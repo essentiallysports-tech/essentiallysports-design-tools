@@ -133,6 +133,8 @@
   // The ES house style is on (and reel-es.js loaded).
   const esOn = () => Boolean(ES && S.get(styleId()).engine === 'es' && !(state.plan && F.isDataFormat && F.isDataFormat(state.plan.format)));
   const scriptLocked = () => Boolean(state.plan && state.plan.script && state.plan.script.locked);
+  // ── Reels 2.0: C (inputs) ── the person's own voiceover (reel-voice-input.js) is on this plan.
+  const ownVoice = () => (state.voiceOwn && state.voiceOwn.plan === state.plan ? state.voiceOwn : null);
   // A beat's name in the strip and the editor (its ES block in the ES style).
   const beatName = beat => (esOn() ? ES.BLOCKS[ES.blockOf(beat).type].label : (KIND_NAME[beat.kind] || beat.kind));
 
@@ -246,9 +248,10 @@
   const VoiceCache = (() => {
     let dbp = null;
     const open = () => dbp || (dbp = new Promise((resolve, reject) => {
-      const req = indexedDB.open('frameup-reels', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('vo');
-      req.onsuccess = () => resolve(req.result);
+      // ── Reels 2.0: C (inputs) ── v2 adds the 'media' store (your uploads and voiceover, reel-media-tray.js).
+      const req = indexedDB.open('frameup-reels', 2);
+      req.onupgradeneeded = () => ['vo', 'media'].forEach(name => { if (!req.result.objectStoreNames.contains(name)) req.result.createObjectStore(name); });
+      req.onsuccess = () => { req.result.onversionchange = () => { req.result.close(); dbp = null; }; resolve(req.result); };
       req.onerror = () => reject(req.error);
     }));
     return {
@@ -608,6 +611,8 @@
     if (sample) { playSample(sample.dataset.sample, sample); return; }
     const pick = event.target.closest('[data-voice]');
     if (pick && pick.dataset.voice !== state.voiceId) {
+      // ── Reels 2.0: C (inputs) ── an AI voice never talks over the person's own recording.
+      if (ownVoice()) { toast('Your own voiceover is on this reel. Remove it under “Voice and captions” to use an AI voice.'); return; }
       state.voiceId = pick.dataset.voice;
       renderVoicePickers();
       if (state.plan && state.voiceOn) { state.voice = {}; rebuild(); renderVoice(); voiceSoon(0); }
@@ -1324,6 +1329,8 @@
     const file = els.visualFile.files[0];
     els.visualFile.value = '';
     if (!file || !uploadTarget) return;
+    // ── Reels 2.0: C (inputs) ── the media tray takes every upload (validation, persistence, Undo).
+    if (window.ReelMakerCtx?.modules.tray) { window.ReelMakerCtx.modules.tray.addFiles([file], { beatId: uploadTarget, via: 'beat' }); return; }
     if (file.size > 120 * 1024 * 1024) { toast('That file is too large (120 MB at most).', { tone: 'error' }); return; }
     const rights = { source: 'Uploaded by you', licence: 'You confirmed ES may use it', organic: true, paid: true, credit: '' };
     const id = `up:${Date.now().toString(36)}`;
@@ -1382,15 +1389,20 @@
     // Only clips whose text (and voice) still match the beat's VO line are used.
     const out = {};
     if (!state.voiceOn) return out;
+    const own = ownVoice();
     (state.plan?.beats || []).forEach(beat => {
       const v = state.voice[beat.id];
+      // ── Reels 2.0: C (inputs) ── the person's own recording stays on its scene; if they
+      // changed the words after recording, the captions pace evenly over the same audio.
+      if (v && v.own) { if (own) out[beat.id] = v.text === beat.vo ? v : { ...v, words: [] }; return; }
       if (v && v.text === beat.vo && v.voiceId === state.voiceId) out[beat.id] = v;
     });
     return out;
   }
   function buildOptions(extra = {}) {
     const voice = voiceFor();
-    const voiceMode = Object.keys(voice).length ? state.config.voice.mode : 'off';
+    // ── Reels 2.0: C (inputs) ── a person's own recording counts as a voiced reel (the renderer knows 'gateway' / 'elevenlabs' / 'off').
+    const voiceMode = Object.keys(voice).length ? (ownVoice() && !['elevenlabs', 'gateway'].includes(state.config.voice.mode) ? 'gateway' : state.config.voice.mode) : 'off';
     return {
       style: styleId(), voice, photos: state.photos, assets: { ...state.assets }, team: state.plan.team, captionStyle: state.captionStyle,
       voiceMode, music: state.music ? { asset: 'music' } : null, sources: state.sources, corpus: state.corpus,
@@ -1426,6 +1438,7 @@
     if (state.step === 'export') renderExport();
     draw();
     autosave();
+    window.ReelMakerCtx?.emit('rebuild', {}); // ── Reels 2.0: C (inputs) ──
   }
   const rebuildSoon = debounce(rebuild, 220);
   // Extra buildTimeline options for a data format (the v2 canvas and data
@@ -1815,11 +1828,23 @@
     const beats = state.plan?.beats || [];
     const withVo = beats.filter(b => (b.vo || '').trim() && !(esOn() && ES.blockOf(b).type === 'endcard')).length;
     const voiced = beats.filter(b => state.voice[b.id] && state.voice[b.id].text === b.vo && state.voice[b.id].voiceId === state.voiceId).length;
+    // ── Reels 2.0: C (inputs) ── with the person's own recording on, nothing is left for the AI voice.
+    if (ownVoice()) return { withVo, voiced: withVo, own: beats.filter(b => state.voice[b.id]?.own).length };
     return { withVo, voiced };
   }
   function renderVoice() {
     const v = state.config.voice;
     const { withVo, voiced } = voiceCounts();
+    // ── Reels 2.0: C (inputs) ── the person's own recording: its own badge, no AI voice button.
+    const mine = ownVoice();
+    if (mine) {
+      els.voiceBadge.className = `es-badge ${state.voiceOn ? (mine.timing === 'estimated' ? 'es-badge--warn' : 'es-badge--good') : ''}`;
+      els.voiceBadge.textContent = state.voiceOn ? (mine.timing === 'estimated' ? 'Your recording · estimated timing' : 'Your recording') : 'Captions only';
+      els.voiceNote.textContent = state.voiceOn ? '' : 'Voice is off: the reel exports with captions only.';
+      els.voiceState.innerHTML = '';
+      els.voiceBtn.hidden = true;
+      return;
+    }
     const on = v.ready && state.voiceOn;
     const all = voiced && voiced === withVo;
     els.voiceBadge.className = `es-badge ${on ? (all ? 'es-badge--good' : (state.voiceError ? 'es-badge--bad' : 'es-badge--brand')) : ''}`;
@@ -1846,6 +1871,7 @@
   let voiceRun = null;
   async function makeVoice({ auto = false } = {}) {
     if (!state.plan || !state.config.voice.ready || !state.voiceOn) return { made: 0, reused: 0, failed: '' };
+    if (ownVoice() || window.ReelMakerCtx?.modules.voiceInput?.pending()) return { made: 0, reused: 0, failed: '' }; // ── Reels 2.0: C (inputs) ── never bill an AI voice over the person's own
     if (voiceRun) return voiceRun;
     voiceRun = (async () => {
       state.voiceMaking = true;
@@ -2415,6 +2441,9 @@
     // Photos, team tiles and clips with a remote source come back on reopen
     // (uploads and AI media live in this tab only).
     Object.entries(state.assets).forEach(([id, a]) => { if (a.kind === 'photo' || a.kind === 'tile' || a.kind === 'design' || (a.kind === 'logo' && id.startsWith('logo:lib:')) || (a.kind === 'clip' && a.remote)) assets[id] = { ...a, src: a.kind === 'clip' ? '' : a.src }; });
+    // ── Reels 2.0: C (inputs) ── your own uploads keep their details (the files stay in this browser, reel-media-tray.js).
+    Object.entries(state.assets).forEach(([id, a]) => { if (a.local) assets[id] = { ...a, src: '' }; });
+    const inputs = window.ReelMakerCtx?.modules || {};
     return {
       id: state.projectId, title: state.plan?.title || 'Untitled reel', format: state.plan?.format || 'explainer', sport: state.plan?.sport || null,
       status: state.status, cost_usd: totalSpent(), updatedAt: Date.now(),
@@ -2425,6 +2454,8 @@
         trend: state.trendRef || null, brief: state.brief || '', planSource: state.planSource,
         music: state.music ? { title: state.music.title, source: state.music.source } : null,
         durationMs: state.timeline?.durationMs || 0,
+        ...(inputs.voiceInput?.snapshot() ? { voiceOwn: inputs.voiceInput.snapshot() } : {}),
+        ...(inputs.tray?.missing().length ? { mediaMissing: inputs.tray.missing() } : {}),
         ...(G && TL ? dataSnapshot() || {} : {}),
       },
     };
@@ -2471,6 +2502,10 @@
     if (typeof t.voiceOn === 'boolean') state.voiceOn = t.voiceOn;
     if (t.style && S.STYLES[t.style]) state.plan.style = t.style;
     state.selected = state.plan.beats[0]?.id || '';
+    // ── Reels 2.0: C (inputs) ── your uploads come back from this browser first; the ones
+    // that are not here are dropped below and asked for again ("Re-add N files").
+    const inputs = window.ReelMakerCtx?.modules || {};
+    if (inputs.tray && (Object.values(t.assets || {}).some(a => a && a.local) || t.mediaMissing?.length)) await inputs.tray.rehydrate(t);
     // Drop picks whose media is gone (uploads, AI media): those beats refill.
     Object.keys(state.photos).forEach(k => { state.photos[k] = (state.photos[k] || []).filter(id => state.assets[id]); if (!state.photos[k].length) { delete state.photos[k]; delete state.visualSrc[k]; } });
     state.captionStyle = t.captionStyle === 'box' ? 'box' : 'highlight';
@@ -2497,6 +2532,9 @@
     });
     Object.values(state.assets).filter(a => a.kind === 'logo' && a.src).forEach(a => { const id = Object.keys(state.assets).find(k => state.assets[k] === a); if (!state.images[id]) loadImage(a.src, /^https?:/.test(a.src)).then(img => { if (img) { state.images[id] = img; draw(); } }); });
     fillVisuals();
+    // ── Reels 2.0: C (inputs) ── a reel with the person's own voiceover gets it back (never the AI voice over it).
+    if (t.voiceOwn && inputs.voiceInput) { if (!await inputs.voiceInput.restore(t.voiceOwn) && state.config.voice.ready && !inputs.voiceInput.snapshot()) restoreVoiceFromCache(); return; }
+    inputs.voiceInput?.restore(null);
     if (state.config.voice.ready) restoreVoiceFromCache();
   }
   async function restoreVoiceFromCache() {
@@ -4011,6 +4049,8 @@
     on(event, fn) { if (!ctxListeners.has(event)) ctxListeners.set(event, new Set()); ctxListeners.get(event).add(fn); return () => ctxListeners.get(event)?.delete(fn); },
     emit(event, data) { (ctxListeners.get(event) || []).forEach(fn => { try { fn(data); } catch (error) { window.FrameUpErrors?.report?.(error, `reels ctx ${event}`); } }); },
   };
+  // ── Reels 2.0: C (inputs) ── the voice badge and pickers follow the person's own voiceover.
+  pageCtx.on('voice-own', () => { renderVoicePickers(); renderVoice(); renderCost(); });
   window.ReelMakerCtx = pageCtx;
   document.dispatchEvent(new CustomEvent('reelmaker:ready', { detail: { ctx: pageCtx } }));
 })();
