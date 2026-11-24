@@ -87,6 +87,8 @@
   const SURFACES = {
     paper: { id: 'paper', ground: 'paper', text: {}, fill: {}, plate: null, dot: 'ink', cta: 'blue', logo: 'blue', mark: 'blue', small: 0.72 },
     white: { id: 'white', ground: 'white', text: { white: 'ink' }, fill: {}, plate: null, dot: 'ink', cta: 'blue', logo: 'blue', mark: 'blue', small: 0.72 },
+    // White with the pills swapped: blue is the first pill, ink the second (Data-led).
+    whiteBlue: { id: 'whiteBlue', ground: 'white', text: { white: 'ink' }, fill: { ink: 'blue', blue: 'ink' }, plate: null, dot: 'ink', cta: 'blue', logo: 'blue', mark: 'blue', small: 0.72 },
     ink: { id: 'ink', ground: 'ink', text: { ink: 'white' }, fill: { ink: 'white' }, plate: null, dot: 'white', cta: 'blue', logo: 'blue', mark: 'blue', small: 0.72 },
     inkPaper: { id: 'inkPaper', ground: 'ink', text: { ink: 'paper', white: 'paper' }, fill: { ink: 'paper', white: 'paper' }, plate: null, dot: 'paper', cta: 'blue', logo: 'blue', mark: 'blue', small: 0.72 },
     blue: { id: 'blue', ground: 'blue', text: { blue: 'white' }, fill: { blue: 'white' }, plate: 'ink', dot: 'ink', cta: 'ink', logo: 'black', mark: 'black', small: 1 },
@@ -146,9 +148,9 @@
       pill: 'boxed', caption: { box: 'hug', emphasis: 'text' }, layout: 'photo', motion: 'standard',
     },
     data: {
-      id: 'data', label: 'Data-led', blurb: 'Clean white, bigger figures and bars, blue kickers: built for numbers.',
-      ground: 'white', surface: 'white', scenes: { quote: 'ink' },
-      roles: { text: 'ink', accent: 'blue', pillFill: 'ink', pillInk: 'white', pillAlt: 'blue', captionFill: 'ink', captionInk: 'white', captionEmphasis: 'yellow', mark: 'blue', wipe: ['ink', 'blue'], dotBase: 'ink', grain: 0 },
+      id: 'data', label: 'Data-led', blurb: 'White for the story, ink boards for the figures, blue pills, bigger numbers and bars.',
+      ground: 'white', surface: 'whiteBlue', scenes: { quote: 'ink', number: 'ink', dots: 'ink', compare: 'ink' },
+      roles: { text: 'ink', accent: 'blue', pillFill: 'blue', pillInk: 'white', pillAlt: 'ink', captionFill: 'ink', captionInk: 'white', captionEmphasis: 'yellow', mark: 'blue', wipe: ['blue', 'ink'], dotBase: 'ink', grain: 0 },
       pill: 'boxed', caption: { box: 'hug', emphasis: 'text' }, layout: 'data', motion: 'standard',
     },
     minimal: {
@@ -188,14 +190,17 @@
     // Team colour with no team on the reel draws as ES blue (the lint says so).
     const surfaces = { ...SURFACES, team: look.teamColour ? (teamHex ? teamSurface(teamHex) : { ...SURFACES.blue, id: 'team', ground: 'team' }) : null };
     const base = surfaces[look.surface];
+    // A team colour close to ink keeps every scene on it (ink boards beside a
+    // near-black ground read as a mistake), and the wipe leads with white.
+    const teamDark = Boolean(teamHex) && contrast(TOKENS.ink, teamHex) < 2.2 && SIGNALS.concat('blue').every(n => contrast(TOKENS[n], teamHex) >= ACCENT_MIN);
     // The first slab, then the slab the cut happens under. On a team colour
     // close to ink the cover slab is white, so the wipe never vanishes.
     const wipe = look.roles.wipe.slice();
-    if (teamHex && wipe[1] === 'ink' && contrast(TOKENS.ink, teamHex) < 1.6) wipe[1] = 'white';
+    if (teamDark) { wipe[0] = 'white'; wipe[1] = 'ink'; }
     const theme = {
       id: look.id, look, colors, team: teamHex, teamMissing: Boolean(look.teamColour && !teamHex),
       base, surfaces,
-      surfaceFor: type => surfaces[look.scenes[type]] || base,
+      surfaceFor: type => (teamDark ? base : surfaces[look.scenes[type]] || base),
       caption: { fill: look.roles.captionFill, ink: look.roles.captionInk, em: look.roles.captionEmphasis, mode: look.caption.emphasis, box: look.caption.box },
       wipe,
       grain: look.roles.grain || 0,
@@ -266,7 +271,9 @@
       const f = n => s.fill[n] || n;
       need(`text on the ${sid} ground`, t('ink'), s.ground, TEXT_MIN);
       need(`accent on the ${sid} ${s.plate && contrast(hex(t('blue')), hex(s.ground)) < ACCENT_MIN ? 'plate' : 'ground'}`, t('blue'), s.plate && contrast(hex(t('blue')), hex(s.ground)) < ACCENT_MIN ? s.plate : s.ground, ACCENT_MIN);
-      ['ink', 'blue', ...SIGNALS].forEach(n => need(`${n} pill ink on the ${sid} surface`, inkOn(f(n), colors), f(n), n === 'ink' ? TEXT_MIN : ACCENT_MIN));
+      // Boxed words are display type (64 px and up): the kit's own white on blue and
+      // white on red pills need 3:1; any other pill needs the full 4.5:1.
+      ['ink', 'blue', ...SIGNALS].forEach(n => need(`${n} pill ink on the ${sid} surface`, inkOn(f(n), colors), f(n), ['blue', 'red'].includes(f(n)) ? ACCENT_MIN : TEXT_MIN));
       need(`end card words on the ${sid} surface`, inkOn(s.cta, colors), s.cta, s.cta === 'blue' ? ACCENT_MIN : TEXT_MIN);
       const small = s.small < 1 ? blend(hex(t('ink')), hex(s.ground), s.small) : hex(t('ink'));
       need(`source line on the ${sid} ground`, small, s.ground, TEXT_MIN);

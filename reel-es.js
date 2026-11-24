@@ -469,7 +469,7 @@
     if (!S.plate) return;
     const ground = theme.hex(S.ground);
     ops.forEach(op => {
-      if ((op.type !== 'text' && op.type !== 'count') || op.fill || op.noCheck || op.small) return;
+      if ((op.type !== 'text' && op.type !== 'count') || op.fill || op.noCheck || op.small || op.onPanel) return;
       if (TH.contrast(theme.hex(op.color), ground) >= TH.ACCENT_MIN) return;
       const need = op.w + 2 * TYPE.pad * op.size;
       if (need > geo.col.w) {
@@ -548,15 +548,23 @@
       if (LY.statementBoxed) {
         // Boxed lines (Photo-led, Bold): every line a hug box, like the hook's pills.
         const size = fitSize(m, lines.map(l => l.text), { max: LY.statementMax * T, min: 72 * T, width: CW, boxed: true });
-        let top = top0;
+        // Over a full-frame photo the lines sit low, just above the caption
+        // line, so the face stays clear (photos are framed on the upper third).
+        const stack = lines.length * boxStep(size) - 12 * T;
+        let top = graphic.media && LY.media.statement === 'full' && block.top == null ? Math.max(top0, geo.contentBottom - 40 * geo.k - stack) : top0;
         lines.forEach((l, i) => { ops.push(boxed(l.text, X, top, size, lineColor(l) || 'ink', { role: 'line', enter: 'up', delay: i * st })); top += boxStep(size); });
         bottom = top - 12 * T;
       } else {
         const size = fitSize(m, lines.map(l => l.text), { max: LY.statementMax * T, min: 88 * T, width: CW });
         let y = top0 + TYPE.cap * size;
+        // A line that will sit on a plate (plateOps) gets the plate's padding
+        // above and below, so it never covers its neighbours.
+        const plated = l => Boolean(S.plate) && TH.contrast(theme.hex(tx(lineColor(l))), theme.hex(S.ground)) < TH.ACCENT_MIN;
         lines.forEach((l, i) => {
+          const gap = plated(l) ? TYPE.pad * size * 1.25 : 0;
+          if (i > 0) y += gap;
           ops.push({ type: 'text', role: 'line', text: l.text, font: displayFont(size), size, x: X, y, w: tracked(m, l.text, size), color: tx(lineColor(l)), track: TYPE.tracking * size, enter: 'up', delay: i * st });
-          y += TYPE.lineHeight * size;
+          y += TYPE.lineHeight * size + gap;
         });
         bottom = y - TYPE.lineHeight * size;
       }
@@ -669,7 +677,7 @@
       const panel = { type: 'panel', role: 'cta-panel', x: X, y: top, w: widest + 2 * pad, h: TYPE.cap * size + (cta.length - 1) * lh + 2 * pad, fill: S.cta, enter: 'left', delay: 0 };
       if (LY.ctaPanel) ops.push(panel);
       // Minimal: the same words without the panel, the last line in the accent.
-      cta.forEach((t, i) => ops.push({ type: 'text', role: 'cta', text: t, font: displayFont(size), size, x: X + (LY.ctaPanel ? pad : 0), y: top + pad + TYPE.cap * size + i * lh, w: tracked(m, t, size), color: LY.ctaPanel ? inkOn(S.cta, theme) : tx(i === cta.length - 1 && cta.length > 1 ? 'blue' : 'ink'), track: TYPE.tracking * size, enter: 'left', delay: 0 }));
+      cta.forEach((t, i) => ops.push({ type: 'text', role: 'cta', text: t, font: displayFont(size), size, x: X + (LY.ctaPanel ? pad : 0), y: top + pad + TYPE.cap * size + i * lh, w: tracked(m, t, size), color: LY.ctaPanel ? inkOn(S.cta, theme) : tx(i === cta.length - 1 && cta.length > 1 ? 'blue' : 'ink'), track: TYPE.tracking * size, ...(LY.ctaPanel ? { onPanel: true } : {}), enter: 'left', delay: 0 }));
       const lw = Math.round((258 * geo.logotype.h) / 30.6864);
       // INFERRED: the message on top, the logotype as the signature above the source line.
       ops.push({ type: 'logotype', role: 'logotype', x: X, y: Math.round(Math.max(panel.y + panel.h + 96 * geo.k, geo.sourceY - 92 * geo.k - geo.logotype.h - 34)), w: lw, h: geo.logotype.h, variant: S.logo, enter: 'up', delay: st });
@@ -1060,22 +1068,24 @@
         const S = theme.surfaceFor(b.type);
         const ops = layout(measure, g, timeline);
         const media = ops.filter(o => o.type === 'media');
+        const panel = ops.find(o => o.type === 'panel');
         const seen = new Set();
         ops.forEach(op => {
           if ((op.type !== 'text' && op.type !== 'count') || op.noCheck) return;
           const box = opBox(op);
           const onPhoto = !op.fill && media.some(mo => box.y + box.h > mo.y && box.y < mo.y + mo.h && box.x + box.w > mo.x && box.x < mo.x + mo.w);
           if (onPhoto) { if (!seen.has('photo')) out.push(issue('look', 'critical', `Beat ${i + 1}: “${String(op.text).slice(0, 24)}” sits on the photo without a box.`, 'Use boxed words over a photo.', g.beat)); seen.add('photo'); return; }
+          const under = op.fill || (op.role === 'cta' && panel ? panel.fill : S.ground);
           const kit = !S.plate && ['paper', 'white'].includes(S.ground) && !op.fill && SIGNALS.includes(op.color);
           if (kit) return;
-          const accent = SIGNALS.includes(op.color) || (!op.fill && op.color === (S.text.blue || 'blue') && op.color !== (S.text.ink || 'ink')) || ['blue', 'red'].includes(op.fill);
+          const accent = SIGNALS.includes(op.color) || (!op.fill && op.color === (S.text.blue || 'blue') && op.color !== (S.text.ink || 'ink')) || ['blue', 'red'].includes(under);
           const min = accent ? TH.ACCENT_MIN : TH.TEXT_MIN;
           let fg = colorOf(op.color, theme);
-          const bg = colorOf(op.fill || S.ground, theme);
+          const bg = colorOf(under, theme);
           if (op.alpha && op.alpha < 1) fg = TH.blend(fg, bg, op.alpha);
           const c = TH.contrast(fg, bg);
-          const key = `${op.color}|${op.fill || S.ground}`;
-          if (c < min && !seen.has(key)) { seen.add(key); out.push(issue('look', c < 2 ? 'critical' : 'warning', `Beat ${i + 1}: “${String(op.text).slice(0, 24)}” is ${op.color} on ${op.fill || S.ground} (${c.toFixed(1)}:1; it needs ${min}:1).`, 'Change the colour of the words, or pick another look.', g.beat)); }
+          const key = `${op.color}|${under}`;
+          if (c < min && !seen.has(key)) { seen.add(key); out.push(issue('look', c < 2 ? 'critical' : 'warning', `Beat ${i + 1}: “${String(op.text).slice(0, 24)}” is ${op.color} on ${under} (${c.toFixed(1)}:1; it needs ${min}:1).`, 'Change the colour of the words, or pick another look.', g.beat)); }
         });
       });
     }
