@@ -363,6 +363,16 @@ function groundBeat(raw, check, index) {
   return { dropped: true, why: why[0] };
 }
 
+// One line that says what a block shows (the storyboard preview on the card).
+function previewText(k) {
+  if (k.type === 'number') return [k.kicker, k.display || ES.numberDisplay(k), k.label].filter(Boolean).join(' · ').slice(0, 120);
+  if (k.type === 'compare') return [k.kicker, (k.items || []).map(it => `${it.label} ${it.display}`).join(' vs ')].filter(Boolean).join(': ').slice(0, 120);
+  if (k.type === 'quote') return `“${k.text}”${k.who ? `, ${k.who}` : ''}`.slice(0, 140);
+  if (k.type === 'dots') return [k.label, k.note].filter(Boolean).join(' · ').slice(0, 120);
+  if (k.type === 'endcard') return 'ES end card';
+  return String(ES.blockText(k) || '').slice(0, 120);
+}
+
 function cleanPoll(raw, check) {
   const question = clean(raw && raw.question, 110).replace(/["“”]/g, '');
   if (!question || check.badNumbers({ text: question }).length) return null;
@@ -430,7 +440,7 @@ function groundAngle(raw, g, { free = false, index = 0 } = {}) {
     angle: {
       id: `i${index + 1}`, lens, lensLabel: LENS_LABEL[lens], angle: line, title: plan.title, recipe,
       hook: { pills: plan.beats[0].block.pills, stamp: plan.beats[0].block.stamp || null },
-      storyboard: plan.beats.map(b => { const k = ES.blockOf(b); return { type: k.type, text: clean(ES.blockText(k), 120) || b.text, vo: b.vo || '' }; }),
+      storyboard: plan.beats.map(b => { const k = ES.blockOf(b); return { type: k.type, text: previewText(k) || b.text, vo: b.vo || '' }; }),
       poll, sources: cited.length || free ? cited : g.sources.filter(s => s.type !== 'brief').slice(0, 1).map(s => s.id),
       plan, issues: [...new Set(all)].slice(0, 6), downgraded, free, voWords: checked.voWords,
     },
@@ -626,7 +636,7 @@ async function esSources(topic, { budgetMs = 6000, maxChars = 3600, deps = {} } 
 }
 
 module.exports = {
-  run, gather, esSources, groundAngle, groundAll, groundBeat, freeAngles, ideasRequest, readInput, cleanPoll, quotedSpans, moneyIn,
+  run, gather, esSources, groundAngle, groundAll, groundBeat, freeAngles, ideasRequest, readInput, cleanPoll, previewText, quotedSpans, moneyIn,
   IDEAS_SYSTEM, FEATURE, PRICES, LIMITS, LENSES, LENS_LABEL, RECIPES, RECIPE_FOR_LENS, IDEA_SPORTS, NEWSLETTERS, CACHE, CACHE_TTL_MS, BUDGET_MS, STEP_MS,
   _test: { step, esArticles, trendContext, teamGames, playerStats, makeChecker, cacheKey },
 };
