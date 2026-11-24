@@ -539,6 +539,8 @@
       v: 1, fps: FPS, size: [W, H], durationMs,
       format: fmt, tag: F.FORMATS[fmt].tag, sport: clean(plan && plan.sport, 12), title: clean(plan && plan.title, 140),
       style: style.id, limits: { maxSeconds: style.seconds.max, targetSeconds: style.seconds.target },
+      // The ES look (reel-es-themes.js): the person's pick, the plan's, else Paper.
+      ...(style.engine === 'es' && getES() ? { look: getES().themes.lookId(opts.look || (plan && plan.look)) } : {}),
       eyebrow: clean(plan && plan.eyebrow, 48), series: plan && plan.series && plan.series.tag ? { tag: clean(plan.series.tag, 28) } : null,
       strip: style.chrome.strip ? sx : null,
       team, highlight, captionStyle, voice: { mode: voiceMode },
