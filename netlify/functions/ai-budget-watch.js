@@ -43,7 +43,18 @@ exports.handler = async function handler(event) {
     weekStart: weekStartUtc().toISOString(),
   });
   if (result.error) console.warn(JSON.stringify({ event: 'ai-budget-watch', ...result }));
-  return json(result.ok ? 200 : 502, result);
+  // The daily Merch sales sync rides this cron (the project keeps to two
+  // crons). Soft-fail: a sync problem never changes the budget answer.
+  let merch = null;
+  try {
+    const sync = require('./merch-sync.js');
+    if (sync._test?.runSync) merch = await sync._test.runSync({});
+  } catch (error) {
+    merch = { ok: false, error: String(error?.message || error).slice(0, 200) };
+    console.warn(JSON.stringify({ event: 'merch-sync-in-budget-watch', error: merch.error }));
+  }
+  if (merch && merch.ok === false) console.warn(JSON.stringify({ event: 'merch-sync-in-budget-watch', ok: false }));
+  return json(result.ok ? 200 : 502, result); // the budget answer's shape is unchanged
 };
 
 exports._test = { cronAuthorized };

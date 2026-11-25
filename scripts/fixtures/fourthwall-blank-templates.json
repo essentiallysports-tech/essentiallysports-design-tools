@@ -1,0 +1,1003 @@
+{
+ "_note": "Trimmed from the public GET /open-api/v1.0/product-templates/{id} on 2026-11-25 (up to 5 colours, descriptions cut). Used by scripts/test-merch.mjs.",
+ "templates": {
+  "tee": {
+   "productId": "pro_Vv1XdaPMSdm6jZ5pj24NCQ",
+   "slug": "stanley-stella-unisex-organic-ribbed-neck-t-shirt-dtg",
+   "name": "Stanley/Stella Unisex Organic Ribbed Neck T-Shirt",
+   "description": "<p>Enjoy style, comfort, and lasting durability with this eco-friendly t-shirt. Made from 100% organic combed ring-spun ",
+   "category": "Apparel/T-Shirts",
+   "brand": "Stanley/Stella",
+   "productionMethod": "DTG",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 15.85,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 23.85,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "Black",
+      "hex": "#020202"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_j8ns918xRQOTUwkMVCltKw",
+       "size": "S",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_2Ql0tYaxSNyTaxTpIYfLSA",
+       "size": "M",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_KQ-Pz_tVSBGJuKE_wPGm9g",
+       "size": "L",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_UpW7AHH5Rh-cYFwVK-jR6g",
+       "size": "XL",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Red",
+      "hex": "#ed0739"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_hTx5pDuhRuKh4wTqpVaUxQ",
+       "size": "S",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_Upzfqx4tSUyMQYnJrPyG8Q",
+       "size": "M",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_JzAQgtMlQQCaufQv-JN6QA",
+       "size": "L",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_otfCdJdVRSCXrS_SpKiSEg",
+       "size": "XL",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    },
+    {
+     "color": {
+      "name": "White",
+      "hex": "#ffffff"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_mbDcOGzhSP-6eKfK3m3y0Q",
+       "size": "S",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_fH9W7mhuSOOBcV6E0Jm7Sw",
+       "size": "M",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_JF54Y5D_TKSVh6UsKaJqdw",
+       "size": "L",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_BZzmjXRaQfqizR_efmBCzg",
+       "size": "XL",
+       "price": {
+        "amount": 15.85,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "back_large",
+     "name": "Back",
+     "type": "back",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": []
+    },
+    {
+     "regionId": "back_large",
+     "name": "Back Large",
+     "type": "back_large",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": []
+    },
+    {
+     "regionId": "front_large",
+     "name": "Front",
+     "type": "front",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": [
+      {
+       "id": "largeCenter",
+       "name": "Large Center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left Chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center Chest"
+      }
+     ]
+    },
+    {
+     "regionId": "front_large",
+     "name": "Front Large",
+     "type": "front_large",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": [
+      {
+       "id": "largeCenter",
+       "name": "Large Center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left Chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center Chest"
+      }
+     ]
+    },
+    {
+     "regionId": "label_inside",
+     "name": "Inside Label",
+     "type": "label_inside",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "label_outside",
+     "name": "Outside Label",
+     "type": "label_outside",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "sleeve_left",
+     "name": "Left Sleeve",
+     "type": "sleeve_left",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 600,
+      "pixelsHeight": 525,
+      "inchesWidth": 4,
+      "inchesHeight": 3.5
+     },
+     "placements": []
+    },
+    {
+     "regionId": "sleeve_right",
+     "name": "Right Sleeve",
+     "type": "sleeve_right",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 600,
+      "pixelsHeight": 525,
+      "inchesWidth": 4,
+      "inchesHeight": 3.5
+     },
+     "placements": []
+    }
+   ],
+   "sizeGuide": {
+    "url": null,
+    "content": null
+   },
+   "supportsBackendRendering": true
+  },
+  "hoodie": {
+   "productId": "pro_380",
+   "slug": "cotton-heritage-unisex-premium-hoodie-dtg",
+   "name": "Cotton Heritage Unisex Premium Hoodie",
+   "description": "<p>Warning: once you throw this soft-to-the-touch cotton blend hoodie on, you may not want to take it off.</p><ul><li>65",
+   "category": "Apparel/Hoodies",
+   "brand": "Cotton Heritage",
+   "productionMethod": "DTG",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 27.29,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 31.29,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "Black",
+      "hex": "#080808"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_4vSMaco2QGWcAQTune3Bkg",
+       "size": "S",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_HPqmK-tKRkeU0oGqigUIrQ",
+       "size": "M",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_r_oZNgINQWa4JVXirczD3A",
+       "size": "L",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_ft7rJ4wtSoGKgJyZM2whDA",
+       "size": "XL",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Navy Blazer",
+      "hex": "#292d3b"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_p3WiynZwTAug_SejDqO9JQ",
+       "size": "S",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_J0-E50mnTlWEd2qAwPx2SQ",
+       "size": "M",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_d8jxO3K8T-SR4YsxBjCZtA",
+       "size": "L",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_wuOaX2gBRzi425tgF7yV8Q",
+       "size": "XL",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Team Royal",
+      "hex": "#2d407d"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_CE7slE7VR9CA_Sd8zzhfxw",
+       "size": "S",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_dyXBgYKqQ_qFwMo1v62QsQ",
+       "size": "M",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_1gjM1zE-ROKFB3QJQypcpw",
+       "size": "L",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_MYHBpDIaT0eJ34P6D4cLJQ",
+       "size": "XL",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Team Red",
+      "hex": "#ff2d41"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_qy5fUEF2Qiurk-_AtbwP9g",
+       "size": "S",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_fCFaoQi5SYOIwJoGirsGqw",
+       "size": "M",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_KoGC3LC7TQK4tpJrzDjyzg",
+       "size": "L",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_wiWz9bqrTF2uHR1tsoTQ7g",
+       "size": "XL",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    },
+    {
+     "color": {
+      "name": "White",
+      "hex": "#fefefe"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_58GqQU9gQNKq8KdJ2vLcfA",
+       "size": "S",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_jYTr0BsGQnSMejlwHCgQ-w",
+       "size": "M",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_PqLCPkBpRdGZJvEXwqTQ1g",
+       "size": "L",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_TdHvuA0bTa2QmfBD7sjzAg",
+       "size": "XL",
+       "price": {
+        "amount": 27.29,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "back_large",
+     "name": "Back",
+     "type": "back",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": []
+    },
+    {
+     "regionId": "back_large",
+     "name": "Back Large",
+     "type": "back_large",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": []
+    },
+    {
+     "regionId": "embroidery_wrist_left",
+     "name": "Left wrist",
+     "type": "embroidery_wrist_left",
+     "available": true,
+     "productionMethod": "EMBROIDERY",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 300,
+      "pixelsHeight": 450,
+      "inchesWidth": 2,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "embroidery_wrist_right",
+     "name": "Right wrist",
+     "type": "embroidery_wrist_right",
+     "available": true,
+     "productionMethod": "EMBROIDERY",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 300,
+      "pixelsHeight": 450,
+      "inchesWidth": 2,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "front",
+     "name": "Front",
+     "type": "front",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1650,
+      "pixelsHeight": 1650,
+      "inchesWidth": 11,
+      "inchesHeight": 11
+     },
+     "placements": [
+      {
+       "id": "fullSize",
+       "name": "Full size"
+      },
+      {
+       "id": "largeCenter",
+       "name": "Large center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center chest"
+      }
+     ]
+    },
+    {
+     "regionId": "label_inside",
+     "name": "Inside Label",
+     "type": "label_inside",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "label_outside",
+     "name": "Outside Label",
+     "type": "label_outside",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 375,
+      "pixelsHeight": 375,
+      "inchesWidth": 2.5,
+      "inchesHeight": 2.5
+     },
+     "placements": []
+    },
+    {
+     "regionId": "sleeve_left",
+     "name": "Left Sleeve",
+     "type": "sleeve_left",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 1800,
+      "inchesWidth": 3,
+      "inchesHeight": 12
+     },
+     "placements": []
+    },
+    {
+     "regionId": "sleeve_right",
+     "name": "Right Sleeve",
+     "type": "sleeve_right",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 1800,
+      "inchesWidth": 3,
+      "inchesHeight": 12
+     },
+     "placements": []
+    }
+   ],
+   "sizeGuide": {
+    "url": "https://firebasestorage.googleapis.com/v0/b/popshopprod.appspot.com/o/library%2Flib_7acfd8f1471e4f98b7%2FHoodie%20Sizing%20Charts.pdf?alt=media&amp;token=a449fb2b-8ca1-4912-8697-e53c06963c9c",
+    "content": null
+   },
+   "supportsBackendRendering": true
+  },
+  "poster": {
+   "productId": "pro_15bc29bc8a324d449d",
+   "slug": "enhanced-matte-paper-poster-printed",
+   "name": "Enhanced Matte Paper Poster",
+   "description": "<p>Transform your space with our premium museum-quality posters! Made from thick 10.3 mil matte paper, these sturdy prin",
+   "category": "Home & Living/Wall Art",
+   "brand": "Allcolor",
+   "productionMethod": "PRINTED",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 5.5,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 18.0,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "White",
+      "hex": "#ffffff"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_cPSCTKJbSdug-33xiq3ywA",
+       "size": "5\" x 7\"",
+       "price": {
+        "amount": 5.5,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_dhUxh5bjQbSHqYI_-Yr0Mg",
+       "size": "8\" x 10\"",
+       "price": {
+        "amount": 7.0,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_xPy7ZNCeSZmwbbnzX8h3yg",
+       "size": "10\" x 10\"",
+       "price": {
+        "amount": 8.0,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_obq71E4JQR6T8ObA5lyoEg",
+       "size": "11\" x 14\"",
+       "price": {
+        "amount": 9.75,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "default",
+     "name": "Default",
+     "type": "default",
+     "available": true,
+     "productionMethod": "PRINTED",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 300,
+      "pixelsWidth": 1500,
+      "pixelsHeight": 2100,
+      "inchesWidth": 5,
+      "inchesHeight": 7
+     },
+     "placements": []
+    }
+   ],
+   "sizeGuide": {
+    "url": null,
+    "content": null
+   },
+   "supportsBackendRendering": true
+  },
+  "sticker": {
+   "productId": "pro_358",
+   "slug": "kiss-cut-stickers-1",
+   "name": "Kiss Cut Stickers",
+   "description": "<p>These Kiss Cut Stickers can be cut in any shape you want, while also leaving a wide enough border around your design ",
+   "category": "Accessories/Stickers",
+   "brand": "Allcolor",
+   "productionMethod": "STICKER",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 2.29,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 5.36,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "White",
+      "hex": "#ffffff"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_1XAmqp3sTdm45NeuQBmUrg",
+       "size": "3\" x 3\"",
+       "price": {
+        "amount": 2.29,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_IBS4tB8AR2Wk8fh_X35xug",
+       "size": "4\" x 4\"",
+       "price": {
+        "amount": 2.49,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_ObHtQf2QTsKCUQIGuLHAsg",
+       "size": "5.5\" x 5.5\"",
+       "price": {
+        "amount": 2.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_D5LfaJETQXSdYSttO0adEg",
+       "size": "15\" x 3.75\"",
+       "price": {
+        "amount": 5.36,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "default",
+     "name": "Default",
+     "type": "default",
+     "available": true,
+     "productionMethod": "STICKER",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 300,
+      "pixelsWidth": 900,
+      "pixelsHeight": 900,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": [
+      {
+       "id": "fullSize",
+       "name": "Default"
+      }
+     ]
+    }
+   ],
+   "sizeGuide": {
+    "url": null,
+    "content": null
+   },
+   "supportsBackendRendering": true
+  },
+  "mug": {
+   "productId": "pro_4v5OfYhyRx62KW5b7Oj6Uw",
+   "slug": "white-glossy-mug-sublimation",
+   "name": "White Glossy Mug",
+   "description": "<p>Add some vivid prints to this heat-resistant mug. Dishwasher &amp; microwave safe \u2014 drink options galore!&nbsp;</p><p",
+   "category": "Drinkware/Coffee Mugs",
+   "brand": "Mugz",
+   "productionMethod": "SUBLIMATION",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 5.95,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 10.5,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "White",
+      "hex": "#ffffff"
+     },
+     "sizeVariants": [
+      {
+       "variantId": "prv_iWENPZN2RamoncPrf6EnXw",
+       "size": "11oz",
+       "price": {
+        "amount": 5.95,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_s6XtiyiCQWa_wkyrSKlO2w",
+       "size": "15oz",
+       "price": {
+        "amount": 8.5,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_BL7I9ZN3TCaDEyg4FRQLDQ",
+       "size": "20 oz",
+       "price": {
+        "amount": 10.5,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "default",
+     "name": "Default",
+     "type": "default",
+     "available": true,
+     "productionMethod": "SUBLIMATION",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 300,
+      "pixelsWidth": 2700,
+      "pixelsHeight": 1050,
+      "inchesWidth": 9,
+      "inchesHeight": 3.5
+     },
+     "placements": [
+      {
+       "id": "front",
+       "name": "Front"
+      },
+      {
+       "id": "back",
+       "name": "Back"
+      }
+     ]
+    }
+   ],
+   "sizeGuide": {
+    "url": null,
+    "content": null
+   },
+   "supportsBackendRendering": true
+  }
+ }
+}

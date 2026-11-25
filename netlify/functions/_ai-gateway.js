@@ -149,6 +149,8 @@ const FEATURE_NAMES = [
   ['video-ads-grammar', 'The AI grammar check'],
   ['video-ads-rating', 'Ad rating'],
   ['meta-ads', 'Competitor ads'],
+  ['merch-concepts', 'Merch design ideas'],
+  ['merch-copy', 'Merch shop copy'],
   ['reels-transcription', 'Automatic captions'],
   ['reels-ideas', 'The Reels ideas room'],
   ['reels-radar', 'The Reels trend radar'],

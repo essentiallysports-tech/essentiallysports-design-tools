@@ -162,7 +162,7 @@
       "maxDuration": 10
     },
     "api/ai-budget-watch.js": {
-      "maxDuration": 30
+      "maxDuration": 90
     },
     "api/ai-status.js": {
       "maxDuration": 10
@@ -186,6 +186,15 @@
       "maxDuration": 120
     },
     "api/reel-radar.js": {
+      "maxDuration": 60
+    },
+    "api/merch.js": {
+      "maxDuration": 120
+    },
+    "api/fourthwall-webhook.js": {
+      "maxDuration": 15
+    },
+    "api/merch-sync.js": {
       "maxDuration": 60
     }
   },

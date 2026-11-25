@@ -3,8 +3,8 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
-      "id": "2026-11-25-reels-studio-2",
-      "date": "2026-11-25",
+      "id": "2026-11-26-reels-studio-2",
+      "date": "2026-11-26",
       "title": "Reels Studio 2.0: easy ES reels for everyone",
       "items": [
         {
@@ -36,6 +36,82 @@
           "title": "Export everything",
           "text": "MP4 in 9:16 and 4:5 plus caption files (SRT, VTT, transcript), one at a time or all in one zip. Full keyboard control and captions always on.",
           "page": "reel-maker.html"
+        }
+      ]
+    },
+    {
+      "id": "2026-11-26-merch-v3",
+      "date": "2026-11-26",
+      "title": "Merch Designs: your full line, variations and sizing",
+      "items": [
+        {
+          "title": "Your whole line, every time",
+          "text": "Every set of designs now starts with Your words: the full sentence you typed, split across pills. Nothing gets cut off.",
+          "page": "merch.html",
+          "target": "#mx-text"
+        },
+        {
+          "title": "Variations and close-ups",
+          "text": "Press Variations on any design for seven more layouts of the same words. Cards show a close-up of the design, with a switch to see it on the tee.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Size it in FrameUp",
+          "text": "In Setup, change the size, how far down the shirt it sits, words per pill and alignment. The print size and checks update as you go.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Every mockup",
+          "text": "See all of Fourthwall's mockups for a product, by colour, from Your merch or after you create it. Click one to view it large.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
+      "id": "2026-11-25-merch-designs",
+      "date": "2026-11-25",
+      "title": "Merch Designs: ES fan merch on Fourthwall",
+      "commit": "483579e",
+      "items": [
+        {
+          "title": "From a line to a tee",
+          "text": "Paste a line, quote or story link, or pick a trend, choose a collection, and get tee designs in ES stacked pills. Edit the pills, colours and order on the card.",
+          "page": "merch.html",
+          "target": "#mx-text"
+        },
+        {
+          "title": "Set up and check rights",
+          "text": "Pick the tee, colours, where the ES logo goes and the price, see what you earn per sale, and tick the rights check before pushing.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Created hidden on Fourthwall",
+          "text": "Products go to Fourthwall hidden. Check the mockups, then Publish. Admins (and named people) can push; everyone can design.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
+      "id": "2026-11-25-merch-v2",
+      "date": "2026-11-25",
+      "title": "Merch Designs: hoodies, posters, stickers, mugs and Your merch",
+      "commit": "e06857f",
+      "items": [
+        {
+          "title": "More products",
+          "text": "Put a design on a tee, hoodie, poster, sticker or mug. Each one has its own print area, ES logo spot, suggested price and print check.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Shop collections",
+          "text": "Add a product to Fourthwall collections when you set it up, or later from its panel. Make a new collection on the spot.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Your merch",
+          "text": "See every product FrameUp made, with its status, link, mockup, and units and revenue for the last 30 days. Archive needs the product name typed in.",
+          "page": "merch.html",
+          "target": "#mx-tab-list"
         }
       ]
     },
