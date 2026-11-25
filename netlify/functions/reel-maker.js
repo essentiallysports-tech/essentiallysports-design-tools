@@ -11,6 +11,10 @@
 //             grounded draft built from the brief (free), never an error.
 //             45-minute cache per (topic, format, tier, steer).
 //   revise    "shorter / punchier / stronger hook / calmer" or free text
+//   ideas     the ideas room (_reel-ideas.js): ES articles, the trend, game and
+//             player data (+ the optional fact check) -> one Haiku call (Sonnet
+//             on request) -> 4-5 grounded ES angles, each with a ready plan.
+//             Free template drafts when AI is off or over a cap. 30-min cache.
 //   music     optional generated instrumental bed (REELS_MUSIC=gateway), organic-only rights
 //   voice-sample  a ~2 s preview of one of the four voices (cached)
 //   voice-align  a person's own voiceover (one take, 16 kHz mono WAV, 90 s at
@@ -71,6 +75,9 @@ const F = require('../../reel-formats.js');
 const games = require('./_reel-games.js');
 const archive = require('./_reel-archive.js');
 const framePick = require('./_reel-frame-pick.js');
+// ── Reels 2.0: lane B ── the ideas room and ES coverage for news reels.
+const ideas = require('./_reel-ideas.js');
+const { cachedEnrichment } = require('./trend-design.js');
 
 const REEL_SPORTS = ['nfl', 'cfb', 'mlb', 'golf'];
 const TREND_HOURS = 48;
@@ -92,20 +99,57 @@ const money = usd => Number((Number(usd) || 0).toFixed(6));
 const clean = (value, max = 400) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, max);
 
 // ─── Trends ────────────────────────────────────────────────────────────────
+// ── Reels 2.0: lane B ── wider sports + the ES angle.
+// The 2-day board covers NFL, CFB and MLB (and whatever is in Google's
+// trending searches). Golf and tennis have their own news feeds only on the
+// 1-day board, so it is merged in (soft-fail). NBA, WNBA and NASCAR have no
+// feed of their own: the classifier files them under "others", and they are
+// picked out here by league words, so those lists are thin (general sports
+// headlines and trending searches only).
+const TREND_SPORTS = [...REEL_SPORTS, 'tennis', 'nba', 'wnba', 'nascar'];
+const TRENDS_PER_SPORT = 12;
+const OTHER_LEAGUES = [
+  ['wnba', /\bwnba\b|caitlin clark|a'ja wilson|angel reese/i],
+  ['nba', /\bnba\b|\b(?:lakers|celtics|warriors|knicks|bucks|nuggets|mavericks|cavaliers|timberwolves)\b|lebron|steph(?:en)? curry|giannis|luka doncic|wembanyama/i],
+  ['nascar', /\bnascar\b|cup series|daytona 500/i],
+];
+function trendSport(item) {
+  if (item.category !== 'others') return item.category;
+  const text = [item.title, ...(item.related || []).map(r => r.title)].join(' ');
+  const hit = OTHER_LEAGUES.find(([, re]) => re.test(text));
+  return hit ? hit[0] : 'others';
+}
 async function trends() {
-  const data = await getTrends(false, { window: '2d' });
+  const [data, day] = await Promise.all([
+    getTrends(false, { window: '2d' }),
+    getTrends(false).catch(() => null), // golf, tennis and general sports headlines
+  ]);
   const since = Date.now() - TREND_HOURS * 3600e3;
-  const items = (data.items || [])
-    .filter(item => REEL_SPORTS.includes(item.category))
-    .filter(item => !item.publishedAt || new Date(item.publishedAt).getTime() >= since)
-    .slice(0, 40)
-    .map(item => ({
-      id: item.id, sport: item.category, title: item.title, source: item.source || '', url: item.url || '',
-      publishedAt: item.publishedAt || '', team: item.team?.name || '',
-      format: F.routeFormat([item.title, ...(item.related || []).map(r => r.title)].join(' ')).format,
-      related: (item.related || []).slice(0, 4).map(r => ({ title: r.title, url: r.url, source: r.source })),
-    }));
-  return { ok: true, updatedAt: data.updatedAt, hours: TREND_HOURS, items, stale: Boolean(data.stale) };
+  const seen = new Set();
+  const perSport = {};
+  const items = [...(data.items || []), ...((day && day.items) || [])]
+    .filter(item => item && !seen.has(item.id) && seen.add(item.id))
+    .map(item => ({ item, sport: trendSport(item) }))
+    .filter(({ sport }) => TREND_SPORTS.includes(sport))
+    .filter(({ item }) => !item.publishedAt || new Date(item.publishedAt).getTime() >= since)
+    .sort((a, b) => (b.item.rank || 0) - (a.item.rank || 0))
+    // At most 12 a sport, so a busy league never crowds a quiet one off the list.
+    .filter(({ sport }) => { perSport[sport] = (perSport[sport] || 0) + 1; return perSport[sport] <= TRENDS_PER_SPORT; })
+    .map(({ item, sport }) => {
+      const ai = cachedEnrichment(item.id);
+      return {
+        id: item.id, sport, title: item.title, source: item.source || '', url: item.url || '',
+        publishedAt: item.publishedAt || '', team: item.team?.name || '',
+        format: F.routeFormat([item.title, ...(item.related || []).map(r => r.title)].join(' ')).format,
+        related: (item.related || []).slice(0, 4).map(r => ({ title: r.title, url: r.url, source: r.source })),
+        // ES fit (0-100, trend-design.js esFit) and, when the trend has been enriched, its ES angle.
+        fit: item.fit ? Number(item.fit.score) || 0 : null,
+        ...(ai && ai.why ? { why: ai.why } : {}),
+        ...(ai && ai.angle ? { angle: ai.angle } : {}),
+      };
+    });
+  const counts = Object.fromEntries(TREND_SPORTS.map(id => [id, items.filter(i => i.sport === id).length]));
+  return { ok: true, updatedAt: data.updatedAt, hours: TREND_HOURS, items, sports: TREND_SPORTS, counts, stale: Boolean(data.stale) };
 }
 
 // ─── Plan ──────────────────────────────────────────────────────────────────
@@ -180,6 +224,10 @@ async function plan(body, track, gates) {
   const blocked = gates.free ? 'free' : gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : '')); // ai-free-mode: 'free' = code plan
   let facts = null;
   let factCost = 0;
+  // ── Reels 2.0: lane B ── ES's own coverage joins the sources of a news reel
+  // (free: ES's public tag search; ~6 s budget, soft-fail). It runs beside the
+  // fact check, so it adds no time when that is on.
+  const esWork = blocked ? null : ideas.esSources([trend?.title, brief].filter(Boolean).join('. '), { budgetMs: 6000 }).catch(() => null);
   if (!blocked && body.factCheck) {
     try {
       facts = await director.factCheck({ topic: [trend?.title, brief].filter(Boolean).join('. '), sport, track });
@@ -188,6 +236,12 @@ async function plan(body, track, gates) {
       if (isBudgetError(error)) facts = null;
     }
   }
+  // The director reads 4,000 characters of extra facts: the fact check keeps
+  // its place, ES coverage takes the room that is left.
+  const es = (esWork && await esWork) || { text: '', sources: [] };
+  const esRoom = 4000 - (facts?.text ? facts.text.length + 1 : 0);
+  const esText = es.text && esRoom >= 400 ? es.text.slice(0, esRoom) : '';
+  const extraFacts = [facts?.text || '', esText].filter(Boolean).join('\n');
   let result;
   if (blocked) {
     // Never spend over a cap (or with AI off): a draft from the brief, no model call.
@@ -197,7 +251,7 @@ async function plan(body, track, gates) {
     draft.style = style;
     result = { plan: draft, read, source: 'draft', cost: 0, model: '', issues: [] };
   } else {
-    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, track, facts: facts?.text || '' });
+    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, track, facts: extraFacts });
   }
   const corpus = result.read.corpus;
   const value = {
@@ -210,7 +264,7 @@ async function plan(body, track, gates) {
     model: result.model || '',
     issues: (result.issues || []).slice(0, 8),
     corpus: corpus.slice(0, 12000),
-    sources: sourcesOf(trend, brief, facts),
+    sources: [...sourcesOf(trend, brief, facts), ...(esText ? es.sources : [])].slice(0, 16),
     route: result.read.route,
     style, suggestedStyle: suggested,
     lint: lintPlan(result.plan, { corpus }),
@@ -445,6 +499,15 @@ exports.handler = withAiMode(async function handler(event) {
       const result = await clipJudge.judgeClips({ clips: body.clips, subjects: body.subjects, budgetUsd: Number(body.budgetUsd ?? CLIPS.JUDGE.maxUsdPerReel), track });
       return json(result.ok ? 200 : (result.status || (result.reason === 'off' || result.reason === 'feature-off' ? 503 : 502)), result);
     }
+    // ── Reels 2.0: lane B ── the ideas room. Over a cap, with AI off or on
+    // any AI failure it answers with free template drafts, never an error.
+    if (body.mode === 'ideas') {
+      const [gate, hourly] = await Promise.all([aiSpendGate(token, { feature: ideas.FEATURE }), userOverHourlyLimit(token)]);
+      const free = freeModeGate(gate);
+      const blocked = free ? 'free' : (gate && gate.reason === 'feature-off') || !gatewayConfigured() ? 'off' : gate ? 'weekly-limit' : hourly ? 'limit' : '';
+      const result = await ideas.run(body, { track, auth, blocked });
+      return json(result.ok ? 200 : (result.status || 502), result);
+    }
     if (FORMAT_MODES[body.mode]) {
       const result = await formatMode(body.mode, body, { auth, token, track });
       return json(result.ok ? 200 : (result.status || 400), result);
@@ -483,4 +546,4 @@ exports.handler = withAiMode(async function handler(event) {
   }
 });
 
-exports._test = { voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };
+exports._test = { voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf, TREND_SPORTS, trendSport, ideas };

@@ -350,5 +350,23 @@ await test('events: the Reels 2.0 types are accepted (start, idea_pick, recipe, 
   assert.equal((await call({ mode: 'event', type: 'voice_align' })).status, 400);
 });
 
+await test('ideas (Reels 2.0): sign-in required; over the weekly cap it answers with free drafts and no AI call; trends carry the wider sports list', async () => {
+  assert.equal((await call({ mode: 'ideas', topic: 'Josh Allen and the Bills' }, 'bad')).status, 401);
+  assert.equal((await call({ mode: 'ideas', topic: '' })).status, 400);
+  const before = aiCalls;
+  spend = 30;
+  const { status, body } = await call({ mode: 'ideas', topic: BRIEF, sport: 'nfl' });
+  spend = 0;
+  assert.equal(status, 200);
+  assert.equal(body.free, true, 'never an error when over a cap');
+  assert.equal(body.cost, 0);
+  assert.equal(aiCalls, before, 'no AI call');
+  assert.ok(Array.isArray(body.angles) && Array.isArray(body.sources));
+  assert.equal(body.steps.es.ok, true, 'a source that cannot be reached is a soft miss');
+  assert.equal(body.steps.es.count, 0);
+  assert.ok(body.angles.every(a => a.free && a.plan.style === 'es' && a.plan.beats[0].block.type === 'hook'));
+  assert.deepEqual(_test.TREND_SPORTS, ['nfl', 'cfb', 'mlb', 'golf', 'tennis', 'nba', 'wnba', 'nascar']);
+});
+
 globalThis.fetch = realFetch;
 console.log(process.exitCode ? '\nReel API tests failed.' : `\nAll ${passed} reel API tests passed.`);

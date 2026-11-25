@@ -407,8 +407,10 @@ const ENRICH_SYSTEM = [
   '- "why": one plain line, at most 14 words, on why fans care right now;',
   '- "titles": 3 headlines for a bold two-line graphic pill, each 3 to 7 words and at most 42 characters, with different angles: straight news, name-led, and short and punchy with a verb;',
   '- "hook": the opening line of a 9:16 reel, at most 12 words, that makes a fan keep watching (the question the story raises, or a tease of its key fact).',
+  // Reels 2.0 (lane B): the ES angle, additive. Grounded like the other fields.
+  '- "angle": {"lens":"fan-first|quote-led|verdict|money|fan-reaction|behind-the-moment","line":"..."}: how ES would tell it, in one line of at most 16 words. Lenses: fan-first (what it means for fans), quote-led (only when the story itself quotes someone), verdict (a legend or insider judging a named star), money (only when the story gives a money figure), fan-reaction (how fans are reacting, only if the story says so), behind-the-moment (the moment behind the moment).',
   'Facts: use only what the story says. Never add opponents, numbers, quotes, outcomes or predictions. Any number you write must appear in the story.',
-  'Reply with JSON only: {"items":[{"id":"<id>","why":"...","titles":["...","...","..."],"hook":"..."}]} with one entry per story id.',
+  'Reply with JSON only: {"items":[{"id":"<id>","why":"...","titles":["...","...","..."],"hook":"...","angle":{"lens":"...","line":"..."}}]} with one entry per story id.',
 ].join('\n');
 
 const enrichCache = new Map(); // trend id -> { at, why, titles }
@@ -416,7 +418,7 @@ function cachedEnrichment(id, now = Date.now()) {
   const hit = enrichCache.get(id);
   if (!hit) return null;
   if (now - hit.at > ENRICH_TTL_MS) { enrichCache.delete(id); return null; }
-  return { why: hit.why, titles: hit.titles, hook: hit.hook || '' };
+  return { why: hit.why, titles: hit.titles, hook: hit.hook || '', ...(hit.angle ? { angle: hit.angle } : {}) };
 }
 function rememberEnrichment(id, value, now = Date.now()) {
   enrichCache.set(id, { at: now, ...value });
@@ -434,6 +436,20 @@ function grounded(line, source) {
   const known = new Set(numbersIn(source));
   return numbersIn(line).every(n => known.has(n));
 }
+// Reels 2.0 (lane B): the ES angle. A known lens and one grounded line (its
+// numbers must be in the story; no quote marks, so no words are put in a
+// mouth; the quote and money lenses need the story to carry a quote / a figure).
+const ANGLE_LENSES = ['fan-first', 'quote-led', 'verdict', 'money', 'fan-reaction', 'behind-the-moment'];
+function parseAngle(raw, source) {
+  if (!raw || typeof raw !== 'object') return null;
+  const lens = String(raw.lens || '').toLowerCase().trim();
+  const line = cleanLine(raw.line, 140).replace(/[.]+$/, '');
+  if (!ANGLE_LENSES.includes(lens) || !line || words(line).length > 20) return null;
+  if (!grounded(line, source) || /["“”]/.test(line)) return null;
+  if (source != null && lens === 'money' && !/[$€£]\s?\d|\b\d[\d,.]*\s?(?:million|billion|m|bn|k)\b/i.test(source)) return null;
+  if (source != null && lens === 'quote-led' && !/["“”‘’']\s?\w|\b(?:says?|said|calls?|blasts?|slams?|admits?|claims?)\b/i.test(source)) return null;
+  return { lens, line };
+}
 // sources: optional { id: story text } to check numbers against.
 function parseEnrichment(text, ids, sources = null) {
   const parsed = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
@@ -450,7 +466,8 @@ function parseEnrichment(text, ids, sources = null) {
     if (!grounded(why, source) || words(why).length > 18) why = '';
     let hook = cleanLine(entry.hook, 100).replace(/^hook:?\s*/i, '');
     if (!grounded(hook, source) || words(hook).length > 14) hook = '';
-    if (titles.length || why || hook) out[id] = { why, titles, hook };
+    const angle = parseAngle(entry.angle, source);
+    if (titles.length || why || hook) out[id] = { why, titles, hook, ...(angle ? { angle } : {}) };
   }
   return out;
 }
@@ -458,7 +475,7 @@ function storyBlock(story) {
   return [`id: ${story.id}`, `Headline: ${story.title}`, ...(story.related || []).slice(0, 2).map(r => `Related: ${r}`), story.sport ? `Sport: ${story.sport}` : ''].filter(Boolean).join('\n');
 }
 // Output budget: the light model reasons before it answers, so leave room.
-const enrichMaxTokens = n => Math.min(3200, 900 + 340 * n); // +hook
+const enrichMaxTokens = n => Math.min(3400, 900 + 380 * n); // +hook, +angle
 
 // stories: [{ id, title, related: [string], sport }] (already de-duplicated).
 // Returns { items: { id: { why, titles, ai, cached } }, calls, cost }.
@@ -1052,11 +1069,14 @@ exports.handler = withAiMode(async event => {
 });
 
 exports.getTrends = getTrends;
+// Reels 2.0 (lane B): the cached AI enrichment of a trend (free; nothing is asked of the AI).
+exports.cachedEnrichment = cachedEnrichment;
+exports.ANGLE_LENSES = ANGLE_LENSES;
 exports._test = {
   classify, parseNews, parseTrends, key, suggestTitles, aiTitles,
   publishTime, withinCutoff, tokens, sameStory, dedupe, rankScore, trafficValue, trendId, teamFor,
   buildTrends, enrich, parseEnrichment, enrichMaxTokens, cachedEnrichment, withCachedEnrichment,
-  storyKeys, buildStorylines, signalFor, esFit, suggestTemplate, photoQuery, grounded, ENRICH_SYSTEM,
+  storyKeys, buildStorylines, signalFor, esFit, suggestTemplate, photoQuery, grounded, ENRICH_SYSTEM, parseAngle, ANGLE_LENSES,
   reset() { Object.keys(previousBuild).forEach(k => delete previousBuild[k]); Object.keys(caches).forEach(k => delete caches[k]); Object.keys(inflights).forEach(k => delete inflights[k]); enrichCache.clear(); titleCache.clear(); imageCache.clear(); },
   setCacheAge(window, ms) { if (caches[window]) caches[window].at = Date.now() - ms; },
   FRESH_MS, STALE_MAX_MS, ENRICH_TTL_MS, ENRICH_BATCH, MAX_AGE_H,
