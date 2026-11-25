@@ -306,6 +306,8 @@ for (const w of WIDTHS) {
   if (w === WIDTHS[0]) {
     // One real MP4 export (WebCodecs, or real-time recording as the page falls back).
     await step('Export MP4', async () => {
+      // Reels 2.0 (lane A): every reel is an ES reel now, and an ES reel needs a source line on its end card to export.
+      await evaluate(`(() => { const c = window.ReelMakerCtx; if (c && c.state.plan && !c.state.plan.sourceLine) { c.state.plan.sourceLine = 'Source: ESPN'; c.rebuild(); } return true; })()`);
       await must('#rm-export');
       await waitFor(`!document.querySelector('#rm-files').hidden || /fail|cancel/i.test(document.querySelector('#rm-export-status').textContent)`, 90000, 'exported file row');
       const st = await evaluate(`document.querySelector('#rm-export-status').textContent`);

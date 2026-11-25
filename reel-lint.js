@@ -119,10 +119,13 @@
     });
 
     // Safe zones (boxes from ReelRender.textBoxes with the real font metrics).
+    // Story beats of a data format in the ES style are ES blocks: their words
+    // follow the ES safe frame (below), not the older zone.
+    const esBeats = new Set(!es && ES && R.styleOf && R.styleOf(timeline).engine === 'es' && R.ES_TEMPLATES ? (timeline.tracks.graphics || []).filter(g => R.ES_TEMPLATES.has(g.template)).map(g => g.beat) : []);
     if (Array.isArray(boxes) && !es) {
       const S = R.SAFE;
       // (The ES mark follows its own rule below: right 60, top 330.)
-      const out = boxes.filter(b => b.role !== 'es-mark').filter(b => b.x < S.left - 0.5 || b.x + b.w > S.right + 0.5 || b.y < S.top - 0.5 || b.y + b.h > S.bottom + 0.5);
+      const out = boxes.filter(b => b.role !== 'es-mark' && !esBeats.has(b.beat)).filter(b => b.x < S.left - 0.5 || b.x + b.w > S.right + 0.5 || b.y < S.top - 0.5 || b.y + b.h > S.bottom + 0.5);
       const seen = new Set();
       out.forEach(b => {
         const key = `${b.beat}:${b.role}`;
@@ -163,9 +166,9 @@
     }
     // The ES safe frame for every style: no words above y 300, within 40 px
     // of the sides, or below y 1640 (the ES checks below cover ES reels).
-    if (Array.isArray(boxes) && ES && !es && timeline.v !== 2) {
+    if (Array.isArray(boxes) && ES && !es && (timeline.v !== 2 || esBeats.size)) {
       const seen = new Set();
-      boxes.filter(b => b.text && ES.outsideSafe(b, timeline.size)).forEach(b => {
+      boxes.filter(b => b.text && (timeline.v !== 2 || esBeats.has(b.beat)) && ES.outsideSafe(b, timeline.size)).forEach(b => {
         const key = `${b.beat}:${b.role}`;
         if (seen.has(key)) return;
         seen.add(key);

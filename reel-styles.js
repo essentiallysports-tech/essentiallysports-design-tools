@@ -36,10 +36,11 @@
 // withLook() / elementTokens(style, element, look) re-skin their overlays.
 (function (root, factory) {
   const node = typeof module === 'object' && module.exports;
-  const api = factory(node ? require('./reel-es-themes.js') : root.ReelESThemes);
+  // The looks are read when asked for, so the script order in a page does not matter.
+  const api = factory(() => (node ? require('./reel-es-themes.js') : root.ReelESThemes) || null);
   if (node) module.exports = api;
   else root.ReelStyles = api;
-}(typeof self !== 'undefined' ? self : this, TH => {
+}(typeof self !== 'undefined' ? self : this, getTH => {
   'use strict';
 
   const CONDENSED = '"Acumin Pro Condensed Local", "Roboto Condensed", sans-serif';
@@ -226,6 +227,7 @@
   const lookCache = new Map();
   function withLook(styleOrId, look, team = '') {
     const style = typeof styleOrId === 'object' && styleOrId ? styleOrId : get(styleOrId);
+    const TH = getTH();
     const a = lookArgs(look);
     const teamHex = a.team || team || '';
     if (!TH || style.engine !== 'es' || !a.id || TH.lookId(a.id) === 'paper') return style;

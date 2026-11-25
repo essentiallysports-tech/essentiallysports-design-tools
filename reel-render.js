@@ -383,6 +383,9 @@
     // ES house style (reel-es.js): blocks, one shot per scene with the
     // drift, the end card last for exactly 3 s and no voiceover on it.
     const ES = !dm && style.engine === 'es' ? getES() : null;
+    // Data formats in the ES style: their story beats (hook, statement, end
+    // card) are ES blocks; the data beats keep their data layouts.
+    const esData = dm && style.engine === 'es' ? getES() : null;
     const size = ES && (opts.aspect === '4:5' || (plan && plan.aspect === '4:5')) ? [W, 1350] : [W, H];
     const voiceMode = ['elevenlabs', 'gateway'].includes(opts.voiceMode) ? opts.voiceMode : 'off';
     const assets = { ...(opts.assets || {}) };
@@ -468,7 +471,7 @@
       if (ES) { beat.block = block; if (!beat.text) beat.text = clean(ES.blockText(block), 120); }
       graphics.push({
         id: `${id}g`, beat: id, template: layout === 'legacy' ? (TEMPLATE_FOR[kind] || 'text') : layout, kind, inMs: t, outMs: t + dur, index,
-        data: { text: beat.text, emphasis: beat.emphasis, label: beat.label, stat: beat.stat, rank: beat.rank, name: beat.name, detail: beat.detail, quote: beat.quote, visual: beat.visual, ...componentData(raw, id, photos, assets), ...(dm ? { refs: beat.refs, ...frameCaptions(raw) } : {}), ...(ES ? { block } : {}) },
+        data: { text: beat.text, emphasis: beat.emphasis, label: beat.label, stat: beat.stat, rank: beat.rank, name: beat.name, detail: beat.detail, quote: beat.quote, visual: beat.visual, ...componentData(raw, id, photos, assets), ...(dm ? { refs: beat.refs, ...frameCaptions(raw) } : {}), ...(ES ? { block } : {}), ...(esData && String(layout).startsWith('es-') ? { block: esData.blockOf({ ...raw, kind, text: beat.text }) } : {}) },
         ...(ES && picks.length ? { media: true } : {}),
       });
 
@@ -560,6 +563,7 @@
       out.timing = { estimate: estimated > 0, wordsPerSecond: F.PACE.wordsPerSecond, ...(voScale !== 1 ? { voLengthMs: Number(plan.voLengthMs) } : {}) };
       if (plan && plan.script && plan.script.locked) out.script = { locked: true };
     }
+    if (esData) out.sourceLine = clean((plan && plan.sourceLine) || sourceLineFrom(opts.sources), 120);
     return dm ? toV2(out, dm, plan) : out;
   }
 
@@ -673,8 +677,15 @@
 
   // Ops for one graphic. Boxes: every op has x, y (baseline), w, size, so a
   // box is [x, y - size*CAP, w, size*CAP] (what the lint checks against SAFE).
+  // An ES block scene always knows its block: a story beat inside a data
+  // format (or an older saved timeline) gets it from the beat's own fields.
+  function esGraphic(graphic) {
+    if (graphic.data && graphic.data.block) return graphic;
+    const kind = graphic.kind || { 'es-hook': 'hook', 'es-endcard': 'cta', 'es-number': 'stat', 'es-dots': 'dotrank', 'es-compare': 'bars', 'es-quote': 'quote' }[graphic.template] || 'point';
+    return { ...graphic, data: { ...(graphic.data || {}), block: getES().blockOf({ ...(graphic.data || {}), kind }) } };
+  }
   function layoutGraphic(measure, graphic, timeline = {}) {
-    if (ES_TEMPLATES.has(graphic.template) && getES()) return getES().layoutBlock(measure, graphic, timeline);
+    if (ES_TEMPLATES.has(graphic.template) && getES()) return getES().layoutBlock(measure, esGraphic(graphic), timeline);
     if (SLIDE_TEMPLATES.has(graphic.template)) return layoutSlide(measure, graphic, { style: 'classic', tracks: { video: [] }, beats: [], ...timeline });
     if (S.LAYOUTS.includes(graphic.template) && graphic.template !== 'legacy') return layoutStyled(measure, graphic, { style: 'classic', tracks: { video: [] }, beats: [], ...timeline });
     const d = graphic.data || {};
@@ -1217,6 +1228,8 @@
   }
   function drawEsMark(ctx, frame, timeline, env) {
     if (frame.graphic && !showsMark(timeline, frame.graphic)) return '';
+    // An ES block scene has already drawn its own mark (reel-es.js drawScene).
+    if (frame.graphic && ES_TEMPLATES.has(frame.graphic.template) && getES() && styleOf(timeline).engine === 'es') return 'blue';
     const variant = markVariant(markBackground(ctx, frame, timeline, env));
     drawSquareMark(ctx, ES_MARK.x, ES_MARK.y, ES_MARK.w, variant, env);
     return variant;
@@ -2858,7 +2871,8 @@
     }
     // Depth: light papers catch a soft light from the top-left; the navy gets
     // a low accent glow behind the content.
-    if (typeof ctx.createRadialGradient === 'function') {
+    // (The ES style is flat: no glow behind its data layouts, in any look.)
+    if (style.engine !== 'es' && typeof ctx.createRadialGradient === 'function') {
       const glow = ctx.createRadialGradient(W * 0.2, H * 0.12, 0, W * 0.2, H * 0.12, H * 0.9);
       glow.addColorStop(0, style.theme === 'light' ? 'rgba(255,255,255,0.55)' : 'rgba(47,128,237,0.16)');
       glow.addColorStop(1, 'rgba(255,255,255,0)');
@@ -2888,6 +2902,14 @@
   function drawStyledGraphic(ctx, frame, timeline, env, style, pal) {
     const g = frame.graphic;
     if (!g) return;
+    // A story beat of a data format in the ES style is an ES block scene:
+    // the ES engine draws it (the look's ground, boxed words, its own mark).
+    if (style.engine === 'es' && ES_TEMPLATES.has(g.template) && getES()) {
+      const E = getES();
+      const eg = esGraphic(g);
+      E.drawScene(ctx, eg, timeline, frame, env, { drawVisual, drawBrand, BRAND }, E.sceneTimes(eg, g.local), layoutGraphic);
+      return;
+    }
     const ops = env.layoutCache ? env.layoutCache(g) : layoutGraphic(env.measure, g, timeline);
     const lead = g.inMs === 0 ? 0 : leadFor(style);
     ctx.save();
@@ -3036,7 +3058,8 @@
       drawGraphic(ctx, frame, timeline, env);
       drawCaption(ctx, frame, timeline, env);
     }
-    drawFinish(ctx, frame, timeline, env);
+    // The ES style is flat 2D: no vignette or moving grain, on data formats too.
+    if (styleOf(timeline).engine !== 'es') drawFinish(ctx, frame, timeline, env);
     drawEsMark(ctx, frame, timeline, env);
     ctx.restore();
     return frame;

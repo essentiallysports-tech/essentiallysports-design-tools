@@ -17,6 +17,8 @@ fs.mkdirSync(out, { recursive: true });
 const chromePath = findChrome();
 if (!chromePath) { console.error('Chrome not found'); process.exit(1); }
 
+// The three data formats (Game Swing, Replay, Archive) from the saved fixtures, rebuilt in the ES style.
+const DATA = Object.fromEntries(['gameswing', 'replay', 'archive'].map(id => [id, JSON.parse(fs.readFileSync(new URL(`../fixtures/reels/timeline-v2-${id}.json`, import.meta.url), 'utf8'))]));
 const photos = {
   p1: figureSvg({ pose: 'swing', cutout: false, colour: '#005A9C', w: 1200, h: 1600 }),
   p2: figureSvg({ pose: 'stand', cutout: false, colour: '#1D428A', w: 1200, h: 1600 }),
@@ -29,6 +31,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>looks</title>
 <script src="/reel-es-themes.js"></script><script src="/reel-es.js"></script><script src="/reel-timeline.js"></script><script src="/reel-replay.js"></script>
 <script src="/reel-render.js"></script><script src="/reel-lint.js"></script>
 <script>
+const DATA = ${JSON.stringify(DATA)};
 const STORIES = ${JSON.stringify(STORIES)}; const CORPUS = ${JSON.stringify(CORPUS)}; const PHOTOS = ${JSON.stringify(photos)};
 const mc = document.createElement('canvas').getContext('2d');
 const measure = (text, font) => { mc.font = font; return mc.measureText(text).width; };
@@ -41,6 +44,10 @@ async function ready() {
   return { fonts: [...document.fonts].filter(f => f.status === 'loaded').map(f => f.family + ' ' + f.weight) };
 }
 function build(story, look, aspect, team) {
+  if (DATA[story]) {
+    const f = DATA[story];
+    return ReelRender.buildTimeline({ format: f.format, title: f.title, sport: f.sport, beats: f.beats.map(b => ({ ...b })) }, { style: 'es', look, team: team ? { name: 'Team', colors: [team] } : null, assets: f.assets, data: f.data, replay: f.replay, slides: f.slides, corpus: f.corpus, sources: f.sources });
+  }
   const photo = story === 'photo';
   return ReelRender.buildTimeline(STORIES[story], { style: 'es', look, aspect, corpus: CORPUS, team: team ? { name: 'Team', colors: [team] } : null,
     ...(photo ? { photos: { b1: ['p1'], b2: ['p2'], b3: ['p3'] }, assets: { p1: { id: 'p1', kind: 'photo' }, p2: { id: 'p2', kind: 'photo' }, p3: { id: 'p3', kind: 'photo' } } } : {}) });
@@ -50,7 +57,7 @@ function times(tl) {
   const g = tl.tracks.graphics;
   const list = [{ t: 0, label: 'frame one' }];
   if (g[1]) list.push({ t: g[1].inMs + 150, label: 'mid-wipe' });
-  g.forEach((x, i) => { if (i < g.length - 1) list.push({ t: Math.min(x.outMs - 60, x.inMs + 2600), label: x.data.block.type }); });
+  g.forEach((x, i) => { if (i < g.length - 1) list.push({ t: Math.min(x.outMs - 60, x.inMs + 2600), label: x.data.block ? x.data.block.type : x.template }); });
   const e = g[g.length - 1];
   list.push({ t: e.inMs + 2200, label: 'end card' });
   return list;
@@ -109,6 +116,8 @@ try {
       }
       save(`contact-${name}-${tag}.jpg`, await chrome.evaluate(`contact(${JSON.stringify(look)}, ${JSON.stringify(aspect)}, ${JSON.stringify(team)}, ${JSON.stringify(STORY_IDS)})`));
     }
+    // Data formats (9:16 only): Game Swing, Replay and Archive in this look.
+    save(`data-${name}.jpg`, await chrome.evaluate(`contact(${JSON.stringify(look)}, '9:16', ${JSON.stringify(team)}, ['gameswing', 'replay', 'archive'])`));
     console.log('done', name);
   }
   fs.writeFileSync(path.join(out, 'lint.txt'), problems.join('\n') + '\n');

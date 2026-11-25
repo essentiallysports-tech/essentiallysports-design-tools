@@ -460,7 +460,7 @@ await test('old styles retired: ES only in the picker, each retired style has a 
   assert.match(js, /pageCtx\.register\('looks', looksApi\);/);
   assert.match(js, /const looksApi = \{\s*list: [\s\S]*?set: [\s\S]*?current: [\s\S]*?thumb: /);
   assert.match(js, /style: styleId\(\), look: lookId\(\),/);
-  assert.match(read('../reel-maker.html'), /<script src="reel-es-themes\.js\?v=[\w-]+"><\/script>\s*<script src="reel-es\.js/, 'the looks load before the engine');
+  assert.match(read('../reel-maker.html'), /<script src="reel-es-themes\.js\?v=[\w-]+"><\/script>\s*<script src="reel-styles\.js[^\n]+\n\s*<script src="reel-es\.js/, 'the looks load before the styles and the engine');
 });
 
 await test('data formats: default to ES, and their overlay elements are re-skinned per look (elementTokens(style, element, look))', () => {
@@ -482,6 +482,28 @@ await test('data formats: default to ES, and their overlay elements are re-skinn
   assert.equal(S.elementTokens('es', 'scorebug', 'ink').ink, '#FFFFFF');
   assert.equal(S.elementTokens('es', 'scorebug', 'paper').ink, '#121212');
   assert.notDeepEqual(S.elementTokens('es', 'playcard', 'blue'), S.elementTokens('es', 'playcard', 'paper'));
+  // Built in the ES style, a data format's story beats are ES block scenes (hook, end card) drawn by
+  // the ES engine; its data beats keep their layouts; the lint is clean; no vignette or glow (flat).
+  ['gameswing', 'replay', 'archive'].forEach(id => {
+    const f = JSON.parse(read(`./fixtures/reels/timeline-v2-${id}.json`));
+    VARIANTS.forEach(v => {
+      const tl = R.buildTimeline({ format: f.format, title: f.title, sport: f.sport, beats: f.beats.map(b => ({ ...b })) }, { style: 'es', look: v.id, team: v.team ? { name: 'T', colors: [v.team] } : null, assets: f.assets, data: f.data, replay: f.replay, slides: f.slides, corpus: f.corpus });
+      assert.equal(tl.v, 2);
+      assert.equal(tl.look, v.id);
+      const g = tl.tracks.graphics;
+      assert.deepEqual([g[0].template, g[0].data.block.type, g[g.length - 1].template, g[g.length - 1].data.block.type], ['es-hook', 'hook', 'es-endcard', 'endcard'], `${id} ${v.name}`);
+      assert.ok(g.slice(1, -1).every(x => !x.data.block && R.DATA_TEMPLATES.has(x.template)), `${id}: data beats keep their data layouts`);
+      const res = L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure });
+      assert.deepEqual(res.issues.filter(i => i.severity === 'critical' && !['rights', 'numbers'].includes(i.id) && !/^(data-|archive-|replay-)/.test(i.id)).map(i => `${i.id}: ${i.message}`), [], `${id} ${v.name}: safe frame, logo and look rules hold`);
+      const theme = E.themeOf(tl);
+      const hook = frameLog(R, tl, 1200);
+      assert.ok(hook.some(c => c[0] === '=fillStyle' && String(c[1]).toUpperCase() === theme.hex(theme.base.ground).toUpperCase()), `${id} ${v.name}: the hook sits on the look's ground`);
+      // The ES block scenes are flat: no vignette, glow or gradient (the data layouts keep their own drawing).
+      [g[0], g[g.length - 1]].forEach(x => assert.ok(!frameLog(R, tl, x.inMs + 1500).some(c => c[0] === 'gradient'), `${id} ${v.name} ${x.template}: flat`));
+      const mk = E.markRect(tl.size);
+      assert.equal(hook.filter(c => c[0] === 'fillRect' && c[1] === mk.x && c[2] === mk.y && c[3] === 80 && c[4] === 80).length, 1, `${id} ${v.name}: one ES mark on the hook`);
+    });
+  });
   // The three saved fixtures, moved to ES, render in every look, a frame at every second.
   ['timeline-v2-gameswing.json', 'timeline-v2-replay.json', 'timeline-v2-archive.json'].forEach(name => {
     const base = JSON.parse(read(`./fixtures/reels/${name}`));
