@@ -36,7 +36,7 @@
     if (local) return true;
     return flag === 'reels' && !PROD_HOSTS.includes(loc.hostname);
   }
-  const fmtUsd = usd => { const n = Number(usd) || 0; if (n === 0) return '$0'; if (n < 0.001) return '<$0.001'; return n < 0.1 ? `$${(Math.round(n * 1000) / 1000).toFixed(3)}` : `$${n.toFixed(2)}`; };
+  const fmtUsd = usd => { const n = Number(usd) || 0; if (n === 0) return '$0'; if (n < 0.001) return '<$0.001'; return n < 0.1 ? `$${String(Math.round(n * 1000) / 1000)}` : `$${n.toFixed(2)}`; };
   // 12400 -> "12k", 1250000 -> "1.3M"
   function compact(n) {
     const v = Number(n) || 0;
@@ -336,6 +336,7 @@
       if (!ideas) { ctx.toast('The ideas room is still loading. Try again in a moment.', { tone: 'error' }); return; }
       const payload = C.handoff({ trend: state.picked, topic: state.topic, sport: state.sport, brief });
       ctx.emit('radar-handoff', { lens: brief ? brief.lens : '', sport: payload.sport, clips: state.clips ? state.clips.clips.length : 0 });
+      ctx.logEvent('radar_handoff', { lens: brief ? brief.lens : '', sport: payload.sport, clips: state.clips ? state.clips.clips.length : 0 });
       close();
       ideas.open(payload);
     }
@@ -458,6 +459,7 @@
       ensureDialog();
       if (dialog && !dialog.open) dialog.showModal();
       else if (!dialog) host.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+      ctx.logEvent('radar_open', { trend: Boolean(opts.trend) });
       const ready = state.trendsState === 'ready' && state.trends.length ? Promise.resolve() : loadTrends();
       const trend = opts.trend && opts.trend.title ? opts.trend : null;
       Promise.resolve(ready).then(() => {

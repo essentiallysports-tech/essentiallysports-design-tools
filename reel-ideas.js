@@ -38,7 +38,7 @@
     if (local) return true;
     return flag === 'reels' && !PROD_HOSTS.includes(loc.hostname);
   }
-  const fmtUsd = usd => { const n = Number(usd) || 0; if (n === 0) return '$0'; if (n < 0.001) return '<$0.001'; return n < 0.1 ? `$${(Math.round(n * 1000) / 1000).toFixed(3)}` : `$${n.toFixed(2)}`; };
+  const fmtUsd = usd => { const n = Number(usd) || 0; if (n === 0) return '$0'; if (n < 0.001) return '<$0.001'; return n < 0.1 ? `$${String(Math.round(n * 1000) / 1000)}` : `$${n.toFixed(2)}`; };
   // What a run will cost at most, for the line under the button.
   function estimate({ best = false, factCheck = false } = {}) {
     return (best ? PRICES.best : PRICES.main) + (factCheck ? PRICES.factCheckCap : 0);
@@ -230,6 +230,7 @@
       }
       state.used = id;
       ctx.emit('idea', { lens: angle.lens, recipe: angle.recipe, free: Boolean(angle.free), topic: result.topic || state.topic });
+      ctx.logEvent('idea_pick', { lens: angle.lens, recipe: angle.recipe, free: Boolean(angle.free), sources: (result.sources || []).length });
       ctx.toast(`Storyboard built from the "${angle.lensLabel}" angle.`);
       if (dialog) close(); else render();
     }
