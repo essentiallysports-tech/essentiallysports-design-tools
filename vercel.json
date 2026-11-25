@@ -187,6 +187,12 @@
     },
     "api/merch.js": {
       "maxDuration": 120
+    },
+    "api/fourthwall-webhook.js": {
+      "maxDuration": 15
+    },
+    "api/merch-sync.js": {
+      "maxDuration": 60
     }
   },
   "crons": [
@@ -197,6 +203,10 @@
     {
       "path": "/api/clips-prefetch?batch=1&chain=1",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/merch-sync",
+      "schedule": "30 9 * * *"
     }
   ]
 }

@@ -28,6 +28,13 @@
 //   PUT  /open-api/v1.0/products/{id}/state { state: 'PUBLIC'|'HIDDEN' } -> OfferFullV1
 //   DELETE /open-api/v1.0/products/{id} -> 204 (archive; permanent through the API)
 //   GET  /open-api/v1.0/products/{id} -> OfferFullV1; GET /products?page&size -> { results, total, page, size, totalPages }
+//   GET  /open-api/v1.0/collections?page&size -> { results: CollectionSlimV1[] } (no offerIds)
+//   GET  /open-api/v1.0/collections/{idOrSlug} -> CollectionV1 { id, name, slug, offerIds[] }
+//   POST /open-api/v1.0/collections { name, description, offerIds[] } -> CollectionV1
+//   PUT  /open-api/v1.0/collections/{id}/products { offerIds[] } -> CollectionV1 (REPLACES the whole list)
+//   GET  /open-api/v1.0/order?updatedAt[gt]&page&size -> { results: OrderV1[] }
+// Webhooks: Fourthwall signs the raw request body with HMAC-SHA256 and the
+// webhook secret, base64, in the X-Fourthwall-Hmac-SHA256 header.
 
 const BASE_URL = 'https://api.fourthwall.com';
 const API = '/open-api/v1.0';
@@ -176,6 +183,12 @@ function createClient({ env = process.env, fetchImpl = (...a) => fetch(...a), sl
     archive: id => call('DELETE', `/products/${enc(id)}`, { retryOn: '429', action: 'archive the product' }),
     product: id => call('GET', `/products/${enc(id)}`, { action: 'read the product' }),
     listProducts: ({ page = 0, size = 20, search } = {}) => call('GET', `/products?page=${Number(page) || 0}&size=${Math.min(100, Number(size) || 20)}${search ? `&search=${enc(search)}` : ''}`, { action: 'list products' }),
+    collections: ({ page = 0, size = 100 } = {}) => call('GET', `/collections?page=${Number(page) || 0}&size=${Math.min(100, Number(size) || 100)}`, { action: 'list collections' }),
+    collection: id => call('GET', `/collections/${enc(id)}`, { action: 'read the collection' }),
+    createCollection: ({ name, description = '' }) => call('POST', '/collections', { body: { name, description, offerIds: [] }, retryOn: '429', action: 'create the collection' }),
+    // Replaces the whole product list of the collection: read it first.
+    setCollectionProducts: (id, offerIds) => call('PUT', `/collections/${enc(id)}/products`, { body: { offerIds }, retryOn: '429', action: 'update the collection' }),
+    orders: ({ updatedAfter, page = 0, size = 100 } = {}) => call('GET', `/order?page=${Number(page) || 0}&size=${Math.min(100, Number(size) || 100)}${updatedAfter ? `&${enc('updatedAt[gt]')}=${enc(updatedAfter)}` : ''}`, { action: 'read orders' }),
     // Server-side PUT to the signed upload URL (the upload-relay fallback).
     async putUpload(uploadUrl, bytes, contentType) {
       let response;
@@ -212,13 +225,69 @@ function normalizeProduct(p = {}, publicDomain = '') {
     currency: variants[0]?.unitPrice?.currency || 'USD',
     thumbnail: p.thumbnailImage ? (p.thumbnailImage.transformedUrl || p.thumbnailImage.url) : (images[0]?.url || ''),
     images: images.slice(0, 12),
+    variants: variants.slice(0, 60).map(v => ({
+      id: String(v.id || ''), name: String(v.name || '').slice(0, 120), sku: String(v.sku || '').slice(0, 60),
+      price: Number.isFinite(Number(v?.unitPrice?.value)) ? Number(v.unitPrice.value) : null,
+      cost: Number.isFinite(Number(v?.unitCost?.value)) ? Number(v.unitCost.value) : null,
+    })),
     url: productUrl(publicDomain, p.slug),
     createdAt: p.createdAt || null,
     updatedAt: p.updatedAt || null,
   };
 }
 
+// ─── Webhooks ───────────────────────────────────────────────────────────────
+// HMAC-SHA256 of the exact raw body bytes with the webhook secret, base64.
+// Constant-time compare; any missing piece = not verified.
+const WEBHOOK_HEADER = 'x-fourthwall-hmac-sha256';
+function webhookSignature(rawBody, secret) {
+  return require('node:crypto').createHmac('sha256', String(secret)).update(Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(String(rawBody), 'utf8')).digest('base64');
+}
+function verifyWebhook(rawBody, signature, secret) {
+  const crypto = require('node:crypto');
+  const key = String(secret || '').trim();
+  const given = String(signature || '').trim();
+  if (!key || !given || rawBody == null) return false;
+  const expected = Buffer.from(webhookSignature(rawBody, key));
+  const got = Buffer.from(given);
+  if (got.length !== expected.length) return false;
+  return crypto.timingSafeEqual(got, expected);
+}
+
+// An order without buyer personal data (no email, name, username, message,
+// addresses). Lines are per product variant: units and money.
+function money(m) { const v = Number(m?.value ?? m?.amount); return Number.isFinite(v) ? Math.round(v * 100) / 100 : null; }
+function normalizeOrder(o = {}) {
+  const offers = Array.isArray(o.offers) ? o.offers : [];
+  const lines = offers.map(of => {
+    const v = of?.variant || {};
+    const quantity = Math.max(0, Math.round(Number(v.quantity) || 0)) || 1;
+    const unit = money(v.unitPrice);
+    const total = money(v.price);
+    // Prefer unitPrice x quantity; `price` is used when the unit price is missing.
+    const revenue = unit != null ? Math.round(unit * quantity * 100) / 100 : (total != null ? total : 0);
+    const unitCost = money(v.unitCost);
+    return {
+      productId: String(of?.id || ''), variantId: String(v.id || ''), name: String(of?.name || '').slice(0, 120),
+      variant: String(v.name || '').slice(0, 120), quantity, revenue,
+      cost: unitCost != null ? Math.round(unitCost * quantity * 100) / 100 : null,
+      currency: String(v.unitPrice?.currency || v.price?.currency || o.amounts?.total?.currency || 'USD'),
+    };
+  }).filter(l => l.productId);
+  return {
+    orderId: String(o.id || ''),
+    friendlyId: String(o.friendlyId || '').slice(0, 40),
+    status: String(o.status || '').toUpperCase().slice(0, 40),
+    placedAt: o.createdAt || null,
+    updatedAt: o.updatedAt || o.createdAt || null,
+    currency: String(o.amounts?.total?.currency || lines[0]?.currency || 'USD'),
+    subtotal: money(o.amounts?.subtotal),
+    lines,
+  };
+}
+
 module.exports = {
-  BASE_URL, API, TIMEOUTS, RETRY, CREATE_LIMIT, CODE_MESSAGES,
+  BASE_URL, API, TIMEOUTS, RETRY, CREATE_LIMIT, CODE_MESSAGES, WEBHOOK_HEADER,
   FourthwallError, configured, createClient, createQueue, CREATE_QUEUE, mapError, retryDelay, normalizeProduct, productUrl,
+  webhookSignature, verifyWebhook, normalizeOrder,
 };

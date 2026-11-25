@@ -10,10 +10,15 @@
 //   register (print size), preview + create with a design and a logo region,
 //   hidden-first, the rights acknowledgement, price -> profitMargin, daily caps,
 //   publish / hide, product (shop URL).
+// v2: all five blanks (per-blank print spec, logo areas, prices), history in
+//   Supabase (fake PostgREST), archive (admin, confirm, ours only), list (db and
+//   Fourthwall fallback), collections (read-modify-write), sales, upload relay
+//   (SSRF guard, own folder, size + PNG check), product refresh.
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import fs from 'node:fs';
+import { createFakeDb } from './fixtures/fake-merch-db.mjs';
 
 const require = createRequire(import.meta.url);
 const fnDir = path.resolve('netlify/functions');
@@ -22,6 +27,10 @@ const fwPath = path.join(fnDir, '_fourthwall.js');
 const authPath = path.join(fnDir, '_supabase-auth.js');
 const gwPath = path.join(fnDir, '_ai-gateway.js');
 const TEE = JSON.parse(fs.readFileSync('scripts/fixtures/fourthwall-tee-template.json', 'utf8')).template;
+const LIVE = JSON.parse(fs.readFileSync('scripts/fixtures/fourthwall-blank-templates.json', 'utf8')).templates;
+const db = createFakeDb();
+const gcsPuts = [];
+const USER_ID = '0b4f6a2e-1c3d-4e5f-8a9b-0c1d2e3f4a5b';
 const USER = 'fw-user-test';
 const PASS = 'fw-pass-SECRET-123';
 const BASIC = `Basic ${Buffer.from(`${USER}:${PASS}`).toString('base64')}`;
@@ -68,6 +77,8 @@ globalThis.fetch = async (url, options = {}) => {
     if (!h) return reply(404, { code: 'NOT_MOCKED' });
     return h(href, options);
   }
+  if (href.startsWith('https://db.example.supabase.co/rest/v1/frameup_merch_') || href.startsWith('https://db.example.supabase.co/storage/v1/')) return db.handle(href, options);
+  if (href.startsWith('https://storage.googleapis.com/')) { gcsPuts.push({ href, headers: options.headers, size: options.body?.length }); return reply(200, ''); }
   if (href.includes('/rest/v1/rpc/is_es_designer_admin')) return reply(200, admin);
   if (href.includes('/rest/v1/rpc/frameup_my_ai_calls_last_hour')) return reply(200, 0);
   if (href.includes('/rest/v1/rpc/frameup_my_ai_spend') || href.includes('/rest/v1/rpc/frameup_team_ai_spend')) return reply(200, [{ total_usd: weeklySpend }]);
@@ -79,7 +90,7 @@ globalThis.fetch = async (url, options = {}) => {
 require.cache[authPath] = { id: authPath, filename: authPath, loaded: true, exports: {
   authConfig: () => ({ url: 'https://db.example.supabase.co', publishableKey: 'pk' }),
   bearerToken: () => 'tok',
-  verifyEsUser: async () => (signedIn ? { ok: true, user: { email: currentEmail } } : { ok: false, statusCode: 401, error: 'Authentication required.' }),
+  verifyEsUser: async () => (signedIn ? { ok: true, user: { id: USER_ID, email: currentEmail } } : { ok: false, statusCode: 401, error: 'Authentication required.' }),
 } };
 let currentEmail = 'designer@essentiallysports.com';
 for (const k of ['FOURTHWALL_API_USERNAME', 'FOURTHWALL_API_PASSWORD', 'MERCH_PUSHERS', 'MERCH_RIGHTS_POLICY', 'MERCH_TEMPLATES', 'AI_DISABLE', 'SUPABASE_SERVICE_ROLE_KEY']) delete process.env[k];
@@ -232,14 +243,15 @@ await test('push modes need canPush', async () => {
 // ─── templates ─────────────────────────────────────────────────────────────
 await test('templates: curated tee with print spec, colours and areas', async () => {
   M.reset();
-  const r = await call({ mode: 'templates' });
+  const r = await call({ mode: 'templates', blank: 'tee' });
   const t = r.body.templates[0];
   assert.equal(r.body.templates.length, 1);
   assert.equal(t.blank, 'tee');
+  assert.equal(t.kind, 'tee');
   assert.equal(t.templateId, 'pro_e4677535402b4eeb81');
   assert.equal(t.source, 'curated');
   assert.equal(t.basePrice, 9.5);
-  assert.deepEqual({ ...t.printSpec }, { templateId: 'pro_e4677535402b4eeb81', region: 'front', regionId: 'front_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150, inchesWidth: 15, inchesHeight: 18, placementStrategy: 'PLACEMENT_ID', placementId: 'largeCenter', garmentColor: '#ffffff' });
+  assert.deepEqual({ ...t.printSpec }, { templateId: 'pro_e4677535402b4eeb81', region: 'front', regionId: 'front_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150, inchesWidth: 15, inchesHeight: 18, placementStrategy: 'PLACEMENT_ID', placementId: 'largeCenter', garmentColor: '#ffffff', kind: 'tee', minDpi: 150, wrap: false });
   assert.deepEqual(t.colors.map(c => c.name).sort(), ['Black', 'Cardinal', 'Royal', 'White']);
   const ids = t.areas.map(a => a.regionId);
   assert.ok(!ids.some(id => /embroidery/.test(id)));
@@ -248,7 +260,7 @@ await test('templates: curated tee with print spec, colours and areas', async ()
   assert.ok(t.areas.find(a => a.regionId === 'front_large').suitsDesign);
   assert.equal(t.areas.find(a => a.regionId === 'label_inside').renderable, false);
   const n = fwCalls.length;
-  await call({ mode: 'templates' });
+  await call({ mode: 'templates', blank: 'tee' });
   assert.equal(fwCalls.length, n, 'cached');
 });
 await test('templates: fallback search, then snapshot', async () => {
@@ -256,14 +268,14 @@ await test('templates: fallback search, then snapshot', async () => {
   delete fw['GET /product-templates/pro_e4677535402b4eeb81'];
   fw['GET /product-templates/search/t-shirt'] = () => reply(200, { total: 1, results: [{ productId: 'pro_alt', name: 'Alt', category: 'Apparel/T-Shirts', brand: 'X', productionMethod: 'DTG', supportsBackendRendering: true, basePrice: { amount: 11, currency: 'USD' } }] });
   fw['GET /product-templates/pro_alt'] = () => reply(200, { ...TEE, productId: 'pro_alt' });
-  let r = await call({ mode: 'templates' });
+  let r = await call({ mode: 'templates', blank: 'tee' });
   assert.equal(r.body.templates[0].templateId, 'pro_alt');
   assert.equal(r.body.templates[0].source, 'search');
   M.reset(); resetFw();
   fw['GET /product-templates/pro_e4677535402b4eeb81'] = () => reply(503, {});
   fw['GET /product-templates/pro_EJBSRKhJSd2unv4ZnGKwdQ'] = () => reply(503, {});
   fw['GET /product-templates/search/t-shirt'] = () => reply(503, {});
-  r = await call({ mode: 'templates' });
+  r = await call({ mode: 'templates', blank: 'tee' });
   assert.equal(r.body.templates[0].source, 'snapshot');
   assert.equal(r.body.templates[0].printSpec.pixelsWidth, 2250);
   assert.ok(r.body.templates[0].areas.some(a => a.suitsLogo));
@@ -326,8 +338,8 @@ await test('copy: AI title/description, price and margin in code', async () => {
   const r = await call({ mode: 'copy', concept: good, content: SOURCE });
   assert.equal(r.body.copy.title, 'Showtime Replay Tee');
   assert.equal(r.body.copy.base, 9.5);
-  assert.equal(r.body.copy.retail, 21.99);
-  assert.equal(r.body.copy.margin, 12.49);
+  assert.equal(r.body.copy.retail, 29.99, 'per-blank suggested price (tee $29.99)');
+  assert.equal(r.body.copy.margin, 20.49);
   assert.ok(usageRows.some(u => u.feature === 'merch-copy'));
   messagesHandler = aiJson({ title: 'Official 9 Rings Tee', description: 'x' });
   const bad = await call({ mode: 'copy', concept: good, content: SOURCE + '.' });
@@ -336,7 +348,7 @@ await test('copy: AI title/description, price and margin in code', async () => {
   weeklySpend = 999;
   const free = await call({ mode: 'copy', concept: good, content: SOURCE + '..' });
   assert.equal(free.body.free, true);
-  assert.equal(free.body.copy.retail, 21.99);
+  assert.equal(free.body.copy.retail, 29.99);
   weeklySpend = 0;
 });
 
@@ -440,8 +452,345 @@ await test('publish / hide / product', async () => {
   assert.equal(r.body.product.thumbnail, 'https://cdn/a-t.png');
   assert.equal((await call({ mode: 'publish', productId: '../x' })).status, 400);
 });
-await test('not yet: archive, list, upload-relay', async () => {
-  for (const mode of ['archive', 'list', 'upload-relay']) assert.equal((await call({ mode })).status, 501);
+// ─── v2: all five blanks ───────────────────────────────────────────────────
+const LIVE_IDS = { tee: 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', hoodie: 'pro_380', poster: 'pro_15bc29bc8a324d449d', sticker: 'pro_358', mug: 'pro_4v5OfYhyRx62KW5b7Oj6Uw' };
+const liveTemplates = () => Object.entries(LIVE_IDS).forEach(([k, id]) => { fw[`GET /product-templates/${id}`] = () => reply(200, LIVE[k]); });
+const serviceOn = (on = true) => { if (on) process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key-test'; else delete process.env.SUPABASE_SERVICE_ROLE_KEY; };
+await test('templates: all five blanks with per-blank print spec, logo rule and price', async () => {
+  M.reset(); resetFw(); liveTemplates();
+  const r = await call({ mode: 'templates' });
+  assert.equal(r.status, 200);
+  const by = Object.fromEntries(r.body.templates.map(t => [t.blank, t]));
+  assert.deepEqual(Object.keys(by), ['tee', 'hoodie', 'poster', 'sticker', 'mug']);
+  for (const t of r.body.templates) { assert.equal(t.kind, t.blank); assert.equal(t.printSpec.kind, t.blank); assert.equal(t.source, 'curated'); }
+  // tee: the owner-verified Stanley/Stella blank, $29.99 on a $15.85 base.
+  assert.equal(by.tee.templateId, LIVE_IDS.tee);
+  assert.equal(by.tee.basePrice, 15.85);
+  assert.deepEqual(by.tee.pricing, { suggested: 29.99, margin: 14.14, base: 15.85 });
+  assert.equal(by.tee.printSpec.placementId, 'largeCenter');
+  // hoodie: 1650 x 1650 front, largeCenter, sleeves for the logo.
+  assert.equal(by.hoodie.printSpec.regionId, 'front');
+  assert.deepEqual([by.hoodie.printSpec.pixelsWidth, by.hoodie.printSpec.pixelsHeight, by.hoodie.printSpec.dpi], [1650, 1650, 150]);
+  assert.equal(by.hoodie.printSpec.placementStrategy, 'PLACEMENT_ID');
+  assert.deepEqual(by.hoodie.areas.filter(a => a.suitsLogo).map(a => a.regionId).sort(), ['sleeve_left', 'sleeve_right']);
+  assert.ok(!by.hoodie.areas.some(a => /embroidery/.test(a.regionId)));
+  assert.equal(by.hoodie.logo, 'area');
+  assert.equal(by.hoodie.pricing.suggested, 49.99);
+  // poster: 300 DPI hard good, one area, logo inside the print.
+  assert.deepEqual([by.poster.printSpec.regionId, by.poster.printSpec.pixelsWidth, by.poster.printSpec.pixelsHeight, by.poster.printSpec.dpi], ['default', 1500, 2100, 300]);
+  assert.equal(by.poster.printSpec.placementStrategy, 'FULL_REGION');
+  assert.equal(by.poster.minDpi, 300);
+  assert.equal(by.poster.apparel, false);
+  assert.equal(by.poster.logo, 'inside');
+  assert.deepEqual(by.poster.areas.map(a => [a.regionId, a.suitsDesign, a.suitsLogo]), [['default', true, false]]);
+  // sticker: 900 x 900 is small but is the design area.
+  assert.deepEqual(by.sticker.areas.map(a => [a.regionId, a.suitsDesign, a.suitsLogo]), [['default', true, false]]);
+  assert.deepEqual([by.sticker.printSpec.placementStrategy, by.sticker.printSpec.placementId], ['PLACEMENT_ID', 'fullSize']);
+  assert.ok(by.sticker.pricing.suggested >= 5.99);
+  // mug: a 2700 x 1050 full wrap at 300 DPI.
+  assert.deepEqual([by.mug.printSpec.pixelsWidth, by.mug.printSpec.pixelsHeight, by.mug.printSpec.dpi, by.mug.printSpec.wrap], [2700, 1050, 300, true]);
+  assert.equal(by.mug.printSpec.placementStrategy, 'FULL_REGION');
+  assert.equal(by.mug.wrap, true);
+  // One blank only.
+  const one = await call({ mode: 'templates', blank: 'mug' });
+  assert.deepEqual(one.body.templates.map(t => t.blank), ['mug']);
+});
+await test('templates: every blank has a snapshot with the same print size', async () => {
+  M.reset(); resetFw(); delete fw['GET /product-templates/pro_e4677535402b4eeb81'];
+  const r = await call({ mode: 'templates' });
+  const by = Object.fromEntries(r.body.templates.map(t => [t.blank, t]));
+  assert.ok(r.body.templates.every(t => t.source === 'snapshot'));
+  assert.deepEqual([by.tee.printSpec.pixelsWidth, by.hoodie.printSpec.pixelsWidth, by.poster.printSpec.pixelsWidth, by.sticker.printSpec.pixelsWidth, by.mug.printSpec.pixelsWidth], [2250, 1650, 1500, 900, 2700]);
+  assert.equal(by.mug.printSpec.wrap, true);
+  assert.deepEqual(by.tee.pricing, { suggested: 29.99, margin: 14.14, base: 15.85 });
+  // Snapshots match the live replies saved on 2026-11-25.
+  for (const [k, t] of Object.entries(LIVE)) {
+    const area = M.pickArea(t, M.BLANKS[k].regionPrefer);
+    assert.equal(by[k].printSpec.regionId, area.regionId, k);
+    assert.equal(by[k].printSpec.pixelsWidth, area.dimensions.pixelsWidth, k);
+    assert.equal(by[k].printSpec.pixelsHeight, area.dimensions.pixelsHeight, k);
+    assert.equal(by[k].basePrice, t.priceFrom.amount, k);
+    assert.ok(M.qualifies(t, M.BLANKS[k]), `${k} qualifies`);
+  }
+  M.reset();
+});
+await test('concepts keep the blanks they name', () => {
+  const c = M.shapeConcept({ ...good, blanks: ['mug', 'poster', 'nope'] }, { content: SOURCE }).concept;
+  assert.deepEqual(c.blanks, ['mug', 'poster']);
+  assert.deepEqual(M.shapeConcept(good, { content: SOURCE }).concept.blanks, ['tee']);
+});
+
+// ─── v2: history in Supabase ───────────────────────────────────────────────
+const mugBody = extra => createBody({ blank: 'mug', logo: undefined, retail: 17.99, color: 'White', title: 'Showtime Mug', ...extra });
+await test('create (mug) writes the design, the product and an event', async () => {
+  M.reset(); resetFw(); liveTemplates(); db.reset(); serviceOn(true);
+  const r = await call(mugBody());
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.history, 'db');
+  const sent = fwCalls.find(c => c.path === '/products' && c.method === 'POST').body;
+  assert.equal(sent.productTemplateId, LIVE_IDS.mug);
+  assert.deepEqual(sent.regions, [{ region: 'default', imageId: 'img_2250', placementStrategy: 'FULL_REGION' }]);
+  assert.equal(sent.profitMargin, 12.04);
+  const [design] = db.table('frameup_merch_designs');
+  assert.equal(design.blank, 'mug');
+  assert.equal(design.created_by, 'designer@essentiallysports.com');
+  assert.equal(design.concept.collection, 'replay');
+  const [prod] = db.table('frameup_merch_products');
+  assert.equal(prod.product_id, 'prod_1');
+  assert.equal(prod.design_id, design.id);
+  assert.equal(prod.state, 'HIDDEN');
+  assert.equal(prod.blank, 'mug');
+  assert.deepEqual(prod.price, { retail: 17.99, base: 5.95, margin: 12.04 });
+  assert.equal(prod.product_url, 'https://shop.essentiallysports.com/products/showtime-tee');
+  assert.deepEqual(db.table('frameup_merch_events').map(e => [e.type, e.product_id, e.source]), [['CREATED', 'prod_1', 'frameup']]);
+  // A logo area on a one-area blank is refused.
+  const logo = await call(mugBody({ logo: { region: 'sleeve_left', imageId: 'img_600' } }));
+  assert.equal(logo.status, 400);
+});
+await test('daily caps count the history table (survive a cold start)', async () => {
+  M.reset(); db.reset(); serviceOn(true);
+  for (let i = 0; i < 10; i += 1) db.table('frameup_merch_products').push({ product_id: `p${i}`, created_by: 'designer@essentiallysports.com', created_at: new Date().toISOString(), state: 'HIDDEN' });
+  const s = await call({ mode: 'status' });
+  assert.equal(s.body.history, 'db');
+  assert.equal(s.body.caps.person.used, 10);
+  assert.equal(s.body.caps.team.used, 10);
+  const r = await call(createBody());
+  assert.equal(r.status, 429);
+  assert.equal(r.body.reason, 'daily-cap');
+});
+await test('a missing table falls back to memory', async () => {
+  M.reset(); resetFw(); db.reset(); serviceOn(true); db.setMissing(true);
+  const r = await call(createBody());
+  assert.equal(r.status, 200);
+  assert.equal(r.body.history, 'memory');
+  assert.equal(M.HISTORY[0].productId, 'prod_1');
+  db.setMissing(false);
+});
+await test('publish / hide are recorded', async () => {
+  M.reset(); resetFw(); db.reset(); serviceOn(true);
+  db.table('frameup_merch_products').push({ product_id: 'prod_1', title: 'Showtime Replay Tee', state: 'HIDDEN', created_by: 'designer@essentiallysports.com', created_at: new Date().toISOString() });
+  await call({ mode: 'publish', productId: 'prod_1' });
+  let row = db.table('frameup_merch_products')[0];
+  assert.equal(row.state, 'PUBLIC');
+  assert.ok(row.published_at);
+  await call({ mode: 'hide', productId: 'prod_1' });
+  row = db.table('frameup_merch_products')[0];
+  assert.equal(row.state, 'HIDDEN');
+  assert.deepEqual(db.table('frameup_merch_events').map(e => e.type), ['PUBLISHED', 'HIDDEN']);
+  assert.equal(db.table('frameup_merch_events')[0].actor, 'designer@essentiallysports.com');
+});
+
+// ─── v2: archive (permanent, admins, ours only) ────────────────────────────
+await test('archive: admins only, confirm, typed name, FrameUp products only', async () => {
+  M.reset(); resetFw(); db.reset(); serviceOn(true);
+  fw['DELETE /products/prod_1'] = () => reply(204, null);
+  db.table('frameup_merch_products').push({ product_id: 'prod_1', title: 'Showtime Replay Tee', state: 'PUBLIC', created_by: 'designer@essentiallysports.com', created_at: new Date().toISOString() });
+  let r = await call({ mode: 'archive', productId: 'prod_1', confirm: true });
+  assert.equal(r.status, 403, 'MERCH_PUSHERS is not enough: admins only');
+  assert.equal(r.body.reason, 'admin-only');
+  admin = true;
+  r = await call({ mode: 'archive', productId: 'prod_1' });
+  assert.equal(r.body.reason, 'confirm');
+  r = await call({ mode: 'archive', productId: 'prod_someone_else', confirm: true });
+  assert.equal(r.status, 409);
+  assert.equal(r.body.reason, 'not-ours');
+  r = await call({ mode: 'archive', productId: 'prod_1', confirm: true, confirmName: 'Showtime' });
+  assert.equal(r.body.reason, 'confirm');
+  assert.ok(!fwCalls.some(c => c.method === 'DELETE'), 'nothing deleted yet');
+  r = await call({ mode: 'archive', productId: 'prod_1', confirm: true, confirmName: 'showtime replay tee' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.product.state, 'archived');
+  assert.equal(fwCalls.filter(c => c.method === 'DELETE' && c.path === '/products/prod_1').length, 1);
+  const row = db.table('frameup_merch_products')[0];
+  assert.equal(row.state, 'ARCHIVED');
+  assert.ok(row.archived_at);
+  assert.equal(db.table('frameup_merch_events').at(-1).type, 'ARCHIVED');
+  // Already gone from Fourthwall: still recorded as archived.
+  db.table('frameup_merch_products').push({ product_id: 'prod_2', title: 'Gone', state: 'HIDDEN', created_at: new Date().toISOString() });
+  fw['DELETE /products/prod_2'] = () => reply(404, { code: 'OFFER_NOT_FOUND_BY_SHOP_ID_AND_ID_ERROR' });
+  r = await call({ mode: 'archive', productId: 'prod_2', confirm: true });
+  assert.equal(r.status, 200);
+  // Without the table: only products this server made (memory).
+  serviceOn(false); M.reset();
+  r = await call({ mode: 'archive', productId: 'prod_1', confirm: true });
+  assert.equal(r.body.reason, 'not-ours');
+  M.HISTORY.push({ productId: 'prod_1', title: 'Showtime Replay Tee' });
+  r = await call({ mode: 'archive', productId: 'prod_1', confirm: true });
+  assert.equal(r.status, 200);
+  admin = false;
+});
+
+// ─── v2: list ──────────────────────────────────────────────────────────────
+const daysAgo = d => new Date(Date.now() - d * 86400000).toISOString();
+await test('list: from the history table with 30-day units and revenue', async () => {
+  M.reset(); resetFw(); db.reset(); serviceOn(true);
+  const P = db.table('frameup_merch_products');
+  P.push({ product_id: 'prod_1', title: 'Showtime Replay Tee', state: 'PUBLIC', blank: 'tee', color: 'White', thumb: 'https://cdn/a.png', product_url: 'https://shop/p/1', created_by: 'designer@essentiallysports.com', created_at: daysAgo(3), price: { retail: 29.99 }, collection_ids: ['col_a'] });
+  P.push({ product_id: 'prod_2', title: 'Mug', state: 'HIDDEN', blank: 'mug', created_by: 'x@essentiallysports.com', created_at: daysAgo(1) });
+  P.push({ product_id: 'prod_3', title: 'Gone', state: 'ARCHIVED', blank: 'tee', created_at: daysAgo(0) });
+  db.table('frameup_merch_orders').push({ order_id: 'o1', status: 'CONFIRMED', placed_at: daysAgo(2), test_mode: false, product_ids: ['prod_1'], lines: [{ productId: 'prod_1', quantity: 2, revenue: 59.98 }] });
+  db.table('frameup_merch_orders').push({ order_id: 'o2', status: 'CONFIRMED', placed_at: daysAgo(45), test_mode: false, product_ids: ['prod_1'], lines: [{ productId: 'prod_1', quantity: 1, revenue: 29.99 }] });
+  const r = await call({ mode: 'list' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.source, 'db');
+  assert.deepEqual(r.body.products.map(p => p.productId), ['prod_2', 'prod_1'], 'newest first, archived hidden');
+  const p1 = r.body.products[1];
+  assert.deepEqual({ ...p1 }, { productId: 'prod_1', title: 'Showtime Replay Tee', url: 'https://shop/p/1', state: 'public', thumb: 'https://cdn/a.png', blank: 'tee', color: 'White', createdAt: p1.createdAt, createdBy: 'designer@essentiallysports.com', units30: 2, revenue30: 59.98, price: 29.99, collectionIds: ['col_a'] });
+  assert.equal(r.body.products[0].units30, 0);
+  // Anyone signed in can list (no push rights needed).
+  process.env.MERCH_PUSHERS = '';
+  assert.equal((await call({ mode: 'list' })).status, 200);
+  process.env.MERCH_PUSHERS = 'designer@essentiallysports.com';
+});
+await test('list: falls back to Fourthwall, only products this server made', async () => {
+  M.reset(); resetFw(); serviceOn(false);
+  fw['GET /products'] = () => reply(200, { results: [offer('PUBLIC'), { ...offer('HIDDEN'), id: 'not_ours', slug: 'other' }], total: 2, page: 0, size: 100, totalPages: 1 });
+  M.HISTORY.push({ productId: 'prod_1', title: 'Showtime Replay Tee', blank: 'tee', color: 'White', by: 'designer@essentiallysports.com', at: '2026-11-25T00:00:00Z' });
+  const r = await call({ mode: 'list' });
+  assert.equal(r.body.source, 'fourthwall');
+  assert.deepEqual(r.body.products.map(p => [p.productId, p.state, p.blank, p.url]), [['prod_1', 'public', 'tee', 'https://shop.essentiallysports.com/products/showtime-tee']]);
+  assert.match(r.body.note, /migration/);
+});
+
+// ─── v2: collections ───────────────────────────────────────────────────────
+await test('collections: list with counts, create, set (read-modify-write)', async () => {
+  M.reset(); resetFw(); db.reset(); serviceOn(true);
+  const cols = { col_a: ['p_other'], col_b: ['prod_1', 'p2'] };
+  fw['GET /collections'] = () => reply(200, { results: [{ id: 'col_a', name: 'Replay', slug: 'replay' }, { id: 'col_b', name: 'Core', slug: 'core' }], total: 2 });
+  fw['GET /collections/col_a'] = () => reply(200, { id: 'col_a', name: 'Replay', slug: 'replay', offerIds: cols.col_a.slice() });
+  fw['GET /collections/col_b'] = () => reply(200, { id: 'col_b', name: 'Core', slug: 'core', offerIds: cols.col_b.slice() });
+  for (const id of ['col_a', 'col_b']) fw[`PUT /collections/${id}/products`] = (u, o) => { cols[id] = JSON.parse(o.body).offerIds; return reply(200, { id, offerIds: cols[id] }); };
+  fw['POST /collections'] = (u, o) => reply(200, { id: 'col_new', name: JSON.parse(o.body).name, slug: 'new-drop', offerIds: [] });
+  db.table('frameup_merch_products').push({ product_id: 'prod_1', title: 'T', state: 'HIDDEN', created_at: daysAgo(0) });
+  let r = await call({ mode: 'collections' });
+  assert.deepEqual(r.body.collections, [{ id: 'col_a', name: 'Replay', slug: 'replay', count: 1 }, { id: 'col_b', name: 'Core', slug: 'core', count: 2 }]);
+  r = await call({ mode: 'collection-set', productId: 'prod_1', collectionIds: ['col_a'] });
+  assert.equal(r.status, 200);
+  assert.deepEqual(cols, { col_a: ['p_other', 'prod_1'], col_b: ['p2'] }, 'other products kept');
+  assert.deepEqual(r.body.changed.sort(), ['col_a', 'col_b']);
+  assert.deepEqual(r.body.collections.map(c => [c.id, c.count, c.has]), [['col_a', 2, true], ['col_b', 1, false]]);
+  const puts = fwCalls.filter(c => c.method === 'PUT' && c.path.startsWith('/collections/'));
+  puts.forEach(p => { const at = fwCalls.indexOf(p); assert.ok(fwCalls.slice(0, at).some(c => c.method === 'GET' && c.path === p.path.replace('/products', '')), 'read before write'); });
+  assert.deepEqual(db.table('frameup_merch_products')[0].collection_ids, ['col_a']);
+  assert.equal(db.table('frameup_merch_events').at(-1).type, 'COLLECTIONS_SET');
+  // No change: no writes.
+  const n = fwCalls.filter(c => c.method === 'PUT').length;
+  await call({ mode: 'collection-set', productId: 'prod_1', collectionIds: ['col_a'] });
+  assert.equal(fwCalls.filter(c => c.method === 'PUT').length, n);
+  assert.equal((await call({ mode: 'collection-set', productId: 'prod_1', collectionIds: ['col_zzz'] })).status, 400);
+  assert.equal((await call({ mode: 'collection-set', productId: 'prod_1', collectionIds: 'col_a' })).status, 400);
+  r = await call({ mode: 'collection-create', name: 'New Drop' });
+  assert.deepEqual(r.body.collection, { id: 'col_new', name: 'New Drop', slug: 'new-drop', count: 0 });
+  assert.deepEqual(fwCalls.find(c => c.method === 'POST' && c.path === '/collections').body, { name: 'New Drop', description: '', offerIds: [] });
+  r = await call({ mode: 'collection-create', name: 'replay' });
+  assert.equal(r.body.existed, true);
+  assert.equal(r.body.collection.id, 'col_a');
+  assert.equal((await call({ mode: 'collection-create', name: 'x' })).status, 400);
+  process.env.MERCH_PUSHERS = '';
+  assert.equal((await call({ mode: 'collection-set', productId: 'prod_1', collectionIds: [] })).status, 403);
+  assert.equal((await call({ mode: 'collections' })).status, 200, 'anyone can read collections');
+  process.env.MERCH_PUSHERS = 'designer@essentiallysports.com';
+});
+
+// ─── v2: sales ─────────────────────────────────────────────────────────────
+await test('sales: 7 / 30 days / all time; cancelled and test orders excluded', async () => {
+  M.reset(); resetFw(); db.reset(); serviceOn(true);
+  db.table('frameup_merch_products').push({ product_id: 'prod_1', title: 'T', state: 'PUBLIC', created_at: daysAgo(100) }, { product_id: 'prod_2', title: 'M', state: 'ARCHIVED', created_at: daysAgo(100) });
+  const O = db.table('frameup_merch_orders');
+  O.push({ order_id: 'o1', status: 'CONFIRMED', placed_at: daysAgo(2), updated_at: daysAgo(2), test_mode: false, product_ids: ['prod_1'], lines: [{ productId: 'prod_1', quantity: 2, revenue: 59.98 }] });
+  O.push({ order_id: 'o2', status: 'SHIPPED', placed_at: daysAgo(20), updated_at: daysAgo(1), test_mode: false, product_ids: ['prod_1', 'prod_2'], lines: [{ productId: 'prod_1', quantity: 1, revenue: 29.99 }, { productId: 'prod_2', quantity: 3, revenue: 53.97 }, { productId: 'not_ours', quantity: 9, revenue: 99 }] });
+  O.push({ order_id: 'o3', status: 'DELIVERED', placed_at: daysAgo(90), updated_at: daysAgo(80), test_mode: false, product_ids: ['prod_1'], lines: [{ productId: 'prod_1', quantity: 1, revenue: 29.99 }] });
+  O.push({ order_id: 'o4', status: 'CANCELLED', placed_at: daysAgo(1), updated_at: daysAgo(1), test_mode: false, product_ids: ['prod_1'], lines: [{ productId: 'prod_1', quantity: 5, revenue: 149.95 }] });
+  O.push({ order_id: 'o5', status: 'CONFIRMED', placed_at: daysAgo(1), updated_at: daysAgo(1), test_mode: true, product_ids: ['prod_1'], lines: [{ productId: 'prod_1', quantity: 7, revenue: 1 }] });
+  db.table('frameup_merch_events').push({ id: 'sync_1', source: 'sync', type: 'SYNC', created_at: daysAgo(0.5), payload: {} });
+  let r = await call({ mode: 'sales' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.source, 'db');
+  const by = Object.fromEntries(r.body.products.map(p => [p.productId, p]));
+  assert.deepEqual(by.prod_1, { productId: 'prod_1', units7: 2, revenue7: 59.98, units30: 3, revenue30: 89.97, unitsAll: 4, revenueAll: 119.96 });
+  assert.deepEqual(by.prod_2, { productId: 'prod_2', units7: 0, revenue7: 0, units30: 3, revenue30: 53.97, unitsAll: 3, revenueAll: 53.97 });
+  assert.ok(!by.not_ours, 'only our products');
+  assert.equal(r.body.updatedAt, db.table('frameup_merch_events')[0].created_at, 'the last sync is newer than any order');
+  r = await call({ mode: 'sales', productId: 'prod_2' });
+  assert.deepEqual(r.body.products.map(p => p.productId), ['prod_2']);
+  serviceOn(false);
+  r = await call({ mode: 'sales' });
+  assert.deepEqual([r.body.source, r.body.products.length], ['none', 0]);
+});
+
+// ─── v2: upload relay ──────────────────────────────────────────────────────
+const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(120, 7)]);
+const GCS = 'https://storage.googleapis.com/fw-upload/abc?X-Goog-Signature=1';
+await test('upload-relay: own folder, Google storage only, size and PNG checked, copy deleted', async () => {
+  M.reset(); resetFw(); db.reset(); serviceOn(true); gcsPuts.length = 0;
+  const path = `${USER_ID}/showtime.png`;
+  db.objects.set(`merch-art/${path}`, PNG);
+  const relay = extra => call({ mode: 'upload-relay', path, uploadUrl: GCS, size: PNG.length, ...extra });
+  for (const bad of ['https://evil.example.com/x', 'http://storage.googleapis.com/x', 'https://storage.googleapis.com.evil.com/x', 'https://user:pw@storage.googleapis.com/x', 'https://169.254.169.254/latest']) {
+    const r = await relay({ uploadUrl: bad });
+    assert.equal(r.status, 400, bad);
+  }
+  assert.equal((await relay({ path: '0b4f6a2e-1c3d-4e5f-8a9b-ffffffffffff/showtime.png' })).status, 403, 'another person\'s folder');
+  assert.equal((await relay({ path: `${USER_ID}/../x.png` })).status, 400);
+  assert.equal((await relay({ size: PNG.length + 1 })).body.reason, 'size');
+  db.objects.set(`merch-art/${USER_ID}/fake.png`, Buffer.from('GIF89a not a png at all'));
+  assert.equal((await relay({ path: `${USER_ID}/fake.png`, size: 23 })).status, 400);
+  assert.equal((await relay({ path: `${USER_ID}/missing.png` })).status, 404);
+  assert.equal(gcsPuts.length, 0, 'nothing sent on a refused relay');
+  const r = await relay();
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body, { ok: true, size: PNG.length });
+  assert.equal(gcsPuts.length, 1);
+  assert.equal(gcsPuts[0].href, GCS);
+  assert.equal(gcsPuts[0].headers['x-goog-content-length-range'], `0,${PNG.length}`);
+  assert.equal(gcsPuts[0].headers['Content-Type'], 'image/png');
+  assert.equal(gcsPuts[0].headers.Authorization, undefined, 'no Fourthwall credentials to Google storage');
+  assert.ok(!db.objects.has(`merch-art/${path}`), 'the relay copy is deleted');
+  serviceOn(false);
+  assert.equal((await relay()).status, 503);
+  process.env.MERCH_PUSHERS = '';
+  assert.equal((await relay()).status, 403);
+  process.env.MERCH_PUSHERS = 'designer@essentiallysports.com';
+});
+
+// ─── v2: product refresh ───────────────────────────────────────────────────
+await test('product refresh stores the latest mockups, variants, price and state', async () => {
+  M.reset(); resetFw(); db.reset(); serviceOn(true);
+  db.table('frameup_merch_products').push({ product_id: 'prod_1', title: 'Old', state: 'HIDDEN', blank: 'tee', color: 'White', created_by: 'designer@essentiallysports.com', created_at: daysAgo(1), thumb: '' });
+  fw['GET /products/prod_1'] = () => reply(200, offer('PUBLIC'));
+  const r = await call({ mode: 'product', productId: 'prod_1', refresh: true });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.refreshed, true);
+  assert.equal(r.body.history, 'db');
+  assert.equal(r.body.product.state, 'PUBLIC');
+  assert.equal(r.body.product.blank, 'tee');
+  const row = db.table('frameup_merch_products')[0];
+  assert.equal(row.state, 'PUBLIC');
+  assert.equal(row.thumb, 'https://cdn/a-t.png');
+  assert.equal(row.title, 'Showtime Tee');
+  assert.deepEqual(row.price, { retail: 21.99, base: 9.5, margin: 12.49 });
+  assert.equal(row.variants[0].price, 21.99);
+  assert.ok(row.refreshed_at);
+  assert.equal(db.table('frameup_merch_events').at(-1).type, 'REFRESHED');
+  // Without refresh nothing is written.
+  const n = db.calls.length;
+  await call({ mode: 'product', productId: 'prod_1' });
+  assert.equal(db.calls.length, n);
+  serviceOn(false);
+});
+
+// ─── v2: migration ─────────────────────────────────────────────────────────
+await test('migration: four tables with RLS, read-only for ES users, private merch-art bucket', () => {
+  const sql = fs.readFileSync('supabase/migrations/20261126120000_frameup_merch.sql', 'utf8');
+  for (const t of ['frameup_merch_designs', 'frameup_merch_products', 'frameup_merch_orders', 'frameup_merch_events']) {
+    assert.match(sql, new RegExp(`create table if not exists public\\.${t}`));
+    assert.match(sql, new RegExp(`alter table public\\.${t} enable row level security`));
+    assert.match(sql, new RegExp(`grant select on table public\\.${t} to authenticated`));
+    assert.ok(!new RegExp(`grant (insert|update|delete|all)[^;]*public\\.${t}`, 'i').test(sql), `${t}: browser cannot write`);
+  }
+  assert.match(sql, /'merch-art', 'merch-art', false/);
+  assert.match(sql, /storage\.foldername\(name\)\)\[1\] = \(select auth\.uid\(\)\)::text/);
+  assert.ok(!/\b(email|username|billing|shipping|address)\b\s+text/i.test(sql), 'no buyer personal data columns');
 });
 await test('rights: inline fallback used until merch-rules.js lands', () => {
   const R = M.InlineRules;
