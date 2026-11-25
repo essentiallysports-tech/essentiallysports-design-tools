@@ -3,6 +3,30 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-25-merch-v2",
+      "date": "2026-11-25",
+      "title": "Merch Designs: hoodies, posters, stickers, mugs and Your merch",
+      "commit": "e06857f",
+      "items": [
+        {
+          "title": "More products",
+          "text": "Put a design on a tee, hoodie, poster, sticker or mug. Each one has its own print area, ES logo spot, suggested price and print check.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Shop collections",
+          "text": "Add a product to Fourthwall collections when you set it up, or later from its panel. Make a new collection on the spot.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Your merch",
+          "text": "See every product FrameUp made, with its status, link, mockup, and units and revenue for the last 30 days. Archive needs the product name typed in.",
+          "page": "merch.html",
+          "target": "#mx-tab-list"
+        }
+      ]
+    },
+    {
       "id": "2026-11-25-merch-designs",
       "date": "2026-11-25",
       "title": "Merch Designs: ES fan merch on Fourthwall",

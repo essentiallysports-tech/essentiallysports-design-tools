@@ -99,7 +99,7 @@ async function load(width, theme, state = '') {
 const AUDIT = `(() => {
   const out = [];
   const vis = e => e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) && e.getBoundingClientRect().width > 0;
-  if (document.documentElement.scrollWidth > innerWidth + 1) out.push('horizontal scroll ' + document.documentElement.scrollWidth);
+  if (document.documentElement.scrollWidth > innerWidth + 1) out.push("horizontal scroll " + document.documentElement.scrollWidth + " " + [...document.querySelectorAll("#main *")].filter(e => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 4).map(e => e.tagName + "." + String(e.className).slice(0, 30)).join(" | "));
   const main = document.getElementById('main');
   const inView = e => { const r = e.getBoundingClientRect(); return r.bottom > 0 && r.top < document.documentElement.scrollHeight; };
   const prim = [...main.querySelectorAll('.es-btn--primary')].filter(e => vis(e) && inView(e));
@@ -362,6 +362,12 @@ try {
   await flow(1024, 'light');
   await states(1440, 'light');
   await states(1440, 'dark');
+  // Desktop only, but no horizontal scroll on a phone: the list view at 375.
+  scenario = 'ok';
+  await load(375, 'light', 'phone');
+  await click('#mx-tab-list');
+  await until("document.querySelectorAll('#mx-list tbody tr').length > 0", '375 list');
+  await audit('375-light-list');
 } catch (error) {
   fails.push('crashed: ' + error.message);
 }
