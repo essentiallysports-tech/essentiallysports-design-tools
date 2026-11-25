@@ -593,7 +593,8 @@
   els.trendbox.addEventListener('scroll', () => els.trendbox.classList.toggle('is-scrolled', els.trendbox.scrollTop > 0), { passive: true });
   function renderPicked() {
     const t = state.trend;
-    els.picked.hidden = !t || state.source !== 'trend' || startOf() !== 'trend';
+    // The picked row is highlighted in the list; the summary card shows while the list steps aside (making).
+    els.picked.hidden = !t || state.source !== 'trend' || startOf() !== 'trend' || !state.flow.making;
     if (!t) { els.picked.innerHTML = ''; return; }
     els.picked.innerHTML = `${leagueTile(t.sport, 40)}
       <div class="rm-picked__body"><p class="rm-picked__eyebrow">Reel about</p><p class="rm-picked__title">${esc(t.title)}</p>${trendMeta(t)}</div>
@@ -918,6 +919,7 @@
     // While it runs, the stepper takes the trend list's place so nothing clips.
     els.panes.topic.classList.toggle('is-making', f.making);
     els.start.classList.toggle('is-making', f.making);
+    renderPicked();
     els.brief.readOnly = f.making;
     els.script.readOnly = f.making;
     const mark = { done: ICON.check, failed: ICON.warn, skipped: '<span class="rm-making__dash"></span>', active: '<span class="rm-spin"></span>', todo: '' };

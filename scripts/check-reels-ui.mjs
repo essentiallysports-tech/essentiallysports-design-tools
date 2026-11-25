@@ -253,7 +253,9 @@ for (const w of WIDTHS) {
   await audit('story-trends', w);
   await step('pick a trend', async () => {
     await must('#rm-trends [data-trend], #rm-trends button', 'trend row');
-    await waitFor(`!document.querySelector('#rm-picked').hidden`, 3000, 'picked card');
+    await waitFor(`document.querySelector('#rm-trends [data-trend]').getAttribute('aria-checked') === 'true' && window.ReelMakerCtx.state.trend`, 3000, 'picked story');
+    // Three clicks to a reel: the Trend tile is already open, so a story and Make my reel are enough.
+    expect(await evaluate(`!document.querySelector('#rm-write').hidden && document.querySelector('#rm-fmt-entry [aria-checked="true"]').dataset.start === 'trend'`), 'Make my reel is not ready after picking a story');
   });
   await audit('story-trend-picked', w);
   await step('Start tiles and recipes', async () => {
