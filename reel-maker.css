@@ -1127,10 +1127,10 @@ html[data-theme="dark"] .rm-railrow { box-shadow: inset 0 0 0 1px var(--es-slate
 .rm-rail .rm-style { padding: 4px; }
 .rm-rail .rm-style__blurb { display: none; }
 .rm-rail .rm-style__name { font-size: 12px; }
-.rm-looks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--es-space-2, 8px); }
+.rm-looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: var(--es-space-2, 8px); }
 .rm-look { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 4px; border: 0; border-radius: 10px; background: transparent; box-shadow: inset 0 0 0 1px var(--rm-line); color: var(--rm-ink); font: 500 11px/1.25 var(--es-font-ui); text-align: center; cursor: pointer; }
 .rm-look__thumb { display: block; width: 100%; aspect-ratio: 9 / 16; border-radius: 6px; background: #101114; }
-.rm-look__name { overflow-wrap: anywhere; }
+.rm-look__name { overflow-wrap: normal; word-break: keep-all; hyphens: manual; } /* never split a look's name mid-word ("Minim-al") */
 .rm-look[aria-checked="true"] { background: var(--rm-brand-soft); box-shadow: inset 0 0 0 2px var(--es-brand-fill, #0a6fde); }
 @media (hover: hover) { .rm-look:not([aria-checked="true"]):hover { background: var(--rm-sunk); } }
 .rm-cost__title { display: flex; justify-content: space-between; gap: var(--es-space-3, 12px); margin: 0; color: var(--rm-ink-2); font-size: 13px; }
