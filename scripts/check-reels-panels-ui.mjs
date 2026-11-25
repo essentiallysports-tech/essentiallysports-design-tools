@@ -5,7 +5,9 @@
 // stubbed /api (config + trends only; the panels must not call anything else).
 //
 // For each width (1440 / 1024 / 375) in light and dark:
-//   ideas room: opens from the temporary button with the picked trend as the
+//   both panels are mounted inline on the Start screen (the Inspiration tile
+//     and its two tabs; "Brainstorm angles" under a picked trend);
+//   ideas room: opens from "Brainstorm angles" with the picked trend as the
 //     topic, cost shown, Brainstorm -> sources + angle cards; the free-draft,
 //     over-budget, empty and error states; "Use this angle" builds the reel
 //     (plan applied, Review step) with no API call;
@@ -109,7 +111,7 @@ async function load() {
   await send('Page.navigate', { url: `${base}/reel-maker.html` });
   for (let i = 0; i < 80; i++) {
     await sleep(200);
-    const ok = await evaluate(`Boolean(window.ReelMakerCtx && window.ReelMakerCtx.modules.ideas && window.ReelMakerCtx.modules.radar && document.querySelector('#rm-trends [data-trend]')) && !/login/.test(location.pathname)`).catch(() => false);
+    const ok = await evaluate(`Boolean(window.ReelMakerCtx && window.ReelMakerCtx.modules.ideas && window.ReelMakerCtx.modules.radar && document.querySelector('#rm-trends [data-trend]') && document.querySelector('#rm-fmt-entry [data-start="inspo"]')) && !/login/.test(location.pathname)`).catch(() => false);
     if (ok) break;
   }
   if (/login/.test(await evaluate('location.pathname'))) throw new Error('sign-in gate: reel-maker.html went to login');
@@ -119,6 +121,7 @@ async function load() {
   apiCalls.length = 0;
 }
 
+const PANEL = '.rm-inspo__host:not([hidden])';
 const AUDIT = fs.readFileSync(path.join(ROOT, 'scripts/lib/reels-ui-audit.js'), 'utf8');
 // .rb-poll: a card cut by the panel's scroll edge reads as an empty band to the audit.
 const IGNORE = ['.es-skeleton', '.es-sr-only', '.rb-clip__caption', '.rb-stamp', '.rb-poll'];
@@ -129,18 +132,20 @@ async function audit(name, w) {
   for (const theme of ['light', 'dark']) {
     await evaluate(`(() => { document.documentElement.setAttribute('data-theme', ${JSON.stringify(theme)}); window.FrameUpTheme?.apply?.(${JSON.stringify(theme)}); return 1; })()`).catch(() => {});
     await sleep(120);
-    const r = await evaluate(`(${AUDIT})({ roots: ['#rb-open-dialogs-only'], warns: false, ignore: ${JSON.stringify(IGNORE)}, keyActions: ['.rb-form__go', '[data-use]', '[data-make]', '[data-read]'] })`);
+    const r = await evaluate(`(${AUDIT})({ roots: ${JSON.stringify([PANEL])}, warns: false, ignore: ${JSON.stringify(IGNORE)}, keyActions: ['.rb-form__go', '[data-use]', '[data-make]', '[data-read]'] })`);
     // Panel rules: no sideways scroll (page or dialog), one primary button, everything inside the dialog.
     const own = await evaluate(`(() => {
-      const d = document.querySelector('.rb-dialog[open]'); const out = [];
-      if (!d) return ['no open panel'];
-      const body = d.querySelector('.rb-dialog__body');
+      const hosts = [...document.querySelectorAll('.rm-inspo__host')].filter(h => !h.hidden && h.offsetParent); const out = [];
+      if (hosts.length !== 1) return [hosts.length + ' panels showing (want 1)'];
+      const d = hosts[0];
+      if (document.querySelector('.rb-dialog, #rb-entry-ideas, #rb-entry-radar')) out.push('the temporary dialog or buttons are still on the page');
       if (document.documentElement.scrollWidth > window.innerWidth + 1) out.push('the page scrolls sideways: ' + document.documentElement.scrollWidth + ' > ' + window.innerWidth);
-      if (body.scrollWidth > body.clientWidth + 1) out.push('the panel scrolls sideways: ' + body.scrollWidth + ' > ' + body.clientWidth);
-      const r = d.getBoundingClientRect();
-      if (r.left < -1 || r.right > window.innerWidth + 1 || r.bottom > window.innerHeight + 1) out.push('the panel leaves the screen: ' + [r.left, r.right, r.bottom].map(Math.round).join(','));
-      const primary = [...d.querySelectorAll('.es-btn--primary')].filter(b => b.offsetParent);
-      if (primary.length !== 1) out.push(primary.length + ' primary buttons (want 1)');
+      if (d.scrollWidth > d.clientWidth + 1) out.push('the panel scrolls sideways: ' + d.scrollWidth + ' > ' + d.clientWidth);
+      const box = d.getBoundingClientRect();
+      const out2 = [...d.querySelectorAll('*')].filter(e => e.offsetParent && !e.closest('.es-sr-only')).filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.right > box.right + 1 || r.left < box.left - 1); });
+      if (out2.length) out.push('sticks out of the panel: ' + out2.slice(0, 3).map(e => (e.className || e.tagName) + ' by ' + Math.round(Math.max(e.getBoundingClientRect().right - box.right, box.left - e.getBoundingClientRect().left))).join(' | '));
+      const primary = [...document.querySelectorAll('#main .es-btn--primary')].filter(b => b.offsetParent && !b.closest('[inert]'));
+      if (primary.length !== 1 || !d.contains(primary[0])) out.push(primary.length + ' primary buttons on the screen (want 1, in the panel): ' + primary.map(b => b.id || b.textContent.trim()).join(', '));
       const small = [...d.querySelectorAll('button, a.rb-clip__link, summary, select, input[type=text], textarea')].filter(b => b.offsetParent && b.getBoundingClientRect().height < 31);
       if (small.length) out.push('tap targets under 32px: ' + small.slice(0, 3).map(b => (b.className || b.tagName) + ' ' + Math.round(b.getBoundingClientRect().height)).join(' | '));
       const unlabelled = [...d.querySelectorAll('select, input, textarea')].filter(f => f.offsetParent && !f.labels?.length && !f.getAttribute('aria-label'));
@@ -173,8 +178,10 @@ try {
 
     // ── Ideas room ─────────────────────────────────────────────────────────
     await must('#rm-trends [data-trend="t1"]', 'the first trend');
-    await must('#rb-entry-ideas', 'the Brainstorm angles button');
-    await waitFor(`Boolean(document.querySelector('.rb-dialog[open] #rb-ideas-topic'))`, 4000, 'the ideas room');
+    await must('#rm-brainstorm', 'the Brainstorm angles button');
+    await waitFor(`Boolean(document.querySelector('#rm-ideas-host:not([hidden]) #rb-ideas-topic')) && document.querySelector('#rm-radar-host').hidden && window.ReelMakerCtx.state.start === 'inspo'`, 4000, 'the ideas room on the Start screen');
+    expect(at, !(await count('.rb-dialog')) && !(await count('#rb-entry-ideas, #rb-entry-radar')), 'the temporary dialog or buttons are still on the page');
+    expect(at, !(await count('#rb-ideas-close')), 'an inline panel has a close button');
     expect(at, /Josh Allen throws for 412 yards/.test(await evaluate(`document.querySelector('#rb-ideas-topic').value`)), 'the topic is not prefilled from the picked trend');
     expect(at, (await evaluate(`document.querySelector('#rb-ideas-sport').value`)) === 'nfl', 'the sport is not prefilled');
     expect(at, /Sample data: no cost/.test(await text('#rb-ideas-cost')), 'sample mode does not say it is free');
@@ -215,7 +222,7 @@ try {
     // Use this angle: the reel is built by code from the validated plan.
     apiCalls.length = 0;
     await must('.rb-angle [data-use="i1"]', 'Use this angle');
-    await waitFor(`!document.querySelector('.rb-dialog[open]') && window.ReelMakerCtx.state.plan && window.ReelMakerCtx.state.plan.lens === 'money'`, 5000, 'the plan to be applied');
+    await waitFor(`window.ReelMakerCtx.state.plan && window.ReelMakerCtx.state.plan.lens === 'money'`, 5000, 'the plan to be applied');
     const plan = await evaluate(`(() => { const p = window.ReelMakerCtx.state.plan; return { beats: p.beats.length, first: p.beats[0].block.type, last: p.beats[p.beats.length - 1].block.type, style: p.style, ids: p.beats.every(b => b.id), tl: window.ReelMakerCtx.state.timeline ? window.ReelMakerCtx.state.timeline.beats.length : 0, sources: window.ReelMakerCtx.state.sources.length, pane: Boolean(document.querySelector('#rm-pane-edit') && !document.querySelector('#rm-pane-edit').hidden) }; })()`);
     expect(at, plan.beats === 6 && plan.first === 'hook' && plan.last === 'endcard' && plan.style === 'es' && plan.ids && plan.tl === 6, `the storyboard was not built from the angle: ${JSON.stringify(plan)}`);
     expect(at, plan.sources === 7 && plan.pane, `the reel did not open in Review with its sources: ${JSON.stringify(plan)}`);
@@ -225,8 +232,12 @@ try {
 
     // ── Radar ──────────────────────────────────────────────────────────────
     await load();
-    await must('#rb-entry-radar', "the What's doing well button");
-    await waitFor(`document.querySelectorAll('.rb-dialog[open] .rb-trend[data-trend]').length === 7`, 5000, 'the radar trends');
+    await must('#rm-fmt-entry [data-start="inspo"]', 'the Inspiration tile');
+    await waitFor(`!document.querySelector('#rm-source-inspo').hidden && !document.querySelector('#rm-inspo-tabs').hidden`, 4000, 'the Inspiration tabs');
+    await must('#rm-inspo-tabs [data-inspo="ideas"]', 'the ideas tab');
+    await waitFor(`!document.querySelector('#rm-ideas-host').hidden && document.querySelector('#rm-radar-host').hidden`, 3000, 'the ideas tab to show the ideas room');
+    await must('#rm-inspo-tabs [data-inspo="radar"]', 'the radar tab');
+    await waitFor(`!document.querySelector('#rm-radar-host').hidden && document.querySelector('#rm-ideas-host').hidden && document.querySelectorAll('#rm-radar-host .rb-trend[data-trend]').length === 7`, 5000, 'the radar trends');
     expect(at, (await count('.rb-trend .rb-trend__angle')) === 4 && /ES fit 90/.test(await text('.rb-trends')), 'trends do not show ES fit and the ES angle');
     expect(at, /No clip search/.test(await text('.rb-trends')), 'sports without clip search are not marked');
     expect(at, /Pick a story/.test(await text('#rb-radar-out')), 'no empty state before a pick');
@@ -269,15 +280,16 @@ try {
     await must('[data-read]', 'Read these clips');
     await waitFor(`document.querySelectorAll('.rb-brief [data-make]').length === 3`, 5000, 'briefs again');
     await must('.rb-brief [data-make="1"]', 'Make our version');
-    await waitFor(`Boolean(document.querySelector('.rb-dialog[open] #rb-ideas-topic')) && !document.querySelector('.rb-dialog[open] #rb-radar-out')`, 5000, 'the ideas room after the hand-off');
+    await waitFor(`!document.querySelector('#rm-ideas-host').hidden && document.querySelector('#rm-radar-host').hidden && document.querySelector('#rm-inspo-tabs [data-inspo="ideas"]').getAttribute('aria-checked') === 'true'`, 5000, 'the ideas room after the hand-off');
     const handed = await evaluate(`(() => { const s = window.ReelMakerCtx.modules.ideas.state(); return { topic: s.topic, sport: s.sport, steer: s.steer, field: document.querySelector('#rb-ideas-topic').value }; })()`);
     expect(at, /^Harbor City Admirals give quarterback Sam Rivers/.test(handed.topic) && handed.field === handed.topic && handed.sport === 'nfl', `the hand-off lost the story: ${JSON.stringify(handed)}`);
     expect(at, /^Treatment idea \(style only, not a fact\): The moment behind the moment/.test(handed.steer), `the brief did not travel as a note: ${handed.steer}`);
     await audit('radar-handoff', w);
-    // Escape closes the panel.
-    await evaluate(`(() => { document.querySelector('.rb-dialog[open]').close(); return 1; })()`);
-    expect(at, (await count('.rb-dialog[open]')) === 0, 'the panel does not close');
-    const stray = apiCalls.filter(c => !/^\/api\/(reel-maker:(config|trends|projects|event)|ai-status:|video-ads:|es-image-search:)/.test(c));
+    // Back: another start tile puts the panels away and brings Make my reel back.
+    await must('#rm-fmt-entry [data-start="trend"]', 'the Trend tile');
+    await waitFor(`document.querySelector('#rm-source-inspo').hidden && !document.querySelector('#rm-source-trend').hidden && !document.querySelector('#rm-write').hidden`, 3000, 'the trend list after leaving Inspiration');
+    expect(at, (await count('.rm-inspo__host:not([hidden])')) === 0 || (await evaluate(`[...document.querySelectorAll('.rm-inspo__host')].every(h => !h.offsetParent)`)), 'a panel still shows after going back');
+    const stray = apiCalls.filter(c => !/^\/api\/(reel-maker:(config|trends|projects|event)|ai-status:|video-ads:|es-image-search:|version:)/.test(c));
     expect(at, !stray.length, `sample mode called the server: ${stray.join(', ')}`);
     consoleErrors.splice(0).forEach(e => fail(`${at} radar`, e));
   }
