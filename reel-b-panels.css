@@ -120,6 +120,8 @@ html[data-theme="dark"] .rb-demo__tag { color: #1F2126; }
 .rb-angle__issues ul, .rb-dropped ul { display: grid; gap: 4px; padding: 4px 0 0 16px !important; list-style: disc !important; }
 .rb-angle__use { align-self: stretch; margin-top: auto; }
 .rb-lens { display: inline-flex; align-items: center; flex: none; height: 22px; padding: 0 8px; border-radius: 6px; background: var(--rb-brand-soft); color: var(--rb-brand-text); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.rb-fit { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; background: var(--rb-sunk); color: var(--rb-ink-2); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.rb-fit--high { background: var(--rb-good-soft); color: var(--rb-good); }
 .rb-lens--money { background: var(--rb-good-soft); color: var(--rb-good); }
 .rb-lens--fan-reaction, .rb-lens--verdict { background: var(--rb-warn-soft); color: var(--rb-warn); }
 .rb-lens--quote-led { background: var(--rb-sunk); color: var(--rb-ink); }
@@ -178,7 +180,7 @@ html[data-theme="dark"] .rb-demo__tag { color: #1F2126; }
 .rb-clips { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--es-space-4, 16px); }
 .rb-clip { display: flex; flex-direction: column; min-width: 0; border-radius: var(--es-radius-control, 12px); background: var(--rb-surface); box-shadow: inset 0 0 0 1px var(--rb-line); overflow: hidden; }
 .rb-clip.is-skeleton { gap: var(--es-space-2, 8px); padding: var(--es-space-2, 8px); min-height: 200px; }
-.rb-clip__thumb { position: relative; display: block; aspect-ratio: 16 / 9; background: var(--rb-sunk); }
+.rb-clip__thumb { position: relative; display: block; text-decoration: none; aspect-ratio: 16 / 9; background: var(--rb-sunk); }
 .rb-clip__thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .rb-clip__thumb:focus-visible { outline-offset: -2px !important; }
 .rb-clip__nothumb { display: grid; place-items: center; width: 100%; height: 100%; color: var(--rb-ink-3); font-size: 13px; }

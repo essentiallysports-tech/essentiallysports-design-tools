@@ -239,7 +239,7 @@
         const angle = t.angle && t.angle.line ? `<span class="rb-trend__angle"><span class="rb-lens rb-lens--${esc(t.angle.lens)}">${esc(C.LENS_LABEL[t.angle.lens] || 'ES angle')}</span>${esc(t.angle.line)}</span>` : '';
         return `<li role="none"><button class="rb-trend" type="button" role="radio" aria-checked="${on}" tabindex="${t.id === tab ? 0 : -1}" data-trend="${esc(t.id)}">
           <span class="rb-trend__title">${esc(t.title)}</span>
-          <span class="rb-trend__meta"><span>${esc(meta)}</span>${fit ? `<span class="es-badge ${Number(t.fit) >= 75 ? 'es-badge--good' : 'es-badge--ink'}">${esc(fit)}</span>` : ''}${C.CLIP_SPORTS.includes(t.sport) ? '' : '<span class="es-badge">No clip search</span>'}</span>
+          <span class="rb-trend__meta"><span>${esc(meta)}</span>${fit ? `<span class="rb-fit${Number(t.fit) >= 75 ? ' rb-fit--high' : ''}">${esc(fit)}</span>` : ''}${C.CLIP_SPORTS.includes(t.sport) ? '' : '<span class="rb-fit">No clip search</span>'}</span>
           ${angle}
         </button></li>`;
       }).join('');
