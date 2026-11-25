@@ -3,6 +3,33 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-26-merch-mvp",
+      "date": "2026-11-26",
+      "title": "Merch Designs MVP: create with AI, Basic and Pro, merch moments",
+      "items": [
+        {
+          "title": "Basic or Pro",
+          "text": "Basic makes clean ES pill designs. Pro uses a stronger AI, plans a small collection and can add numbers, lines, blocks and icons beside the pills.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Merch-worthy moments",
+          "text": "Today's trends, scored for merch: quotes, nicknames, eras and big moments. Press Design this to start from one.",
+          "page": "merch.html"
+        },
+        {
+          "title": "The design studio",
+          "text": "A big preview on a real blank photo, every design in a strip, and one editor for pills, colours, size and layout. Tell the AI what to change, and undo any edit.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Live mockups",
+          "text": "For admins, Fourthwall's own mockups load in the product step and update when the design changes.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-26-merch-v3",
       "date": "2026-11-26",
       "title": "Merch Designs: your full line, variations and sizing",
