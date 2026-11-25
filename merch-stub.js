@@ -27,7 +27,7 @@
     const rows = (concept.stack || []).filter(r => r && String(r.text || '').trim());
     if (!rows.length) return;
     const big = Math.min(box.h / (rows.length * 1.05 + 0.2), box.w / 5.2);
-    const sizeOf = r => (r.size === 'small' ? big * 0.45 : big);
+    const sizeOf = r => (r.size === 'small' ? big * 0.45 : r.size === 'mid' ? big * 0.62 : big);
     let total = rows.reduce((n, r) => n + sizeOf(r) * 1.12, 0);
     const shrink = total > box.h ? box.h / total : 1;
     let y = box.y + (box.h - total * shrink) / 2;

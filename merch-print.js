@@ -9,7 +9,7 @@
 //
 // Concept and print spec are the shapes in the merch contract:
 //   Concept   { id, collection, title, team: { id, name } | null, palette: { a, b, ink },
-//               garment: { color, name }, stack: [{ text, size: 'big'|'small', fill, ink }],
+//               garment: { color, name }, stack: [{ text, size: 'big'|'mid'|'small', fill, ink }],
 //               align: 'left'|'center', blanks, rights: [{ kind, text }], why }
 //   PrintSpec { templateId, region: 'front'|'back', pixelsWidth, pixelsHeight, dpi, garmentColor }
 //             (optional: kind 'tee'|'hoodie'|'poster'|'sticker'|'mug', default from concept.blanks[0];
@@ -52,6 +52,7 @@
   const WORDMARK = { w: 258, h: 31, blue: 'brand-logo-blue.svg', white: 'brand-logo-white.svg' };
   const PHONE_MAX_PIXELS = 16000000; // iOS Safari refuses canvases over ~16.7 MP
   const SMALL = 0.36; // small (name line) pills, relative to the big pill size
+  const MID = 0.62; // mid pills: the lines under a big headline
   const WRAP_AT = 18; // big rows longer than this wrap into more pills
   const MIN_CAP_IN = { apparel: 0.12, other: 0.08 }; // smallest printable cap height
   const MIN_CONTRAST = 1.45; // ink vs garment: below this the art melts into the shirt
@@ -183,10 +184,42 @@
     const rows = [];
     stack.slice(0, 12).forEach(r => {
       const small = r.size === 'small';
+      const rel = small ? SMALL : r.size === 'mid' ? MID : 1;
       const parts = !small && up(r.text).length > WRAP_AT ? wrapText(r.text) : [up(r.text)];
-      parts.forEach(t => rows.push({ text: t, rel: small ? SMALL : 1, row: r }));
+      parts.forEach(t => rows.push({ text: t, rel, row: r }));
     });
     return rows.slice(0, 14);
+  }
+
+  // ─── Fit: size and position the person sets in FrameUp ─────────────────
+  // concept.fit = { scale: 0.6-1.6 (1 = the default compact size), topIn:
+  // inches from the top of the print area (apparel; null = default) }.
+  const FIT = { scaleMin: 0.6, scaleMax: 1.6, topMinIn: 0.5, topMaxIn: 10 };
+  const clampN = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  function fitOf(concept = {}) {
+    const f = concept.fit || {};
+    const scale = Number(f.scale) > 0 ? clampN(Number(f.scale), FIT.scaleMin, FIT.scaleMax) : 1;
+    const topIn = f.topIn === null || f.topIn === undefined || f.topIn === '' || !Number.isFinite(Number(f.topIn)) ? null : clampN(Number(f.topIn), FIT.topMinIn, FIT.topMaxIn);
+    return { scale, topIn };
+  }
+  // Splits words into pills: 'word' one word each (tiny words ride with the
+  // next), 'pair' two words, 'line' long lines, 'auto' balanced rows.
+  const TINY = new Set(['A', 'AN', 'THE', 'OF', 'IN', 'ON', 'AT', 'TO', 'FOR', 'AND', 'OR', 'BY', 'IS', 'IT', 'MY', 'NO', 'SO', 'WE', 'I']);
+  function splitWords(text, mode = 'auto') {
+    const words = up(text).split(' ').filter(Boolean);
+    if (!words.length) return [];
+    if (mode === 'line') return wrapText(text, 24);
+    if (mode === 'word' || mode === 'pair') {
+      const units = [];
+      let carry = '';
+      words.forEach(w => { if (TINY.has(w.replace(/[^A-Z]/g, '')) && w.length <= 3) carry = carry ? `${carry} ${w}` : w; else { units.push(carry ? `${carry} ${w}` : w); carry = ''; } });
+      if (carry) { if (units.length) units[units.length - 1] += ` ${carry}`; else units.push(carry); }
+      if (mode === 'word') return units;
+      const out = [];
+      for (let i = 0; i < units.length; i += 2) out.push(units.slice(i, i + 2).join(' '));
+      return out;
+    }
+    return wrapText(text);
   }
 
   // Rows -> placed pills inside box (sized so the widest row and the whole
@@ -243,10 +276,12 @@
     const single = rows.length === 1;
     const longest = Math.max(...rows.map(r => r.text.length));
     const widthRatio = single ? (longest <= 3 ? 0.26 : longest <= 10 ? 0.46 : 0.66) : concept.collection === 'quote' ? 0.58 : 0.5;
+    const fit = fitOf(concept);
     let box;
     if (blank.apparel) {
-      const top = Math.round(Math.min(1.75 * a.dpi, H * 0.12));
-      box = { x: Math.round(W * (1 - widthRatio) / 2), y: top, w: Math.round(W * widthRatio), h: Math.round(Math.min(H - top - margin, H * 0.6)), valign: 'top' };
+      const wr = Math.min(0.94, widthRatio * fit.scale);
+      const top = fit.topIn !== null ? Math.min(Math.round(fit.topIn * a.dpi), H - margin - 10) : Math.round(Math.min(1.75 * a.dpi, H * 0.12));
+      box = { x: Math.round(W * (1 - wr) / 2), y: top, w: Math.round(W * wr), h: Math.max(10, Math.round(Math.min(H - top - margin, H * 0.6 * fit.scale))), valign: 'top' };
     } else if (kind === 'mug') {
       // The face of the mug: the middle of the wrap, clear of the handle seam.
       const faceW = Math.round(W * MUG_FACE);
@@ -257,6 +292,8 @@
       const pad = Math.max(Math.round(Math.min(W, H) * 0.1), Math.ceil((SAFE_IN[kind] || 0) * a.dpi * 1.5));
       box = { x: pad, y: pad, w: W - 2 * pad, h: H - 2 * pad, valign: 'center' };
     }
+    // Hard goods can only shrink inside their safe edge.
+    if (!blank.apparel && fit.scale < 1) { const nw = Math.round(box.w * fit.scale); const nh = Math.round(box.h * fit.scale); box.x += Math.round((box.w - nw) / 2); box.y += Math.round((box.h - nh) / 2); box.w = nw; box.h = nh; }
     if (single && longest > 3) box.h = Math.min(box.h, Math.round(box.w * 0.34));
     // Hard goods have one print area, so the ES wordmark goes under the design.
     const inlineLogo = !blank.apparel && (spec.logo === 'inline' || spec.logo === 'inside');
@@ -287,7 +324,7 @@
       design.x = x0;
       design.h = logo.y + logo.h - design.y;
     }
-    return { w: W, h: H, dpi: a.dpi, inW: a.inW, inH: a.inH, region: a.region, kind, apparel: blank.apparel, garment, palette: pal, items, design, size: result.size, bigRows: bigRows.length, inlineLogo };
+    return { w: W, h: H, dpi: a.dpi, inW: a.inW, inH: a.inH, region: a.region, kind, apparel: blank.apparel, garment, palette: pal, items, design, size: result.size, bigRows: bigRows.length, inlineLogo, fit, designIn: { w: design.w / a.dpi, h: design.h / a.dpi, top: design.y / a.dpi } };
   }
 
   // ─── Print checks ──────────────────────────────────────────────────────
@@ -316,7 +353,7 @@
     add('dpi', dpiOk, renderScale < 1 && scene.dpi >= minDpi ? 'warn' : 'error', dpiOk ? `${scene.w} × ${scene.h} px at ${scene.dpi} DPI: full print size.` : scene.dpi < minDpi ? `This blank's print area is ${scene.dpi} DPI; ${minDpi} DPI is the minimum for a ${(MerchRules.BLANKS[scene.kind] || {}).label || 'blank'}.` : `This preview is ${eff} DPI; printing needs ${minDpi}. Create the product from a desktop.`);
     if (scene.apparel) {
       const inches = scene.design.w / scene.dpi;
-      add('placement', inches <= 9.5, 'warn', inches <= 9.5 ? `Design is ${inches.toFixed(1)} in wide: compact, mid-chest.` : `Design is ${inches.toFixed(1)} in wide, wider than a chest print. Use shorter words.`);
+      add('placement', inches <= 9.5, 'warn', inches <= 9.5 ? `Design is ${inches.toFixed(1)} in wide: compact, mid-chest.` : `Design is ${inches.toFixed(1)} in wide, wider than a chest print. Make it smaller or use shorter words.`);
     } else {
       // Safe edge: poster trim, sticker cut line, mug handle seam.
       const safe = Math.round((SAFE_IN[scene.kind] || 0) * scene.dpi);
@@ -542,6 +579,35 @@
     return { width: size, height: size, scene };
   }
 
+  // Close-up: just the design on the blank's colour, filling the canvas, so
+  // designs can be compared at a glance (the tee mockup shows placement).
+  async function closeup(concept, garmentColor, canvas, opts = {}) {
+    await loadFonts();
+    const kind = MerchRules.BLANKS[opts.kind] ? opts.kind : 'tee';
+    const apparel = MerchRules.BLANKS[kind].apparel;
+    const garment = apparel ? (hex(garmentColor) || hex(concept?.garment?.color) || WHITE) : WHITE;
+    const W = canvas.width || 480;
+    const H = canvas.height || 560;
+    const g = canvas.getContext('2d');
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = garment;
+    g.fillRect(0, 0, W, H);
+    const spec = { ...(DEFAULT_AREAS[kind]), ...(opts.spec || {}), garmentColor: garment, kind };
+    const scene = layout(concept, spec);
+    const d = scene.design;
+    const pad = opts.pad ?? 0.1;
+    const k = Math.min((W * (1 - 2 * pad)) / Math.max(1, d.w), (H * (1 - 2 * pad)) / Math.max(1, d.h));
+    const off = document.createElement('canvas');
+    off.width = W;
+    off.height = H;
+    const og = off.getContext('2d');
+    og.translate(W / 2 - (d.x + d.w / 2) * k, H / 2 - (d.y + d.h / 2) * k);
+    og.scale(k, k);
+    await drawScene(scene, og);
+    g.drawImage(off, 0, 0);
+    return { width: W, height: H, scene };
+  }
+
   // ─── Concepts without AI ───────────────────────────────────────────────
   const STOP = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'is', 'was', 'are', 'were', 'be', 'it', 'its', 'his', 'her', 'their', 'this', 'that', 'as', 'after', 'before', 'over', 'into', 'than', 'then', 'he', 'she', 'they', 'we', 'you', 'i', 'said', 'says', 'has', 'have', 'had', 'will', 'just', 'who', 'what', 'when']);
   let rightsIndex = null;
@@ -572,6 +638,41 @@
   function concept(base) {
     return { id: `fb-${base.collection}-${hashOf(JSON.stringify(base.stack))}`, align: 'left', blanks: ['tee', 'hoodie'], rights: [], why: '', ...base };
   }
+  // The person's own line, whole, as pills ("Your words"). The main line is
+  // the first sentence (or the whole text when it's short); never cut short.
+  // Returns null when there's no usable line (too long for a chest print).
+  function mainLine(text) {
+    const t = String(text || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    if (t.length <= 90) return t.replace(/[.!?]+$/, '');
+    const first = t.split(/(?<=[.!?])\s+/)[0].replace(/[.!?]+$/, '');
+    return first.length <= 120 ? first : '';
+  }
+  function yourWords(content, opts = {}) {
+    const c = typeof content === 'string' ? { text: content } : (content || {});
+    const line = mainLine(c.text).replace(/["“”]/g, '');
+    if (!line || line.split(' ').length < 2 || MerchRules.bannedIn(line).length) return null;
+    const idx = indexNow();
+    const hit = c.team ? { name: String(c.team.name || c.team) } : MerchRules.teamsIn(line, idx)[0] || MerchRules.teamsIn(String(c.text || ''), idx)[0];
+    const team = hit ? { id: hashOf(hit.name), name: hit.name } : null;
+    const pal = teamPalette(team?.name);
+    let rows = splitWords(line, 'auto');
+    if (rows.length > 8) rows = splitWords(line, 'line');
+    if (rows.length > 9) return null;
+    const inkA = contrast(pal.a, WHITE) >= 3 ? 'white' : 'ink';
+    return concept({ collection: 'current', label: 'Your words', title: line.length <= 48 ? line : `${line.slice(0, 45).replace(/\s+\S*$/, '')}…`, team, palette: pal, garment: { color: WHITE, name: 'White' }, align: opts.align || 'left',
+      stack: rows.map((t, i) => ({ text: t, size: 'big', fill: i % 2 ? 'b' : 'a', ink: i % 2 ? 'ink' : inkA })),
+      rights: [...(team ? [{ kind: 'team', text: team.name }] : []), ...MerchRules.peopleIn(line, idx).map(p => ({ kind: 'name', text: p }))],
+      why: 'Your line, word for word, split across pills.' });
+  }
+  // True when a concept already carries the whole line (any row split).
+  function hasLine(concept, text) {
+    const line = up(mainLine(text).replace(/["“”]/g, '')).replace(/[^A-Z0-9 ]/g, '');
+    if (!line) return true;
+    const all = up((concept.stack || []).map(r => r.text).join(' ')).replace(/[^A-Z0-9 ]/g, '').replace(/\s+/g, ' ');
+    return all.includes(line);
+  }
+
   // content: a string, or { text, team, collection }. Returns up to opts.max
   // (default 4) concepts across collections, each fit to print.
   function fallbackConcepts(content, opts = {}) {
@@ -586,6 +687,8 @@
     const teamRights = team ? [{ kind: 'team', text: team.name }] : [];
     const era = /\b(19|20)\d{2}s?\b|\bera\b|\bremember|\bback in\b|\bdynasty\b|\bclassic\b|\bthrowback\b/i.test(text);
     const out = [];
+    const mine = yourWords(c);
+    if (mine) out.push(mine);
     const people = MerchRules.peopleIn(text, idx);
     const quote = findQuote(text);
     const nick = findNickname(text);
@@ -633,9 +736,55 @@
     return out.filter(x => !seen.has(x.id) && seen.add(x.id)).slice(0, opts.max || 4);
   }
 
+  // ─── Variations (no AI) ────────────────────────────────────────────────
+  // The same words in different ES pill layouts: stacked words, centre
+  // stagger, big + small, wide banner, on the team colour, compact, bold.
+  // Small rows (like "— Name") stay small at the end. Rights carry over.
+  const VARIANTS = [
+    { key: 'stack', title: 'Stacked words', why: 'One word per pill, alternating the two colours.' },
+    { key: 'stagger', title: 'Centre stagger', why: 'Two words per pill, centred, so the edges step in and out.' },
+    { key: 'headline', title: 'Big + small', why: 'The first words big, the rest in small pills under them.' },
+    { key: 'banner', title: 'Wide banner', why: 'Long pills in one colour, like a headline across the chest.' },
+    { key: 'inverse', title: 'On the team colour', why: 'Team-colour tee with light pills; the shirt shows through the letters.' },
+    { key: 'compact', title: 'Compact chest', why: 'Small and left-aligned, like a pocket print.' },
+    { key: 'bold', title: 'Bold and big', why: 'Bigger pills, one word each, centred.' },
+  ];
+  function variations(base = {}, opts = {}) {
+    const pal = { ...teamPalette(base.team?.name), ...Object.fromEntries(Object.entries(base.palette || {}).filter(([, v]) => hexOk(v)).map(([k, v]) => [k, v.toUpperCase()])) };
+    const stack = (Array.isArray(base.stack) ? base.stack : []).filter(r => r && up(r.text));
+    const smalls = stack.filter((r, i) => r.size === 'small' && i > 0);
+    const words = stack.filter(r => !smalls.includes(r)).map(r => up(r.text)).join(' ');
+    if (!words) return [];
+    const inkOn = key => (contrast(resolve(key, pal), WHITE) >= 3 ? 'white' : 'ink');
+    const alt = (texts, keys = ['a', 'b']) => texts.map((t, i) => { const fill = keys[i % keys.length]; return { text: t, size: 'big', fill, ink: fill === 'b' ? 'ink' : inkOn(fill) }; });
+    const tail = (fill = 'b') => smalls.map(r => ({ ...r, size: 'small', fill, ink: fill === 'b' ? 'ink' : inkOn(fill) }));
+    const cap = (rows, max = 9) => (rows.length > max ? null : rows);
+    const per = mode => { const r = splitWords(words, mode); return r.length > 8 ? splitWords(words, mode === 'word' ? 'pair' : 'line') : r; };
+    const white = { color: WHITE, name: 'White' };
+    const teamTee = { color: pal.a, name: colorName(pal.a) };
+    const make = (v, rows, extra = {}) => (rows ? { ...base, id: `${String(base.id || 'c').replace(/-v-[a-z]+$/, '')}-v-${v.key}`, variantOf: base.variantOf || base.id, variant: v.key, label: v.title, title: base.title || words.slice(0, 40), why: v.why, stack: rows, fit: { scale: 1, topIn: null }, ...extra } : null);
+    const out = [];
+    for (const v of VARIANTS) {
+      let c = null;
+      if (v.key === 'stack') c = make(v, cap([...alt(per('word')), ...tail()]), { align: 'left', garment: white });
+      else if (v.key === 'stagger') c = make(v, cap([...alt(per('pair')), ...tail()]), { align: 'center', garment: white });
+      else if (v.key === 'headline') {
+        const rows = splitWords(words, 'auto');
+        const first = rows.length > 1 ? [rows[0]] : splitWords(words, 'word').slice(0, 1);
+        const rest = rows.length > 1 ? rows.slice(1) : splitWords(words, 'word').slice(1);
+        c = rest.length ? make(v, cap([{ text: first[0], size: 'big', fill: 'a', ink: inkOn('a') }, ...rest.map((t, i) => ({ text: t, size: 'mid', fill: i % 2 ? 'a' : 'b', ink: i % 2 ? inkOn('a') : 'ink' })), ...tail()]), { align: 'left', garment: white }) : null;
+      } else if (v.key === 'banner') c = make(v, cap([...splitWords(words, 'line').map(t => ({ text: t, size: 'big', fill: 'a', ink: inkOn('a') })), ...tail()]), { align: 'center', garment: white });
+      else if (v.key === 'inverse') { const f = boldFill(pal); c = contrast(pal.a, WHITE) < 1.3 ? null : make(v, cap([...per('word').map((t, i) => ({ text: t, size: 'big', fill: i % 2 && f !== 'white' ? f : 'white', ink: 'a' })), ...tail(f === 'white' ? 'b' : f)]), { align: 'left', garment: teamTee }); }
+      else if (v.key === 'compact') c = make(v, cap([...alt(per('pair')), ...tail()]), { align: 'left', garment: white, fit: { scale: 0.7, topIn: null } });
+      else if (v.key === 'bold') c = make(v, cap([...alt(per('word')), ...tail()]), { align: 'center', garment: white, fit: { scale: 1.35, topIn: null } });
+      if (c && JSON.stringify(c.stack) !== JSON.stringify(stack.map(r => ({ ...r, text: up(r.text) })))) out.push(c);
+    }
+    return out.slice(0, opts.max || VARIANTS.length);
+  }
+
   return {
-    VERSION: '2026-11-25b', WORDMARK, PHONE_MAX_PIXELS, SMALL, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
-    render, renderLogo, checks, preview, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
+    VERSION: '2026-11-26a', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
+    render, renderLogo, checks, preview, closeup, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,
   };

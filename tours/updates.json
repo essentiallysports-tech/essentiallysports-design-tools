@@ -3,6 +3,34 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-26-merch-v3",
+      "date": "2026-11-26",
+      "title": "Merch Designs: your full line, variations and sizing",
+      "items": [
+        {
+          "title": "Your whole line, every time",
+          "text": "Every set of designs now starts with Your words: the full sentence you typed, split across pills. Nothing gets cut off.",
+          "page": "merch.html",
+          "target": "#mx-text"
+        },
+        {
+          "title": "Variations and close-ups",
+          "text": "Press Variations on any design for seven more layouts of the same words. Cards show a close-up of the design, with a switch to see it on the tee.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Size it in FrameUp",
+          "text": "In Setup, change the size, how far down the shirt it sits, words per pill and alignment. The print size and checks update as you go.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Every mockup",
+          "text": "See all of Fourthwall's mockups for a product, by colour, from Your merch or after you create it. Click one to view it large.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-25-merch-designs",
       "date": "2026-11-25",
       "title": "Merch Designs: ES fan merch on Fourthwall",

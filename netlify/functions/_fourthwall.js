@@ -212,7 +212,14 @@ function normalizeProduct(p = {}, publicDomain = '') {
   const variants = Array.isArray(p.variants) ? p.variants : [];
   const prices = variants.map(v => Number(v?.unitPrice?.value)).filter(Number.isFinite);
   const costs = variants.map(v => Number(v?.unitCost?.value)).filter(Number.isFinite);
-  const images = (Array.isArray(p.images) ? p.images : []).map(i => ({ url: i.transformedUrl || i.url, width: i.width, height: i.height })).filter(i => i.url);
+  // Every mockup: the product's own images, then each variant's (labelled by
+  // colour), without repeats. The page shows them all in a gallery.
+  const seen = new Set();
+  const pick = (i, color = '') => ({ url: i?.transformedUrl || i?.url, width: i?.width, height: i?.height, color: String(i?.color || color || '').slice(0, 40) });
+  const images = [
+    ...(Array.isArray(p.images) ? p.images : []).map(i => pick(i)),
+    ...variants.flatMap(v => (Array.isArray(v?.images) ? v.images : []).map(i => pick(i, v?.attributes?.color?.name))),
+  ].filter(i => i.url && !seen.has(i.url) && seen.add(i.url));
   return {
     id: String(p.id || ''),
     name: String(p.name || ''),
@@ -224,9 +231,10 @@ function normalizeProduct(p = {}, publicDomain = '') {
     cost: costs.length ? Math.min(...costs) : null,
     currency: variants[0]?.unitPrice?.currency || 'USD',
     thumbnail: p.thumbnailImage ? (p.thumbnailImage.transformedUrl || p.thumbnailImage.url) : (images[0]?.url || ''),
-    images: images.slice(0, 12),
+    images: images.slice(0, 40),
     variants: variants.slice(0, 60).map(v => ({
       id: String(v.id || ''), name: String(v.name || '').slice(0, 120), sku: String(v.sku || '').slice(0, 60),
+      color: String(v?.attributes?.color?.name || '').slice(0, 40), size: String(v?.attributes?.size?.name || '').slice(0, 20),
       price: Number.isFinite(Number(v?.unitPrice?.value)) ? Number(v.unitPrice.value) : null,
       cost: Number.isFinite(Number(v?.unitCost?.value)) ? Number(v.unitCost.value) : null,
     })),

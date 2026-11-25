@@ -156,7 +156,16 @@ async function flow(width, theme) {
   await click('.mx-design [data-act="up"][data-i="1"]');
   ok(await evaluate("MerchUI.state.concepts[0].stack[1].text === 'KOBE!'"), `${tag}: pill order`);
   await click('.mx-design [data-act="size"]');
-  ok(await evaluate("MerchUI.state.concepts[0].stack.some(r => r.size === 'small')"), `${tag}: big / small`);
+  ok(await evaluate("MerchUI.state.concepts[0].stack.slice(1).some(r => r.size === 'mid' || r.size === 'small')"), `${tag}: pill sizes`);
+  // v3: variations, close-up / tee cards
+  const nBefore = await evaluate("MerchUI.state.concepts.length");
+  await click('.mx-design [data-act="vary"]');
+  ok(await evaluate(`MerchUI.state.concepts.length > ${nBefore} && MerchUI.state.concepts.some(c => c.variantOf)`), `${tag}: variations added`);
+  ok(await evaluate("document.querySelectorAll('.mx-design.is-variant').length >= 3"), `${tag}: variation cards`);
+  await click('[data-card-view="tee"]');
+  ok(await evaluate("MerchUI.state.cardView === 'tee'"), `${tag}: tee view`);
+  await click('[data-card-view="closeup"]');
+  ok(await evaluate("MerchUI.state.cardView === 'closeup'"), `${tag}: close-up view`);
   await click('.mx-design [data-act="align"]');
   await click('.mx-design [data-act="garment"][data-color="#101114"]');
   ok(await evaluate("MerchUI.state.concepts[0].garment.color === '#101114'"), `${tag}: garment colour`);

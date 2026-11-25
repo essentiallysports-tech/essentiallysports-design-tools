@@ -265,3 +265,24 @@ html[data-theme="dark"] .mx-page .es-badge--ink { background: #3B4049; color: #F
   .mx-danger, #mx-view-list > .mx-row--between { flex-wrap: wrap; }
   .mx-lt__name { min-width: 180px; }
 }
+
+/* Merch v3: size and layout controls, variations, mockup gallery */
+.mx-fit { display: grid; gap: var(--es-space-2, 8px); width: min(100%, 440px); margin: 0; padding: var(--es-space-3, 12px) 0 0; border: 0; border-top: 1px solid var(--mx-line, rgba(14,16,20,.12)); }
+.mx-fit__row { display: grid; grid-template-columns: 104px 1fr 64px; align-items: center; gap: var(--es-space-2, 8px); font-size: 14px; color: var(--mx-ink-2, inherit); }
+.mx-fit__row input[type=range] { width: 100%; accent-color: #0A7DFA; }
+.mx-fit__row output { text-align: right; font-variant-numeric: tabular-nums; color: var(--mx-ink-3, inherit); font-size: 13px; }
+.mx-fit__opts { align-items: end; }
+.mx-seg { display: inline-flex; border: 1px solid var(--mx-line, rgba(14,16,20,.16)); border-radius: 10px; overflow: hidden; }
+.mx-seg__b { min-height: 34px; padding: 0 12px; border: 0; background: transparent; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.mx-seg__b[aria-pressed="true"] { background: #0A7DFA; color: #FFFFFF; }
+.mx-seg__b:focus-visible { outline: 2px solid #0A7DFA; outline-offset: -2px; }
+.mx-design.is-variant .mx-tag { background: #0E1014; }
+.mx-mock__btn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: 12px; }
+.mx-mock__btn:focus-visible { outline: 2px solid #0A7DFA; outline-offset: 2px; }
+.mx-mockups__count { margin: 0 0 var(--es-space-2, 8px); }
+.mx-gallery { width: min(92vw, 900px); max-height: 92vh; padding: var(--es-space-4, 16px); border: 0; border-radius: 16px; background: var(--mx-surface, #fff); color: inherit; }
+.mx-gallery::backdrop { background: rgba(8,10,14,.6); }
+.mx-gallery__fig { margin: 0; display: grid; gap: var(--es-space-2, 8px); justify-items: center; }
+.mx-gallery__fig img { display: block; max-width: 100%; max-height: 72vh; object-fit: contain; border-radius: 12px; background: var(--mx-sunk, #f3f4f6); }
+.mx-gallery__bar { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--es-space-2, 8px); margin-top: var(--es-space-3, 12px); }
+.mx-lt__more td { padding: var(--es-space-3, 12px) var(--es-space-4, 16px); background: var(--mx-sunk, transparent); }

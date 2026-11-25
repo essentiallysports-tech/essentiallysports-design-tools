@@ -49,7 +49,7 @@
     { id: 't2', title: 'Sample: the comeback nobody saw coming', category: 'nfl', rank: 80 },
     { id: 't3', title: 'Sample: a walk-off in extra innings', category: 'mlb', rank: 70 },
   ];
-  const IMAGES = [{ url: MOCK, width: 1000, height: 1000 }, { url: MOCK, width: 1000, height: 1000 }];
+  const IMAGES = ['White', 'White', 'Black', 'Black', 'Navy', 'Heather grey'].map((color, i) => ({ url: MOCK, width: 1000, height: 1000, color, region: i % 2 ? 'back' : 'front_large' }));
   let product = null;
   const SHOP = 'https://sample-shop.example/products/';
   const COLLECTIONS = [{ id: 'col_fan', name: 'Fan favourites (sample)', count: 4 }, { id: 'col_replay', name: 'Replay era (sample)', count: 2 }, { id: 'col_core', name: 'Core ES (sample)', count: 3 }];

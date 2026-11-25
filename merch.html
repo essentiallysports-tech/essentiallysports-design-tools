@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="merch.css?v=20261125-merch2">
+  <link rel="stylesheet" href="merch.css?v=20261126-merch3">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -111,7 +111,13 @@
           <h2 class="mx-h2" id="mx-h-designs">Pick a design</h2>
           <p class="mx-sub" id="mx-designs-sub">Click a design to choose it. Quick edits change it on the spot.</p>
         </div>
-        <button class="es-btn es-btn--ghost" type="button" id="mx-again">Make new designs</button>
+        <div class="mx-row">
+          <div class="mx-seg" role="group" aria-label="Card view">
+            <button class="mx-seg__b" type="button" data-card-view="closeup" aria-pressed="true">Close-up</button>
+            <button class="mx-seg__b" type="button" data-card-view="tee" aria-pressed="false">On the tee</button>
+          </div>
+          <button class="es-btn es-btn--ghost" type="button" id="mx-again">Make new designs</button>
+        </div>
       </div>
       <div class="mx-grid" id="mx-grid" aria-live="polite"></div>
       <div class="mx-actions mx-actions--bar">
@@ -125,6 +131,28 @@
       <div class="mx-split">
         <aside class="mx-card mx-stage" aria-label="Design preview">
           <canvas class="mx-stage__canvas" id="mx-stage-canvas" width="480" height="560" role="img" aria-label="Tee preview"></canvas>
+          <fieldset class="mx-fit" id="mx-fit">
+            <legend class="mx-label">Size and layout</legend>
+            <label class="mx-fit__row" for="mx-fit-scale"><span>Size</span><input type="range" id="mx-fit-scale" min="60" max="160" step="5" value="100" aria-describedby="mx-fit-read"><output id="mx-fit-scale-out" for="mx-fit-scale">100%</output></label>
+            <label class="mx-fit__row" id="mx-fit-top-row" for="mx-fit-top"><span>From the top</span><input type="range" id="mx-fit-top" min="0.5" max="8" step="0.25" value="1.75" aria-describedby="mx-fit-read"><output id="mx-fit-top-out" for="mx-fit-top">1.75 in</output></label>
+            <div class="mx-row mx-row--wrap mx-fit__opts">
+              <label class="es-field mx-grow"><span class="es-field__label">Words per pill</span>
+                <select class="mx-input mx-input--sm" id="mx-fit-split">
+                  <option value="">As designed</option>
+                  <option value="word">One word</option>
+                  <option value="pair">Two words</option>
+                  <option value="auto">Balanced</option>
+                  <option value="line">Long lines</option>
+                </select>
+              </label>
+              <div class="mx-seg" role="group" aria-label="Alignment">
+                <button class="mx-seg__b" type="button" data-fit-align="left" aria-pressed="true">Left</button>
+                <button class="mx-seg__b" type="button" data-fit-align="center" aria-pressed="false">Centre</button>
+              </div>
+              <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-fit-reset">Reset</button>
+            </div>
+            <p class="mx-meta" id="mx-fit-read" aria-live="polite"></p>
+          </fieldset>
           <div class="mx-mockups" id="mx-mockups" aria-live="polite"></div>
         </aside>
         <div class="mx-card mx-setup">
@@ -219,6 +247,19 @@
       <div class="mx-card mx-list-card" id="mx-list" aria-live="polite" aria-busy="false"></div>
     </section>
 
+    <dialog class="es-dialog mx-gallery" id="mx-gallery" aria-labelledby="mx-gallery-cap">
+      <figure class="mx-gallery__fig">
+        <img id="mx-gallery-img" alt="">
+        <figcaption class="mx-meta" id="mx-gallery-cap"></figcaption>
+      </figure>
+      <div class="mx-gallery__bar">
+        <button class="es-btn es-btn--sm" type="button" id="mx-gallery-prev" aria-label="Previous mockup">←</button>
+        <a class="es-btn es-btn--ghost es-btn--sm" id="mx-gallery-open" target="_blank" rel="noopener">Open full size</a>
+        <button class="es-btn es-btn--sm" type="button" id="mx-gallery-next" aria-label="Next mockup">→</button>
+        <button class="es-btn es-btn--sm" type="button" id="mx-gallery-close">Close</button>
+      </div>
+    </dialog>
+
     <dialog class="es-dialog mx-dialog" id="mx-archive" aria-labelledby="mx-archive-h" aria-describedby="mx-archive-copy">
       <form method="dialog" class="mx-dialog__form" id="mx-archive-form">
         <h2 class="mx-dialog__title" id="mx-archive-h">Archive this product?</h2>
@@ -242,7 +283,7 @@
   <script src="brand-kit.js?v=20261111-tennis1"></script>
   <script src="video-ads-teams.js?v=20261122-rel"></script>
   <script src="merch-rules.js?v=20261125-merch"></script>
-  <script src="merch-print.js?v=20261125-merch2"></script>
-  <script src="merch.js?v=20261125-merch2"></script>
+  <script src="merch-print.js?v=20261126-merch3"></script>
+  <script src="merch.js?v=20261126-merch3"></script>
 </body>
 </html>

@@ -4,6 +4,17 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-26 — Suhail (Claude): Merch v3: full line, variations, sizing, every mockup (branch feature/merch3)
+- Status: pushed to main after the full suite.
+- Full sentences: pill text 40 → 60 chars (page input + server `LIMITS.rowText`), rows 6 → 10. `MerchPrint.yourWords()` makes a "Your words" concept from the first sentence (whole, never cut); the page adds it in front when no AI concept carries the line (`hasLine`). Fallback concepts lead with it. AI prompt: first concept must use the person's line in full; vary layouts.
+- Variations: `MerchPrint.variations(concept)` ($0, no AI): stack, stagger, headline (big + mid), banner, inverse (team-colour tee), compact (fit 0.7), bold (fit 1.35). "Variations" button on cards inserts them after the design (`variantOf`, `label`).
+- New pill size `mid` (0.62 of big); server accepts big|mid|small. "Pill sizes" button cycles all big → big + mid → big + small.
+- Fit: `concept.fit = { scale 0.6–1.6, topIn }` honoured by `layout()`; Setup "Size and layout" panel (size, from the top, words per pill via `splitWords`, alignment, reset, print-size readout). Checks unchanged (placement warn text now says "Make it smaller").
+- Cards: close-up view by default (`MerchPrint.closeup`), toggle to the tee mockup.
+- Mockups: `_fourthwall.normalizeProduct` returns product + every variant's images (deduped, labelled by colour, up to 40); variants carry color/size. Live panel fetches all mockups after create; Your merch rows have "Mockups" (expandable gallery); `#mx-gallery` dialog viewer. Store keeps up to 30 image urls.
+- Tests: new `scripts/test-merch-v3.mjs` (10), `check-merch-ui.mjs` (220), merch tests, test-tour. Release note `2026-11-26-merch-v3`. Cache keys → `20261126-merch3`.
+- Unverified live: AI concept quality with the new prompt; real variant image arrays from Fourthwall.
+
 ## 2026-11-26 — Suhail (Claude, Agent SERVER2): Merch v2 server: all blanks, history, archive, list, collections, sales (branch feature/merch2-server)
 - Status: committed, not pushed. Base release/merch (b9477db). Pairs with feature/merch2-ui.
 - Blanks: tee `pro_Vv1XdaPMSdm6jZ5pj24NCQ` (Stanley/Stella, $15.85, now first), hoodie `pro_380`, poster `pro_15bc29bc8a324d449d`, sticker `pro_358`, mug `pro_4v5OfYhyRx62KW5b7Oj6Uw`, all re-checked with public GETs on 2026-11-25 (fixtures in `scripts/fixtures/fourthwall-blank-templates.json`). `templates` returns every blank with `kind`, `minDpi`, `wrap`, `logo` ('area' for apparel, 'inside' for one-area hard goods) and `pricing`. `merch-rules.js`: per-blank suggested retail (tee 29.99, hoodie 49.99, poster 17.99, sticker 5.99+, mug 17.99).

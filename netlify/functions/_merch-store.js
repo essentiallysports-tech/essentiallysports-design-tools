@@ -127,7 +127,7 @@ function patchFromProduct(product, now = new Date().toISOString()) {
   const round2 = n => Math.round(Number(n) * 100) / 100;
   return {
     state: product.state, title: product.name || undefined, slug: product.slug || undefined, productUrl: product.url || undefined,
-    thumb: product.thumbnail || undefined, images: product.images, variants: product.variants,
+    thumb: product.thumbnail || undefined, images: Array.isArray(product.images) ? product.images.slice(0, 30).map(i => ({ url: i.url, color: i.color || '' })) : undefined, variants: product.variants,
     ...(product.price != null ? { price: { retail: product.price, base: product.cost, margin: product.cost != null ? round2(product.price - product.cost) : null } } : {}),
     ...(product.state === 'ARCHIVED' ? { archivedAt: now } : {}),
     refreshedAt: now,

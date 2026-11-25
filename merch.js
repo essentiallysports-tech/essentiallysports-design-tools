@@ -262,6 +262,11 @@
       btn.textContent = 'Create designs';
       $('mx-content-meta').textContent = '';
       syncContent();
+      // The person's own line always comes back whole ("Your words"), even when the AI shortened it.
+      try {
+        const MP = window.MerchPrint;
+        if (MP?.yourWords && Array.isArray(concepts) && !concepts.some(c => MP.hasLine(c, content.text))) { const mine = MP.yourWords(content); if (mine) concepts = [mine, ...concepts]; }
+      } catch (error) { console.warn('merch your words', error); }
       state.concepts = (concepts || []).map(c => ({ ...c, garment: { ...(c.garment || { color: '#FFFFFF', name: 'White' }) } }));
       state.selected = state.concepts[0]?.id || null;
       state.ack = false; $('mx-ack').checked = false; state.image = null; state.mockups = []; state.copyFor = '';
@@ -284,29 +289,30 @@
       const on = c.id === state.selected;
       const rights = (c.rights || []).map(r => `<span class="mx-rchip" title="${esc(r.text)}">${esc(RIGHTS_LABEL[r.kind] || r.kind)}</span>`).join('');
       const swatches = garmentChoices(c).map(g => `<button class="mx-swatch" type="button" style="--sw:${esc(g.color)}" aria-pressed="${(c.garment?.color || '').toLowerCase() === g.color.toLowerCase()}" aria-label="${esc(g.name)} tee" title="${esc(g.name)}" data-act="garment" data-color="${esc(g.color)}" data-name="${esc(g.name)}"></button>`).join('');
-      return `<article class="mx-design${on ? ' is-on' : ''}" data-id="${esc(c.id)}">
+      return `<article class="mx-design${on ? ' is-on' : ''}${c.variantOf ? ' is-variant' : ''}" data-id="${esc(c.id)}">
         <button class="mx-design__pick" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" aria-label="Choose ${esc(c.title)}">
           <canvas class="mx-design__tee" width="480" height="560" aria-hidden="true"></canvas>
         </button>
         <div class="mx-design__body">
-          <div class="mx-design__tags"><span class="mx-tag">${esc(COLLECTION_LABEL[c.collection] || c.collection)}</span>${c.team?.name ? `<span class="mx-design__team">${esc(c.team.name)}</span>` : ''}</div>
+          <div class="mx-design__tags"><span class="mx-tag">${c.label ? esc(c.label) : esc(COLLECTION_LABEL[c.collection] || c.collection)}</span>${c.variantOf ? '<span class="mx-design__team">Variation</span>' : ''}${c.team?.name ? `<span class="mx-design__team">${esc(c.team.name)}</span>` : ''}</div>
           <h3 class="mx-design__title">${esc(c.title)}</h3>
           ${c.why ? `<p class="mx-design__why">${esc(c.why)}</p>` : ''}
           ${rights ? `<div class="mx-design__rights" aria-label="Rights to check">${rights}</div>` : ''}
           <div class="mx-design__swatches" role="group" aria-label="Tee colour">${swatches}</div>
           <div class="mx-design__edits" role="group" aria-label="Quick edits">
+            <button class="mx-edit" type="button" data-act="vary" title="The same words in other ES pill layouts">Variations</button>
             <button class="mx-edit" type="button" data-act="text" aria-expanded="${state.editing === c.id}">Edit pills</button>
-            <button class="mx-edit" type="button" data-act="size" title="First pill big and the rest small, or all big">Big / small</button>
+            <button class="mx-edit" type="button" data-act="size" title="Cycle: all big, first big with mid lines, first big with small lines">Pill sizes</button>
             <button class="mx-edit" type="button" data-act="swap" title="Swap the two pill colours">Swap colours</button>
             <button class="mx-edit" type="button" data-act="align" title="Left or centre">${c.align === 'center' ? 'Align left' : 'Centre'}</button>
           </div>
-          ${state.editing === c.id ? `<div class="mx-pills" role="group" aria-label="Pills">${(c.stack || []).map((r, i) => `<div class="mx-pill-row"><input class="mx-input mx-input--sm" type="text" value="${esc(r.text)}" maxlength="40" aria-label="Pill ${i + 1} text" data-pill="${i}"><button class="mx-icon" type="button" data-act="up" data-i="${i}" aria-label="Move pill ${i + 1} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="mx-icon" type="button" data-act="drop" data-i="${i}" aria-label="Remove pill ${i + 1}"${(c.stack || []).length < 2 ? ' disabled' : ''}>×</button></div>`).join('')}<button class="mx-edit" type="button" data-act="add"${(c.stack || []).length >= 8 ? ' disabled' : ''}>Add a pill</button></div>` : ''}
+          ${state.editing === c.id ? `<div class="mx-pills" role="group" aria-label="Pills">${(c.stack || []).map((r, i) => `<div class="mx-pill-row"><input class="mx-input mx-input--sm" type="text" value="${esc(r.text)}" maxlength="60" aria-label="Pill ${i + 1} text" data-pill="${i}"><button class="mx-icon" type="button" data-act="up" data-i="${i}" aria-label="Move pill ${i + 1} up"${i === 0 ? ' disabled' : ''}>↑</button><button class="mx-icon" type="button" data-act="drop" data-i="${i}" aria-label="Remove pill ${i + 1}"${(c.stack || []).length < 2 ? ' disabled' : ''}>×</button></div>`).join('')}<button class="mx-edit" type="button" data-act="add"${(c.stack || []).length >= 10 ? ' disabled' : ''}>Add a pill</button></div>` : ''}
         </div>
       </article>`;
     }
     async function drawCard(card, c) {
       const cv = card.querySelector('canvas');
-      try { await P('preview')(c, c.garment?.color, cv); } catch (error) { console.warn('merch preview', error); }
+      try { await P(state.cardView === 'tee' || !window.MerchPrint?.closeup ? 'preview' : 'closeup')(c, c.garment?.color, cv); } catch (error) { console.warn('merch preview', error); }
     }
     function renderGrid() {
       const grid = $('mx-grid');
@@ -328,7 +334,12 @@
       if (act === 'garment') c.garment = { color: btn.dataset.color, name: btn.dataset.name };
       else if (act === 'swap') c.palette = { ...c.palette, a: c.palette?.b || c.palette?.a, b: c.palette?.a || c.palette?.b };
       else if (act === 'align') c.align = c.align === 'center' ? 'left' : 'center';
-      else if (act === 'size') { const mixed = stack.some(r => r.size === 'small'); c.stack = stack.map((r, i) => ({ ...r, size: mixed || i === 0 ? 'big' : 'small' })); }
+      else if (act === 'size') {
+        // All big → first big, rest mid → first big, rest small → all big.
+        const rest = stack.slice(1).map(r => r.size);
+        const next = rest.every(x => x === 'mid') && rest.length ? 'small' : rest.every(x => x === 'big' || !x) ? 'mid' : 'big';
+        c.stack = stack.map((r, i) => ({ ...r, size: i === 0 ? 'big' : next }));
+      }
       else if (act === 'text') state.editing = state.editing === c.id ? '' : c.id;
       else if (act === 'up') { const i = Number(btn.dataset.i); if (i > 0) { const s2 = [...stack]; [s2[i - 1], s2[i]] = [s2[i], s2[i - 1]]; c.stack = s2; } }
       else if (act === 'drop') { if (stack.length > 1) c.stack = stack.filter((_, i) => i !== Number(btn.dataset.i)); }
@@ -340,6 +351,7 @@
       if (!card) return;
       const c = state.concepts.find(x => x.id === card.dataset.id);
       const act = e.target.closest('[data-act]');
+      if (act && act.dataset.act === 'vary') { addVariations(c); return; }
       if (act) {
         edit(c, act.dataset.act, act);
         state.selected = c.id;
@@ -360,6 +372,22 @@
         syncDesigns();
       }
     });
+    // Variations: the same words in other pill layouts, added right after the
+    // design (replacing its earlier variations). No AI, no cost.
+    function addVariations(c) {
+      const list = window.MerchPrint?.variations ? window.MerchPrint.variations(c) : [];
+      if (!list.length) { $('mx-designs-meta').textContent = 'No other layouts fit these words. Edit the pills and try again.'; return; }
+      const root = c.variantOf || c.id;
+      const at = state.concepts.findIndex(x => x.id === c.id);
+      const keep = state.concepts.filter(x => x.variantOf !== root || x.id === c.id);
+      const pos = keep.findIndex(x => x.id === c.id);
+      const fresh = list.filter(v => v.id !== c.id).map(v => ({ ...v, variantOf: root, garment: { ...(v.garment || {}) } }));
+      state.concepts = [...keep.slice(0, pos + 1), ...fresh, ...keep.slice(pos + 1)];
+      renderGrid();
+      window.FrameUpTrack?.track?.('merch', { action: 'variations', count: fresh.length, at });
+      $('mx-designs-meta').textContent = `${fresh.length} variations added after “${c.label || c.title}”.`;
+      $('mx-grid').querySelector(`.mx-design[data-id="${CSS.escape(fresh[0].id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
     $('mx-grid').addEventListener('input', e => {
       const input = e.target.closest('[data-pill]');
       if (!input) return;
@@ -379,6 +407,11 @@
       $('mx-grid').querySelector(`.mx-design[data-id="${CSS.escape(next.id)}"] .mx-design__pick`).click();
       $('mx-grid').querySelector(`.mx-design[data-id="${CSS.escape(next.id)}"] .mx-design__pick`).focus();
     });
+    document.querySelectorAll('[data-card-view]').forEach(b => b.addEventListener('click', () => {
+      state.cardView = b.dataset.cardView;
+      document.querySelectorAll('[data-card-view]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      $('mx-grid').querySelectorAll('.mx-design').forEach(card => drawCard(card, state.concepts.find(c => c.id === card.dataset.id)));
+    }));
     $('mx-to-setup').addEventListener('click', () => go('setup'));
     $('mx-again').addEventListener('click', () => go('content'));
 
@@ -514,11 +547,58 @@
         ? `A ${BLANK_INFO[k].label.toLowerCase()} has one print area, so the small ESSENTIALLYSPORTS pill is printed at the bottom of the design, in the same file.`
         : logos.length ? 'The ES logo is the small ESSENTIALLYSPORTS pill, printed in its own area. The preview shows where.' : `This ${BLANK_INFO[k].label.toLowerCase()} has no small print areas, so it goes without the ES logo.`;
       drawStage();
+      renderFit();
       renderMockups();
       renderChecks();
       syncEarn();
       syncSetup();
     }
+    // ── Size and layout (the person's own fit, saved on the design) ──
+    const DEFAULT_TOP_IN = 1.75;
+    function renderFit() {
+      const c = selectedConcept();
+      if (!c) return;
+      const f = window.MerchPrint?.fitOf ? window.MerchPrint.fitOf(c) : { scale: 1, topIn: null };
+      $('mx-fit-scale').value = Math.round(f.scale * 100);
+      $('mx-fit-scale-out').textContent = `${Math.round(f.scale * 100)}%`;
+      $('mx-fit-top-row').hidden = !apparel();
+      $('mx-fit-split').value = c.split || '';
+      document.querySelectorAll('[data-fit-align]').forEach(b => b.setAttribute('aria-pressed', String((c.align === 'center' ? 'center' : 'left') === b.dataset.fitAlign)));
+      let read = '';
+      try {
+        const sc = window.MerchPrint.layout(c, printSpec());
+        const top = sc.designIn?.top ?? DEFAULT_TOP_IN;
+        if (apparel()) { $('mx-fit-top').value = f.topIn ?? Math.round(top * 4) / 4; $('mx-fit-top-out').textContent = `${Number($('mx-fit-top').value).toFixed(2)} in`; }
+        read = `Print size ${sc.designIn.w.toFixed(1)} × ${sc.designIn.h.toFixed(1)} in${apparel() ? `, ${top.toFixed(1)} in below the top of the print area` : ''}.`;
+      } catch (error) { console.warn('merch fit', error); }
+      $('mx-fit-read').textContent = read;
+    }
+    function fitChanged() {
+      state.image = null; state.mockups = [];
+      renderFit(); drawStage(); renderMockups(); renderChecks(); syncSetup();
+    }
+    $('mx-fit-scale').addEventListener('input', () => { const c = selectedConcept(); if (!c) return; c.fit = { ...(c.fit || {}), scale: Number($('mx-fit-scale').value) / 100 }; fitChanged(); });
+    $('mx-fit-top').addEventListener('input', () => { const c = selectedConcept(); if (!c) return; c.fit = { ...(c.fit || {}), topIn: Number($('mx-fit-top').value) }; fitChanged(); });
+    $('mx-fit-split').addEventListener('change', () => {
+      const c = selectedConcept();
+      if (!c) return;
+      const mode = $('mx-fit-split').value;
+      if (!c.designedStack) c.designedStack = (c.stack || []).map(r => ({ ...r }));
+      if (!mode) { c.stack = c.designedStack.map(r => ({ ...r })); c.split = ''; fitChanged(); return; }
+      const base = c.designedStack;
+      const smalls = base.filter((r, i) => r.size === 'small' && i > 0);
+      const words = base.filter(r => !smalls.includes(r)).map(r => r.text).join(' ');
+      const parts = window.MerchPrint.splitWords(words, mode);
+      if (parts.length > 9) { $('mx-fit-read').textContent = 'That makes too many pills for one print. Pick another option.'; $('mx-fit-split').value = c.split || ''; return; }
+      const first = base[0] || { fill: 'a', ink: 'white' };
+      const second = base.find((r, i) => i > 0 && r.size !== 'small') || { fill: first.fill === 'a' ? 'b' : 'a', ink: 'ink' };
+      c.stack = [...parts.map((t, i) => ({ text: t, size: 'big', fill: (i % 2 ? second : first).fill, ink: (i % 2 ? second : first).ink })), ...smalls.map(r => ({ ...r }))];
+      c.split = mode;
+      fitChanged();
+    });
+    document.querySelectorAll('[data-fit-align]').forEach(b => b.addEventListener('click', () => { const c = selectedConcept(); if (!c) return; c.align = b.dataset.fitAlign; fitChanged(); }));
+    $('mx-fit-reset').addEventListener('click', () => { const c = selectedConcept(); if (!c) return; c.fit = { scale: 1, topIn: null }; if (c.designedStack) c.stack = c.designedStack.map(r => ({ ...r })); c.split = ''; fitChanged(); });
+
     // Print checks for the chosen blank (300 DPI hard goods, mug wrap, sticker cut, poster trim).
     function printChecks() {
       const c = selectedConcept();
@@ -623,9 +703,43 @@
     $('mx-to-live').addEventListener('click', () => go('live'));
 
     const imgUrl = m => (typeof m === 'string' ? m : m?.url || m?.transformedUrl || '');
+    // Every mockup Fourthwall made, labelled by colour; click one to see it big.
+    const galleries = new Map();
+    let galleryN = 0;
     function imagesHtml(list, label) {
-      return `<div class="mx-mockups__grid">${(list || []).slice(0, 4).map((m, i) => `<figure class="mx-mock"><img src="${esc(imgUrl(m))}" alt="${esc(label)} mockup ${i + 1}" loading="lazy"></figure>`).join('')}</div>`;
+      const items = (list || []).filter(m => imgUrl(m));
+      if (!items.length) return '';
+      const id = `g${++galleryN}`;
+      galleries.set(id, items.map((m, i) => ({ url: imgUrl(m), caption: [m?.color || label, m?.region ? String(m.region).replace(/_/g, ' ') : '', `${i + 1} of ${items.length}`].filter(Boolean).join(' · ') })));
+      if (galleries.size > 30) galleries.delete(galleries.keys().next().value);
+      return `<p class="mx-meta mx-mockups__count">${items.length} mockup${items.length === 1 ? '' : 's'}</p><div class="mx-mockups__grid">${items.map((m, i) => `<figure class="mx-mock"><button class="mx-mock__btn" type="button" data-gal="${id}" data-gi="${i}" aria-label="View ${esc(m?.color || label)} mockup ${i + 1} of ${items.length}"><img src="${esc(imgUrl(m))}" alt="" loading="lazy"></button>${m?.color ? `<figcaption>${esc(m.color)}</figcaption>` : ''}</figure>`).join('')}</div>`;
     }
+    let galleryAt = { id: '', i: 0, from: null };
+    function showGallery() {
+      const list = galleries.get(galleryAt.id) || [];
+      const it = list[galleryAt.i];
+      if (!it) return;
+      $('mx-gallery-img').src = it.url;
+      $('mx-gallery-img').alt = it.caption;
+      $('mx-gallery-cap').textContent = it.caption;
+      $('mx-gallery-open').href = it.url;
+      $('mx-gallery-prev').disabled = list.length < 2;
+      $('mx-gallery-next').disabled = list.length < 2;
+    }
+    function stepGallery(d) { const n = (galleries.get(galleryAt.id) || []).length; if (n) { galleryAt.i = (galleryAt.i + d + n) % n; showGallery(); } }
+    document.addEventListener('click', e => {
+      const b = e.target.closest('[data-gal]');
+      if (!b) return;
+      galleryAt = { id: b.dataset.gal, i: Number(b.dataset.gi) || 0, from: b };
+      showGallery();
+      const d = $('mx-gallery');
+      if (d.showModal && !d.open) d.showModal(); else d.setAttribute('open', '');
+    });
+    $('mx-gallery-prev').addEventListener('click', () => stepGallery(-1));
+    $('mx-gallery-next').addEventListener('click', () => stepGallery(1));
+    $('mx-gallery-close').addEventListener('click', () => $('mx-gallery').close());
+    $('mx-gallery').addEventListener('keydown', e => { if (e.key === 'ArrowLeft') { e.preventDefault(); stepGallery(-1); } else if (e.key === 'ArrowRight') { e.preventDefault(); stepGallery(1); } });
+    $('mx-gallery').addEventListener('close', () => galleryAt.from?.focus?.());
     function renderMockups() {
       const box = $('mx-mockups');
       const what = apparel() ? (state.colors[0] || '') : BLANK_INFO[kind()].label;
@@ -934,6 +1048,16 @@
         </div>`}
         <p class="mx-meta" id="mx-live-status" role="status" aria-live="polite"></p>`;
       if (!archived) { renderShopColls(); syncLiveColls(); if (!state.shopColls) loadShopColls(); }
+      if (!archived && !p.allImages && p.id) loadAllMockups(p);
+    }
+    // After create, Fourthwall's create reply has a few mockups; the product has them all.
+    async function loadAllMockups(p) {
+      p.allImages = true;
+      try {
+        const data = await api({ mode: 'product', productId: p.id });
+        const imgs = data.product?.images || [];
+        if (state.product === p && imgs.length > (p.images || []).length) { p.images = imgs; renderLive(); }
+      } catch { /* the create reply's mockups stay */ }
     }
     async function saveLiveCollections() {
       const p = state.product;
@@ -1072,10 +1196,27 @@
         <td class="mx-num">${p.revenue30 != null ? money(p.revenue30) : '—'}</td>
         <td class="mx-lt__acts">
           ${p.url && !archived ? `<a class="es-btn es-btn--ghost es-btn--sm" href="${esc(p.url)}" target="_blank" rel="noopener" aria-label="Open ${esc(p.title)} on Fourthwall">Open</a>` : ''}
+          <button class="es-btn es-btn--ghost es-btn--sm" type="button" data-row="mockups" aria-expanded="${state.openMocks === p.productId}" aria-label="Mockups of ${esc(p.title)}">Mockups</button>
           ${archived ? '' : `<button class="es-btn es-btn--ghost es-btn--sm" type="button" data-row="refresh" aria-label="Refresh ${esc(p.title)}">Refresh</button>`}
           ${archived ? '' : `<button class="es-btn es-btn--ghost es-btn--sm mx-lt__archive" type="button" data-row="archive" aria-label="Archive ${esc(p.title)}"${can.ok ? '' : ` disabled title="${esc(can.text)}"`}>Archive</button>`}
         </td>
-      </tr>`;
+      </tr>${state.openMocks === p.productId ? `<tr class="mx-lt__more" data-more="${esc(p.productId)}"><td colspan="6">${p.imagesBusy ? '<p class="mx-meta">Loading the mockups…</p>' : p.imagesError ? `<p class="mx-meta mx-meta--bad">${esc(p.imagesError)}</p>` : (p.images || []).length ? imagesHtml(p.images, p.color || p.title) : '<p class="mx-meta">Fourthwall has no mockups for this product yet.</p>'}</td></tr>` : ''}`;
+    }
+    async function toggleMockups(row) {
+      if (state.openMocks === row.productId) { state.openMocks = ''; renderList(); return; }
+      state.openMocks = row.productId;
+      if (!row.imagesLoaded) {
+        row.imagesBusy = true; row.imagesError = '';
+        renderList();
+        try {
+          const data = await api({ mode: 'product', productId: row.productId });
+          row.images = data.product?.images || [];
+          row.imagesLoaded = true;
+        } catch (error) { row.imagesError = explain(error).text; }
+        row.imagesBusy = false;
+      }
+      renderList();
+      $('mx-list').querySelector(`tr[data-pid="${CSS.escape(row.productId)}"] [data-row="mockups"]`)?.focus();
     }
     function renderList() {
       const box = $('mx-list');
@@ -1120,6 +1261,7 @@
       const row = (state.list || []).find(r => r.productId === tr.dataset.pid);
       if (!row) return;
       if (b.dataset.row === 'archive') { openArchive({ productId: row.productId, title: row.title }, b); return; }
+      if (b.dataset.row === 'mockups') { toggleMockups(row); return; }
       b.disabled = true;
       b.setAttribute('aria-busy', 'true');
       $('mx-list-updated').textContent = `Refreshing “${row.title}”…`;
@@ -1127,7 +1269,7 @@
         const data = await api({ mode: 'product', productId: row.productId, refresh: true });
         const fresh = data.product || {};
         const thumb = fresh.thumb || imgUrl((fresh.images || [])[0]);
-        Object.assign(row, { state: fresh.state && fresh.state !== 'UNKNOWN' ? fresh.state : row.state, url: fresh.url || row.url, thumb: thumb || row.thumb });
+        Object.assign(row, { state: fresh.state && fresh.state !== 'UNKNOWN' ? fresh.state : row.state, url: fresh.url || row.url, thumb: thumb || row.thumb, ...(Array.isArray(fresh.images) ? { images: fresh.images, imagesLoaded: true } : {}) });
         renderList();
         $('mx-list-updated').textContent = `“${row.title}” is up to date.`;
         $('mx-list').querySelector(`tr[data-pid="${CSS.escape(row.productId)}"] [data-row="refresh"]`)?.focus();

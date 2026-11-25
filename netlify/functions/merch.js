@@ -73,7 +73,7 @@ const AI_TIER = 'main'; // Haiku: the cheapest model that writes reliable JSON i
 const COLLECTIONS = ['replay', 'nickname', 'quote', 'core', 'current'];
 const COLOR_KEYS = ['a', 'b', 'ink', 'white'];
 const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
-const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 6, rowText: 40, title: 80, desc: 600, why: 240, concepts: 6, uploadBytes: 25 * 1024 * 1024 });
+const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, uploadBytes: 25 * 1024 * 1024 });
 const CAPS = Object.freeze({ person: 10, team: 30 });
 const TEMPLATE_TTL_MS = 24 * 60 * 60 * 1000;
 const SHOP_TTL_MS = 10 * 60 * 1000;
@@ -383,7 +383,7 @@ function shapeConcept(raw, { content = '', policy = 'acknowledge' } = {}) {
   const stack = [];
   for (const r of raw.stack) {
     const text = clip(r?.text, LIMITS.rowText);
-    if (!text || !['big', 'small'].includes(r.size) || !COLOR_KEYS.includes(r.fill) || !COLOR_KEYS.includes(r.ink) || r.fill === r.ink) return { error: 'row' };
+    if (!text || !['big', 'mid', 'small'].includes(r.size) || !COLOR_KEYS.includes(r.fill) || !COLOR_KEYS.includes(r.ink) || r.fill === r.ink) return { error: 'row' };
     stack.push({ text, size: r.size, fill: r.fill, ink: r.ink });
   }
   const align = raw.align === 'center' ? 'center' : (raw.align === 'left' || raw.align == null ? 'left' : null);
@@ -408,10 +408,12 @@ Collections: "replay" (a moment or era fans relive), "nickname" (an "almost famo
 Rules:
 - Quotes must be copied word for word from the source. Never paraphrase a quote.
 - Never invent numbers, scores, dates or facts. Every number must appear in the source.
-- 2 to 5 rows, each 3 to 22 characters. Short rows print bigger.
+- 2 to 8 rows, each 3 to 24 characters. Short rows print bigger.
+- The person's own words matter most: the FIRST concept must use their main line in full, word for word, split across rows at natural breaks. Never cut a line short or drop the end of a sentence.
+- Make the concepts look different from each other: vary one-word-per-pill stacks, a big line with small lines under it, a wide banner, left and centre alignment, white and team-colour tees.
 - List every real person, nickname, quote and team you used in "rights".
 ${VOICE}
-Shape: {"concepts":[{"collection":"replay|nickname|quote|core|current","title":"short name","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|small","fill":"a|b|ink|white","ink":"a|b|ink|white"}],"align":"left|center","rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line on why fans would wear it"}]}`;
+Shape: {"concepts":[{"collection":"replay|nickname|quote|core|current","title":"short name","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white","ink":"a|b|ink|white"}],"align":"left|center","rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line on why fans would wear it"}]}`;
 
 function parseJson(raw) {
   const s = String(raw || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
@@ -624,7 +626,7 @@ function regionsFor(template, body) {
   }
   return { regions };
 }
-const pipelineImages = list => (Array.isArray(list) ? list : []).map(i => ({ url: i.url, width: i.width, height: i.height, color: i.color, style: i.style, region: i.region || null })).filter(i => i.url).slice(0, 24);
+const pipelineImages = list => (Array.isArray(list) ? list : []).map(i => ({ url: i.url, width: i.width, height: i.height, color: i.color, style: i.style, region: i.region || null })).filter(i => i.url).slice(0, 40);
 
 async function previewMode(body) {
   const kind = BLANKS[body.blank] ? body.blank : 'tee';
