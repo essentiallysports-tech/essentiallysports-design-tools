@@ -55,8 +55,8 @@
   const MID = 0.62; // mid pills: the lines under a big headline
   const WRAP_AT = 18; // big rows longer than this wrap into more pills
   const MIN_CAP_IN = { apparel: 0.12, other: 0.08 }; // smallest printable cap height
-  const MIN_CONTRAST = 1.45; // ink vs garment: below this the art melts into the shirt
-  const CAP = 0.7; // cap height / font size (Acumin Post)
+  const MIN_CONTRAST = 1.7; // box vs garment: below this a pill melts into the shirt (navy on black is ~1.5; gold on white ~1.8 still reads)
+  let CAP = 0.675; // cap height / font size (Acumin Post 900, measured from the font; refined once it loads)
   // Safe edges for hard goods, in inches: poster trim, sticker cut line, mug handle seam.
   const SAFE_IN = { poster: 0.25, sticker: 0.125, mug: 0.5 };
   const MUG_FACE = 0.5; // share of the wrap seen from one side
@@ -161,7 +161,13 @@
     const options = [pal.a, pal.b, pal.ink, WHITE, BLACK].map(hex).filter(Boolean);
     let bg = resolve(row.fill || 'a', pal);
     let ink = resolve(row.ink || (row.fill === 'b' ? 'ink' : 'white'), pal);
-    if (contrast(bg, garment) < MIN_CONTRAST) bg = options.filter(c => c !== garment).sort((x, y) => (contrast(y, garment) >= 2 ? 1 : 0) - (contrast(x, garment) >= 2 ? 1 : 0) || options.indexOf(x) - options.indexOf(y))[0];
+    if (contrast(bg, garment) < MIN_CONTRAST) {
+      const a = hex(pal.a) || ES_BLUE;
+      // The second colour lost on the shirt: white (on dark) or black (on light) pill, team-colour text.
+      const swap = isLight(garment) ? BLACK : WHITE;
+      if (row.fill !== 'a' && contrast(swap, garment) >= MIN_CONTRAST && a !== bg && contrast(a, swap) >= 2.4 && contrast(a, garment) >= MIN_CONTRAST) { bg = swap; ink = a; }
+      else bg = options.filter(c => c !== garment).sort((x, y) => (contrast(y, garment) >= MIN_CONTRAST ? 1 : 0) - (contrast(x, garment) >= MIN_CONTRAST ? 1 : 0) || options.indexOf(x) - options.indexOf(y))[0];
+    }
     const knockout = apparel && contrast(ink, garment) < 1.15 && contrast(bg, garment) >= MIN_CONTRAST;
     if (!knockout && contrast(ink, bg) < 2.4) ink = options.filter(c => c !== bg).sort((x, y) => contrast(y, bg) - contrast(x, bg))[0];
     return { bg, ink, knockout };
@@ -202,6 +208,41 @@
     const topIn = f.topIn === null || f.topIn === undefined || f.topIn === '' || !Number.isFinite(Number(f.topIn)) ? null : clampN(Number(f.topIn), FIT.topMinIn, FIT.topMaxIn);
     return { scale, topIn };
   }
+  // ─── Pro elements (beside the pills; solid ink, print-safe) ─────────────
+  // Basic designs are pills only. Pro may add up to 3 of these:
+  //   number { text: 1-2 digits, style: solid|outline, color, position: behind|above }
+  //   rule   { position: above|below|between, color, weight: thin|thick }
+  //   block  { position: behind, color }  (a solid patch behind the stack)
+  //   icon   { name: ICONS, position: above|below|left, color }
+  // Icons are original simple shapes on a 24-unit grid: `fill` is solid ink,
+  // `cut` lines are knocked out (the shirt shows through).
+  const ELEMENT_TYPES = Object.freeze({ number: ['behind', 'above'], rule: ['above', 'below', 'between'], block: ['behind'], icon: ['above', 'below', 'left'] });
+  const ICON_SHAPES = {
+    star: { fill: 'M12 1.8l3 6.7 7.2.7-5.4 4.8 1.6 7.1L12 17.4l-6.4 3.7 1.6-7.1L1.8 9.2 9 8.5z' },
+    crown: { fill: 'M2.5 6.5l5 4.5L12 3.5l4.5 7.5 5-4.5-2 13h-15z' },
+    flame: { fill: 'M12 1.5c1.2 4.2 5.5 6.3 5.5 11.5a5.5 5.5 0 0 1-11 0c0-3.2 2-4.6 2.2-7.6 1.6 1.1 2.3 2.7 2.3 4.4 1.2-2.2 1.3-5.3 1-8.3z' },
+    bolt: { fill: 'M13.5 1.5L3.5 14h7l-1.5 8.5L20.5 9.5h-7z' },
+    trophy: { fill: 'M6.5 2.5h11v2.5h3.5v2.5a5 5 0 0 1-5 5h-.4a5.6 5.6 0 0 1-2.6 3v2.5h3.5v3.5H7.5V18H11v-2.5a5.6 5.6 0 0 1-2.6-3H8a5 5 0 0 1-5-5V5h3.5z', cut: ['M5 6.8a2.6 2.6 0 0 0 1.6 3.1', 'M19 6.8a2.6 2.6 0 0 1-1.6 3.1'] },
+    arrow: { fill: 'M2.5 9.5h11V4l8 8-8 8v-5.5h-11z' },
+    basketball: { fill: 'M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z', cut: ['M12 2v20', 'M2 12h20', 'M5 4.8c3 2.6 3 11.8 0 14.4', 'M19 4.8c-3 2.6-3 11.8 0 14.4'] },
+    football: { fill: 'M3.2 20.8c-1.6-5.6.2-12 4.7-15.5S18.3 1.6 20.8 3.2c1.6 5.6-.2 12-4.7 15.5s-10.4 3.7-12.9 2.1z', cut: ['M8.5 15.5l7-7', 'M10 11.2l2.8 2.8', 'M11.8 9.4l2.8 2.8', 'M8.2 13l2.8 2.8'] },
+    baseball: { fill: 'M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z', cut: ['M6.2 4c2.6 4.2 2.6 11.8 0 16', 'M17.8 4c-2.6 4.2-2.6 11.8 0 16'] },
+    soccer: { fill: 'M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z', cut: ['M12 7.5l4.3 3.1-1.6 5h-5.4l-1.6-5z', 'M12 7.5V3', 'M16.3 10.6l4.2-1.4', 'M14.7 15.6l2.6 3.7', 'M9.3 15.6l-2.6 3.7', 'M7.7 10.6L3.5 9.2'] },
+    hockey: { fill: 'M14.5 1.5h3.2l-4.4 15.5h5.2a2.2 2.2 0 0 1 0 4.4H8.6l-1.3-4.4h4.2zM2.5 19.2c0-1.2 1.8-2 4-2s4 .8 4 2-1.8 2-4 2-4-.8-4-2z' },
+    golf: { fill: 'M7 1.5h2V19H7zM9 1.5l9 4.3-9 4.3zM8 18.5c2.8 0 5 .9 5 2s-2.2 2-5 2-5-.9-5-2 2.2-2 5-2z' },
+    tennis: { fill: 'M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20z', cut: ['M4.2 5.8c4.3 2.6 4.3 9.8 0 12.4', 'M19.8 5.8c-4.3 2.6-4.3 9.8 0 12.4'] },
+    'racing-flag': { fill: 'M4 1.5h2v21H4zM6 2.5h4v4H6zM14 2.5h4v4h-4zM10 6.5h4v4h-4zM18 6.5h3v4h-3zM6 10.5h4v4H6zM14 10.5h4v4h-4z' },
+  };
+  const ICONS = Object.freeze(Object.keys(ICON_SHAPES));
+  // Keeps only valid elements (Pro), max 3; numbers 1-2 digits.
+  function elementsOf(concept = {}) {
+    if (concept.mode === 'basic' || !Array.isArray(concept.elements)) return [];
+    const okColor = c => ['a', 'b', 'ink', 'white', 'black'].includes(c) || hexOk(c);
+    return concept.elements.filter(e => e && ELEMENT_TYPES[e.type] && ELEMENT_TYPES[e.type].includes(e.position || ELEMENT_TYPES[e.type][0]) && okColor(e.color || 'a'))
+      .filter(e => (e.type !== 'number' || /^\d{1,2}$/.test(String(e.text || ''))) && (e.type !== 'icon' || ICON_SHAPES[e.name]))
+      .slice(0, 3).map(e => ({ ...e, position: e.position || ELEMENT_TYPES[e.type][0] }));
+  }
+
   // Splits words into pills: 'word' one word each (tiny words ride with the
   // next), 'pair' two words, 'line' long lines, 'auto' balanced rows.
   const TINY = new Set(['A', 'AN', 'THE', 'OF', 'IN', 'ON', 'AT', 'TO', 'FOR', 'AND', 'OR', 'BY', 'IS', 'IT', 'MY', 'NO', 'SO', 'WE', 'I']);
@@ -227,7 +268,10 @@
   function stackRows(rows, box, measure, scale, align) {
     const at100 = rows.map(r => { const g = pillGeom(100 * r.rel, scale); return { w: measure(r.text, 100 * r.rel) + g.padL + g.padR, step: g.step, h: g.h }; });
     const maxW = Math.max(...at100.map(r => r.w));
-    const totalH = at100.reduce((s, r, i) => s + (i < at100.length - 1 ? r.step : r.h), 0);
+    // Rows touch without overlapping, so every pill keeps even padding
+    // (the editor overlaps the box under the letters; on a print that
+    // reads as uneven spacing).
+    const totalH = at100.reduce((s, r) => s + r.h, 0);
     const size = Math.max(4, Math.floor(Math.min(box.w / maxW, box.h / totalH) * 100));
     const items = [];
     let y = 0;
@@ -238,7 +282,7 @@
       const w = measure(r.text, s) + g.padL + g.padR;
       blockW = Math.max(blockW, w);
       items.push({ type: 'pill', text: r.text, size: s, w, h: g.h, padL: g.padL, baseline: g.baseline, y, bg: r.bg, ink: r.ink, knockout: r.knockout, small: r.rel < 1, align: r.align || align });
-      y += i < rows.length - 1 ? g.step : g.h;
+      y += g.h;
     });
     const x0 = box.x + (box.w - blockW) / 2;
     const y0 = box.y + (box.valign === 'top' ? 0 : (box.h - y) / 2);
@@ -308,9 +352,74 @@
       box.h = Math.max(1, box.h - logoH - gap);
       box.fullH = fullH;
     }
-    const result = stackRows(rows, box, m, scale, align);
-    items.push(...result.items);
-    const design = { ...result.bounds };
+    const els = elementsOf(concept);
+    let result = stackRows(rows, box, m, scale, align);
+    const extras = [];
+    if (els.length) {
+      // Room the elements need around the stack, relative to the big pill height.
+      const need = (r) => {
+        const ph = pillGeom(r.size, scale).h;
+        const e = { top: 0, bottom: 0, left: 0, gapIn: 0 };
+        els.forEach(el => {
+          if (el.type === 'rule') { const t = Math.max(Math.round(0.05 * a.dpi), Math.round(ph * (el.weight === 'thick' ? 0.16 : 0.07))); const g = Math.round(t * 1.6); if (el.position === 'above') e.top += t + g; else if (el.position === 'below') e.bottom += t + g; else e.gapIn += t + 2 * g; }
+          if (el.type === 'icon') { const sz = Math.round(ph * 1.1); if (el.position === 'above') e.top += sz + Math.round(ph * 0.25); else if (el.position === 'below') e.bottom += sz + Math.round(ph * 0.25); else e.left += sz + Math.round(ph * 0.3); }
+          if (el.type === 'number' && el.position === 'above') e.top += Math.round(ph * 1.9);
+          if (el.type === 'block') { const pad = Math.round(ph * 0.3); e.top += pad; e.bottom += pad; e.left += pad / 2; }
+        });
+        return e;
+      };
+      let e = need(result);
+      const bw = result.bounds.w + e.left;
+      const bh = result.bounds.h + e.top + e.bottom + e.gapIn;
+      const k = Math.min(1, box.w / bw, box.h / bh);
+      if (k < 1) { result = stackRows(rows, { ...box, w: Math.floor(box.w * k), h: Math.floor(box.h * k) }, m, scale, align); e = need(result); }
+      const ph = pillGeom(result.size, scale).h;
+      // Centre the group (stack + extras) in the box.
+      const groupW = result.bounds.w + e.left;
+      const groupH = result.bounds.h + e.top + e.bottom + e.gapIn;
+      const gx = box.x + Math.round((box.w - groupW) / 2);
+      const gy = box.y + (box.valign === 'top' ? 0 : Math.round((box.h - groupH) / 2));
+      const dx = gx + e.left - result.bounds.x;
+      const dy = gy + e.top - result.bounds.y;
+      result.items.forEach(i => { i.x += dx; i.y += dy; });
+      result.bounds.x += dx; result.bounds.y += dy;
+      // 'between' rule: push rows after the first down.
+      const between = els.find(el => el.type === 'rule' && el.position === 'between');
+      if (between && result.items.length > 1) { result.items.slice(1).forEach(i => { i.y += e.gapIn; }); result.bounds.h += e.gapIn; }
+      const b = result.bounds;
+      const col = key => resolve(key || 'a', pal);
+      let top = b.y;
+      let bottom = b.y + b.h;
+      els.forEach(el => {
+        if (el.type === 'block') { const pad = Math.round(ph * 0.3); extras.push({ type: 'rect', role: 'block', z: -2, x: b.x - Math.round(pad / 2), y: b.y - pad, w: b.w + pad, h: b.h + 2 * pad, bg: col(el.color) }); }
+        if (el.type === 'number') {
+          const fill = col(el.color);
+          if (el.position === 'behind') { const size = Math.round(Math.min(b.h * 1.25, b.w * 1.1) / CAP * 0.82); extras.push({ type: 'number', z: -1, text: String(el.text), style: el.style === 'outline' ? 'outline' : 'solid', size, stroke: Math.max(Math.round(0.06 * a.dpi), Math.round(size * 0.035)), x: b.x, y: b.y, w: b.w, h: b.h, ink: fill, bg: fill }); }
+          else { const size = Math.round((ph * 1.7) / CAP); const h = Math.round(size * CAP); top -= h + Math.round(ph * 0.2); extras.push({ type: 'number', z: 1, text: String(el.text), style: el.style === 'outline' ? 'outline' : 'solid', size, stroke: Math.max(Math.round(0.06 * a.dpi), Math.round(size * 0.035)), x: b.x, y: top, w: b.w, h, ink: fill, bg: fill, align: align === 'center' ? 'center' : 'left' }); }
+        }
+        if (el.type === 'rule') {
+          const t = Math.max(Math.round(0.05 * a.dpi), Math.round(ph * (el.weight === 'thick' ? 0.16 : 0.07)));
+          const g = Math.round(t * 1.6);
+          let y;
+          if (el.position === 'above') { top -= t + g; y = top; }
+          else if (el.position === 'below') { y = bottom + g; bottom = y + t; }
+          else { const first = result.items[0]; y = first.y + first.h + g; }
+          extras.push({ type: 'rect', role: 'rule', z: 1, x: b.x, y, w: b.w, h: t, bg: col(el.color) });
+        }
+        if (el.type === 'icon') {
+          const sz = Math.round(ph * 1.1);
+          let x; let y;
+          if (el.position === 'left') { x = b.x - sz - Math.round(ph * 0.3); y = b.y + Math.round((Math.min(b.h, ph * 2) - sz) / 2); }
+          else if (el.position === 'above') { top -= sz + Math.round(ph * 0.25); y = top; x = align === 'center' ? b.x + Math.round((b.w - sz) / 2) : b.x; }
+          else { y = bottom + Math.round(ph * 0.25); bottom = y + sz; x = align === 'center' ? b.x + Math.round((b.w - sz) / 2) : b.x; }
+          extras.push({ type: 'icon', z: 1, name: el.name, x, y, w: sz, h: sz, bg: col(el.color) });
+        }
+      });
+    }
+    // Elements behind the pills draw first.
+    items.push(...extras.filter(x => x.z < 0).sort((p, q) => p.z - q.z), ...result.items, ...extras.filter(x => x.z > 0));
+    const all = items.filter(i => i.type !== 'logo');
+    const design = all.length ? (() => { const x0 = Math.min(...all.map(i => i.x)); const y0 = Math.min(...all.map(i => i.y)); return { x: x0, y: y0, w: Math.max(...all.map(i => i.x + i.w)) - x0, h: Math.max(...all.map(i => i.y + i.h)) - y0 }; })() : { ...result.bounds };
     if (inlineLogo) {
       // Centre the design + wordmark block in the full box.
       const blockH = design.h + gap + logoH;
@@ -337,12 +446,15 @@
     const effects = scene.items.some(i => (i.opacity !== undefined && i.opacity !== 1) || i.shadow || i.glow || i.gradient);
     add('effects', !effects, 'error', effects ? 'Fades, glows or see-through ink print badly. Remove them.' : 'Solid ink only: no fades, glows or see-through areas.');
     if (semiPixels !== null) add('pixels', semiPixels === 0, 'error', semiPixels === 0 ? 'Every pixel is fully solid or fully clear.' : `${semiPixels} see-through pixels would print as a halo.`);
-    const boxes = scene.items.filter(i => i.type === 'pill' || i.type === 'block');
-    const lost = boxes.find(i => contrast(i.bg, scene.garment) < MIN_CONTRAST);
+    const boxes = scene.items.filter(i => i.type === 'pill' || i.type === 'block' || i.type === 'rect' || i.type === 'icon' || i.type === 'number');
+    // A pill on a block sits on the block, not the shirt.
+    const block = scene.items.find(i => i.role === 'block');
+    const under = i => (block && i.type === 'pill' ? block.bg : scene.garment);
+    const lost = boxes.find(i => contrast(i.bg, under(i)) < MIN_CONTRAST);
     const whiteOnWhite = scene.apparel && contrast(scene.garment, WHITE) < 1.2 && boxes.some(i => contrast(i.bg, WHITE) < 1.2);
-    const unreadable = boxes.find(i => !i.knockout && contrast(i.ink, i.bg) < 2.4);
+    const unreadable = boxes.find(i => i.type === 'pill' && !i.knockout && contrast(i.ink, i.bg) < 2.4);
     const garmentOk = !lost && !whiteOnWhite && !unreadable;
-    add('garment', garmentOk, 'error', garmentOk ? 'Every colour stands out from the blank.' : unreadable ? `"${unreadable.text}" is hard to read on its box. Swap the colours.` : `The "${(lost || boxes[0]).text}" box disappears on a ${colorName(scene.garment).toLowerCase()} ${scene.apparel ? 'shirt' : 'blank'}. Pick another colour.`);
+    add('garment', garmentOk, 'error', garmentOk ? 'Every colour stands out from the blank.' : unreadable ? `"${unreadable.text}" is hard to read on its box. Swap the colours.` : `The "${(lost || boxes[0]).text || (lost || boxes[0]).name || (lost || boxes[0]).role || 'design'}" ${lost?.type === 'pill' || !lost ? 'box' : 'element'} disappears on a ${colorName(scene.garment).toLowerCase()} ${scene.apparel ? 'shirt' : 'blank'}. Pick another colour.`);
     const minCap = Math.min(...boxes.filter(i => i.type === 'pill').map(i => i.size * CAP / scene.dpi), Infinity);
     const need = scene.apparel ? MIN_CAP_IN.apparel : MIN_CAP_IN.other;
     const capOk = !Number.isFinite(minCap) || minCap >= need - 1e-6;
@@ -424,7 +536,9 @@
       const face = new FontFace('Acumin Post', `url(${BASE}fonts/acumin-post-legacy.otf)`, { weight: '900' });
       fontPromise = face.load().then(f => {
         document.fonts.add(f);
-        liveMeasure = canvasMeasure(document.createElement('canvas').getContext('2d'));
+        const mctx = document.createElement('canvas').getContext('2d');
+        liveMeasure = canvasMeasure(mctx);
+        try { mctx.font = fontOf(1000); const asc = mctx.measureText('H').actualBoundingBoxAscent / 1000; if (asc > 0.5 && asc < 0.8) CAP = asc; } catch { /* keep the default */ }
         return true;
       }).catch(() => false);
     }
@@ -448,6 +562,30 @@
         else g.fillText(it.text, it.x + it.padL, it.y + it.baseline);
         g.globalCompositeOperation = 'source-over';
         g.textAlign = 'left';
+      } else if (it.type === 'rect') {
+        g.fillStyle = it.bg;
+        g.fillRect(it.x, it.y, it.w, it.h);
+      } else if (it.type === 'number') {
+        g.font = fontOf(it.size);
+        g.textBaseline = 'alphabetic';
+        const capH = it.size * CAP;
+        g.textAlign = it.align === 'left' ? 'left' : 'center';
+        const tx = it.align === 'left' ? it.x : it.x + it.w / 2;
+        const ty = it.y + (it.h + capH) / 2;
+        if (it.style === 'outline') { g.strokeStyle = it.ink; g.lineWidth = it.stroke; g.lineJoin = 'miter'; g.strokeText(it.text, tx, ty); }
+        else { g.fillStyle = it.ink; g.fillText(it.text, tx, ty); }
+        g.textAlign = 'left';
+      } else if (it.type === 'icon') {
+        const shape = ICON_SHAPES[it.name];
+        if (shape && typeof Path2D !== 'undefined') {
+          g.save();
+          g.translate(it.x, it.y);
+          g.scale(it.w / 24, it.h / 24);
+          g.fillStyle = it.bg;
+          g.fill(new Path2D(shape.fill), 'evenodd');
+          if (shape.cut) { g.globalCompositeOperation = 'destination-out'; g.strokeStyle = BLACK; g.lineWidth = 1.5; g.lineCap = 'round'; g.lineJoin = 'round'; shape.cut.forEach(d => g.stroke(new Path2D(d))); }
+          g.restore();
+        }
       } else if (it.type === 'logo') {
         const img = await loadImage(BASE + (it.variant === 'white' ? WORDMARK.white : WORDMARK.blue));
         if (img) g.drawImage(img, it.x, it.y, it.w, it.h);
@@ -605,6 +743,78 @@
     og.scale(k, k);
     await drawScene(scene, og);
     g.drawImage(off, 0, 0);
+    return { width: W, height: H, scene };
+  }
+
+  // ─── Mockup on Fourthwall's real blank photo (the fallback mockup) ──────
+  // Fourthwall's templates carry real photos per colour (colorVariants[].photos).
+  // Photo 0 is the front view. PHOTO_AREAS maps the print area onto that photo
+  // (fractions of the photo; measured on the Stanley/Stella tee photos,
+  // 720 x 960, 2026-11-26). Kinds without a calibration return null so the
+  // page falls back to the flat preview.
+  const PHOTO_AREAS = {
+    tee: { x: 258 / 720, y: 292 / 960, w: 204 / 720, h: 245 / 960, logo: { sleeve: { x: 500 / 720, y: 372 / 960, w: 34 / 720 }, neck: { x: 343 / 720, y: 268 / 960, w: 34 / 720 } } },
+  };
+  // Nearest template colour (by hex) with photos, for a garment colour.
+  function photoFor(colors = [], garment = WHITE) {
+    const g = hex(garment) || WHITE;
+    const rgb = x => [1, 3, 5].map(i => parseInt(x.slice(i, i + 2), 16));
+    const [r, gg, b] = rgb(g);
+    const withPhotos = colors.filter(c => hexOk(c.hex) && Array.isArray(c.photos) && c.photos.length);
+    if (!withPhotos.length) return null;
+    const best = withPhotos.map(c => { const [R, G, B] = rgb(c.hex.toUpperCase()); return [c, (r - R) ** 2 + (gg - G) ** 2 + (b - B) ** 2]; }).sort((x, y) => x[1] - y[1])[0][0];
+    return { url: best.photos[0], color: best };
+  }
+  const photoCache = new Map();
+  function loadPhoto(src) {
+    if (!photoCache.has(src)) {
+      photoCache.set(src, new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => { const plain = new Image(); plain.onload = () => resolve(plain); plain.onerror = () => resolve(null); plain.src = src; };
+        img.src = src;
+      }));
+    }
+    return photoCache.get(src);
+  }
+  // opts: { photo: url, kind, garmentColor, spec, logoSpot: 'sleeve'|'neck'|'none' }.
+  // Resolves { width, height, scene } or null (no photo / no calibration).
+  async function photoMock(concept, canvas, opts = {}) {
+    const kind = MerchRules.BLANKS[opts.kind] ? opts.kind : 'tee';
+    const cal = PHOTO_AREAS[kind];
+    if (!cal || !opts.photo) return null;
+    await loadFonts();
+    const img = await loadPhoto(opts.photo);
+    if (!img) return null;
+    const W = canvas.width || 600;
+    const H = Math.round(W * (img.naturalHeight || 960) / (img.naturalWidth || 720));
+    canvas.height = H;
+    const g = canvas.getContext('2d');
+    g.clearRect(0, 0, W, H);
+    g.drawImage(img, 0, 0, W, H);
+    const garment = hex(opts.garmentColor) || WHITE;
+    const spec = { ...(DEFAULT_AREAS[kind]), ...(opts.spec || {}), garmentColor: garment, kind };
+    const scene = layout(concept, spec);
+    const rect = { x: cal.x * W, y: cal.y * H, w: cal.w * W, h: cal.h * H };
+    const k = Math.min(rect.w / scene.w, rect.h / scene.h);
+    const off = document.createElement('canvas');
+    off.width = Math.max(1, Math.round(scene.w * k));
+    off.height = Math.max(1, Math.round(scene.h * k));
+    const og = off.getContext('2d');
+    og.scale(k, k);
+    await drawScene(scene, og);
+    // Ink sits in the fabric: multiply on light shirts keeps the folds; on dark shirts draw it straight.
+    g.save();
+    g.globalCompositeOperation = isLight(garment) ? 'multiply' : 'source-over';
+    g.globalAlpha = 0.96;
+    g.drawImage(off, Math.round(rect.x + (rect.w - off.width) / 2), Math.round(rect.y));
+    g.restore();
+    const spot = cal.logo?.[opts.logoSpot === 'back-neck' || opts.logoSpot === 'label' ? 'neck' : opts.logoSpot];
+    if (spot) {
+      const logo = await loadImage(BASE + (contrast(garment, ES_BLUE) < 1.6 ? WORDMARK.white : WORDMARK.blue));
+      if (logo) { const lw = spot.w * W; g.drawImage(logo, Math.round(spot.x * W), Math.round(spot.y * H), Math.round(lw), Math.round(lw * WORDMARK.h / WORDMARK.w)); }
+    }
     return { width: W, height: H, scene };
   }
 
@@ -783,8 +993,8 @@
   }
 
   return {
-    VERSION: '2026-11-26a', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
-    render, renderLogo, checks, preview, closeup, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
+    VERSION: '2026-11-26b', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, ICONS, ICON_SHAPES, ELEMENT_TYPES, elementsOf, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
+    render, renderLogo, checks, preview, closeup, photoMock, photoFor, PHOTO_AREAS, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,
   };

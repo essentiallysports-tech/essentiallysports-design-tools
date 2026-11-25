@@ -69,3 +69,32 @@ ok('Fourthwall product: every mockup, variant images labelled by colour, no repe
   assert.equal(p.variants[1].color, 'Black');
 });
 console.log(`merch v3: ${n} checks passed`);
+
+// ─── merch4 engine ──────────────────────────────────────────────────────
+ok('pills touch without overlapping (even padding)', () => {
+  const c = P.yourWords(line);
+  const pills = P.layout(c, TEE).items.filter(i => i.type === 'pill');
+  for (let i = 1; i < pills.length; i++) assert.ok(Math.abs(pills[i].y - (pills[i - 1].y + pills[i - 1].h)) <= 1, 'touching, no overlap');
+});
+ok('navy second colour on a dark tee becomes a white pill with team-colour text', () => {
+  const c = { palette: { a: '#0A7DFA', b: '#033162', ink: '#FFFFFF' }, stack: [{ text: 'THEY', size: 'big', fill: 'a', ink: 'white' }, { text: 'DONT', size: 'big', fill: 'b', ink: 'white' }] };
+  const pills = P.layout(c, { ...TEE, garmentColor: '#020718' }).items;
+  assert.equal(pills[1].bg, '#FFFFFF'); assert.equal(pills[1].ink, '#0A7DFA');
+  assert.equal(P.checks(c, { ...TEE, garmentColor: '#020718' }).find(x => x.id === 'garment').level, 'ok');
+});
+ok('Pro elements are laid out inside the area; Basic strips them', () => {
+  const c = { mode: 'pro', ...P.yourWords(line), elements: [{ type: 'number', text: '23', style: 'outline', color: 'b', position: 'behind' }, { type: 'icon', name: 'crown', position: 'above', color: 'a' }, { type: 'rule', position: 'below', color: 'a', weight: 'thick' }, { type: 'block', position: 'behind', color: 'a' }] };
+  const s = P.layout(c, TEE);
+  assert.deepEqual(s.items.filter(i => i.type !== 'pill').map(i => i.type).sort(), ['icon', 'number', 'rect']);
+  assert.equal(P.checks(c, TEE).filter(x => x.level === 'error').length, 0);
+  assert.equal(P.layout({ ...c, mode: 'basic' }, TEE).items.filter(i => i.type !== 'pill').length, 0);
+  assert.equal(P.elementsOf({ mode: 'pro', elements: [{ type: 'icon', name: 'nba-logo', position: 'above' }, { type: 'number', text: '123' }] }).length, 0);
+  assert.ok(P.ICONS.includes('basketball') && P.ELEMENT_TYPES.rule.includes('between'));
+});
+ok('photoFor picks the nearest template colour with photos', () => {
+  const colors = [{ name: 'White', hex: '#ffffff', photos: ['w.jpg'] }, { name: 'French Navy', hex: '#020718', photos: ['n.jpg'] }, { name: 'Red', hex: '#ed0739', photos: [] }];
+  assert.equal(P.photoFor(colors, '#0C2340').url, 'n.jpg');
+  assert.equal(P.photoFor(colors, '#C8102E').url, 'n.jpg'.replace('n', 'n')); // red has no photos -> nearest with photos
+  assert.equal(P.photoFor([], '#fff'), null);
+});
+console.log(`merch v3 + merch4 engine: ${n} checks passed`);
