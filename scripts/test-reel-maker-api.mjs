@@ -76,7 +76,7 @@ await test('config: the Gateway key alone turns the house voice on; music bed of
   assert.equal(body.voice.model, 'elevenlabs/eleven-v4');
   assert.deepEqual(body.voice.voices.map(v => v.name), ['Brian', 'Liam', 'Sarah', 'Bella']);
   ['nPczCjzI2devNBz1zQrb', 'TX3LPaxmHKxFdv7VOQHJ', 'EXAVITQu4vr4xnSDxMaL', 'hpp4J3VqNfWAUOO0d1Us'].forEach(id => assert.equal(JSON.stringify(body).includes(id), false));
-  assert.deepEqual(body.styles, ['es', 'classic', 'explainer', 'series', 'countdown']);
+  assert.deepEqual(body.styles, ['es'], 'Reels 2.0: ES is the only style offered');
   assert.equal(body.aiClips.ready, false, 'AI clips are off by default');
   assert.equal(body.aiClips.max, 2);
   assert.equal(body.music.ready, false);

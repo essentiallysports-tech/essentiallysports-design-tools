@@ -174,6 +174,13 @@
     }
     // The ES system's checklist (ES-style reels).
     if (es) issues.push(...ES.checks(timeline, { boxes, measure: typeof measure === 'function' ? measure : null, layout: R.layoutGraphic }));
+    // Reels 2.0: the look. ES.checks runs the look's checks for news reels
+    // (a real look, validateLook with the reel's team colour, every word's
+    // contrast against what is under it). Data formats in the ES style wear
+    // the look too, so its own rules are checked here; and a reel still in a
+    // retired style is flagged.
+    if (!es && ES && ES.lookChecks && timeline.look) issues.push(...ES.lookChecks(timeline, {}).filter(i => i.severity !== 'info' || /team/i.test(i.message)));
+    if (R.styleRetired && R.styleRetired(timeline)) issues.push(issue('look', 'warning', 'This reel is in a style that has been retired.', 'Open it again, or pick a look: it will be redrawn in the ES system.'));
 
     // Captions: contrast and card size.
     const hl = timeline.highlight || R.ES_BLUE;

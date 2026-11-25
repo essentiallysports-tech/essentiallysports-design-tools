@@ -267,7 +267,7 @@ await test('reel-maker plan hand-off: a data format with its data plans from the
   delete process.env.AI_GATEWAY_API_KEY;
   const { _test } = require('../netlify/functions/reel-maker.js');
   const g = await _test.plan({ format: 'gameswing', digest: FULL }, { email: 'e' }, { off: true });
-  assert.deepEqual([g.ok, g.source, g.reason, g.style, g.cost], [true, 'data', 'off', 'series', 0]);
+  assert.deepEqual([g.ok, g.source, g.reason, g.style, g.cost], [true, 'data', 'off', 'es', 0]);
   assert.ok(g.corpus.includes('Win probability: ESPN Analytics'));
   assert.equal((g.lint.issues || []).filter(i => i.id === 'numbers').length, 0, 'no unsourced-number lint');
   const a = await _test.plan({ format: 'archive', archive: ARCHIVE, athlete: ATHLETE }, { email: 'e' }, { weekly: true });

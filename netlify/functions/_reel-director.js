@@ -150,9 +150,19 @@ const ES_SPEC = [
   '- endcard (the last beat, kind "cta"): {"type":"endcard"}. It shows "WE BRING / THE RECEIPTS.", the ES logotype and the source line; its vo is not read.',
   'Colours: ink and blue carry structure. green (money won, the good side) and red (loss, wrong) only for meaning, at most two per beat. Never yellow on screen (captions use it).',
   'On-screen words are a headline, not the sentence. Numbers on screen exactly as the vo says them. One idea per beat. In each vo, wrap the one word that carries the meaning in *asterisks* (it turns yellow in the captions).',
+  // Reels 2.0: looks (reel-es-themes.js). One line per layout preset; the
+  // reel's own look is named under LOOK (lookRequest), else write for Standard.
+  'LOOKS: the reel is drawn in one look. Its layout preset shapes the beats you choose (colours and fonts are not yours to set):',
+  ...Object.values(ES.LOOK_LAYOUTS).map(l => `- ${l.director}`),
 ].join('\n');
-function styleRequest(style) {
-  if (style && style.engine === 'es') return ES_SPEC;
+// The line for the reel's own look ("LOOK: Data-led (Data-led: at least two of…)").
+function lookRequest(look) {
+  if (!look || !ES.LOOKS[look]) return '';
+  const l = ES.LOOKS[look];
+  return `LOOK: ${l.label}. Follow the ${ES.LOOK_LAYOUTS[l.layout].director.split(':')[0]} line above.`;
+}
+function styleRequest(style, look = '') {
+  if (style && style.engine === 'es') return [ES_SPEC, lookRequest(look)].filter(Boolean).join('\n');
   if (!style || !style.components.length) return '';
   const long = style.seconds.max > 90;
   return [
@@ -165,11 +175,11 @@ function styleRequest(style) {
   ].filter(Boolean).join('\n');
 }
 
-function directorRequest({ read, format, steer = '', style = null, today = new Date() }) {
+function directorRequest({ read, format, steer = '', style = null, look = '', today = new Date() }) {
   const fmt = F.FORMATS[format];
   return [
     `FORMAT: ${read.auto ? `auto (the router suggests ${fmt.id}; candidates: ${read.route.candidates.join(', ')})` : fmt.id}`,
-    styleRequest(style),
+    styleRequest(style, look),
     `SPORT: ${(F.SPORTS.find(s => s.id === read.sport) || {}).label || 'unknown'}`,
     read.team ? `TEAM: ${read.team.name}` : '',
     steer ? `EDITOR NOTE: ${clean(steer, 300)}` : '',
@@ -215,7 +225,7 @@ const COMPONENT_OK = {
   mystery: () => true,
 };
 
-function validatePlan(parsed, { read, format, steer = '', style: styleId = '' } = {}) {
+function validatePlan(parsed, { read, format, steer = '', style: styleId = '', look = '' } = {}) {
   const issues = [];
   const style = STYLES.get(styleId);
   let fmt = F.FORMATS[format] ? format : 'explainer';
@@ -338,6 +348,8 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '' } 
     beats: final,
     steer: clean(steer, 200),
     style: style.id,
+    // The ES look (only a real look id is kept; the page defaults to Paper).
+    ...(style.engine === 'es' && look && ES.LOOKS[look] ? { look } : {}),
   };
   // Plan-level chrome: eyebrow, series tag, the data strip (numbers sourced).
   const eyebrow = clean(parsed && parsed.eyebrow, 48);
@@ -359,15 +371,18 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '' } 
 
 // ─── Director ────────────────────────────────────────────────────────────
 // tier: 'economy' = Haiku only; 'standard' = Haiku, then Sonnet when weak.
-async function runReelDirector({ brief = '', trend = null, facts = '', format = 'auto', sport = '', tier = 'standard', steer = '', style: styleId = 'classic', track = null, timeoutMs = 22000, startedAt = Date.now(), budgetMs = 45000, now = () => Date.now() } = {}) {
+async function runReelDirector({ brief = '', trend = null, facts = '', format = 'auto', sport = '', tier = 'standard', steer = '', style: styleId = 'es', look = '', track = null, timeoutMs = 22000, startedAt = Date.now(), budgetMs = 45000, now = () => Date.now() } = {}) {
   const read = readReelBrief({ brief, trend, facts, sport, format });
-  const style = STYLES.get(styleId);
+  // Reels 2.0: the older styles are retired; a request for one is written in ES.
+  const style = STYLES.get(STYLES.currentStyle(styleId));
+  const lookId = look && ES.LOOKS[look] ? look : '';
   const longForm = style.seconds.max > 90;
   const result = { plan: null, read, model: '', cost: 0, source: 'draft', issues: [], escalated: false };
   const draft = () => {
     const plan = F.fallbackPlan({ brief: read.text, title: trend ? trend.title : '', format: read.format, sport: read.sport });
     plan.team = read.team;
     plan.style = style.id;
+    if (lookId) plan.look = lookId;
     return plan;
   };
   let api;
@@ -378,7 +393,7 @@ async function runReelDirector({ brief = '', trend = null, facts = '', format = 
     system: DIRECTOR_SYSTEM,
     cacheSystem: true,
     json: true,
-    messages: [{ role: 'user', content: directorRequest({ read, format: read.format, steer, style }) }],
+    messages: [{ role: 'user', content: directorRequest({ read, format: read.format, steer, style, look: lookId }) }],
     effort: 'low',
     maxTokens: longForm ? 5200 : 2600,
     timeoutMs,
@@ -388,7 +403,7 @@ async function runReelDirector({ brief = '', trend = null, facts = '', format = 
   const attempt = async askTier => {
     const reply = await ask(askTier);
     result.cost += Number(reply.cost) || 0;
-    const checked = validatePlan(extractJson(reply.text), { read, format: read.format, steer, style: style.id });
+    const checked = validatePlan(extractJson(reply.text), { read, format: read.format, steer, style: style.id, look: lookId });
     checked.model = reply.model;
     if (!best || (best.weak && !checked.weak) || (best.weak === checked.weak && checked.plan.beats.length > best.plan.beats.length)) best = checked;
     return checked;
@@ -426,20 +441,21 @@ async function revisePlan({ plan, instruction = '', corpus = '', track = null, t
   const read = { corpus: clean(corpus, 8000), auto: false, route: F.routeFormat(''), sport: plan && plan.sport || '', team: plan && plan.team || null };
   const ask = REVISE_PRESETS[instruction] || clean(instruction, 300);
   if (!ask) throw new Error('Say what to change.');
-  const style = STYLES.get(plan && plan.style);
+  const style = STYLES.get(STYLES.currentStyle(plan && plan.style));
+  const lookId = plan && ES.LOOKS[plan.look] ? plan.look : '';
   const current = { format: plan.format, title: plan.title, team: plan.team ? plan.team.name : '', eyebrow: plan.eyebrow, series: plan.series, strip: plan.strip, beats: (plan.beats || []).slice(0, style.beats.max) };
   const reply = await api.aiText({
     tier: 'main',
     system: DIRECTOR_SYSTEM,
     cacheSystem: true,
     json: true,
-    messages: [{ role: 'user', content: `${directorRequest({ read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style })}\n\nCURRENT REEL:\n${JSON.stringify(current)}\n\nCHANGE: ${ask}\nReturn the whole revised reel as JSON in the same shape. Keep the format.` }],
+    messages: [{ role: 'user', content: `${directorRequest({ read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style, look: lookId })}\n\nCURRENT REEL:\n${JSON.stringify(current)}\n\nCHANGE: ${ask}\nReturn the whole revised reel as JSON in the same shape. Keep the format.` }],
     effort: 'low',
     maxTokens: style.seconds.max > 90 ? 5200 : 2600,
     timeoutMs,
     track: track ? { ...track, feature: 'reels-revise' } : undefined,
   });
-  const checked = validatePlan(extractJson(reply.text), { read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style: style.id });
+  const checked = validatePlan(extractJson(reply.text), { read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style: style.id, look: lookId });
   return { ...checked, model: reply.model, cost: Number(reply.cost) || 0 };
 }
 
@@ -597,8 +613,9 @@ function validateDataCopy(parsed, plan, facts, { voice = false } = {}) {
 }
 
 // The data-format director. input = readDataInput(body). Never throws.
-async function runDataDirector(input, { style = '', tier = 'standard', steer = '', voice = false, blocked = '', track = null, timeoutMs = 18000 } = {}) {
-  const plan = codeDataPlan(input, { style });
+async function runDataDirector(input, { style = '', look = '', tier = 'standard', steer = '', voice = false, blocked = '', track = null, timeoutMs = 18000 } = {}) {
+  const plan = codeDataPlan(input, { style: style ? STYLES.currentStyle(style) : '' });
+  if (plan && look && ES.LOOKS[look]) plan.look = look;
   if (!plan) return { plan: null, source: 'draft', reason: 'no-data', cost: 0, model: '', issues: ['No usable data for this format.'], corpus: '' };
   const facts = dataFacts({ format: input.format, digest: plan.data.game, athlete: plan.data.athlete, archive: input.archive, captions: input.captions });
   const tl = planTimeline(plan);
@@ -638,7 +655,7 @@ async function runDataDirector(input, { style = '', tier = 'standard', steer = '
 }
 
 module.exports = {
-  readReelBrief, directorRequest, styleRequest, validatePlan, runReelDirector, COMPONENT_SPEC, revisePlan, factCheck, teamInfo,
+  readReelBrief, directorRequest, styleRequest, lookRequest, ES_SPEC, validatePlan, runReelDirector, COMPONENT_SPEC, revisePlan, factCheck, teamInfo,
   DIRECTOR_SYSTEM, REVISE_PRESETS, FACT_CHECK, KIT_SPORT,
   DATA_SYSTEM, runDataDirector, readDataInput, hasDataInput, codeDataPlan, dataFacts, validateDataCopy, planTimeline, DATA_CACHE,
   _test: { extractJson, clean, squash, beatBrief },
