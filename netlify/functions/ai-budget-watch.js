@@ -53,7 +53,8 @@ exports.handler = async function handler(event) {
     merch = { ok: false, error: String(error?.message || error).slice(0, 200) };
     console.warn(JSON.stringify({ event: 'merch-sync-in-budget-watch', error: merch.error }));
   }
-  return json(result.ok ? 200 : 502, { ...result, merchSync: merch ? { ok: merch.ok !== false } : null });
+  if (merch && merch.ok === false) console.warn(JSON.stringify({ event: 'merch-sync-in-budget-watch', ok: false }));
+  return json(result.ok ? 200 : 502, result); // the budget answer's shape is unchanged
 };
 
 exports._test = { cronAuthorized };
