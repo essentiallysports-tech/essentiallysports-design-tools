@@ -566,13 +566,18 @@ for (const w of WIDTHS) {
     await must('#rm-trends [data-trend]');
     const r = await evaluate(`(async () => { const c = window.ReelMakerCtx; const t = document.querySelector('#rm-fmt-entry [data-start="inspo"]'); const row = document.querySelector('#rm-brainstorm-row'); const enabled = t.getAttribute('aria-disabled') !== 'true' && !row.hidden;
       document.querySelector('#rm-brainstorm').click(); await new Promise(r => setTimeout(r, 120));
-      return { enabled, start: c.state.start, shown: !document.querySelector('#rm-source-inspo').hidden && document.querySelector('#rm-radar-host').childElementCount > 0 && document.querySelector('#rm-ideas-host').childElementCount > 0, make: document.querySelector('#rm-write').hidden, recipes: document.querySelector('#rm-recipe-sec').hidden, temp: Boolean(document.querySelector('#rb-entry')), stub: window.__b || null }; })()`);
+      return { enabled, start: c.state.start, shown: !document.querySelector('#rm-source-inspo').hidden && document.querySelector('#rm-radar-host').childElementCount > 0 && document.querySelector('#rm-ideas-host').childElementCount > 0 && document.querySelector('#rm-radar-host').hidden && !document.querySelector('#rm-ideas-host').hidden && !document.querySelector('#rm-inspo-tabs').hidden, make: document.querySelector('#rm-write').hidden, recipes: document.querySelector('#rm-recipe-sec').hidden, temp: Boolean(document.querySelector('#rb-entry')), stub: window.__b || null }; })()`);
     expect(r.enabled && r.start === 'inspo' && r.shown, `Inspiration: ${JSON.stringify(r)}`);
     expect(r.make && r.recipes, 'Make my reel or the recipes still show on Inspiration');
     expect(!r.temp, 'lane B’s temporary buttons are still on the page');
     if (r.stub) expect(r.stub.radar === 1 && r.stub.ideas === 1 && r.stub.opened && r.stub.opened.name === 'ideas' && r.stub.opened.trend && r.stub.opened.topic, `stand-in calls: ${JSON.stringify(r.stub)}`);
   });
   await audit('start-inspiration', w);
+  await step('Inspiration: one panel at a time', async () => {
+    await must('#rm-inspo-tabs [data-inspo="radar"]');
+    await waitFor(`!document.querySelector('#rm-radar-host').hidden && document.querySelector('#rm-ideas-host').hidden`, 2000, 'the radar panel');
+  });
+  await audit('start-inspiration-radar', w);
   await step('back to Trend', async () => { await must('#rm-fmt-entry [data-start="trend"]'); await waitFor(`!document.querySelector('#rm-write').hidden && !document.querySelector('#rm-source-trend').hidden`, 2000, 'trend list'); });
 
   // ── Game Swing ──

@@ -156,7 +156,7 @@
   const beatName = beat => (esOn() ? ES.BLOCKS[ES.blockOf(beat).type].label : (KIND_NAME[beat.kind] || beat.kind));
   // ── Reels 2.0: D (interface) ── what the reel starts from (a Start tile), the words tab last used,
   // the recipe ('' = Auto), the versions of this reel and a calm (cuts, no wipes) preview.
-  Object.assign(state, { start: 'trend', words: 'script', recipe: '', lookPicked: false, versions: null, version: 0, versionsBusy: false, calm: false, scene: -1 });
+  Object.assign(state, { start: 'trend', words: 'script', inspo: 'radar', recipe: '', lookPicked: false, versions: null, version: 0, versionsBusy: false, calm: false, scene: -1 });
   const mods = () => (window.ReelMakerCtx ? window.ReelMakerCtx.modules : {});
   const emit = (event, data) => { if (window.ReelMakerCtx) window.ReelMakerCtx.emit(event, data); };
   const RC = window.ReelRecipes || null;
@@ -451,13 +451,22 @@
     if (state.step !== 'topic') goStep('topic', { focus: false });
   });
   // Inspiration and "Brainstorm angles" (lane B's panels, when they are loaded).
+  // One panel at a time (each has its own main button): what is doing well, or the ideas room.
   const inspoMounted = { radar: false, ideas: false };
-  function mountInspo() {
+  const inspoTabs = $('rm-inspo-tabs');
+  function mountInspo(show = '') {
     const { radar, ideas } = mods();
     els.inspoSoon.hidden = Boolean(radar || ideas);
-    if (radar && !inspoMounted.radar) { inspoMounted.radar = true; els.radarHost.hidden = false; radar.mount(els.radarHost); }
-    if (ideas && !inspoMounted.ideas) { inspoMounted.ideas = true; els.ideasHost.hidden = false; ideas.mount(els.ideasHost); }
+    if (radar && !inspoMounted.radar) { inspoMounted.radar = true; radar.mount(els.radarHost); }
+    if (ideas && !inspoMounted.ideas) { inspoMounted.ideas = true; ideas.mount(els.ideasHost); }
+    if (show) state.inspo = show;
+    if (!mods()[state.inspo]) state.inspo = radar ? 'radar' : 'ideas';
+    inspoTabs.hidden = !(radar && ideas);
+    radios(inspoTabs, 'inspo', state.inspo);
+    els.radarHost.hidden = !radar || state.inspo !== 'radar';
+    els.ideasHost.hidden = !ideas || state.inspo !== 'ideas';
   }
+  inspoTabs.addEventListener('click', event => { const btn = event.target.closest('[data-inspo]'); if (btn) mountInspo(btn.dataset.inspo); });
   els.brainstorm.addEventListener('click', () => {
     const ideas = mods().ideas;
     if (!ideas) return;
@@ -465,7 +474,7 @@
     const topic = state.source === 'brief' ? els.brief.value.trim() : (state.source === 'script' ? els.script.value.trim() : (trend ? trend.title : ''));
     state.start = 'inspo';
     syncStart();
-    mountInspo();
+    mountInspo('ideas');
     ideas.open({ trend, topic, sport: (trend && trend.sport) || state.sport || '' });
   });
 
@@ -4501,6 +4510,8 @@
     if (name === 'ideas' || name === 'radar') { queueMicrotask(() => document.getElementById('rb-entry')?.remove()); syncStart(); if (startOf() === 'inspo') mountInspo(); }
     if (name === 'storyboard' && state.plan) renderBeats();
   });
+  // Lane B: "Make our version" in the radar hands over to the ideas room.
+  pageCtx.on('radar-handoff', () => { if (startOf() === 'inspo') mountInspo('ideas'); });
   // Room for the rail in a column of its own? (The work area's own width: the app sidebar takes a share of the window.)
   if (window.ResizeObserver) new ResizeObserver(entries => { const w = entries[0].contentRect.width; els.work.classList.toggle('is-wide', w >= 1340); els.work.classList.toggle('is-tight', w < 900 && w > 0); }).observe(els.work);
   try { if (localStorage.getItem('frameup.reels.calm.v1') === '1' || (localStorage.getItem('frameup.reels.calm.v1') == null && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)) setCalm(true); } catch { /* default: full motion */ }
