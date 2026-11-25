@@ -257,7 +257,9 @@ function normalizeTemplate(kind, t, source) {
       templateId: t.productId, region: 'front', regionId: area.regionId,
       pixelsWidth: area.dimensions.pixelsWidth, pixelsHeight: area.dimensions.pixelsHeight, dpi: area.dimensions.dpi,
       inchesWidth: area.dimensions.inchesWidth, inchesHeight: area.dimensions.inchesHeight,
-      placementStrategy: blank.placementStrategy, garmentColor: '#ffffff',
+      // Verified on a real shop (owner's ~/fourthwall-merch, 2026-11-25): PLACEMENT_ID + largeCenter on front_large.
+      ...((area.placements || []).some(p => p && p.id === 'largeCenter') ? { placementStrategy: 'PLACEMENT_ID', placementId: 'largeCenter' } : { placementStrategy: blank.placementStrategy }),
+      garmentColor: '#ffffff',
     },
     areas: listAreas(t),
     colors: variants.map(c => ({ name: clip(c.color.name, 60), hex: String(c.color.hex).toLowerCase() })),
@@ -518,7 +520,8 @@ function regionsFor(template, body) {
   const usable = id => template.areas.find(a => a.regionId === id && a.available && a.renderable);
   if (!IMAGE_ID.test(String(body.imageId || ''))) return { error: 'Upload the print file first.' };
   if (!usable(designRegion)) return { error: `The ${template.label.toLowerCase()} can't print the design on "${designRegion}". Pick another area.` };
-  const regions = [{ region: designRegion, imageId: body.imageId, placementStrategy: designRegion === template.printSpec.regionId ? template.printSpec.placementStrategy : 'FULL_REGION' }];
+  const main = designRegion === template.printSpec.regionId;
+  const regions = [{ region: designRegion, imageId: body.imageId, placementStrategy: main ? template.printSpec.placementStrategy : 'FULL_REGION', ...(main && template.printSpec.placementId ? { placementId: template.printSpec.placementId } : {}) }];
   if (body.logo) {
     const logoRegion = clip(body.logo.region, 60);
     if (!IMAGE_ID.test(String(body.logo.imageId || ''))) return { error: 'Upload the logo file first.' };

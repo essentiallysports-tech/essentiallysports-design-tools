@@ -25,7 +25,8 @@ const TEE_COLORS = [
 const BLANKS = Object.freeze({
   tee: {
     label: 'T-shirt',
-    ids: ['pro_e4677535402b4eeb81', 'pro_EJBSRKhJSd2unv4ZnGKwdQ'],
+    // First: the Stanley/Stella DTG tee proven end to end on a real shop (owner's ~/fourthwall-merch, 2026-11-25).
+    ids: ['pro_Vv1XdaPMSdm6jZ5pj24NCQ', 'pro_e4677535402b4eeb81', 'pro_EJBSRKhJSd2unv4ZnGKwdQ'],
     search: 't-shirt',
     category: 'Apparel/T-Shirts',
     regionPrefer: ['front_large', 'front'],

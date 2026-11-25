@@ -180,7 +180,7 @@ function createClient({ env = process.env, fetchImpl = (...a) => fetch(...a), sl
     async putUpload(uploadUrl, bytes, contentType) {
       let response;
       try {
-        response = await fetchImpl(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: bytes, signal: AbortSignal.timeout(TIMEOUTS.upload) });
+        response = await fetchImpl(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType, 'x-goog-content-length-range': `0,${bytes.length || bytes.byteLength || 0}` }, body: bytes, signal: AbortSignal.timeout(TIMEOUTS.upload) });
       } catch {
         throw new FourthwallError("The print file didn't upload. Try again in a moment.", { status: 504, reason: 'upload' });
       }

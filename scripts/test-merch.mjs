@@ -239,7 +239,7 @@ await test('templates: curated tee with print spec, colours and areas', async ()
   assert.equal(t.templateId, 'pro_e4677535402b4eeb81');
   assert.equal(t.source, 'curated');
   assert.equal(t.basePrice, 9.5);
-  assert.deepEqual({ ...t.printSpec }, { templateId: 'pro_e4677535402b4eeb81', region: 'front', regionId: 'front_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150, inchesWidth: 15, inchesHeight: 18, placementStrategy: 'FULL_REGION', garmentColor: '#ffffff' });
+  assert.deepEqual({ ...t.printSpec }, { templateId: 'pro_e4677535402b4eeb81', region: 'front', regionId: 'front_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150, inchesWidth: 15, inchesHeight: 18, placementStrategy: 'PLACEMENT_ID', placementId: 'largeCenter', garmentColor: '#ffffff' });
   assert.deepEqual(t.colors.map(c => c.name).sort(), ['Black', 'Cardinal', 'Royal', 'White']);
   const ids = t.areas.map(a => a.regionId);
   assert.ok(!ids.some(id => /embroidery/.test(id)));
@@ -364,7 +364,7 @@ await test('preview: design + logo regions, queue-limited customization', async 
   assert.equal(r.status, 200);
   assert.equal(r.body.customizationId, 'cus_1');
   const sent = fwCalls.find(c => c.path === '/customizations').body;
-  assert.deepEqual(sent, { productTemplateId: 'pro_e4677535402b4eeb81', regions: [{ region: 'front_large', imageId: 'img_2250', placementStrategy: 'FULL_REGION' }, { region: 'sleeve_left', imageId: 'img_600', placementStrategy: 'FULL_REGION' }], colors: ['Royal'] });
+  assert.deepEqual(sent, { productTemplateId: 'pro_e4677535402b4eeb81', regions: [{ region: 'front_large', imageId: 'img_2250', placementStrategy: 'PLACEMENT_ID', placementId: 'largeCenter' }, { region: 'sleeve_left', imageId: 'img_600', placementStrategy: 'FULL_REGION' }], colors: ['Royal'] });
   assert.equal((await call({ mode: 'preview', imageId: 'img_2250', logo: { region: 'label_inside', imageId: 'img_1' } })).status, 400, 'non-renderable area refused');
   assert.equal((await call({ mode: 'preview', imageId: 'img_2250', logo: { region: 'front_large', imageId: 'img_1' } })).status, 400, 'same area refused');
 });

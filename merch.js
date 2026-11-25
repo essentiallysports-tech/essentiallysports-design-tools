@@ -519,6 +519,8 @@
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', url);
         xhr.setRequestHeader('Content-Type', 'image/png');
+        // Required by Google Cloud Storage's signed URL (verified on a real shop).
+        xhr.setRequestHeader('x-goog-content-length-range', `0,${blob.size}`);
         xhr.upload.onprogress = e => { if (e.lengthComputable) onPct(e.loaded / e.total); };
         xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(Object.assign(new Error(`Upload failed (${xhr.status}). Try again.`), { status: xhr.status })));
         xhr.onerror = () => reject(Object.assign(new Error('network'), { network: true }));
