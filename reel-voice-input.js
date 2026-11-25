@@ -241,9 +241,14 @@
       const panels = new Set();
 
       // ── Decode, downmix, slice ──
+      // Decoded at 48 kHz whatever the machine's speakers run at (a Bluetooth headset in
+      // call mode is 16 kHz, and a live AudioContext would decode the take down to that).
+      const DECODE_RATE = 48000;
       async function decode(blob) {
         const bytes = await blob.arrayBuffer();
-        const ac = audioContext();
+        const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        let ac;
+        try { ac = new Offline(2, 1, DECODE_RATE); } catch { ac = audioContext(); }
         return new Promise((resolve, reject) => { const p = ac.decodeAudioData(bytes, resolve, reject); if (p && p.catch) p.catch(reject); });
       }
       async function to16k(buffer) {
@@ -263,7 +268,7 @@
         const rate = buffer.sampleRate;
         const a = Math.max(0, Math.min(buffer.length - 1, Math.floor((fromMs / 1000) * rate)));
         const b = Math.max(a + 1, Math.min(buffer.length, Math.ceil((toMs / 1000) * rate)));
-        const out = audioContext().createBuffer(buffer.numberOfChannels, b - a, rate);
+        const out = typeof AudioBuffer === 'function' ? new AudioBuffer({ numberOfChannels: buffer.numberOfChannels, length: b - a, sampleRate: rate }) : audioContext().createBuffer(buffer.numberOfChannels, b - a, rate);
         const fade = Math.min(Math.floor(rate * 0.006), Math.floor((b - a) / 4));
         for (let c = 0; c < buffer.numberOfChannels; c += 1) {
           const data = out.getChannelData(c);

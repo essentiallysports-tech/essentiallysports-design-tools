@@ -340,7 +340,7 @@ try {
     })()`);
     expect(r.out.ok && r.out.timing === 'ai', `result: ${JSON.stringify(r.out)}`);
     expect(r.own === r.spoken && r.vo === r.spoken, `voiced ${r.own}/${r.spoken}, audio clips ${r.vo}`);
-    expect(r.rate === 44100, `slices are not the original quality (rate ${r.rate})`);
+    expect(r.rate === 48000, `slices are not full quality (rate ${r.rate}; they must not follow the 16 kHz copy sent for timing, or the machine's speaker rate)`);
     expect(r.total > 4 && r.total <= 9.01, `cut audio totals ${r.total}s of a 9 s take`);
     expect(r.rights === 'Your recording', `rights: ${r.rights}`);
     expect(r.estimate === false, 'timeline still says times are estimates');
@@ -405,6 +405,22 @@ try {
     await audit('1440-missing', ['#ri-tray', '#ri-voice-panel']);
     const back = await evaluate(`(async () => { const s = qa.ctx().state; const f = await qa.png(${JSON.stringify(lost.name)}); await qa.ctx().modules.tray.addFiles([f], { via: 'picker' }); await new Promise(r => setTimeout(r, 400)); return { on: (s.photos[${JSON.stringify(lost.beat)}] || [])[0], missing: qa.ctx().modules.tray.missing().length }; })()`);
     expect(back.on === lost.id && back.missing === 0, `re-add: ${JSON.stringify(back)}`);
+  });
+
+  await step('a different reel keeps its own tray: another reel\'s files are not put on it', async () => {
+    const r = await evaluate(`(async () => {
+      const c = qa.ctx(); const s = c.state; const mine = c.modules.tray.items().length;
+      const other = JSON.parse(JSON.stringify(c.snapshot())); other.id = crypto.randomUUID(); other.title = 'Another reel';
+      Object.keys(other.timeline.assets).forEach(id => { if (other.timeline.assets[id].local) delete other.timeline.assets[id]; });
+      other.timeline.photos = {}; other.timeline.visualSrc = {}; delete other.timeline.voiceOwn; delete other.timeline.mediaMissing;
+      const first = JSON.parse(JSON.stringify(c.snapshot()));
+      await c.restore(other); await new Promise(r => setTimeout(r, 900));
+      const there = { items: c.modules.tray.items().length, own: Object.values(qa.used()).flat().filter(a => a.local).length, voice: c.modules.voiceInput.active() || c.modules.voiceInput.pending() };
+      await c.restore(first); await new Promise(r => setTimeout(r, 1200));
+      return { mine, there, back: c.modules.tray.items().length, backOwn: Object.values(qa.used()).flat().filter(a => a.local).length };
+    })()`);
+    expect(r.mine >= 2 && r.there.items === 0 && r.there.own === 0 && !r.there.voice, `the other reel: ${JSON.stringify(r)}`);
+    expect(r.back >= 2 && r.backOwn >= 2, `coming back: ${JSON.stringify(r)}`);
   });
 
   // ── 2. Recording with the fake microphone ──

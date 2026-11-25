@@ -262,7 +262,8 @@
           state.images[assetId] = img;
           state.assets[assetId] = { kind: 'upload', label: `Your image: ${meta.name.slice(0, 40)}`, src: url, rights: { ...RIGHTS }, ...meta };
         }
-        return { id: assetId, kind: check.kind, name: meta.name, size: meta.size, type: meta.type };
+        // project: the reel it was added to; waiting: added before any reel existed.
+        return { id: assetId, kind: check.kind, name: meta.name, size: meta.size, type: meta.type, project: state.projectId, waiting: !state.plan };
       }
       const place = (beatId, item) => ctx.setVisual(beatId, [item.id], item.kind === 'video' ? 'upload-clip' : 'upload');
       const keep = (item, file) => store.put(state.projectId, item.id, file, { name: item.name, type: item.type, kind: item.kind, size: item.size });
@@ -275,7 +276,7 @@
           locked: (state.photos[beat.id] || []).some(isOwn),
         }));
         const { pairs } = assign(list, beats);
-        pairs.forEach(pair => place(pair.beat, list.find(i => i.id === pair.item)));
+        pairs.forEach(pair => { const item = list.find(i => i.id === pair.item); item.waiting = false; place(pair.beat, item); });
         return pairs;
       }
       function undoable(before, message) {
@@ -417,7 +418,7 @@
       // page drops picks whose media is gone.
       async function rehydrate(saved = {}) {
         items = [];
-        missing = Array.isArray(saved.mediaMissing) ? saved.mediaMissing.filter(m => m && m.id && !state.assets[m.id]).map(m => ({ id: String(m.id), kind: m.kind === 'video' ? 'video' : 'image', name: String(m.name || 'file'), size: Number(m.size) || 0, beats: Array.isArray(m.beats) ? m.beats.map(String) : [] })) : [];
+        missing = Array.isArray(saved.mediaMissing) ? saved.mediaMissing.filter(m => m && m.id && !state.assets[m.id]).map(m => ({ id: String(m.id), kind: m.kind === 'video' ? 'video' : 'image', name: String(m.name || 'file'), size: Number(m.size) || 0, project: state.projectId, beats: Array.isArray(m.beats) ? m.beats.map(String) : [] })) : [];
         const local = Object.entries(state.assets).filter(([, a]) => a && a.local);
         store.touch(state.projectId);
         for (const [id, asset] of local) {
@@ -429,9 +430,8 @@
             try { item = await makeAsset(rec.blob, { kind, type: asset.type || rec.type || rec.blob.type }, id, name); } catch { item = null; }
             if (item && kind === 'video' && asset.clipIn != null) state.assets[id].clipIn = asset.clipIn;
           }
-          if (item) items.push(item);
-          else {
-            missing.push({ id, kind, name: asset.name || 'file', size: Number(asset.size) || 0, beats: Object.keys(state.photos).filter(b => (state.photos[b] || []).includes(id)) });
+          if (item) { item.waiting = false; items.push(item); } else {
+            missing.push({ id, kind, name: asset.name || 'file', size: Number(asset.size) || 0, project: state.projectId, beats: Object.keys(state.photos).filter(b => (state.photos[b] || []).includes(id)) });
             delete state.assets[id];
           }
         }
@@ -590,7 +590,11 @@
         if (state.plan !== lastPlan) {
           const fresh = Boolean(state.plan) && !beatsNow().some(b => (state.photos[b.id] || []).some(isOwn));
           lastPlan = state.plan;
-          const waiting = items.filter(i => state.assets[i.id]);
+          // Another reel was opened: its tray is its own (rehydrate fills it). Files from the last reel stay with that reel.
+          items = items.filter(i => i.project === state.projectId);
+          missing = missing.filter(m => !m.project || m.project === state.projectId);
+          // Only files added before a reel existed go on by themselves; the rest wait for the person.
+          const waiting = items.filter(i => i.waiting && state.assets[i.id]);
           if (fresh && waiting.length) {
             const pairs = autoAssign(waiting);
             if (pairs.length) { setTimeout(() => { ctx.rebuild(); ctx.renderBeats(); ctx.toast(`Your ${pairs.length === 1 ? 'file is' : `${pairs.length} files are`} on ${sceneList(pairs.map(p => p.beat))}.`); }, 0); }
