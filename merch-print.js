@@ -393,7 +393,10 @@
       els.forEach(el => {
         if (el.type === 'block') { const pad = Math.round(ph * 0.3); extras.push({ type: 'rect', role: 'block', z: -2, x: b.x - Math.round(pad / 2), y: b.y - pad, w: b.w + pad, h: b.h + 2 * pad, bg: col(el.color) }); }
         if (el.type === 'number') {
-          const fill = col(el.color);
+          // A thin outline needs more contrast than a solid shape to read on the shirt.
+          let fill = col(el.color);
+          const needN = el.style === 'outline' ? 3 : MIN_CONTRAST;
+          if (blank.apparel && contrast(fill, garment) < needN) fill = [pal.a, pal.b, pal.ink, isLight(garment) ? BLACK : WHITE].map(hex).filter(Boolean).find(c => contrast(c, garment) >= needN) || (isLight(garment) ? BLACK : WHITE);
           if (el.position === 'behind') { const size = Math.round(Math.min(b.h * 1.25, b.w * 1.1) / CAP * 0.82); extras.push({ type: 'number', z: -1, text: String(el.text), style: el.style === 'outline' ? 'outline' : 'solid', size, stroke: Math.max(Math.round(0.06 * a.dpi), Math.round(size * 0.035)), x: b.x, y: b.y, w: b.w, h: b.h, ink: fill, bg: fill }); }
           else { const size = Math.round((ph * 1.7) / CAP); const h = Math.round(size * CAP); top -= h + Math.round(ph * 0.2); extras.push({ type: 'number', z: 1, text: String(el.text), style: el.style === 'outline' ? 'outline' : 'solid', size, stroke: Math.max(Math.round(0.06 * a.dpi), Math.round(size * 0.035)), x: b.x, y: top, w: b.w, h, ink: fill, bg: fill, align: align === 'center' ? 'center' : 'left' }); }
         }
