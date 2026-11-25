@@ -392,6 +392,7 @@ for (const w of WIDTHS) {
     expect(r.firstLeft, 'scene 1 offers Move left');
     expect(r.typed === 0, 'a field still shows the typed colour syntax');
   });
+  await evaluate(`(document.querySelector('#rm-beats [data-sb-face]').click(), 1)`); // scene 1 is the one being edited (on a phone only its card is open)
   await step('colour chips set the colour (no typed syntax)', async () => {
     const r = await evaluate(`(() => { const c = window.ReelMakerCtx; const card = document.querySelector('#rm-beats .rm-card'); const chip = card.querySelector('[data-sb-rows] [data-sb-color="red"]'); chip.click(); const b = c.ES.blockOf(c.state.plan.beats[0]); const input = card.querySelector('[data-sb-text]'); input.value = 'Cubs lost'; input.dispatchEvent(new Event('input', { bubbles: true })); const b2 = c.ES.blockOf(c.state.plan.beats[0]);
       return { color: b.pills[0].color, checked: chip.getAttribute('aria-checked'), id: input.id, text: b2.pills[0].text, kept: b2.pills[0].color, label: chip.getAttribute('aria-label') }; })()`);
