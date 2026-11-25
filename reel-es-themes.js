@@ -129,14 +129,16 @@
       pill: 'boxed', caption: { box: 'hug', emphasis: 'text' }, layout: 'standard', motion: 'standard',
     },
     ink: {
-      id: 'ink', label: 'Ink', blurb: 'Night mode: ink ground, paper type, a paper quote.',
-      ground: 'ink', surface: 'inkPaper', scenes: { quote: 'paper' },
+      id: 'ink', label: 'Ink', blurb: 'Night mode: ink ground, paper type and pills.',
+      // Every scene stays on ink, the quote too: one light scene in a dark reel reads as a mistake.
+      ground: 'ink', surface: 'inkPaper', scenes: {},
       roles: { text: 'paper', accent: 'blue', pillFill: 'paper', pillInk: 'ink', pillAlt: 'blue', captionFill: 'paper', captionInk: 'ink', captionEmphasis: 'yellow', mark: 'blue', wipe: ['blue', 'paper'], dotBase: 'paper', grain: 0 },
       pill: 'boxed', caption: { box: 'hug', emphasis: 'highlight' }, layout: 'standard', motion: 'standard',
     },
     blue: {
       id: 'blue', label: 'Blue', blurb: 'ES blue edge to edge, ink type; figures on ink.',
-      ground: 'blue', surface: 'blue', scenes: { quote: 'ink', number: 'ink', dots: 'ink', compare: 'ink' },
+      // The quote stays on blue; only the figures (number, dots, compare) drop to ink boards.
+      ground: 'blue', surface: 'blue', scenes: { number: 'ink', dots: 'ink', compare: 'ink' },
       roles: { text: 'ink', accent: 'white', pillFill: 'ink', pillInk: 'white', pillAlt: 'white', captionFill: 'ink', captionInk: 'white', captionEmphasis: 'yellow', mark: 'black', wipe: ['white', 'ink'], dotBase: 'ink', grain: 0 },
       pill: 'boxed', caption: { box: 'hug', emphasis: 'text' }, layout: 'standard', motion: 'standard',
     },
@@ -166,8 +168,9 @@
       pill: 'plain', caption: { box: 'hug', emphasis: 'text' }, layout: 'minimal', motion: 'calm',
     },
     bold: {
-      id: 'bold', label: 'Bold', blurb: 'Everything boxed, a size up, quotes on blue.',
-      ground: 'paper', surface: 'paper', scenes: { quote: 'blue' },
+      id: 'bold', label: 'Bold', blurb: 'Everything boxed and a size up, a faster pace.',
+      // The quote sits on ink, as in Paper (the kit's own quote).
+      ground: 'paper', surface: 'paper', scenes: { quote: 'ink' },
       roles: { text: 'ink', accent: 'blue', pillFill: 'ink', pillInk: 'white', pillAlt: 'blue', captionFill: 'ink', captionInk: 'white', captionEmphasis: 'yellow', mark: 'blue', wipe: ['ink', 'blue'], dotBase: 'ink', grain: 0.05 },
       pill: 'big', caption: { box: 'hug', emphasis: 'text' }, layout: 'bold', motion: 'punchy',
     },

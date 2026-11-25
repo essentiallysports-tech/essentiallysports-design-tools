@@ -350,7 +350,12 @@ await test('every look draws differently from Paper and from each other, on the 
   assert.equal(fills({ id: 'data' }, 'news', 0)[0], '#FFFFFF');
   assert.equal(fills({ id: 'team', team: TEAMS.light }, 'news', 0)[0], TEAMS.light);
   assert.ok(fills({ id: 'blue' }, 'news', 3).includes('#121212'), 'Blue: figures drop to an ink board');
-  assert.ok(fills({ id: 'bold' }, 'quote', 1).includes('#0A7DFA'), 'Bold: the quote sits on blue');
+  // The quote follows the look's ground in Ink and Blue; Paper and Bold keep the kit's ink quote.
+  assert.deepEqual([TH.LOOKS.paper.scenes.quote, TH.LOOKS.bold.scenes.quote, TH.LOOKS.ink.scenes.quote, TH.LOOKS.blue.scenes.quote], ['ink', 'ink', undefined, undefined]);
+  ['ink', 'blue', 'photo', 'minimal'].forEach(id => { const tl = build('quote', { id }); assert.ok(!R.layoutGraphic(measure, tl.tracks.graphics[1], tl).some(o => o.role === 'ground'), `${id}: the quote stays on the look's ground`); });
+  assert.ok(!fills({ id: 'ink' }, 'quote', 1).includes('#F1EFEA') || fills({ id: 'ink' }, 'quote', 1)[0] === '#121212', 'Ink: the quote scene starts on ink');
+  assert.equal(fills({ id: 'ink' }, 'quote', 1)[0], '#121212');
+  assert.equal(fills({ id: 'blue' }, 'quote', 1)[0], '#0A7DFA');
   // Layout presets: Bold's pills are bigger, Minimal has no boxes, Photo-led boxes its statements over a full photo.
   const ops = (v, story, i) => { const tl = build(story, v); return R.layoutGraphic(measure, tl.tracks.graphics[i], tl); };
   const pill = v => ops(v, 'quote', 0).find(o => o.role === 'pill');
