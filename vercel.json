@@ -203,6 +203,10 @@
     {
       "path": "/api/clips-prefetch?batch=1&chain=1",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/merch-sync",
+      "schedule": "30 9 * * *"
     }
   ]
 }
