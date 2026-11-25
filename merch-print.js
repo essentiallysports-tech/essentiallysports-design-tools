@@ -1,6 +1,7 @@
 // Merch Designs: the print engine (browser: window.MerchPrint; tests: require).
 //
 //   MerchPrint.render(concept, printSpec, canvas[, opts])   -> Promise<{ canvas, blob, width, height, scale, full, note, semiPixels, checks }>
+//   MerchPrint.renderLogo(printSpec, canvas[, opts])        -> the same, for the ES wordmark's own small print
 //   MerchPrint.checks(concept, printSpec[, opts])           -> [{ id, ok, level: 'ok'|'warn'|'error', text }]
 //   MerchPrint.preview(concept, garmentColor, canvas[, opts]) -> Promise<{ width, height }>  (flat tee mockup for the UI)
 //   MerchPrint.fallbackConcepts(content[, opts])            -> Concept[] (no AI)
@@ -14,12 +15,14 @@
 //             (optional: kind 'tee'|'hoodie'|'poster'|'sticker'|'mug', default from concept.blanks[0])
 //
 // The design is drawn at the print area's own pixel size and DPI from ES pills
-// only (FrameUp's Cover pill: Acumin Post 900, uppercase, a solid straight
-// box, stacked rows touching), knockout type and the tiny ES wordmark pill.
+// only (owner rule: FrameUp's Cover pill, Acumin Post 900, uppercase, a solid
+// straight box, stacked rows touching; no shapes, blocks, rules or icons).
+// The ES wordmark is not part of the design: renderLogo() makes it as its own
+// print for a separate area the person picks (sleeve, back neck, label).
 // The look follows the owner's merch board (Figma 2550:4085): one word per
 // pill alternating the team's colours, small name lines, a wide banner pill,
-// a knockout nickname pill, a giant number block, quote stacks; compact on the
-// chest (about a third of the chest); the ES wordmark just under the collar.
+// a knockout nickname pill, a number pill, quote stacks; compact, mid-chest
+// (about a third of the chest).
 // A row whose type colour is the shirt colour is knocked out (the shirt shows
 // through), so there is no ink to match. Every pixel of the print file ends
 // fully solid or fully clear (DTG prints see-through ink as a muddy halo).
@@ -220,56 +223,26 @@
     rows.forEach(r => Object.assign(r, rowColors(r.row, pal, garment, blank.apparel)));
     const items = [];
 
-    // The ES wordmark pill: apparel fronts, centred at the top of the print
-    // area (just under the collar); hard goods, centred under the design.
-    const front = a.region === 'front';
-    const logoW = Math.round(Math.min(2.0 * a.dpi, W * (blank.apparel ? 0.17 : 0.22)));
-    const logoH = Math.round(logoW * WORDMARK.h / WORDMARK.w);
+    // Pills only (owner rule): every element is a pill. The ES wordmark is not
+    // part of this print; it is its own small print (renderLogo) in a separate
+    // area of the person's choice.
     const margin = Math.round(0.15 * a.dpi);
-    const numberRow = /^#?\d{1,2}$/.test(rows[0].text) ? rows[0] : null;
     const bigRows = rows.filter(r => r.rel === 1);
     const single = rows.length === 1;
-    const widthRatio = numberRow ? 0.4 : single ? (rows[0].text.length <= 10 ? 0.46 : 0.66) : concept.collection === 'quote' ? 0.58 : 0.5;
+    const longest = Math.max(...rows.map(r => r.text.length));
+    const widthRatio = single ? (longest <= 3 ? 0.26 : longest <= 10 ? 0.46 : 0.66) : concept.collection === 'quote' ? 0.58 : 0.5;
     let box;
     if (blank.apparel) {
-      const top = front ? margin + logoH + Math.round(1.25 * a.dpi) : Math.round(1.0 * a.dpi);
+      const top = Math.round(Math.min(1.75 * a.dpi, H * 0.12));
       box = { x: Math.round(W * (1 - widthRatio) / 2), y: top, w: Math.round(W * widthRatio), h: Math.round(Math.min(H - top - margin, H * 0.6)), valign: 'top' };
     } else {
-      const logoSpace = front ? logoH + Math.round(0.3 * a.dpi) : 0;
       const pad = Math.round(Math.min(W, H) * 0.1);
-      box = { x: pad, y: pad, w: W - 2 * pad, h: H - 2 * pad - logoSpace, valign: 'center' };
+      box = { x: pad, y: pad, w: W - 2 * pad, h: H - 2 * pad, valign: 'center' };
     }
-    if (single && !numberRow) box.h = Math.min(box.h, Math.round(box.w * 0.34));
-
-    let result;
-    if (numberRow) {
-      // The giant number block: a tall box with the number knocked out.
-      const caption = rows.slice(1);
-      const capRoom = caption.length ? Math.round(box.w * 0.3) : 0;
-      const bw = Math.round(Math.min(box.w, (box.h - capRoom) / 1.28));
-      const bh = Math.round(bw * 1.28);
-      const bx = Math.round(box.x + (box.w - bw) / 2);
-      const by = box.valign === 'top' ? box.y : Math.round(box.y + (box.h - bh - capRoom) / 2);
-      const num = numberRow.text.replace('#', '');
-      const numSize = Math.floor(Math.min((bh * 0.78) / CAP, (bw * 0.84) / Math.max(0.01, m(num, 1))));
-      const knock = blank.apparel;
-      items.push({ type: 'block', x: bx, y: by, w: bw, h: bh, bg: numberRow.bg, ink: knock ? garment : numberRow.ink, text: num, size: numSize, knockout: knock });
-      result = { items: [], size: numSize, bounds: { x: bx, y: by, w: bw, h: bh } };
-      if (caption.length) {
-        const capBox = { x: bx, y: by + bh + Math.round(0.06 * a.dpi), w: bw, h: capRoom, valign: 'top' };
-        const cap = stackRows(caption.map(r => ({ ...r, rel: 1 })), capBox, m, scale, 'center');
-        result.items = cap.items;
-        result.bounds = { x: Math.min(bx, cap.bounds.x), y: by, w: Math.max(bw, cap.bounds.w), h: cap.bounds.y + cap.bounds.h - by };
-      }
-    } else {
-      result = stackRows(rows, box, m, scale, align);
-    }
+    if (single && longest > 3) box.h = Math.min(box.h, Math.round(box.w * 0.34));
+    const result = stackRows(rows, box, m, scale, align);
     items.push(...result.items);
     const design = result.bounds;
-    if (front) {
-      const ly = blank.apparel ? margin : Math.round(design.y + design.h + 0.3 * a.dpi);
-      items.push({ type: 'logo', variant: contrast(garment, ES_BLUE) < 1.6 ? 'white' : 'blue', x: Math.round((W - logoW) / 2), y: ly, w: logoW, h: logoH });
-    }
     return { w: W, h: H, dpi: a.dpi, inW: a.inW, inH: a.inH, region: a.region, kind, apparel: blank.apparel, garment, palette: pal, items, design, size: result.size, bigRows: bigRows.length };
   }
 
@@ -297,8 +270,6 @@
     const eff = Math.round(scene.dpi * renderScale);
     const dpiOk = eff >= minDpi && scene.dpi >= minDpi;
     add('dpi', dpiOk, renderScale < 1 && scene.dpi >= minDpi ? 'warn' : 'error', dpiOk ? `${scene.w} × ${scene.h} px at ${scene.dpi} DPI: full print size.` : scene.dpi < minDpi ? `This blank's print area is ${scene.dpi} DPI; ${minDpi} DPI is the minimum for a ${(MerchRules.BLANKS[scene.kind] || {}).label || 'blank'}.` : `This preview is ${eff} DPI; printing needs ${minDpi}. Create the product from a desktop.`);
-    const logo = scene.items.find(i => i.type === 'logo');
-    add('logo', Boolean(logo) || scene.region !== 'front', 'warn', logo ? (scene.apparel ? 'ES wordmark sits under the collar, centred.' : 'ES wordmark sits under the design.') : 'No ES wordmark on the front.');
     if (scene.apparel) {
       const inches = scene.design.w / scene.dpi;
       add('placement', inches <= 9.5, 'warn', inches <= 9.5 ? `Design is ${inches.toFixed(1)} in wide: compact, mid-chest.` : `Design is ${inches.toFixed(1)} in wide, wider than a chest print. Use shorter words.`);
@@ -308,6 +279,45 @@
   function checks(concept, spec, opts = {}) {
     return checksFor(layout(concept, spec, opts), opts);
   }
+  // ─── The ES wordmark: its own small print ───────────────────────────────
+  // The ESSENTIALLYSPORTS wordmark pill (brand-logo-blue.svg / -white.svg, the
+  // official ES assets), fitted to whatever area the person picked (sleeve,
+  // back neck, neck label...), centred, transparent around it.
+  const LOGO_MIN_LETTER_IN = 0.06; // the wordmark's letters are ~70% of its height
+  function logoLayout(spec = {}) {
+    const a = areaOf(spec, 'tee');
+    const garment = hex(spec.garmentColor) || WHITE;
+    const pad = Math.round(Math.min(a.w, a.h) * 0.06);
+    const maxW = Math.min(a.w - 2 * pad, (a.h - 2 * pad) * WORDMARK.w / WORDMARK.h, (Number(spec.maxInches) || 3) * a.dpi);
+    const w = Math.max(1, Math.floor(maxW));
+    const h = Math.max(1, Math.round(w * WORDMARK.h / WORDMARK.w));
+    const logo = { type: 'logo', variant: contrast(garment, ES_BLUE) < 1.6 ? 'white' : 'blue', x: Math.round((a.w - w) / 2), y: Math.round((a.h - h) / 2), w, h };
+    return { w: a.w, h: a.h, dpi: a.dpi, inW: a.inW, inH: a.inH, region: spec.region || 'logo', kind: 'tee', apparel: true, garment, logo: true, items: [logo], design: { x: logo.x, y: logo.y, w, h }, size: h };
+  }
+  function logoChecks(scene, { semiPixels = null } = {}) {
+    const out = [];
+    const add = (id, ok, level, text) => out.push({ id, ok, level: ok ? 'ok' : level, text });
+    const l = scene.items[0];
+    add('area', l.x >= 0 && l.y >= 0 && l.x + l.w <= scene.w && l.y + l.h <= scene.h, 'error', 'The wordmark sits inside its print area.');
+    const letters = (l.h * 0.7) / scene.dpi;
+    add('text-size', letters >= LOGO_MIN_LETTER_IN, 'error', letters >= LOGO_MIN_LETTER_IN ? `Wordmark is ${(l.w / scene.dpi).toFixed(2)} in wide.` : 'This area is too small for the ES wordmark to print cleanly. Pick a bigger spot.');
+    add('dpi', scene.dpi >= 150, 'error', scene.dpi >= 150 ? `${scene.dpi} DPI.` : `This area is ${scene.dpi} DPI; 150 is the minimum.`);
+    if (semiPixels !== null) add('pixels', semiPixels === 0, 'error', semiPixels === 0 ? 'Every pixel is fully solid or fully clear.' : `${semiPixels} see-through pixels would print as a halo.`);
+    return out;
+  }
+  async function renderLogo(spec, canvas, opts = {}) {
+    const scene = logoLayout(spec);
+    const target = canvas || document.createElement('canvas');
+    target.width = scene.w;
+    target.height = scene.h;
+    const g = target.getContext('2d');
+    g.clearRect(0, 0, target.width, target.height);
+    await drawScene(scene, g);
+    const semiPixels = solidify(g, target.width, target.height);
+    const blob = opts.blob === false || !target.toBlob ? null : await new Promise(resolve => target.toBlob(resolve, 'image/png'));
+    return { canvas: target, blob, width: target.width, height: target.height, scale: 1, full: true, note: '', semiPixels, scene, checks: logoChecks(scene, { semiPixels }) };
+  }
+
   const blocking = list => (list || []).filter(c => c.level === 'error');
 
   // ─── Browser drawing ───────────────────────────────────────────────────
@@ -396,6 +406,15 @@
   // Shapes on a 1000-unit square; `area` is the print area on the blank.
   const TEE = 'M318 112 L196 150 L48 300 L148 410 L228 346 L228 930 L772 930 L772 346 L852 410 L952 300 L804 150 L682 112 Q500 250 318 112 Z';
   const HOOD = 'M318 112 L196 150 L60 380 L150 440 L228 380 L228 930 L772 930 L772 380 L850 440 L940 380 L804 150 L682 112 Q640 40 500 30 Q360 40 318 112 Z';
+  // Where the wordmark hint sits on the flat tee (front view; back-neck and
+  // inside labels are shown at the collar).
+  const LOGO_SPOTS = {
+    neck: { x: 500, y: 150, w: 64 },
+    'back-neck': { x: 500, y: 150, w: 64 },
+    label: { x: 500, y: 150, w: 64 },
+    sleeve: { x: 128, y: 290, w: 54 },
+    none: null,
+  };
   const MOCK = {
     tee: { path: TEE, collar: 'M318 112 Q500 250 682 112 Q500 214 318 112 Z', area: { x: 338, y: 214, w: 324 } },
     hoodie: { path: HOOD, collar: 'M330 120 Q500 230 670 120 Q500 60 330 120 Z', area: { x: 338, y: 240, w: 324 } },
@@ -449,6 +468,12 @@
     og.scale(k, k);
     await drawScene(scene, og);
     g.drawImage(off, Math.round(shape.area.x * u), Math.round(shape.area.y * u));
+    // A small hint of where the separate ES wordmark print goes.
+    const spot = LOGO_SPOTS[opts.logoSpot === undefined ? 'neck' : opts.logoSpot];
+    if (spot && shape.path) {
+      const img = await loadImage(BASE + (contrast(garment, ES_BLUE) < 1.6 ? WORDMARK.white : WORDMARK.blue));
+      if (img) g.drawImage(img, Math.round((spot.x - spot.w / 2) * u), Math.round(spot.y * u), Math.round(spot.w * u), Math.round(spot.w * u * WORDMARK.h / WORDMARK.w));
+    }
     return { width: size, height: size, scene };
   }
 
@@ -520,7 +545,7 @@
     if (num && team) {
       out.push(concept({ collection: era ? 'replay' : 'current', title: `#${num.n}`, team, palette: pal, garment: garmentTeam, align: 'center',
         stack: [{ text: num.n, size: 'big', fill: boldFill(pal), ink: 'a' }, ...(num.word ? [{ text: num.word, size: 'small', fill: boldFill(pal), ink: 'a' }] : [])],
-        rights: teamRights, why: 'A giant number block: the stat or the jersey, nothing else.' }));
+        rights: teamRights, why: 'One number pill: the stat or the jersey, nothing else.' }));
     }
     // A banner from the story's own words (first clause, 2-4 content words).
     const words = text.replace(/["“”]/g, '').split(/[.!?;:—]/)[0].split(/\s+/).filter(Boolean);
@@ -545,7 +570,7 @@
 
   return {
     VERSION: '2026-11-25', WORDMARK, PHONE_MAX_PIXELS, SMALL, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS,
-    render, checks, preview, fallbackConcepts, layout,
+    render, renderLogo, checks, preview, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,
   };
