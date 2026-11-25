@@ -348,6 +348,7 @@ const TAKES = [
   ['reel-maker.js', /track\?\.\('export', \{ tool: 'reels-studio', action: result\.ext/, 'Reels Studio / explainer MP4'],
   ['reel-maker.js', /track\?\.\('export', \{ tool: 'reels-studio', action: 'zip'/, 'Reels Studio carousel ZIP'],
   ['reel-maker.js', /track\?\.\('download', \{ tool: 'reels-studio', action: 'download-again'/, 'Reels Studio download again'],
+  ['reel-captions-export.js', /track\?\.\('download', \{ tool: 'reels-studio', action: kind/, 'Reels Studio caption files (SRT, VTT, transcript)'],
   ['image-pool.html', /track\?\.\('share', \{ tool: 'image-pool', action: 'photo-link'/, 'Image Pool copy link'],
   ['image-pool.html', /track\?\.\('download', \{ tool: 'image-pool', action: 'photo'/, 'Image Pool download'],
   ['gallery.html', /track\?\.\('open', \{ tool: 'gallery', action: 'open-in-editor'/, 'Gallery open in editor'],

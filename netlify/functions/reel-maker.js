@@ -13,6 +13,11 @@
 //   revise    "shorter / punchier / stronger hook / calmer" or free text
 //   music     optional generated instrumental bed (REELS_MUSIC=gateway), organic-only rights
 //   voice-sample  a ~2 s preview of one of the four voices (cached)
+//   voice-align  a person's own voiceover (one take, 16 kHz mono WAV, 90 s at
+//             most): transcribed (free provider first) and aligned to the
+//             beats' words -> per-beat { startMs, endMs, words }. The script
+//             is never rewritten. No beats: the transcript comes back so the
+//             page can build a locked-words reel from the take.
 //   scene     one AI scene still for the fill chain (no people, names or logos)
 //   clip-judge  a vision model rates up to 3 candidate clips from frames the
 //             browser sampled (_reel-clip-judge.js, Gemini 3.8 Flash, Haiku
@@ -74,7 +79,11 @@ const PLAN_CACHE = new Map();
 const MAX_BODY = 220 * 1024; // a project's timeline is capped at 200 KB; a clip-judge batch (3 clips x 3 small JPEGs) is ~120 KB
 const PROJECTS = 'frameup_reel_projects';
 const EVENTS = 'frameup_reel_events';
-const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals', 'data', 'frames', 'carousel_export'];
+// ── Reels 2.0: C (inputs) ── a voice-align body carries one take (<= 90 s of 16 kHz mono WAV as base64, ~3.9 MB).
+const MAX_VOICE_BODY = 4.3 * 1024 * 1024;
+const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals', 'data', 'frames', 'carousel_export',
+  // ── Reels 2.0: C (inputs) ── start source, idea lens, recipe, look, version, media added, voice mode, captions export, radar
+  'start', 'idea_pick', 'recipe', 'look', 'variant', 'media_add', 'voice_upload', 'captions_export', 'radar_open', 'radar_handoff'];
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
@@ -233,6 +242,18 @@ async function voiceSample(body, track) {
   if (!out.ok) return { ok: false, status: out.reason === 'off' || out.reason === 'budget' ? 503 : (out.reason === 'voice' ? 400 : 502), reason: out.reason, error: out.error };
   return { ok: true, voice: clean(body.voice, 12), audio: out.audio, mime: out.mime, cost: out.cost, cached: out.cached, model: out.model };
 }
+// ── Reels 2.0: C (inputs) ── a person's own voiceover -> per-beat windows.
+async function voiceAlign(body, track) {
+  const audio = typeof body.audio === 'string' ? body.audio : '';
+  if (!audio) return { ok: false, status: 400, reason: 'bad-audio', error: 'No recording was sent.' };
+  const check = voice.checkTake(Buffer.from(audio, 'base64'));
+  if (!check.ok) return { ok: false, status: check.reason === 'too-long' ? 413 : 400, reason: check.reason, error: check.error };
+  const beats = (Array.isArray(body.beats) ? body.beats : []).slice(0, voice.TAKE.maxBeats).map(b => ({ id: clean(b && b.id, 24), vo: clean(b && b.vo, 320) })).filter(b => b.id && b.vo);
+  const heard = await voice.transcribeTake({ audio, track: { ...track, feature: 'reels-voice-align' } });
+  if (!heard.ok) return { ok: false, status: heard.reason === 'off' || heard.reason === 'budget' ? 503 : (heard.reason === 'silent' ? 422 : 502), reason: heard.reason, error: heard.error };
+  const aligned = voice.alignBeats(beats, heard.words, check.durationMs);
+  return { ok: true, durationMs: check.durationMs, beats: aligned.beats, match: aligned.match, transcript: heard.text, words: beats.length ? undefined : heard.words, provider: heard.provider, model: heard.model, cost: money(heard.cost), cached: Boolean(heard.cached) };
+}
 const COLORS = list => (Array.isArray(list) ? list : []).filter(c => /^#[0-9a-f]{6}$/i.test(String(c))).slice(0, 2);
 async function sceneImage(body, track) {
   const out = await media.scene({ scene: clean(body.scene, 16), sport: clean(body.sport, 8), colors: COLORS(body.colors), track });
@@ -374,7 +395,7 @@ async function formatMode(mode, body, ctx, gates = {}) {
   }
 }
 
-const AI_MODES = { plan, revise, voice: speak, music, 'voice-sample': voiceSample, scene: sceneImage, 'ai-clip-start': aiClipStart };
+const AI_MODES = { plan, revise, voice: speak, 'voice-align': voiceAlign, music, 'voice-sample': voiceSample, scene: sceneImage, 'ai-clip-start': aiClipStart };
 // ai-clip-status only reads a job that was already billed and capped.
 const DATA_MODES = { 'ai-clip-status': aiClipStatus, projects, 'project-save': projectSave, 'project-load': projectLoad, event: recordEvent };
 
@@ -390,11 +411,15 @@ exports.handler = withAiMode(async function handler(event) {
     return json(200, { diag: 'voice', ...out });
   }
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed.' });
-  if (String(event.body || '').length > MAX_BODY) return json(413, { ok: false, error: 'That request is too large.' });
+  const bodySize = String(event.body || '').length;
+  if (bodySize > MAX_VOICE_BODY) return json(413, { ok: false, reason: 'too-long', error: 'That request is too large.' });
+  // Only a voice-align take may be larger than the usual cap (checked once the body is read).
+  if (bodySize > MAX_BODY && !/"mode"\s*:\s*"voice-align"/.test(String(event.body).slice(0, 4000) + String(event.body).slice(-4000))) return json(413, { ok: false, error: 'That request is too large.' });
   const auth = await verifyEsUser(event);
   if (!auth.ok) return json(auth.statusCode, { ok: false, error: auth.error });
   let body = {};
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { ok: false, error: 'Invalid request.' }); }
+  if (bodySize > MAX_BODY && body.mode !== 'voice-align') return json(413, { ok: false, error: 'That request is too large.' });
   const token = bearerToken(event.headers);
   const track = { email: auth.user.email, token };
   try {
@@ -458,4 +483,4 @@ exports.handler = withAiMode(async function handler(event) {
   }
 });
 
-exports._test = { FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };
+exports._test = { voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf };

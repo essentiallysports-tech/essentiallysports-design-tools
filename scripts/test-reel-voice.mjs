@@ -182,6 +182,20 @@ await test('captions only, too long, and budget errors stay calm', async () => {
   assert.equal((await V.synthesize({ text: 'Budget line.', env: GW, track })).reason, 'budget');
 });
 
+await test('own voiceover: TAKE limits and alignBeats are exported; beats are split from one alignScript pass', () => {
+  assert.equal(V.TAKE.maxSeconds, 90);
+  assert.equal(V.TAKE.sampleRate, 16000);
+  assert.ok(V.TAKE.maxWavBytes >= 90 * 16000 * 2 && V.TAKE.maxWavBytes * 4 / 3 < 4.3 * 1024 * 1024, 'a full take fits one request as base64');
+  const heard = [{ w: 'The', s: 100, e: 300 }, { w: 'Bills', s: 320, e: 700 }, { w: 'won.', s: 720, e: 1000 }, { w: 'Again.', s: 1800, e: 2300 }];
+  const { beats, match } = V.alignBeats([{ id: 'a', vo: "The Bills' won." }, { id: 'b', vo: '*Again.*' }], heard, 2500);
+  const whole = V.alignScript("The Bills' won. Again.", heard, 2500);
+  assert.deepEqual(beats.flatMap(b => b.words), whole.map(w => ({ w: w.w, s: w.s, e: w.e })));
+  assert.deepEqual([beats[0].startMs, beats[0].endMs, beats[1].startMs, beats[1].endMs], [100, 1000, 1800, 2300]);
+  assert.equal(match, 1);
+  assert.equal(V.checkTake(wav(2, 16000)).ok, true);
+  assert.equal(V.checkTake(wav(91, 16000)).reason, 'too-long');
+});
+
 await test('alignScript: matched words take transcript times, misses are interpolated, order is kept', () => {
   const heard = [{ w: 'the', s: 0, e: 100 }, { w: 'bills', s: 120, e: 400 }, { w: 'win', s: 900, e: 1200 }];
   const words = V.alignScript("The Bills' big win", heard, 1300);

@@ -69,11 +69,22 @@
     upload: svg('<path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>'),
     shield: svg('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>'),
     scissors: svg('<circle cx="6" cy="6" r="3"/><path d="M8.12 8.12 12 12"/><path d="M20 4 8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8 20 20"/>'),
+    // ── Reels 2.0: D (interface) ── Start tiles, storyboard and versions.
+    trend: svg('<path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>'),
+    words: svg('<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>'),
+    game: svg('<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>'),
+    player: svg('<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+    idea: svg('<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>'),
+    left: svg('<path d="m15 18-6-6 6-6"/>'),
+    grip: svg('<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>'),
+    layers: svg('<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/>'),
   };
   const KIND_NAME = { hook: 'Hook', context: 'Context', point: 'Point', stat: 'Stat', rank: 'Rank', quote: 'Quote', payoff: 'Why it matters', cta: 'End card', bars: 'Bars', versus: 'Versus', dotrank: 'Dot ranking', chips: 'Squares', steps: 'Steps', tiles: 'Team tiles', roles: 'Position cards', mystery: 'Mystery card', play: 'Play', wpline: 'Win probability', moment: 'Moment', panel3: '3 frames' };
   // Where a beat's picture came from (the fill chain), in plain words.
   const SOURCE_NAME = { 'x-clip': 'Official X clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', paper: 'ES paper (no photo)', none: 'Nothing yet (plain black)' };
-  const SPORT_LABEL = { nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', golf: 'Golf' };
+  // ── Reels 2.0: D (interface) ── trends cover NBA, WNBA, tennis and NASCAR too (lane B).
+  const SPORT_LABEL = { nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', golf: 'Golf', nba: 'NBA', wnba: 'WNBA', tennis: 'Tennis', nascar: 'NASCAR' };
+  const TREND_SPORTS = Object.keys(SPORT_LABEL);
   const LOCAL_KEY = 'frameup.reels.projects.v1';
   const HANDOFF_KEY = 'frameup.reelMoment.v1';
   const MEDIABUNNY = 'https://cdn.jsdelivr.net/npm/mediabunny@1.62.1/+esm';
@@ -81,13 +92,19 @@
   const els = {
     steps: $('rm-steps'), canvas: $('rm-canvas'), emptyStage: $('rm-empty-stage'), safe: $('rm-safe'),
     play: $('rm-play'), scrub: $('rm-scrub'), time: $('rm-time'), mute: $('rm-mute'), safeToggle: $('rm-safe-toggle'), stageMeta: $('rm-stage-meta'),
-    panes: { format: $('rm-pane-format'), source: $('rm-pane-source'), topic: $('rm-pane-topic'), edit: $('rm-pane-edit'), export: $('rm-pane-export') },
-    work: document.querySelector('.rm-work'), topic: $('rm-topic'), fmtEntry: $('rm-fmt-entry'), gallery: $('rm-gallery'), galleryClose: $('rm-gallery-close'), sourceStep: $('rm-source-step'),
+    panes: { source: $('rm-pane-source'), topic: $('rm-pane-topic'), edit: $('rm-pane-edit'), export: $('rm-pane-export') },
+    work: document.querySelector('.rm-work'), topic: $('rm-topic'), fmtEntry: $('rm-fmt-entry'), sourceStep: $('rm-source-step'),
+    // ── Reels 2.0: D (interface) ── the Start screen, the storyboard, the settings rail, versions and Export all.
+    start: $('rm-start'), startMeta: $('rm-start-meta'), sourceWords: $('rm-source-words'), sourceInspo: $('rm-source-inspo'), inspoSoon: $('rm-inspo-soon'), radarHost: $('rm-radar-host'), ideasHost: $('rm-ideas-host'),
+    brainstorm: $('rm-brainstorm'), brainstormRow: $('rm-brainstorm-row'), brainstormNote: $('rm-brainstorm-note'), recipes: $('rm-recipes'), recipeSec: $('rm-recipe-sec'), recipeWhy: $('rm-recipe-why'),
+    rail: $('rm-settings'), looks: $('rm-looks'), sources: $('rm-sources'), costMeta: $('rm-cost-meta'), captionsMeta: $('rm-captions-meta'), captionsNote: $('rm-captions-note'), more: $('rm-more'),
+    versions: $('rm-versions'), addBeat: $('rm-add-beat'), sbScroll: $('rm-sb-scroll'), exportAll: $('rm-export-all'), exportAllText: $('rm-export-all-text'), exportAllNote: $('rm-export-all-note'), exportWhat: $('rm-export-what'),
+    calm: $('rm-calm'), calmNote: $('rm-calm-note'),
     dataStory: $('rm-data-story'), dataReview: $('rm-data-review'), view: $('rm-view'), device: $('rm-device'), transport: $('rm-transport'),
     slidenav: $('rm-slidenav'), slidePos: $('rm-slide-pos'), slideDots: $('rm-slide-dots'), slidePrev: $('rm-slide-prev'), slideNext: $('rm-slide-next'),
     carouselOut: $('rm-carousel-out'), carouselBtn: $('rm-export-carousel'), carouselNote: $('rm-carousel-note'), carouselStatus: $('rm-carousel-status'),
     source: $('rm-source'), sourceTrend: $('rm-source-trend'), sourceBrief: $('rm-source-brief'), leagues: $('rm-leagues'), trendbox: $('rm-trendbox'), trends: $('rm-trends'), trendsNote: $('rm-trends-note'), picked: $('rm-picked'),
-    brief: $('rm-brief'), formats: $('rm-formats'), sport: $('rm-sport'), tier: $('rm-tier'), factcheck: $('rm-factcheck'), factcheckRow: $('rm-factcheck-row'),
+    brief: $('rm-brief'), sport: $('rm-sport'), tier: $('rm-tier'), factcheck: $('rm-factcheck'), factcheckRow: $('rm-factcheck-row'),
     cost: $('rm-cost'), write: $('rm-write'), writeText: $('rm-write-text'), writeStatus: $('rm-write-status'), recent: $('rm-recent'), recentList: $('rm-recent-list'),
     notice: $('rm-notice'), summary: $('rm-summary'), askForm: $('rm-ask'), askInput: $('rm-ask-input'), beats: $('rm-beats'), beatsMeta: $('rm-beats-meta'),
     voiceBadge: $('rm-voice-badge'), voiceNote: $('rm-voice-note'), voiceBtn: $('rm-voice-btn'), voiceProgress: $('rm-voice-progress'), capstyle: $('rm-capstyle'),
@@ -97,11 +114,11 @@
     back: $('rm-back'), next: $('rm-next'), nextText: $('rm-next-text'),
     photos: $('rm-photos'), photosForm: $('rm-photos-search'), photosQ: $('rm-photos-q'), photosGrid: $('rm-photos-grid'), photosNone: $('rm-photos-none'),
     toasts: $('rm-toasts'),
-    strip: $('rm-strip'), stripwrap: $('rm-stripwrap'), making: $('rm-making'), makingLive: $('rm-making-live'), autoline: $('rm-autoline'), settings: $('rm-settings'), settingsMeta: $('rm-settings-meta'),
+    making: $('rm-making'), makingLive: $('rm-making-live'), settingsMeta: $('rm-settings-meta'),
     styles: $('rm-styles'), stylesEdit: $('rm-styles-edit'), styleWhy: $('rm-style-why'), styleMeta: $('rm-style-meta'),
-    voiceTopic: $('rm-voice-topic'), voiceEdit: $('rm-voice-edit'), voiceState: $('rm-voice-state'),
+    voiceEdit: $('rm-voice-edit'), voiceState: $('rm-voice-state'),
     clipsOn: $('rm-clips-on'), aiclipsOn: $('rm-aiclips-on'), aiclipsRow: $('rm-aiclips-row'), aiclipsNote: $('rm-aiclips-note'),
-    statusline: $('rm-statusline'), statuslineText: $('rm-statusline-text'), lint: $('rm-lint'), costEdit: $('rm-cost-edit'),
+    statusline: $('rm-statusline'), statuslineText: $('rm-statusline-text'), lint: $('rm-lint'),
     musicMeta: $('rm-music-meta'), sourcesMeta: $('rm-sources-meta'), visualFile: $('rm-visual-file'), capstyleField: $('rm-capstyle-field'),
     sourceScript: $('rm-source-script'), script: $('rm-script'), scriptSource: $('rm-script-source'), scriptVo: $('rm-script-vo'),
     checklist: $('rm-checklist'), guide: $('rm-guide'), guideBody: $('rm-guide-body'), aspect: $('rm-aspect'), aspectSec: $('rm-aspect-sec'),
@@ -133,8 +150,17 @@
   // The ES house style is on (and reel-es.js loaded).
   const esOn = () => Boolean(ES && S.get(styleId()).engine === 'es' && !(state.plan && F.isDataFormat && F.isDataFormat(state.plan.format)));
   const scriptLocked = () => Boolean(state.plan && state.plan.script && state.plan.script.locked);
+  // ── Reels 2.0: C (inputs) ── the person's own voiceover (reel-voice-input.js) is on this plan.
+  const ownVoice = () => (state.voiceOwn && state.voiceOwn.plan === state.plan ? state.voiceOwn : null);
   // A beat's name in the strip and the editor (its ES block in the ES style).
   const beatName = beat => (esOn() ? ES.BLOCKS[ES.blockOf(beat).type].label : (KIND_NAME[beat.kind] || beat.kind));
+  // ── Reels 2.0: D (interface) ── what the reel starts from (a Start tile), the words tab last used,
+  // the recipe ('' = Auto), the versions of this reel and a calm (cuts, no wipes) preview.
+  Object.assign(state, { start: 'trend', words: 'script', inspo: 'radar', recipe: '', lookPicked: false, versions: null, version: 0, versionsBusy: false, calm: false, scene: -1 });
+  const mods = () => (window.ReelMakerCtx ? window.ReelMakerCtx.modules : {});
+  const emit = (event, data) => { if (window.ReelMakerCtx) window.ReelMakerCtx.emit(event, data); };
+  const RC = window.ReelRecipes || null;
+  const A11Y = window.ReelA11yCore || null;
 
   // ─── Small helpers ───────────────────────────────────────────────────────
   function toast(text, { tone = '', action = null } = {}) {
@@ -246,9 +272,10 @@
   const VoiceCache = (() => {
     let dbp = null;
     const open = () => dbp || (dbp = new Promise((resolve, reject) => {
-      const req = indexedDB.open('frameup-reels', 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('vo');
-      req.onsuccess = () => resolve(req.result);
+      // ── Reels 2.0: C (inputs) ── v2 adds the 'media' store (your uploads and voiceover, reel-media-tray.js).
+      const req = indexedDB.open('frameup-reels', 2);
+      req.onupgradeneeded = () => ['vo', 'media'].forEach(name => { if (!req.result.objectStoreNames.contains(name)) req.result.createObjectStore(name); });
+      req.onsuccess = () => { req.result.onversionchange = () => { req.result.close(); dbp = null; }; resolve(req.result); };
       req.onerror = () => reject(req.error);
     }));
     return {
@@ -259,39 +286,55 @@
 
   // ─── Steps ───────────────────────────────────────────────────────────────
   // Page steps: format and source show for the data formats only.
-  const PAGE_STEPS = ['format', 'source', 'topic', 'edit', 'export'];
-  const FLOW_STEP = { format: 'format', source: 'source', topic: 'story', edit: 'review', export: 'export' };
+  // ── Reels 2.0: D (interface) ── three steps for every reel: Start, Storyboard, Export.
+  // A reel from a game, a clip or a player picks its source on the Start
+  // screen (the 'source' pane, under the Start tiles); the nav shows it as Start.
+  const NAV_STEPS = ['topic', 'edit', 'export'];
+  const FLOW_STEP = { source: 'source', topic: 'story', edit: 'review', export: 'export' };
   function goStep(step, { focus = true } = {}) {
-    if (step !== 'topic' && step !== 'format' && step !== 'source' && !state.plan) return;
+    if (step === 'format') step = 'topic';
+    if (step !== 'topic' && step !== 'source' && !state.plan) return;
     const fmt = G && TL ? dataFmt() : '';
-    if (step === 'source' && !fmt) return;
+    if (step === 'source' && !fmt) step = 'topic';
     if (step === 'topic' && fmt && !FLOW.sourceReady(fmt, state.flow.source)) step = 'source';
+    const was = state.step;
     state.step = step;
     if (fmt && !state.flow.making) state.flow = { ...state.flow, step: FLOW_STEP[step] };
     Object.entries(els.panes).forEach(([id, pane]) => { pane.hidden = id !== step; });
-    els.work.classList.toggle('is-gallery', step === 'format');
+    const starting = step === 'topic' || step === 'source';
+    els.start.hidden = !starting;
+    els.work.dataset.step = step;
     els.work.classList.toggle('is-picking', step === 'source');
-    if (G && TL) renderStepsNav();
+    els.work.classList.toggle('has-reel', Boolean(state.plan));
+    const navStep = starting ? 'topic' : step;
     els.steps.querySelectorAll('.rm-step').forEach(btn => {
       const id = btn.dataset.step;
-      const order = PAGE_STEPS;
-      btn.toggleAttribute('aria-current', id === step);
-      if (id === step) btn.setAttribute('aria-current', 'step');
-      btn.disabled = id === 'format' ? false : (id === 'source' ? !fmt : (id === 'topic' ? Boolean(fmt) && !FLOW.sourceReady(fmt, state.flow.source) : !state.plan));
-      btn.classList.toggle('is-done', order.indexOf(id) < order.indexOf(step) && (Boolean(state.plan) || ['format', 'source'].includes(id)));
+      btn.toggleAttribute('aria-current', id === navStep);
+      if (id === navStep) btn.setAttribute('aria-current', 'step');
+      btn.disabled = id === 'topic' ? false : !state.plan;
+      btn.classList.toggle('is-done', NAV_STEPS.indexOf(id) < NAV_STEPS.indexOf(navStep) && Boolean(state.plan));
     });
-    els.back.hidden = step === 'format' || (step === 'topic' && !fmt);
-    els.next.hidden = (step !== 'edit' && !(step === 'topic' && state.plan)) || ['format', 'source'].includes(step);
-    els.nextText.textContent = step === 'topic' ? 'Back to your reel' : 'Next: Export';
-    els.stripwrap.hidden = ['format', 'source', 'topic'].includes(step) || !state.plan;
+    els.back.hidden = starting;
+    els.next.hidden = step !== 'edit' && !(step === 'topic' && state.plan);
+    els.nextText.textContent = step === 'topic' ? 'Back to your storyboard' : 'Next: Export';
     els.next.classList.toggle('es-btn--primary', step === 'edit');
     if (step === 'export') renderExport();
     if (G && TL) { if (step === 'source') syncLive(); else stopLive(); }
-    if (focus) els.panes[step].querySelector('h3, button, input, textarea')?.focus({ preventScroll: true });
-    document.querySelector('.rm-panel')?.scrollTo?.({ top: 0 });
+    renderRail();
+    if (focus) focusStep(step);
+    if (was !== step) emit('step', { step, from: was });
   }
-  els.steps.addEventListener('click', event => { const btn = event.target.closest('.rm-step'); if (!btn || btn.disabled) return; if (btn.dataset.step === 'format') openGallery(); else goStep(btn.dataset.step); });
-  els.back.addEventListener('click', () => goStep({ export: 'edit', edit: 'topic', topic: 'source', source: 'format' }[state.step] || 'topic'));
+  // Where the keyboard lands on each step: the picked Start tile, the first
+  // control of a picker, the selected scene, the export button.
+  function focusStep(step) {
+    const target = step === 'topic' ? els.fmtEntry.querySelector('[aria-checked="true"]')
+      : step === 'edit' ? (els.beats.querySelector('.rm-card.is-on [data-sb-face]') || els.beats.querySelector('[data-sb-face], input, textarea'))
+        : step === 'export' ? els.exportBtn
+          : els.panes[step].querySelector('button:not(:disabled), input, textarea, select');
+    target?.focus({ preventScroll: true });
+  }
+  els.steps.addEventListener('click', event => { const btn = event.target.closest('.rm-step'); if (!btn || btn.disabled) return; goStep(btn.dataset.step); });
+  els.back.addEventListener('click', () => goStep({ export: 'edit', edit: 'topic' }[state.step] || 'topic'));
   els.next.addEventListener('click', () => goStep(state.step === 'topic' ? 'edit' : 'export'));
 
   function radios(group, attr, value) {
@@ -314,18 +357,165 @@
     next.click();
   });
 
-  // ─── Step 1: Topic ───────────────────────────────────────────────────────
+  // ─── Step 1: Start ───────────────────────────────────────────────────────
+  // ── Reels 2.0: D (interface) ── six tiles: Trend, Script or brief, Game,
+  // Clip, Player, Inspiration. The picked tile opens its own source right
+  // below (the trend list, your words, the game / clip / player picker, or
+  // the inspiration panels), then a recipe and one "Make my reel".
+  const START = [
+    { id: 'trend', label: 'Trend', blurb: 'Today’s sports news', icon: 'trend' },
+    { id: 'words', label: 'Script or brief', blurb: 'Your own words', icon: 'words' },
+    { id: 'game', label: 'Game', blurb: 'The plays that swung it', icon: 'game', format: 'gameswing' },
+    { id: 'clip', label: 'Clip', blurb: 'One clip, three frames', icon: 'film', format: 'replay' },
+    { id: 'player', label: 'Player', blurb: 'A career in moments', icon: 'player', format: 'archive' },
+    { id: 'inspo', label: 'Inspiration', blurb: 'What is doing well', icon: 'idea' },
+  ];
+  const START_META = { trend: 'Pick a story, then Make my reel.', words: 'Paste your words, then Make my reel.', game: 'Pick a game.', clip: 'Pick a clip.', player: 'Pick a player.', inspo: 'See what is working, then make your version.' };
+  const startOf = () => { const f = G && TL ? dataFmt() : ''; return f ? START.find(x => x.format === f).id : state.start; };
+  const inspoOn = () => Boolean(mods().radar || mods().ideas);
+  const tileSoon = tile => (tile.format ? !(G && TL) || G.formatStatus(tile.format, state.config.formatModes) !== 'ready' : (tile.id === 'inspo' ? !inspoOn() : false));
+  function renderStart() {
+    const cur = startOf();
+    const refocus = els.fmtEntry.contains(document.activeElement) ? document.activeElement.dataset.start : '';
+    els.fmtEntry.innerHTML = START.map(tile => {
+      const on = tile.id === cur;
+      const soon = tileSoon(tile);
+      return `<button class="rm-tile${soon ? ' is-soon' : ''}" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-start="${tile.id}"${tile.format ? ` data-gformat="${tile.format}"` : ''}${soon ? ' aria-disabled="true"' : ''}>
+        <span class="rm-tile__icon" aria-hidden="true">${ICON[tile.icon]}</span>
+        <span class="rm-tile__name">${esc(tile.label)}${soon ? '<span class="es-badge rm-tile__soon">Soon</span>' : ''}</span>
+        <span class="rm-tile__blurb">${esc(tile.blurb)}</span></button>`;
+    }).join('');
+    els.startMeta.textContent = START_META[cur] || '';
+    if (refocus) els.fmtEntry.querySelector(`[data-start="${refocus}"]`)?.focus({ preventScroll: true });
+  }
+  // Back to the news flow from a game, a clip or a player.
+  function leaveData() {
+    if (!(G && TL) || !dataFmt()) return;
+    if (state.plan && F.isDataFormat(state.plan.format)) startFresh();
+    state.flow = FLOW.reduce(state.flow, { type: 'pick-format', format: 'explainer' });
+    leaveDataPrefs();
+    renderDataStory();
+    renderStyles();
+  }
+  function setStart(id) {
+    const tile = START.find(x => x.id === id);
+    if (!tile || state.flow.making) return;
+    if (tileSoon(tile)) {
+      toast(tile.format ? `${F.FORMATS[tile.format].label} is coming soon. Its data server lands next; trends and your own words work today.` : 'Inspiration is coming soon. Start from a trend or your own words for now.');
+      return;
+    }
+    if (tile.format) { pickFormat(tile.format); return; }
+    state.start = id;
+    if (id === 'trend') state.source = 'trend';
+    if (id === 'words') state.source = state.words;
+    leaveData();
+    syncStart();
+    goStep('topic', { focus: false });
+    if (id === 'inspo') mountInspo();
+  }
+  // The Start screen follows the picked tile.
+  function syncStart() {
+    const data = Boolean(G && TL && dataFmt());
+    const cur = startOf();
+    const inspo = cur === 'inspo' && !data;
+    renderStart();
+    els.sourceTrend.hidden = data || cur !== 'trend';
+    els.sourceWords.hidden = data || cur !== 'words';
+    els.sourceInspo.hidden = !inspo;
+    els.sourceBrief.hidden = state.source !== 'brief';
+    els.sourceScript.hidden = state.source === 'brief';
+    radios(els.source, 'source', state.source === 'brief' ? 'brief' : 'script');
+    // Inspiration hands over to a storyboard by itself: no recipe or Make button there.
+    els.recipeSec.hidden = data || inspo || !RC;
+    els.write.hidden = inspo;
+    els.brainstormRow.hidden = data || inspo || !mods().ideas;
+    renderPicked();
+    renderRecipes();
+    renderCost();
+  }
+  els.fmtEntry.addEventListener('click', event => {
+    const btn = event.target.closest('[data-start]');
+    if (!btn) return;
+    setStart(btn.dataset.start);
+    els.fmtEntry.querySelector(`[data-start="${startOf()}"]`)?.focus({ preventScroll: true });
+  });
+  // Script / Brief inside "Script or brief".
   els.source.addEventListener('click', event => {
     const btn = event.target.closest('[data-source]');
     if (!btn) return;
-    state.source = btn.dataset.source;
-    radios(els.source, 'source', state.source);
-    els.sourceTrend.hidden = state.source !== 'trend';
-    els.sourceBrief.hidden = state.source !== 'brief';
-    if (els.sourceScript) els.sourceScript.hidden = state.source !== 'script';
-    renderPicked();
-    renderFormats();
+    state.words = btn.dataset.source === 'brief' ? 'brief' : 'script';
+    state.source = state.words;
+    state.start = 'words';
+    leaveData();
+    syncStart();
+    if (state.step !== 'topic') goStep('topic', { focus: false });
+  });
+  // Inspiration and "Brainstorm angles" (lane B's panels, when they are loaded).
+  // One panel at a time (each has its own main button): what is doing well, or the ideas room.
+  const inspoMounted = { radar: false, ideas: false };
+  const inspoTabs = $('rm-inspo-tabs');
+  function mountInspo(show = '') {
+    const { radar, ideas } = mods();
+    els.inspoSoon.hidden = Boolean(radar || ideas);
+    if (radar && !inspoMounted.radar) { inspoMounted.radar = true; radar.mount(els.radarHost); }
+    if (ideas && !inspoMounted.ideas) { inspoMounted.ideas = true; ideas.mount(els.ideasHost); }
+    if (show) state.inspo = show;
+    if (!mods()[state.inspo]) state.inspo = radar ? 'radar' : 'ideas';
+    inspoTabs.hidden = !(radar && ideas);
+    radios(inspoTabs, 'inspo', state.inspo);
+    els.radarHost.hidden = !radar || state.inspo !== 'radar';
+    els.ideasHost.hidden = !ideas || state.inspo !== 'ideas';
+  }
+  inspoTabs.addEventListener('click', event => { const btn = event.target.closest('[data-inspo]'); if (btn) mountInspo(btn.dataset.inspo); });
+  els.brainstorm.addEventListener('click', () => {
+    const ideas = mods().ideas;
+    if (!ideas) return;
+    const trend = state.source === 'trend' ? state.trend : null;
+    const topic = state.source === 'brief' ? els.brief.value.trim() : (state.source === 'script' ? els.script.value.trim() : (trend ? trend.title : ''));
+    state.start = 'inspo';
+    syncStart();
+    mountInspo('ideas');
+    ideas.open({ trend, topic, sport: (trend && trend.sport) || state.sport || '' });
+  });
+
+  // Recipes (reel-recipes.js): the shape of the story. Auto leaves it to the script writer.
+  const GLYPH = {
+    hook: '<rect class="g-ink" x="3" y="11" width="9" height="4" rx="1"/><rect class="g-blue" x="3" y="17" width="12" height="4" rx="1"/>',
+    statement: '<rect class="g-ink" x="3" y="10" width="12" height="3" rx="1"/><rect class="g-ink" x="3" y="15" width="9" height="3" rx="1"/><rect class="g-blue" x="3" y="20" width="11" height="3" rx="1"/>',
+    number: '<rect class="g-blue" x="3" y="10" width="12" height="9" rx="1.5"/><rect class="g-ink" x="3" y="21" width="8" height="2" rx="1"/>',
+    dots: '<circle class="g-ink" cx="5" cy="12" r="1.3"/><circle class="g-ink" cx="9" cy="12" r="1.3"/><circle class="g-ink" cx="13" cy="12" r="1.3"/><circle class="g-ink" cx="5" cy="16" r="1.3"/><circle class="g-ink" cx="9" cy="16" r="1.3"/><circle class="g-ink" cx="13" cy="16" r="1.3"/><circle class="g-ink" cx="5" cy="20" r="1.3"/><circle class="g-ink" cx="9" cy="20" r="1.3"/><circle class="g-green" cx="13" cy="20" r="1.3"/>',
+    compare: '<rect class="g-blue" x="3" y="11" width="12" height="4" rx="1"/><rect class="g-ink" x="3" y="17" width="7" height="4" rx="1"/>',
+    quote: '<rect class="g-ink" x="3" y="9" width="12" height="14" rx="1.5"/><rect class="g-paper" x="5" y="12" width="8" height="2" rx="1"/><rect class="g-paper" x="5" y="16" width="6" height="2" rx="1"/>',
+    endcard: '<rect class="g-blue" x="3" y="12" width="12" height="8" rx="1.5"/>',
+  };
+  const shapeSvg = blocks => `<span class="rm-recipe__shape" aria-hidden="true">${blocks.map(b => `<svg viewBox="0 0 18 32" focusable="false"><rect class="g-frame" x=".5" y=".5" width="17" height="31" rx="3"/>${GLYPH[b] || ''}</svg>`).join('')}</span>`;
+  function renderRecipes() {
+    if (!RC) return;
+    const fits = RC.suggest(topicText());
+    const items = [{ id: '', label: 'Auto', blurb: 'Reels Studio picks the shape that fits the story.', blocks: null }, ...RC.list()];
+    const refocus = els.recipes.contains(document.activeElement) ? document.activeElement.dataset.recipe : null;
+    els.recipes.innerHTML = items.map(r => {
+      const on = state.recipe === r.id;
+      return `<button class="rm-recipe" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-recipe="${r.id}">
+        ${r.blocks ? shapeSvg(r.blocks) : `<span class="rm-recipe__auto" aria-hidden="true">${ICON.sparkles}</span>`}
+        <span class="rm-recipe__name">${esc(r.label)}${r.id && r.id === fits ? '<span class="rm-format__dot" title="Fits this story"><span class="es-sr-only">, fits this story</span></span>' : ''}</span>
+        <span class="rm-recipe__blurb">${esc(r.blurb)}</span></button>`;
+    }).join('');
+    const picked = RC.get(state.recipe);
+    els.recipeWhy.textContent = picked ? `${picked.blocks.length} scenes: ${picked.blocks.map(b => (ES ? ES.BLOCKS[b].label : b)).join(', ')}.` : (fits ? `Auto picks for you. ${RC.get(fits).label} fits this story.` : 'The shape of the story. Auto picks for you.');
+    if (refocus != null) els.recipes.querySelector(`[data-recipe="${refocus}"]`)?.focus({ preventScroll: true });
+  }
+  els.recipes.addEventListener('click', event => {
+    const btn = event.target.closest('[data-recipe]');
+    if (!btn || state.flow.making) return;
+    state.recipe = RC && RC.get(btn.dataset.recipe) ? btn.dataset.recipe : '';
+    // The director's format follows the recipe (Auto: it routes the story itself).
+    state.format = state.recipe ? RC.get(state.recipe).format : 'auto';
+    renderRecipes();
+    renderStyles();
     renderCost();
+    els.recipes.querySelector(`[data-recipe="${state.recipe}"]`)?.focus({ preventScroll: true });
+    logEvent('recipe', { recipe: state.recipe || 'auto', at: 'pick' });
   });
 
   function leagueTile(sport, size = 20) {
@@ -334,7 +524,9 @@
     return `<span class="rm-league" style="--tile:${esc(logo.bg)};--size:${size}px" title="${esc(logo.label)}"><img src="${esc(logo.src)}" alt="" loading="lazy"></span>`;
   }
   function renderLeagues() {
-    const list = [['all', 'All'], ['nfl', 'NFL'], ['cfb', 'CFB'], ['mlb', 'MLB'], ['golf', 'Golf']];
+    // The four core leagues always show; the newer ones show when they have a story.
+    const extra = ['nba', 'wnba', 'tennis', 'nascar'].filter(id => state.trends.some(t => t.sport === id) || state.league === id).map(id => [id, SPORT_LABEL[id]]);
+    const list = [['all', 'All'], ['nfl', 'NFL'], ['cfb', 'CFB'], ['mlb', 'MLB'], ['golf', 'Golf'], ...extra];
     els.leagues.innerHTML = list.map(([id, label]) => `<button class="es-chip" type="button" role="radio" aria-checked="${state.league === id}" tabindex="${state.league === id ? 0 : -1}" data-league="${id}">${id === 'all' ? '' : leagueTile(id, 16)}${label}</button>`).join('');
   }
   els.leagues.addEventListener('click', event => {
@@ -410,7 +602,8 @@
   els.trendbox.addEventListener('scroll', () => els.trendbox.classList.toggle('is-scrolled', els.trendbox.scrollTop > 0), { passive: true });
   function renderPicked() {
     const t = state.trend;
-    els.picked.hidden = !t || state.source !== 'trend';
+    // The picked row is highlighted in the list; the summary card shows while the list steps aside (making).
+    els.picked.hidden = !t || state.source !== 'trend' || startOf() !== 'trend' || !state.flow.making;
     if (!t) { els.picked.innerHTML = ''; return; }
     els.picked.innerHTML = `${leagueTile(t.sport, 40)}
       <div class="rm-picked__body"><p class="rm-picked__eyebrow">Reel about</p><p class="rm-picked__title">${esc(t.title)}</p>${trendMeta(t)}</div>
@@ -436,12 +629,13 @@
       const data = await api({ mode: 'trends' });
       state.trends = data.items || [];
       state.trendsState = 'ready';
+      renderLeagues();
     } catch (error) {
       // Static previews have no API: the public trends endpoint is tried too.
       try {
         const response = await fetch('/api/trend-design');
         const data = await response.json();
-        state.trends = (data.items || []).filter(i => ['nfl', 'cfb', 'mlb', 'golf'].includes(i.category)).map(i => ({ id: i.id, sport: i.category, title: i.title, url: i.url, publishedAt: i.publishedAt, team: i.team?.name || '', format: F.routeFormat(i.title).format, related: (i.related || []).slice(0, 4) }));
+        state.trends = (data.items || []).filter(i => TREND_SPORTS.includes(i.category)).map(i => ({ id: i.id, sport: i.category, title: i.title, url: i.url, publishedAt: i.publishedAt, team: i.team?.name || '', format: F.routeFormat(i.title).format, related: (i.related || []).slice(0, 4) }));
         state.trendsState = 'ready';
       } catch {
         state.trendsState = 'error';
@@ -450,27 +644,10 @@
     renderTrends();
   }
 
-  const topicText = () => (state.source === 'trend' ? [state.trend?.title, ...(state.trend?.related || []).map(r => r.title)].filter(Boolean).join(' ') : els.brief.value);
-  function renderFormats() {
-    const suggestion = F.routeFormat(topicText()).format;
-    const list = [{ id: 'auto', label: 'Auto', blurb: 'FrameUp picks the format that fits the story.' }, ...F.FORMAT_IDS.map(id => F.FORMATS[id])];
-    els.formats.innerHTML = list.map(fmt => {
-      const on = state.format === fmt.id;
-      const suggested = fmt.id === suggestion && topicText().trim().length > 8;
-      return `<button class="rm-format" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-format="${fmt.id}">
-        <span class="rm-format__icon">${ICON[fmt.id === 'auto' ? 'sparkles' : fmt.id]}</span>
-        <span class="rm-format__name">${esc(fmt.label)}${suggested ? '<span class="rm-format__dot" title="Fits this story"><span class="es-sr-only">, fits this story</span></span>' : ''}</span>
-        <span class="rm-format__blurb">${esc(fmt.blurb)}</span>
-      </button>`;
-    }).join('');
-  }
-  els.formats.addEventListener('click', event => {
-    const btn = event.target.closest('[data-format]');
-    if (!btn) return;
-    state.format = btn.dataset.format;
-    renderFormats();
-    renderStyles();
-  });
+  const topicText = () => (state.source === 'trend' ? [state.trend?.title, ...(state.trend?.related || []).map(r => r.title)].filter(Boolean).join(' ') : (state.source === 'script' ? els.script.value : els.brief.value));
+  // ── Reels 2.0: D (interface) ── the format picker is the recipe row now
+  // (a recipe sets the director's format; Auto routes the story itself).
+  function renderFormats() { renderRecipes(); }
 
   // ─── Styles: picker with live thumbnails drawn by the renderer ──────────
   const SAMPLE = {
@@ -534,41 +711,70 @@
   els.styles.addEventListener('click', onStylePick);
   els.stylesEdit.addEventListener('click', onStylePick);
 
-  // The Settings summary above Make my reel: Style · Voice · Clips · Format.
-  // Each tile opens All settings at that section.
-  function renderAutoline() {
-    const v = state.config.voice;
-    const voice = v.ready && state.voiceOn ? ((v.voices || []).find(x => x.id === state.voiceId) || {}).name || 'House voice' : 'Captions only';
-    const st = state.style === 'auto' ? `Auto · ${S.get(state.styleSuggested.id).label}` : S.get(state.style).label;
+  // ── Reels 2.0: D (interface) ── one settings rail (Look, Size, Voice, Music,
+  // Captions, Sources, Cost, Script and clips) beside every step. Each row
+  // shows its current value; nothing is set in two places.
+  function renderRail() {
+    if (!els.rail) return;
     const data = G && TL ? dataFmt() : '';
-    const fmt = data ? F.FORMATS[data].short : (state.format === 'auto' ? 'Auto' : F.FORMATS[state.format].short);
-    const rows = [['style', 'Style', st], ['voice', 'Voice', voice], ['clips', 'Clips', state.useClips ? 'On' : 'Stills only'], ['format', 'Format', fmt]]
-      .filter(([id]) => !data || id !== 'clips' || data === 'gameswing');
-    els.autoline.innerHTML = rows.map(([id, label, value]) => `<button class="rm-setsum__item" type="button" data-open="${id}" aria-label="${esc(label)}: ${esc(value)}. Change ${esc(label.toLowerCase())}"><span class="rm-setsum__label">${esc(label)}</span><span class="rm-setsum__value">${esc(value)}</span>${ICON.chevronRight}</button>`).join('');
-    els.settingsMeta.textContent = `${state.tier === 'economy' ? 'Economy' : 'Standard'} script · fact check ${state.factCheck ? 'on' : 'off'}`;
+    const planData = state.plan && F.isDataFormat && F.isDataFormat(state.plan.format) ? state.plan.format : '';
+    // Size: the ES system's 9:16 and its 4:5 feed version (the preview follows it).
+    els.aspectSec.hidden = !esOn() || Boolean(data || planData);
+    radios(els.aspect, 'aspect', state.aspect);
+    els.sources.hidden = !state.plan;
+    els.settingsMeta.textContent = `${state.useClips ? 'Clips on' : 'Stills only'} · ${state.tier === 'economy' ? 'economy' : 'standard'} script${state.factCheck ? ' · fact check' : ''}`;
+    $('rm-set-script').hidden = Boolean(data);
+    els.capstyleField.hidden = S.get(styleId()).caption.mode !== 'user';
+    els.captionsMeta.textContent = 'Always on';
+    renderLooks();
   }
-  const SETTING_SEC = { style: 'rm-set-style', voice: 'rm-voice-topic', clips: 'rm-set-clips', format: 'rm-set-format' };
-  els.autoline.addEventListener('click', event => {
-    const btn = event.target.closest('[data-open]');
-    if (btn && btn.dataset.open === 'format' && G && TL && dataFmt()) { openGallery(); return; }
-    const sec = btn && $(SETTING_SEC[btn.dataset.open]);
-    if (!sec) return;
-    els.settings.open = true;
-    const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    sec.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' });
-    sec.querySelector('[role="radio"][aria-checked="true"]:not(:disabled), input:not(:disabled), button:not(:disabled)')?.focus({ preventScroll: true });
+  function renderAutoline() { renderRail(); }
+  // The Look section. With the looks module (reel-es-themes.js, lane A) it is
+  // one row of live thumbnails; without it the page's own style picker shows.
+  function renderLooks() {
+    const looks = mods().looks;
+    els.looks.hidden = !looks;
+    els.styles.hidden = Boolean(looks);
+    if (!looks) return;
+    const current = looks.current();
+    const list = looks.list();
+    const sig = `${list.map(lk => lk.id).join()}|${current}|${state.plan?.team?.name || ''}|${Object.keys(state.images).length}`;
+    if (els.looks.dataset.sig === sig && els.looks.childElementCount) return;
+    els.looks.dataset.sig = sig;
+    const refocus = els.looks.contains(document.activeElement) ? document.activeElement.dataset.look : '';
+    els.looks.innerHTML = list.map(lk => {
+      const on = lk.id === current;
+      return `<button class="rm-look" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-look="${esc(lk.id)}" title="${esc(lk.blurb || '')}">
+        <canvas class="rm-look__thumb" width="108" height="192" data-look-thumb="${esc(lk.id)}" aria-hidden="true"></canvas>
+        <span class="rm-look__name">${esc(lk.label)}</span></button>`;
+    }).join('');
+    els.looks.querySelectorAll('[data-look-thumb]').forEach(cv => { try { looks.thumb(cv, cv.dataset.lookThumb); } catch (error) { window.FrameUpErrors?.report?.(error, 'reels look thumb'); } });
+    const now = list.find(lk => lk.id === current);
+    if (now) { els.styleMeta.textContent = now.label; els.styleWhy.textContent = now.blurb || ''; }
+    if (refocus) els.looks.querySelector(`[data-look="${refocus}"]`)?.focus({ preventScroll: true });
+  }
+  els.looks.addEventListener('click', event => {
+    const btn = event.target.closest('[data-look]');
+    const looks = mods().looks;
+    if (!btn || !looks) return;
+    state.lookPicked = true;
+    looks.set(btn.dataset.look);
+    renderLooks();
+    els.looks.querySelector(`[data-look="${btn.dataset.look}"]`)?.focus({ preventScroll: true });
+    renderStoryboardSoon();
   });
+  els.styles.addEventListener('click', event => { if (event.target.closest('[data-style], [data-look]')) state.lookPicked = true; });
 
   // ─── Voice picker (Story settings and Review fold share it) ─────────────
   let sampleSource = null;
   function voicePickerHtml(where) {
     const v = state.config.voice;
-    // In Review the fold's own note (#rm-voice-note) already says why; one line, not two.
-    if (!v.ready) return where === 'edit' ? '' : `<h3 class="rm-sec__title">Voice</h3><p class="rm-hint">${esc(v.reason || 'No voice is set up. Reels export with captions.')}</p>`;
+    // The rail's own note (#rm-voice-note) already says why; one line, not two.
+    if (!v.ready) return '';
     const list = v.voices || [];
     const est = F.estimateCost({ voiceMode: v.mode, voiceModel: v.model, voChars: voChars(), tier: 'economy' }).lines.find(l => l.id === 'voice').usd;
-    return `<div class="rm-sec__head"><h3 class="rm-sec__title">Voice</h3>
-      <label class="rm-switch"><input type="checkbox" role="switch" data-voice-on ${state.voiceOn ? 'checked' : ''}><span>${state.voiceOn ? 'On' : 'Off'}</span></label></div>
+    return `<div class="rm-sec__head"><span class="es-field__label" id="rm-aivoice-label">AI voice</span>
+      <label class="rm-switch"><input type="checkbox" role="switch" data-voice-on aria-labelledby="rm-aivoice-label" ${state.voiceOn ? 'checked' : ''}><span>${state.voiceOn ? 'On' : 'Off'}</span></label></div>
       ${list.length ? `<div class="rm-voices" role="radiogroup" aria-label="Voice" ${state.voiceOn ? '' : 'aria-disabled="true"'}>${list.map(x => {
         const on = state.voiceId === x.id;
         return `<div class="rm-voice${on ? ' is-on' : ''}"><button class="rm-voice__pick" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-voice="${x.id}" ${state.voiceOn ? '' : 'disabled'}><span class="rm-voice__name">${esc(x.name)}</span><span class="rm-voice__line">${esc(x.line)}</span></button><button class="rm-icon-btn rm-icon-btn--sm rm-voice__play" type="button" data-sample="${x.id}" aria-label="Hear ${esc(x.name)}" title="Hear a short sample">${ICON.play}</button></div>`;
@@ -576,8 +782,9 @@
       <p class="rm-hint">${state.voiceOn ? `Human-sounding AI voices (${esc(v.model.replace('elevenlabs/', 'ElevenLabs '))}), never a clone. About ${F.money(est)} for this reel; unchanged lines are reused for free.` : 'Off: the reel exports with captions only.'}</p>`;
   }
   function renderVoicePickers() {
-    els.voiceTopic.innerHTML = voicePickerHtml('topic');
     els.voiceEdit.innerHTML = voicePickerHtml('edit');
+    els.voiceEdit.hidden = !els.voiceEdit.childElementCount;
+    if (!state.plan) renderVoice();
     renderAutoline();
   }
   async function playSample(id, btn) {
@@ -608,6 +815,8 @@
     if (sample) { playSample(sample.dataset.sample, sample); return; }
     const pick = event.target.closest('[data-voice]');
     if (pick && pick.dataset.voice !== state.voiceId) {
+      // ── Reels 2.0: C (inputs) ── an AI voice never talks over the person's own recording.
+      if (ownVoice()) { toast('Your own voiceover is on this reel. Remove it under Voice in Settings to use an AI voice.'); return; }
       state.voiceId = pick.dataset.voice;
       renderVoicePickers();
       if (state.plan && state.voiceOn) { state.voice = {}; rebuild(); renderVoice(); voiceSoon(0); }
@@ -621,7 +830,7 @@
     renderVoicePickers();
     if (state.plan) { rebuild(); renderVoice(); if (state.voiceOn) voiceSoon(0); }
   }
-  [els.voiceTopic, els.voiceEdit].forEach(root => { root.addEventListener('click', onVoiceUi); root.addEventListener('change', onVoiceToggle); });
+  [els.voiceEdit].forEach(root => { root.addEventListener('click', onVoiceUi); root.addEventListener('change', onVoiceToggle); });
   els.clipsOn.addEventListener('change', () => { state.useClips = els.clipsOn.checked; renderAutoline(); renderCost(); });
   els.aiclipsOn.addEventListener('change', () => { state.aiClips = els.aiclipsOn.checked; renderCost(); });
   // Original clip audio: off by default (clips are muted in preview and export).
@@ -638,6 +847,7 @@
     });
   }
   els.brief.addEventListener('input', debounce(() => { renderFormats(); renderStyles(); renderCost(); }, 250));
+  els.script.addEventListener('input', debounce(() => { renderFormats(); renderCost(); }, 250));
   els.sport.addEventListener('change', () => { state.sport = els.sport.value; });
   els.tier.addEventListener('click', event => {
     const btn = event.target.closest('[data-tier]');
@@ -681,9 +891,17 @@
       <ul>${est.lines.map(line => `<li><span>${esc(line.label)}</span><span>${F.money(line.usd)}</span></li>`).join('')}</ul>
       <p>Counts toward your weekly AI limit. Official X clips are free once found. ${ai ? '' : 'AI is off here, so you get a draft built from your words.'}</p></details>`;
   }
+  // ── Reels 2.0: D (interface) ── the rail's Cost row: the estimate, then what this reel has spent.
   function renderCost() {
-    els.cost.innerHTML = costHtml();
-    if (els.costEdit) els.costEdit.innerHTML = costHtml(`Spent ${F.money(totalSpent())} so far · estimate`);
+    const est = costEstimate();
+    const ai = state.config.ai && !state.config.offline;
+    const script = state.source === 'script' && !(G && TL && dataFmt()) && !state.plan;
+    els.costMeta.textContent = state.plan ? `${F.money(totalSpent())} spent` : (ai ? (script ? 'Free script' : `≈ ${F.money(est.total)}`) : 'Free draft');
+    els.cost.innerHTML = `<p class="rm-cost__title">Estimate for this reel <b>${ai ? `≈ ${F.money(est.total)}` : 'Free draft'}</b></p>
+      <ul class="rm-cost__list">${est.lines.map(line => `<li><span>${esc(line.label)}</span><span>${F.money(line.usd)}</span></li>`).join('')}</ul>
+      <p class="rm-hint">Counts toward your weekly AI limit. Official X clips are free once found. ${ai ? '' : 'AI is off here, so you get a draft built from your words.'}</p>`;
+    els.spend.hidden = !state.plan;
+    if (state.plan) renderSpend();
   }
 
   // ─── Write the reel ──────────────────────────────────────────────────────
@@ -709,7 +927,10 @@
     els.making.hidden = !f.making && !f.stages.some(x => x.state !== 'todo');
     // While it runs, the stepper takes the trend list's place so nothing clips.
     els.panes.topic.classList.toggle('is-making', f.making);
+    els.start.classList.toggle('is-making', f.making);
+    renderPicked();
     els.brief.readOnly = f.making;
+    els.script.readOnly = f.making;
     const mark = { done: ICON.check, failed: ICON.warn, skipped: '<span class="rm-making__dash"></span>', active: '<span class="rm-spin"></span>', todo: '' };
     els.making.innerHTML = f.stages.map(x => `<li class="rm-making__step is-${x.state}"${x.state === 'active' ? ' aria-current="step"' : ''}><span class="rm-making__mark" aria-hidden="true">${mark[x.state]}</span><span class="rm-making__text"><span class="rm-making__label">${esc(x.label)}</span>${x.note ? `<small>${esc(x.note)}</small>` : ''}</span><span class="es-sr-only">, ${STATE_WORD[x.state] || x.state}</span></li>`).join('');
     const i = f.stages.findIndex(x => x.state === 'active');
@@ -738,12 +959,17 @@
     els.making.scrollIntoView?.({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' });
     const started = Date.now();
     // 1. Script.
-    const body = { mode: 'plan', brief, trend, format: state.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style };
+    // ── Reels 2.0: D (interface) ── the recipe: its steer and block order for the script writer.
+    const recipe = RC ? RC.planRequest(state.recipe, { format: state.format }) : { format: state.format, steer: '' };
+    const body = { mode: 'plan', brief, trend, format: recipe.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style, ...(recipe.steer ? { steer: recipe.steer } : {}) };
+    logStart();
     try {
       const data = await api(body);
       state.spent.director += Number(data.costs?.director) || 0;
       state.spent.factCheck += Number(data.costs?.factCheck) || 0;
       if (data.suggestedStyle) state.styleSuggested = data.suggestedStyle;
+      // A plan the AI did not write (free mode, a weak answer) gets the recipe's shape by code, at $0.
+      withRecipe(data, { byCode: !/^director/.test(data.source || '') });
       applyPlan(data, { brief, trend, go: false });
       logEvent('plan', { source: data.source, format: data.plan.format, style: data.plan.style, escalated: data.escalated, cost: data.cost, issues: (data.issues || []).length, beats: data.plan.beats.length });
       flowEvent({ type: 'stage-done', stage: 'script', note: `${data.plan.beats.length} beats · ${S.get(data.plan.style).label}` });
@@ -753,7 +979,9 @@
         const corpus = [brief, trend?.title, ...(trend?.related || []).map(r => r.title)].filter(Boolean).join('\n');
         const plan = F.fallbackPlan({ brief: corpus, title: trend?.title || '', format: state.format, sport: state.sport || trend?.sport || '' });
         plan.style = state.style === 'auto' ? state.styleSuggested.id : state.style;
-        applyPlan({ plan, source: 'draft', notice: 'The AI server is not reachable here, so this is a draft built from your words.', corpus, sources: trend ? [{ type: 'trend', title: trend.title, url: trend.url }] : [{ type: 'brief', title: 'Your brief' }] }, { brief, trend, go: false });
+        const draft = { plan, source: 'draft', notice: 'The AI server is not reachable here, so this is a draft built from your words.', corpus, sources: trend ? [{ type: 'trend', title: trend.title, url: trend.url }] : [{ type: 'brief', title: 'Your brief' }] };
+        withRecipe(draft, { byCode: true });
+        applyPlan(draft, { brief, trend, go: false });
         flowEvent({ type: 'stage-done', stage: 'script', note: 'Draft from your words' });
       } else {
         flowEvent({ type: 'stage-done', stage: 'script', failed: true, note: error.message });
@@ -776,10 +1004,35 @@
     const started = Date.now();
     const plan = ES.scriptToPlan(script, { sourceLine: els.scriptSource.value.trim(), voLengthSec: Number(els.scriptVo.value) || 0, sport: state.sport, format: state.format === 'auto' ? 'explainer' : state.format });
     plan.style = state.style === 'auto' ? 'es' : state.style;
-    applyPlan({ plan, source: 'script', notice: 'Your script, word for word: each line has a block. Change a block or its on-screen words below; your voiceover lines stay as you wrote them.', corpus: [script, plan.sourceLine].filter(Boolean).join('\n'), sources: [{ type: 'script', title: 'Your script' }] }, { brief: script, go: false });
+    logStart();
+    const made = { plan, source: 'script', notice: 'Your script, word for word: each line is a scene. Change a scene’s block or its on-screen words on its card; your voiceover lines stay as you wrote them.', corpus: [script, plan.sourceLine].filter(Boolean).join('\n'), sources: [{ type: 'script', title: 'Your script' }] };
+    withRecipe(made, { byCode: true });
+    applyPlan(made, { brief: script, go: false });
     logEvent('plan', { source: 'script', format: plan.format, style: plan.style, beats: plan.beats.length, cost: 0 });
-    flowEvent({ type: 'stage-done', stage: 'script', note: `${plan.beats.length} scenes from your words · $0` });
+    flowEvent({ type: 'stage-done', stage: 'script', note: `${made.plan.beats.length} scenes from your words · $0` });
     await finishMake(started);
+  }
+  // ── Reels 2.0: D (interface) ── recipes on a fresh plan, and the start / recipe events.
+  // data: what applyPlan takes. The recipe is noted on the plan; its look is
+  // used unless the person picked one. byCode: reshape the blocks here, free.
+  function withRecipe(data, { byCode = false } = {}) {
+    const r = RC && RC.get(state.recipe);
+    if (!r || !data || !data.plan) return data;
+    const es = ES && S.get(S.STYLES[data.plan.style] ? data.plan.style : styleId()).engine === 'es';
+    if (byCode && es) {
+      const out = RC.applyRecipe(data.plan, r.id, { keepLook: state.lookPicked });
+      data.plan = out.plan;
+      if (out.notes.length) data.notice = [data.notice, ...out.notes].filter(Boolean).join(' ');
+    } else {
+      data.plan.recipe = r.id;
+      if (!state.lookPicked || !data.plan.look) data.plan.look = r.look;
+    }
+    if (state.lookPicked && mods().looks) data.plan.look = mods().looks.current();
+    logEvent('recipe', { recipe: r.id, at: 'make', byCode: Boolean(byCode && es), look: data.plan.look || '' });
+    return data;
+  }
+  function logStart() {
+    logEvent('start', { source: startOf(), words: startOf() === 'words' ? state.source : '', recipe: state.recipe || 'auto' });
   }
   async function finishMake(started) {
     // 2. Voice (automatic when it is set up and on).
@@ -801,9 +1054,9 @@
     setWriteBusy(false);
     if (els.makingLive) els.makingLive.textContent = 'Your reel is ready.';
     renderEdit();
-    goStep('edit', { focus: false });
-    toast('Your reel is ready. Tap a beat under the preview to change it.');
-    logEvent('make', { ms: Date.now() - started, style: styleId(), seconds: Math.round(state.timeline.durationMs / 1000), clipShare: clipShare().share });
+    goStep('edit', { focus: true });
+    toast('Your reel is ready. Change any scene on its card.');
+    logEvent('make', { ms: Date.now() - started, style: styleId(), seconds: Math.round(state.timeline.durationMs / 1000), clipShare: clipShare().share, start: startOf(), recipe: state.plan.recipe || 'auto' });
   }
   els.write.addEventListener('click', makeReel);
 
@@ -832,9 +1085,12 @@
     state.voice = {};
     state.status = 'draft';
     state.t = 0;
+    state.versions = null; state.version = 0; state.scene = -1; // ── Reels 2.0: D (interface) ──
+    if (RC && RC.get(plan.recipe) && state.recipe !== plan.recipe) { state.recipe = plan.recipe; renderRecipes(); }
     loadTeamLogo();
     rebuild();
     renderEdit();
+    emit('plan', { source: state.planSource }); // ── Reels 2.0: D (interface) ──
     if (go) { goStep('edit', { focus: false }); fillVisuals().then(() => rebuild()); }
     if (data.issues?.length) els.writeStatus.textContent = '';
   }
@@ -1324,6 +1580,8 @@
     const file = els.visualFile.files[0];
     els.visualFile.value = '';
     if (!file || !uploadTarget) return;
+    // ── Reels 2.0: C (inputs) ── the media tray takes every upload (validation, persistence, Undo).
+    if (window.ReelMakerCtx?.modules.tray) { window.ReelMakerCtx.modules.tray.addFiles([file], { beatId: uploadTarget, via: 'beat' }); return; }
     if (file.size > 120 * 1024 * 1024) { toast('That file is too large (120 MB at most).', { tone: 'error' }); return; }
     const rights = { source: 'Uploaded by you', licence: 'You confirmed ES may use it', organic: true, paid: true, credit: '' };
     const id = `up:${Date.now().toString(36)}`;
@@ -1382,21 +1640,28 @@
     // Only clips whose text (and voice) still match the beat's VO line are used.
     const out = {};
     if (!state.voiceOn) return out;
+    const own = ownVoice();
     (state.plan?.beats || []).forEach(beat => {
       const v = state.voice[beat.id];
+      // ── Reels 2.0: C (inputs) ── the person's own recording stays on its scene; if they
+      // changed the words after recording, the captions pace evenly over the same audio.
+      if (v && v.own) { if (own) out[beat.id] = v.text === beat.vo ? v : { ...v, words: [] }; return; }
       if (v && v.text === beat.vo && v.voiceId === state.voiceId) out[beat.id] = v;
     });
     return out;
   }
   function buildOptions(extra = {}) {
     const voice = voiceFor();
-    const voiceMode = Object.keys(voice).length ? state.config.voice.mode : 'off';
+    // ── Reels 2.0: C (inputs) ── a person's own recording counts as a voiced reel (the renderer knows 'gateway' / 'elevenlabs' / 'off').
+    const voiceMode = Object.keys(voice).length ? (ownVoice() && !['elevenlabs', 'gateway'].includes(state.config.voice.mode) ? 'gateway' : state.config.voice.mode) : 'off';
     return {
       style: styleId(), voice, photos: state.photos, assets: { ...state.assets }, team: state.plan.team, captionStyle: state.captionStyle,
       voiceMode, music: state.music ? { asset: 'music' } : null, sources: state.sources, corpus: state.corpus,
       // Clip sound is muted unless "Original clip audio" is on (then only clips that have a sound track).
       clipAudio: state.clipAudio ? Object.keys(state.buffers).filter(k => k.startsWith('clipaudio:') && state.buffers[k]).map(k => k.slice(10)) : false,
       ...dataBuildOptions(),
+      // ── Reels 2.0: D (interface) ── the preview is the size that exports (ES 9:16 or its 4:5 feed version).
+      ...(esOn() && state.aspect === '4:5' ? { aspect: '4:5' } : {}),
       ...extra,
     };
   }
@@ -1412,6 +1677,13 @@
     state.lint = L.lintTimeline(state.timeline, { boxes: R.textBoxes(measure, state.timeline), measure, target: state.target, extraSources: facts ? [els.extraSource.value, facts].filter(Boolean).join('\n') : els.extraSource.value });
     // A script reel keeps the person's words: say so if an edit changed them.
     if (scriptLocked() && ES && !ES.voMatchesScript(state.plan)) state.lint.issues.push({ id: 'script', severity: 'info', message: 'The voiceover lines no longer match your original script word for word.', fix: 'That is fine if you edited them yourself.', beat: '' });
+    // ── Reels 2.0: D (interface) ── captions are always on: a voiced scene with no caption words is an error.
+    if (A11Y) A11Y.captionGaps(state.timeline).forEach(id => {
+      const n = state.plan.beats.findIndex(b => b.id === id) + 1;
+      state.lint.issues.push({ id: 'captions', severity: 'critical', message: `Scene ${n} has a voiceover but no captions.`, fix: 'Every spoken word shows on screen. Edit the line, or make the voiceover again.', beat: id });
+      state.lint.critical = (state.lint.critical || 0) + 1;
+      state.lint.ok = false;
+    });
     state.mix = null;
     // A clip added while "Original clip audio" is on gets its sound decoded, then the mix is rebuilt.
     if (state.clipAudio && Object.entries(state.assets).some(([id, a]) => a.kind === 'clip' && a.src && !(`clipaudio:${id}` in state.buffers))) clipSounds().then(n => { if (n) rebuild(); });
@@ -1419,6 +1691,8 @@
     els.play.disabled = false;
     els.scrub.disabled = false;
     state.t = Math.min(state.t, state.timeline.durationMs - 1);
+    syncCanvasSize();
+    els.work.classList.add('has-reel');
     renderLint();
     renderMeta();
     renderCost();
@@ -1426,6 +1700,7 @@
     if (state.step === 'export') renderExport();
     draw();
     autosave();
+    window.ReelMakerCtx?.emit('rebuild', {}); // ── Reels 2.0: C (inputs) ──
   }
   const rebuildSoon = debounce(rebuild, 220);
   // Extra buildTimeline options for a data format (the v2 canvas and data
@@ -1436,12 +1711,22 @@
     return { canvas: { w: 1080, h: 1920 }, outputs: F.FORMATS[fmt].outputs.slice(), data: { game: fmt === 'gameswing' ? state.data.game : null, athlete: fmt === 'archive' ? state.data.athlete : null, archive: fmt === 'archive' ? state.data.archive : null }, replay: fmt === 'replay' ? state.replay : null, ...(Array.isArray(state.plan.slides) ? { slides: state.plan.slides } : {}) };
   }
 
+  // ── Reels 2.0: D (interface) ── the preview canvas is the timeline's size (1080×1920, or 1080×1350 for 4:5).
+  function syncCanvasSize() {
+    if (state.view === 'carousel') return;
+    const h = (state.timeline && state.timeline.size && state.timeline.size[1]) || 1920;
+    if (els.canvas.height !== h) els.canvas.height = h;
+    els.device.classList.toggle('is-45', h === 1350);
+    const geo = ES && h !== 1920 ? ES.geometry([1080, h]) : null;
+    els.safe.style.top = geo ? `${(geo.safe.top / h * 100).toFixed(2)}%` : '';
+    els.safe.style.bottom = geo ? `${((h - geo.safe.bottom) / h * 100).toFixed(2)}%` : '';
+  }
   function renderMeta() {
     const tl = state.timeline;
     if (!tl) return;
     const sec = tl.durationMs / 1000;
-    els.beatsMeta.textContent = `${tl.beats.length} beats · ${sec.toFixed(0)} s`;
-    els.stageMeta.textContent = `${F.FORMATS[tl.format].label} · ${sec.toFixed(1)} s · 1080×1920${tl.timing && tl.timing.estimate ? ' · times estimated' : ''}`;
+    els.beatsMeta.textContent = `${tl.beats.length} scenes · ${sec.toFixed(0)} s`;
+    els.stageMeta.textContent = `${F.FORMATS[tl.format].label} · ${sec.toFixed(1)} s · ${(tl.size || [1080, 1920]).join('×')}${tl.timing && tl.timing.estimate ? ' · times estimated' : ''}`;
     els.time.textContent = `${fmtTime(state.t)} / ${fmtTime(tl.durationMs)}`;
     // Beat times in the list.
     els.beats.querySelectorAll('[data-beat]').forEach(li => {
@@ -1470,7 +1755,7 @@
     els.lintBadge.textContent = lint.critical ? `${lint.critical} to fix` : (lint.warnings ? `${lint.warnings} to review` : 'All clear');
     els.issues.innerHTML = list.length ? list.map(issue => {
       const n = state.plan ? state.plan.beats.findIndex(b => b.id === issue.beat) : -1;
-      return `<li class="rm-issue is-${issue.severity}">${sevIcon[issue.severity]}<div><p>${esc(issue.message)}</p>${issue.fix ? `<span>${esc(issue.fix)}</span>` : ''}</div>${n >= 0 ? `<button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-goto="${esc(issue.beat)}">Beat ${n + 1}</button>` : ''}</li>`;
+      return `<li class="rm-issue is-${issue.severity}">${sevIcon[issue.severity]}<div><p>${esc(issue.message)}</p>${issue.fix ? `<span>${esc(issue.fix)}</span>` : ''}</div>${n >= 0 ? `<button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-goto="${esc(issue.beat)}">Scene ${n + 1}</button>` : ''}</li>`;
     }).join('') : `<li class="rm-issue is-good">${ICON.check}<div><p>Hook, safe zones, captions, sources and rights all check out.</p></div></li>`;
     // Flags on beat cards.
     els.beats.querySelectorAll('[data-beat]').forEach(li => {
@@ -1483,9 +1768,7 @@
   els.issues.addEventListener('click', event => {
     const btn = event.target.closest('[data-goto]');
     if (!btn) return;
-    selectBeat(btn.dataset.goto, { seek: true });
-    els.beats.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    els.beats.querySelector('input, textarea')?.focus({ preventScroll: true });
+    selectBeat(btn.dataset.goto, { seek: true, focus: true });
   });
   els.statusline.addEventListener('click', () => {
     const open = els.lint.hidden;
@@ -1494,6 +1777,13 @@
   });
 
   // ─── Step 2: Edit ────────────────────────────────────────────────────────
+  // The fan-pulse poll idea that comes with a plan from the ideas room (a caption idea, not part of the video).
+  function pollHtml(poll) {
+    const q = poll && String(poll.question || (typeof poll === 'string' ? poll : '')).trim();
+    if (!q) return '';
+    const options = Array.isArray(poll.options) ? poll.options.map(o => String(o).trim()).filter(Boolean).slice(0, 4) : [];
+    return `<p class="rm-poll"><span class="rm-poll__tag">Poll idea</span><span>${esc(q)}${options.length ? ` <span class="rm-meta">${options.map(esc).join(' · ')}</span>` : ''}</span></p>`;
+  }
   function renderEdit() {
     const plan = state.plan;
     const fmt = F.FORMATS[plan.format];
@@ -1501,17 +1791,19 @@
     els.notice.innerHTML = state.notice ? `${ICON.info}<p>${esc(state.notice)}</p>` : '';
     const teamChip = plan.team ? `<span class="rm-teamchip">${plan.team.logo ? `<span class="es-team-logo" style="--logo:20px"><img src="${esc(plan.team.logo)}" alt="" onerror="this.parentNode.classList.add('es-team-logo--dot')"></span>` : ''}${esc(plan.team.name)}</span>` : '';
     const share = clipShare();
-    els.summary.innerHTML = `<p class="rm-summary__eyebrow">${esc(S.get(styleId()).label)} · ${esc(fmt.label)}${plan.sport ? ` · ${esc(SPORT_LABEL[plan.sport] || plan.sport)}` : ''}${state.planSource === 'director-sonnet' ? ' · <span class="ais-badge" title="Sonnet improved a weak first draft">Sonnet</span>' : ''}</p>
+    const recipeName = RC && RC.get(plan.recipe) ? RC.get(plan.recipe).label : fmt.label;
+    els.summary.innerHTML = `<p class="rm-summary__eyebrow">${esc(S.get(styleId()).label)} · ${esc(recipeName)}${plan.sport ? ` · ${esc(SPORT_LABEL[plan.sport] || plan.sport)}` : ''}${state.planSource === 'director-sonnet' ? ' · <span class="ais-badge" title="Sonnet improved a weak first draft">Sonnet</span>' : ''}</p>
       <p class="rm-summary__title">${esc(plan.title || 'Untitled reel')}</p>
       ${plan.angle ? `<p class="rm-summary__angle">${esc(plan.angle)}</p>` : ''}${teamChip}
-      <div class="rm-ratio" title="Share of the reel's time"><span class="rm-ratio__bar"><span style="width:${Math.round(share.share * 100)}%"></span></span><span>Clips ${Math.round(share.share * 100)}% · Stills ${100 - Math.round(share.share * 100)}%</span></div>
-      ${plan.hooks?.length ? `<div class="rm-hooks"><span>Other hooks</span>${plan.hooks.map((h, i) => `<button class="es-chip" type="button" data-hook="${i}">${esc(h)}</button>`).join('')}</div>` : ''}`;
+      ${pollHtml(plan.poll)}
+      ${plan.hooks?.length && !state.versions ? `<div class="rm-hooks"><span>Other hooks</span>${plan.hooks.map((h, i) => `<button class="es-chip" type="button" data-hook="${i}">${esc(h)}</button>`).join('')}</div>` : ''}`;
+    void share;
     renderBeats();
     renderVoice();
     renderVoicePickers();
     renderSources();
     renderStyles();
-    els.capstyleField.hidden = S.get(styleId()).caption.mode !== 'user';
+    renderVersions();
     syncSafe();
     // Your script is never rewritten: no AI revise on a script reel.
     $('rm-revise').hidden = !state.config.ai || state.config.offline || scriptLocked();
@@ -1523,11 +1815,126 @@
     const hook = state.plan.beats[0];
     const alt = state.plan.hooks[Number(btn.dataset.hook)];
     state.plan.hooks[Number(btn.dataset.hook)] = hook.text;
-    hook.text = alt;
+    setHook(hook, alt);
     rebuild();
     renderEdit();
     logEvent('edit', { what: 'hook-swap' });
   });
+
+  // ── Reels 2.0: D (interface) ── versions: the same story three ways. The
+  // reel as made, one with a different hook, one in a different look. Every
+  // version keeps the scene ids, so photos, clips and voice carry across;
+  // edits go to the version on screen. Free mode (and a script reel, whose
+  // words are never rewritten) varies the look only.
+  function setHook(beat, text) {
+    beat.text = text;
+    if (esOn()) Object.assign(beat, ES.legacyFields(ES.blockOf({ kind: 'hook', text, emphasis: '' })));
+  }
+  const clonePlan = plan => JSON.parse(JSON.stringify(plan));
+  // Two looks that read differently from the current one.
+  function otherLooks(n) {
+    const looks = mods().looks;
+    if (!looks) return [];
+    const now = looks.current();
+    const ids = looks.list().map(lk => lk.id);
+    const order = ['ink', 'paper', 'bold', 'blue', 'data', 'minimal', 'photo', 'team'].filter(id => ids.includes(id) && id !== now);
+    return order.slice(0, n).map(id => looks.list().find(lk => lk.id === id));
+  }
+  const canHook = () => Boolean(state.plan && !scriptLocked() && !(F.isDataFormat && F.isDataFormat(state.plan.format)) && state.plan.beats.length > 1);
+  const hookNeedsAi = () => canHook() && !(state.plan.hooks || []).length;
+  const aiOn = () => Boolean(state.config.ai && !state.config.offline);
+  function versionsPlan() {
+    const hook = canHook() && (!hookNeedsAi() || aiOn());
+    const looks = otherLooks(hook ? 1 : 2);
+    return { hook, looks, cost: hook && hookNeedsAi() ? F.PRICES.revise : 0, total: 1 + (hook ? 1 : 0) + looks.length };
+  }
+  function renderVersions() {
+    if (!els.versions) return;
+    const refocus = els.versions.contains(document.activeElement) ? (document.activeElement.dataset.version || 'make') : '';
+    if (state.versions) {
+      els.versions.innerHTML = `<span class="es-field__label" id="rm-versions-label">Versions</span>
+        <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-versions-label" id="rm-version-pick">${state.versions.map((v, i) => `<button class="es-segmented__item" type="button" role="radio" aria-checked="${i === state.version}" tabindex="${i === state.version ? 0 : -1}" data-version="${i}" title="${esc(v.what)}">${esc(v.label)}</button>`).join('')}</div>`;
+    } else if (state.plan) {
+      const plan = versionsPlan();
+      const can = plan.total >= 2;
+      const why = !can ? 'Versions need a second look or a second hook, and this reel has neither yet.' : `${plan.hook ? 'A new hook and a new look' : 'Two more looks'}, same story. ${plan.cost ? `About ${F.money(plan.cost)}.` : 'Free.'}`;
+      els.versions.innerHTML = `<button class="es-btn es-btn--sm" type="button" id="rm-versions-make" ${can ? '' : 'disabled'} aria-describedby="rm-versions-note">${ICON.layers}<span>Make ${can ? plan.total : 3} versions</span></button><span class="rm-hint" id="rm-versions-note">${esc(why)}</span>`;
+    } else els.versions.innerHTML = '';
+    if (refocus) (els.versions.querySelector(refocus === 'make' ? '#rm-versions-make' : `[data-version="${refocus}"]`) || els.versions.querySelector('[aria-checked="true"], button'))?.focus({ preventScroll: true });
+  }
+  async function makeVersions() {
+    if (!state.plan || state.versionsBusy || state.versions) return;
+    const want = versionsPlan();
+    if (want.total < 2) return;
+    const base = state.plan;
+    const list = [{ kind: 'made', label: 'As made', what: 'Your reel as you made it', plan: base }];
+    const btn = $('rm-versions-make');
+    state.versionsBusy = true;
+    if (btn) { btn.setAttribute('aria-busy', 'true'); btn.disabled = true; btn.querySelector('span').textContent = 'Making versions…'; }
+    let cost = 0;
+    try {
+      if (want.hook) {
+        const plan = clonePlan(base);
+        let done = false;
+        if ((base.hooks || []).length) { setHook(plan.beats[0], base.hooks[0]); plan.hooks = [base.beats[0].text, ...base.hooks.slice(1)]; done = true; }
+        else {
+          // One cheap AI call (the existing "Stronger hook" revise); only the hook scene is taken from it.
+          try {
+            const data = await api({ mode: 'revise', plan: base, instruction: 'hook', corpus: `${state.corpus}\n${els.extraSource.value}` });
+            cost = Number(data.cost) || 0;
+            state.spent.revise += cost;
+            const hook = data.plan && data.plan.beats && data.plan.beats[0];
+            if (hook && String(hook.text || '').trim() && hook.text !== base.beats[0].text) {
+              const keep = plan.beats[0];
+              plan.beats[0] = { ...keep, ...hook, id: keep.id, photo: keep.photo };
+              if (esOn() && !(hook.block && hook.block.type === 'hook')) setHook(plan.beats[0], hook.text);
+              done = true;
+            }
+          } catch (error) { toast(`${error.message} The versions vary the look only.`, { tone: 'error' }); }
+        }
+        if (done) list.push({ kind: 'hook', label: 'New hook', what: `Opens with: ${plan.beats[0].text}`, plan });
+      }
+      otherLooks(3 - list.length).forEach(lk => { const plan = clonePlan(base); plan.look = lk.id; list.push({ kind: 'look', look: lk.id, label: `${lk.label} look`, what: lk.blurb || `The same reel in the ${lk.label} look`, plan }); });
+      if (list.length < 2) { toast('No other version could be made for this reel.', { tone: 'error' }); return; }
+      if (state.plan !== base) return; // the reel changed while the versions were being made
+      state.versions = list;
+      state.version = 0;
+      logEvent('variant', { at: 'make', kinds: list.map(v => v.kind), looks: list.filter(v => v.look).map(v => v.look), cost, free: !aiOn() });
+      toast(`${list.length} versions ready. Pick one above the storyboard.`);
+    } finally {
+      state.versionsBusy = false;
+      renderEdit();
+      renderCost();
+    }
+  }
+  function useVersion(i) {
+    const v = state.versions && state.versions[i];
+    if (!v || i === state.version) return;
+    stop();
+    state.version = i;
+    state.plan = v.plan;
+    if (!state.plan.beats.some(b => b.id === state.selected)) state.selected = state.plan.beats[0]?.id || '';
+    const looks = mods().looks;
+    if (looks && state.plan.look && looks.current() !== state.plan.look) looks.set(state.plan.look);
+    rebuild();
+    renderEdit();
+    voiceSoon(0);
+    emit('plan', { source: 'version' });
+    logEvent('variant', { at: 'pick', kind: v.kind, look: v.look || '', index: i });
+  }
+  if (els.versions) els.versions.addEventListener('click', event => {
+    if (event.target.closest('#rm-versions-make')) { makeVersions(); return; }
+    const btn = event.target.closest('[data-version]');
+    if (btn) { useVersion(Number(btn.dataset.version)); els.versions.querySelector(`[data-version="${state.version}"]`)?.focus({ preventScroll: true }); }
+  });
+  // Calm preview: cuts in place of the wipe (also on by itself when the system asks for less motion).
+  function setCalm(on) {
+    state.calm = Boolean(on);
+    els.calm.setAttribute('aria-pressed', String(state.calm));
+    els.calmNote.hidden = !state.calm;
+    draw();
+  }
+  els.calm.addEventListener('click', () => { setCalm(!state.calm); try { localStorage.setItem('frameup.reels.calm.v1', state.calm ? '1' : '0'); } catch { /* per-browser convenience only */ } });
 
   const count = (text, max) => { const n = F.wordCount(text); return `<span class="rm-count${n > max ? ' is-over' : ''}">${n}/${max}</span>`; };
   // ES Reels: each beat edits as its block, with exactly the block's fields.
@@ -1572,6 +1979,11 @@
     const key = field.slice(3);
     let b = ES.blockOf(beat);
     if (key === 'type') b = ES.blockOf({ ...beat, block: null, kind: ES.KIND_FOR[value] });
+    // ── Reels 2.0: D (interface) ── structured values from the storyboard cards: rows of
+    // { text, color } (pills, lines) or { label, display, color } (compare bars), a stamp object or null.
+    else if (Array.isArray(value) && (key === 'pills' || key === 'lines')) b[key] = value.map(x => ({ ...(b[key] || []).find(o => o.text === x.text && o.size), text: String(x.text || '').trim(), color: String(x.color || 'ink').toLowerCase() })).filter(x => x.text);
+    else if (Array.isArray(value) && key === 'items') b.items = value.map(x => { const display = String(x.display == null ? '' : x.display).trim(); return { label: String(x.label || '').trim(), display, value: display, ...(x.color ? { color: String(x.color).toLowerCase() } : {}) }; }).filter(x => x.label);
+    else if (key === 'stamp') b.stamp = value && String(value.text || '').trim() ? { ...(b.stamp || {}), ...value, text: String(value.text).trim() } : undefined;
     else if (key === 'pills' || key === 'lines') b[key] = String(value).split('\n').map(line => { const [t, c] = line.split('|'); return { text: t.trim(), color: (c || 'ink').trim().toLowerCase() }; }).filter(x => x.text);
     else if (key === 'items') b.items = String(value).split('\n').map(line => { const [main, c] = line.split('|'); const [label, ...rest] = main.split('='); const display = rest.join('=').trim(); return { label: label.trim(), display, value: display, ...(c ? { color: c.trim().toLowerCase() } : {}) }; }).filter(x => x.label);
     else if (key.startsWith('stamp.')) { const k = key.slice(6); const st = { ...(b.stamp || {}) }; if (value === '' || value == null) delete st[k]; else st[k] = k === 'at' ? Number(value) : value; b.stamp = st.text ? st : undefined; }
@@ -1628,39 +2040,18 @@
           ${cutable ? btn('cutout', 'Cut out the player', ICON.scissors) : ''}
         </div></div></div>`;
   }
-  function renderStrip() {
-    const tl = state.timeline;
-    if (!state.plan || !tl) { els.stripwrap.hidden = true; return; }
-    els.stripwrap.hidden = state.step === 'topic';
-    els.strip.innerHTML = state.plan.beats.map((beat, i) => {
-      const b = tl.beats.find(x => x.id === beat.id);
-      const id = (state.photos[beat.id] || [])[0];
-      const img = id && state.images[id];
-      const on = beat.id === state.selected;
-      const issue = state.lint?.issues.find(x => x.beat === beat.id && x.severity !== 'info');
-      const w = b ? Math.max(56, Math.min(140, (b.outMs - b.inMs) / 40)) : 64;
-      return `<li><button class="rm-chipbeat${on ? ' is-on' : ''}${issue ? ` has-${issue.severity}` : ''}" type="button" data-pick="${esc(beat.id)}" aria-pressed="${on}" style="--w:${w}px" aria-label="Beat ${i + 1}, ${esc(beatName(beat))}${b ? `, ${fmtTime(b.inMs)}` : ''}">
-        <span class="rm-chipbeat__img${esOn() && !(img && (img.src || img.tagName === 'CANVAS')) ? ' is-paper' : ''}">${img && img.src ? `<img src="${esc(img.src)}" alt="">` : ''}${state.assets[id]?.kind === 'clip' ? `<span class="rm-chipbeat__clip">${ICON.film}</span>` : ''}</span>
-        <span class="rm-chipbeat__n">${i + 1}</span><span class="rm-chipbeat__kind">${esc(beatName(beat))}</span></button></li>`;
-    }).join('') + `<li><button class="rm-chipbeat rm-chipbeat--add" type="button" id="rm-add-beat" aria-label="Add a beat" ${state.plan.beats.length >= S.get(styleId()).beats.max ? 'disabled' : ''}>${ICON.plus}</button></li>`;
-    // Canvas posters (clips) are drawn into the chips.
-    els.strip.querySelectorAll('[data-pick]').forEach(btn => {
-      const id = (state.photos[btn.dataset.pick] || [])[0];
-      const img = id && state.images[id];
-      if (img && img.tagName === 'CANVAS') { const c = document.createElement('canvas'); c.width = 80; c.height = 80; const g = c.getContext('2d'); const k = Math.max(80 / img.width, 80 / img.height); g.drawImage(img, (80 - img.width * k) / 2, (80 - img.height * k) / 2, img.width * k, img.height * k); btn.querySelector('.rm-chipbeat__img').prepend(c); }
-    });
-  }
-  els.strip.addEventListener('click', event => {
-    if (event.target.closest('#rm-add-beat')) { addBeat(); return; }
-    const btn = event.target.closest('[data-pick]');
-    if (!btn) return;
-    selectBeat(btn.dataset.pick, { seek: true });
-  });
+  // ── Reels 2.0: D (interface) ── the storyboard (reel-storyboard.js) took the
+  // beat strip's place: every scene is a card. renderStrip stays for the page
+  // context; it refreshes the cards' thumbnails and marks.
+  function renderStrip() { renderStoryboardSoon(); }
+  const renderStoryboardSoon = debounce(() => { mods().storyboard?.refresh(); }, 60);
   function selectBeat(id, { seek: doSeek = false, focus = false } = {}) {
+    const changed = state.selected !== id;
     state.selected = id;
-    renderBeats();
+    const sb = mods().storyboard;
+    if (sb) sb.select(id, { focus }); else { renderBeats(); if (focus) els.beats.querySelector('input, textarea')?.focus(); }
     if (doSeek) seekBeat(id);
-    if (focus) els.beats.querySelector('input, textarea')?.focus();
+    if (changed) emit('beat', { id });
   }
   function addBeat() {
     const at = Math.max(1, state.plan.beats.findIndex(b => b.id === state.selected) + 1 || state.plan.beats.length - 1);
@@ -1672,10 +2063,17 @@
     rebuild();
     renderBeats();
     fillVisuals({ only: [beat.id] }).then(() => { rebuild(); renderBeats(); });
-    els.beats.querySelector('input')?.select();
+    const card = els.beats.querySelector(`[data-beat="${CSS.escape(beat.id)}"]`);
+    card?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    card?.querySelector('input:not([type="hidden"]), textarea')?.select();
+    emit('beat', { id: beat.id, added: true });
   }
+  els.addBeat.addEventListener('click', addBeat);
   function renderBeats() {
     if (!state.plan) return;
+    // ── Reels 2.0: D (interface) ── every scene is a card on the storyboard.
+    els.addBeat.disabled = state.plan.beats.length >= S.get(styleId()).beats.max;
+    if (mods().storyboard) { if (!state.plan.beats.some(b => b.id === state.selected)) state.selected = state.plan.beats[0]?.id || ''; mods().storyboard.render(); renderLint(); return; }
     const tl = state.timeline;
     const active = document.activeElement;
     const keepId = active && els.beats.contains(active) ? active.id : '';
@@ -1700,8 +2098,6 @@
     const holder = els.beats.querySelector('[data-thumb-canvas]');
     const img = state.images[(state.photos[beat.id] || [])[0]];
     if (holder && img) { const c = document.createElement('canvas'); c.width = 128; c.height = 128; const g = c.getContext('2d'); const k = Math.max(128 / img.width, 128 / img.height); g.drawImage(img, (128 - img.width * k) / 2, (128 - img.height * k) / 2, img.width * k, img.height * k); holder.replaceWith(c); }
-    els.beatsMeta.textContent = `Beat ${i + 1} of ${state.plan.beats.length}`;
-    renderStrip();
     renderLint();
     if (keepId) { const el = $(keepId); if (el) { el.focus(); const len = el.value.length; try { el.setSelectionRange(len, len); } catch { /* not a text field */ } } }
   }
@@ -1727,7 +2123,7 @@
     const beat = state.plan.beats.find(b => b.id === li.dataset.beat);
     if (!beat) return;
     setField(beat, input.dataset.field, input.value);
-    if (input.dataset.field === 'es.type') { rebuild(); renderBeats(); els.beats.querySelector('[data-field="es.type"]')?.focus(); return; }
+    if (input.dataset.field === 'es.type') { rebuild(); renderBeats(); els.beats.querySelector(`[data-beat="${CSS.escape(beat.id)}"] [data-field="es.type"]`)?.focus(); return; }
     if (beat.kind === 'rank' && input.dataset.field === 'name') beat.text = input.value;
     if (input.dataset.field === 'vo') voiceSoon();
     const counter = input.closest('.rm-bf')?.querySelector('.rm-count');
@@ -1760,7 +2156,8 @@
       state.selected = (state.plan.beats[i] || state.plan.beats[i - 1]).id;
       rebuild();
       renderBeats();
-      toast(`Beat ${i + 1} deleted`, { action: { label: 'Undo', run: () => { state.plan.beats.splice(i, 0, removed); rebuild(); renderBeats(); } } });
+      els.beats.querySelector(`[data-beat="${CSS.escape(state.selected)}"] [data-sb-face]`)?.focus();
+      toast(`Scene ${i + 1} deleted`, { action: { label: 'Undo', run: () => { state.plan.beats.splice(i, 0, removed); state.selected = removed.id; rebuild(); renderBeats(); } } });
     }
   });
   function seekBeat(id) {
@@ -1790,7 +2187,10 @@
       });
       data.plan.team = old.team;
       data.plan.style = old.style;
+      if (old.look) data.plan.look = old.look;
+      if (old.recipe) data.plan.recipe = old.recipe;
       state.plan = data.plan;
+      if (state.versions) state.versions[state.version].plan = state.plan; // ── Reels 2.0: D (interface) ──
       state.selected = data.plan.beats[0]?.id || '';
       rebuild();
       renderEdit();
@@ -1815,11 +2215,23 @@
     const beats = state.plan?.beats || [];
     const withVo = beats.filter(b => (b.vo || '').trim() && !(esOn() && ES.blockOf(b).type === 'endcard')).length;
     const voiced = beats.filter(b => state.voice[b.id] && state.voice[b.id].text === b.vo && state.voice[b.id].voiceId === state.voiceId).length;
+    // ── Reels 2.0: C (inputs) ── with the person's own recording on, nothing is left for the AI voice.
+    if (ownVoice()) return { withVo, voiced: withVo, own: beats.filter(b => state.voice[b.id]?.own).length };
     return { withVo, voiced };
   }
   function renderVoice() {
     const v = state.config.voice;
     const { withVo, voiced } = voiceCounts();
+    // ── Reels 2.0: C (inputs) ── the person's own recording: its own badge, no AI voice button.
+    const mine = ownVoice();
+    if (mine) {
+      els.voiceBadge.className = `es-badge ${state.voiceOn ? (mine.timing === 'estimated' ? 'es-badge--warn' : 'es-badge--good') : ''}`;
+      els.voiceBadge.textContent = state.voiceOn ? (mine.timing === 'estimated' ? 'Your recording · estimated timing' : 'Your recording') : 'Captions only';
+      els.voiceNote.textContent = state.voiceOn ? '' : 'Voice is off: the reel exports with captions only.';
+      els.voiceState.innerHTML = '';
+      els.voiceBtn.hidden = true;
+      return;
+    }
     const on = v.ready && state.voiceOn;
     const all = voiced && voiced === withVo;
     els.voiceBadge.className = `es-badge ${on ? (all ? 'es-badge--good' : (state.voiceError ? 'es-badge--bad' : 'es-badge--brand')) : ''}`;
@@ -1831,7 +2243,9 @@
     els.voiceState.innerHTML = on && state.voiceError && !state.voiceMaking
       ? `<div class="rm-voicefail">${ICON.warn}<div><p><b>The voiceover didn't record.</b> ${esc(state.voiceError)}</p><span>You can still export with captions only.</span></div><button class="es-btn es-btn--sm" type="button" data-voice-retry>Retry</button></div>`
       : '';
-    els.voiceBtn.hidden = !on || all || state.voiceMaking || Boolean(state.voiceError);
+    // ── Reels 2.0: D (interface) ── before a reel exists the rail's Voice row names the voice it will use.
+    if (!state.plan && on) { els.voiceBadge.className = 'es-badge es-badge--brand'; els.voiceBadge.textContent = ((v.voices || []).find(x => x.id === state.voiceId) || {}).name || 'AI voice'; }
+    els.voiceBtn.hidden = !on || all || state.voiceMaking || Boolean(state.voiceError) || !state.plan;
     els.voiceBtn.disabled = Boolean(state.busy) || !withVo || all;
     els.voiceBtn.textContent = voiced ? 'Voice the edited lines' : 'Make the voiceover';
   }
@@ -1846,6 +2260,7 @@
   let voiceRun = null;
   async function makeVoice({ auto = false } = {}) {
     if (!state.plan || !state.config.voice.ready || !state.voiceOn) return { made: 0, reused: 0, failed: '' };
+    if (ownVoice() || window.ReelMakerCtx?.modules.voiceInput?.pending()) return { made: 0, reused: 0, failed: '' }; // ── Reels 2.0: C (inputs) ── never bill an AI voice over the person's own
     if (voiceRun) return voiceRun;
     voiceRun = (async () => {
       state.voiceMaking = true;
@@ -2098,11 +2513,27 @@
       return;
     }
     if (!state.exporting) syncClips(state.t, state.playing);
-    R.drawFrame(ctx, state.timeline, state.t, env);
+    // ── Reels 2.0: D (interface) ── a calm preview cuts between scenes (no wipe). Exports draw their own frames.
+    const tDraw = state.calm && A11Y ? A11Y.calmTime(state.timeline, state.t, wipeMs()) : state.t;
+    R.drawFrame(ctx, state.timeline, tDraw, env);
     const d = state.timeline.durationMs;
     els.scrub.value = String(Math.round((state.t / d) * 1000));
-    els.scrub.setAttribute('aria-valuetext', fmtTime(state.t));
+    const scene = sceneAt(state.t);
+    els.scrub.setAttribute('aria-valuetext', A11Y && state.plan ? A11Y.valueText({ t: state.t, index: scene, total: state.plan.beats.length, name: state.plan.beats[scene] ? beatName(state.plan.beats[scene]) : '' }) : fmtTime(state.t));
     els.time.textContent = `${fmtTime(state.t)} / ${fmtTime(d)}`;
+    if (scene !== state.scene) { state.scene = scene; emit('scene', { index: scene, id: state.plan && state.plan.beats[scene] ? state.plan.beats[scene].id : '' }); }
+  }
+  // The scene on screen at t (the beat whose time holds t).
+  function sceneAt(t) {
+    const beats = state.timeline ? state.timeline.beats : [];
+    let at = 0;
+    beats.forEach((b, i) => { if (t >= b.inMs) at = i; });
+    return at;
+  }
+  // The length of this style's cut between scenes (0 when it has none).
+  function wipeMs() {
+    const st = S.get(styleId());
+    return st.engine !== 'classic' && ['slide', 'wipe', 'flip', 'slab'].includes(st.motion.transition) ? (st.motion.transitionMs || 0) : 0;
   }
   let raf = 0;
   let playSource = null;
@@ -2208,6 +2639,9 @@
     if (!btn) return;
     state.aspect = btn.dataset.aspect === '4:5' ? '4:5' : '9:16';
     radios(els.aspect, 'aspect', state.aspect);
+    // ── Reels 2.0: D (interface) ── the preview and the storyboard show the size that exports.
+    if (state.plan) { rebuild(); if (!state.lint.ok && state.aspect === '4:5') toast('The 4:5 version needs a fix before it exports. See the quality checks.'); }
+    logEvent('edit', { what: 'size', aspect: state.aspect });
   });
   els.target.addEventListener('click', event => {
     const btn = event.target.closest('[data-target]');
@@ -2218,7 +2652,13 @@
   });
   function renderExport() {
     if (!state.timeline) return;
-    if (els.aspectSec) { els.aspectSec.hidden = !esOn(); radios(els.aspect, 'aspect', state.aspect); }
+    renderRail();
+    // ── Reels 2.0: D (interface) ── what the two export buttons make.
+    const both = esOn();
+    const size = (state.timeline.size || [1080, 1920]).join('×');
+    els.exportWhat.textContent = `An MP4 at ${size} (${state.timeline.size && state.timeline.size[1] === 1350 ? '4:5 feed' : '9:16 reel'}).${both ? ' Change the size in Settings.' : ''}`;
+    const caps = Boolean(mods().captions);
+    els.exportAllNote.textContent = `One zip: ${both ? 'the reel in 9:16 and 4:5' : 'the reel'}${caps ? ', plus the caption files (SRT, VTT and a transcript)' : ''}.`;
     // One row per kind of asset with the same rights (6 voiceover clips = 1 row).
     const KIND_PLURAL = { photo: 'ES photos', vo: 'Voiceover clips', logo: 'Logos', graphic: 'Graphics', clip: 'Official X clips', scene: 'AI scenes', tile: 'Team graphics' };
     const groups = new Map();
@@ -2238,19 +2678,25 @@
       ? `<div class="rm-gate__bad">${ICON.alert}<div><p><b>${critical.length} ${critical.length > 1 ? 'things block' : 'thing blocks'} the export</b></p><ul>${critical.map(i => `<li>${esc(i.message)}</li>`).join('')}</ul><button class="es-btn es-btn--sm" type="button" id="rm-fix">Fix in Edit</button></div></div>`
       : `<div class="rm-gate__ok">${ICON.check}<p><b>Ready to export.</b> ${lint.warnings ? `${lint.warnings} suggestion${lint.warnings > 1 ? 's' : ''} in Quality checks.` : 'Every check passes.'}</p></div>`;
     $('rm-fix')?.addEventListener('click', () => { goStep('edit'); $('rm-lint').scrollIntoView({ behavior: 'smooth' }); });
+    renderSpend();
+    const busy = Boolean(state.exporting && !state.exporting.cancel) || Boolean(state.exportingAll);
+    els.exportBtn.disabled = Boolean(critical.length) || busy;
+    els.exportAll.disabled = Boolean(critical.length) || Boolean(state.exporting);
+    if (G && TL) renderDataExport();
+  }
+  // What this reel has spent so far (the rail's Cost row).
+  function renderSpend() {
+    if (!state.plan) return;
     const est = F.estimateCost({ tier: state.tier, voiceMode: state.config.voice.ready ? state.config.voice.mode : 'off', voChars: voChars() });
     const voiceLeft = state.config.voice.ready && !state.spent.voice && !Object.keys(voiceFor()).length ? est.lines.find(l => l.id === 'voice').usd : 0;
-    els.spend.innerHTML = `<ul class="rm-spend__list">
+    els.spend.innerHTML = `<p class="rm-cost__title">Spent on this reel <b>${F.money(totalSpent())}</b></p><ul class="rm-spend__list">
       <li><span>Script</span><span>${F.money(state.spent.director)}</span></li>
       ${state.spent.factCheck ? `<li><span>Fact check</span><span>${F.money(state.spent.factCheck)}</span></li>` : ''}
       ${state.spent.revise ? `<li><span>Revisions</span><span>${F.money(state.spent.revise)}</span></li>` : ''}
       ${state.spent.music ? `<li><span>Generated music</span><span>${F.money(state.spent.music)}</span></li>` : ''}
       <li><span>Voiceover</span><span>${state.spent.voice ? F.money(state.spent.voice) : (voiceLeft ? `≈ ${F.money(voiceLeft)} if you add it` : '$0')}</span></li>
       ${G && TL ? dataSpendRows() : ''}
-      <li><span>Render and export</span><span>$0 (in your browser)</span></li>
-      <li class="rm-spend__total"><span>Spent on this reel</span><span>${F.money(totalSpent())}</span></li></ul>`;
-    els.exportBtn.disabled = Boolean(critical.length) || Boolean(state.exporting && !state.exporting.cancel);
-    if (G && TL) renderDataExport();
+      <li><span>Render and export</span><span>$0 (in your browser)</span></li></ul>`;
   }
   function dataSpendRows() {
     const fmt = state.plan && F.isDataFormat(state.plan.format) ? state.plan.format : '';
@@ -2336,77 +2782,160 @@
     return { blob: new Blob(chunks, { type: mimeType.split(';')[0] }), ext, how: 'realtime', hasAudio };
   }
   const slug = text => String(text || 'reel').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'reel';
+  // ── Reels 2.0: D (interface) ── Export: one MP4 in the size on screen, or
+  // "Export all": the reel in 9:16 and 4:5 plus the caption files, in one zip.
   let fileUrl = '';
-  async function exportReel() {
-    if (state.exporting) { state.exporting.cancel?.(); return; }
-    // The voice is always brought up to date before export.
+  const saveFile = (url, name) => { const a = document.createElement('a'); a.href = url; a.download = name; document.body.append(a); a.click(); setTimeout(() => a.remove(), 1000); };
+  const sizeOf = tl => (tl.size || [1080, 1920]);
+  // The timeline for one size, checked again before it is encoded (the ES rules, scaled).
+  function timelineFor(aspect) {
+    const now = sizeOf(state.timeline)[1] === 1350 ? '4:5' : '9:16';
+    if (aspect === now) return { tl: state.timeline, lint: state.lint };
+    const tl = R.buildTimeline(state.plan, buildOptions({ aspect }));
+    return { tl, lint: L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure, target: state.target, extraSources: els.extraSource.value }) };
+  }
+  // Encodes one timeline: frame-exact MP4 first, real-time recording as the fallback.
+  async function encodeTimeline(tl, mix, progress, job) {
+    try {
+      els.exportStatus.textContent = `Encoding MP4 ${sizeOf(tl).join('×')} (frame by frame)…`;
+      return await encodeWebCodecs(tl, mix, progress, job);
+    } catch (error) {
+      if (error.message === 'cancelled') throw error;
+      els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.';
+      return recordRealtime(tl, mix, progress, job);
+    }
+  }
+  const exportName = (tl, ext) => `es-reel-${slug(state.plan.title)}-${sizeOf(tl).join('x')}.${ext}`;
+  // Brings the voice up to date and checks the reel. False when it cannot export yet.
+  async function readyToExport() {
     if (state.voiceOn && state.config.voice.ready && !state.voiceError) {
       els.exportStatus.textContent = 'Recording the voiceover for the edited lines…';
       await ensureVoice();
     }
     rebuild();
-    if (!state.lint.ok) { renderExport(); logEvent('lint_blocked', { issues: state.lint.issues.filter(i => i.severity === 'critical').map(i => i.id) }); return; }
+    if (!state.lint.ok) { renderExport(); logEvent('lint_blocked', { issues: state.lint.issues.filter(i => i.severity === 'critical').map(i => i.id) }); return false; }
     stop();
-    const job = { cancelled: false };
-    // ES Reels: the 4:5 feed version is the same reel laid out on 1080x1350
-    // (the ES rules scaled), checked again before it is encoded.
-    let tl = state.timeline;
-    if (esOn() && state.aspect === '4:5') {
-      tl = R.buildTimeline(state.plan, buildOptions({ aspect: '4:5' }));
-      const lint45 = L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure, target: state.target, extraSources: els.extraSource.value });
-      if (!lint45.ok) { els.exportStatus.textContent = `The 4:5 version needs a fix first: ${lint45.issues.find(i => i.severity === 'critical').message}`; return; }
-    }
+    return true;
+  }
+  function exportUi(job, all) {
     state.exporting = job;
+    state.exportingAll = Boolean(job && all);
     const bar = els.exportProgress.querySelector('span');
-    els.exportProgress.hidden = false;
-    bar.style.width = '0%';
-    els.files.hidden = true;
-    els.exportText.textContent = 'Cancel export';
-    els.exportBtn.classList.add('es-btn--danger');
-    els.exportStatus.textContent = 'Preparing fonts, photos and audio…';
-    const progress = p => { bar.style.width = `${Math.min(100, Math.round(p * 100))}%`; };
-    let result = null;
+    if (job) {
+      els.exportProgress.hidden = false;
+      bar.style.width = '0%';
+      els.files.hidden = true;
+      (all ? els.exportAllText : els.exportText).textContent = 'Cancel export';
+      (all ? els.exportAll : els.exportBtn).classList.add('es-btn--danger');
+      (all ? els.exportBtn : els.exportAll).disabled = true;
+      els.exportStatus.textContent = 'Preparing fonts, photos and audio…';
+    } else {
+      els.exportText.textContent = 'Export MP4';
+      els.exportAllText.textContent = 'Export all (zip)';
+      els.exportBtn.classList.remove('es-btn--danger');
+      els.exportAll.classList.remove('es-btn--danger');
+      setTimeout(() => { els.exportProgress.hidden = true; }, 800);
+      renderExport();
+      draw();
+    }
+    return p => { bar.style.width = `${Math.min(100, Math.round(p * 100))}%`; };
+  }
+  const audioLine = (result, tl) => (result.hasAudio ? (X.mixPlan(tl, state.buffers).vo ? ' with the voiceover' : ' with music') : ' with captions only (no audio)');
+  const aiLine = tl => (L.usedAssets(tl).some(id => tl.assets[id]?.rights?.ai) ? 'It has AI-generated scenes: turn on the platform’s AI label when you post.' : 'No AI-generated video in it.');
+  async function exportReel() {
+    if (state.exporting) { state.exporting.cancel?.(); return; }
+    if (!await readyToExport()) return;
+    const tl = state.timeline;
+    const job = { cancelled: false };
+    const progress = exportUi(job, false);
     try {
       await ensureImages();
       const mix = await renderMix();
       const plan = X.mixPlan(tl, state.buffers);
       if (plan.missingVo && state.voiceOn && state.config.voice.ready) els.exportStatus.textContent = `${plan.missingVo} line${plan.missingVo > 1 ? 's have' : ' has'} no voice yet; exporting with captions for ${plan.missingVo > 1 ? 'them' : 'it'}.`;
-      try {
-        els.exportStatus.textContent = 'Encoding MP4 (frame by frame)…';
-        result = await encodeWebCodecs(tl, mix, progress, job);
-      } catch (error) {
-        if (error.message === 'cancelled') throw error;
-        els.exportStatus.textContent = 'Recording in real time. Keep this tab open and visible.';
-        result = await recordRealtime(tl, mix, progress, job);
-      }
+      const result = await encodeTimeline(tl, mix, progress, job);
       progress(1);
       if (fileUrl) URL.revokeObjectURL(fileUrl);
       fileUrl = URL.createObjectURL(result.blob);
-      const name = `es-reel-${slug(state.plan.title)}-${(tl.size || [1080, 1920]).join('x')}.${result.ext}`;
-      const a = document.createElement('a');
-      a.href = fileUrl; a.download = name;
-      document.body.append(a); a.click(); setTimeout(() => a.remove(), 1000);
+      const name = exportName(tl, result.ext);
+      saveFile(fileUrl, name);
       window.FrameUpTrack?.track?.('export', { tool: 'reels-studio', action: result.ext, label: name, meta: { format: state.plan.format, seconds: Math.round(tl.durationMs / 1000), audio: Boolean(result.hasAudio) } });
       els.files.hidden = false;
       els.files.innerHTML = `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(result.blob.size / 1048576).toFixed(1)} MB · ${(tl.durationMs / 1000).toFixed(1)} s</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`;
       els.files.querySelector('a[download]')?.addEventListener('click', () => window.FrameUpTrack?.track?.('download', { tool: 'reels-studio', action: 'download-again', label: name }));
-      const hasAi = L.usedAssets(tl).some(id => tl.assets[id]?.rights?.ai);
-      const voiced = X.mixPlan(tl, state.buffers).vo;
-      els.exportStatus.textContent = `${result.ext === 'mp4' ? 'Exported' : 'Exported as WebM (this browser can’t make MP4; use Chrome or Edge)'}${result.hasAudio ? (voiced ? ' with the voiceover' : ' with music') : ' with captions only (no audio)'}. ${hasAi ? 'It has AI-generated scenes: turn on the platform’s AI label when you post.' : 'No AI-generated video in it.'}`;
+      els.exportStatus.textContent = `${result.ext === 'mp4' ? 'Exported' : 'Exported as WebM (this browser can’t make MP4; use Chrome or Edge)'}${audioLine(result, tl)}. ${aiLine(tl)}`;
       state.status = 'exported';
       autosave(true);
       toast('Reel exported', { tone: 'good' });
-      logEvent('export', { audio: Boolean(result.hasAudio), clipShare: clipShare().share, style: tl.style, how: result.how, ext: result.ext, seconds: Math.round(tl.durationMs / 1000), format: tl.format, beats: tl.beats.length, voice: tl.voice.mode, music: Boolean(state.music), target: state.target, warnings: state.lint.warnings, cost: totalSpent() });
+      logEvent('export', { audio: Boolean(result.hasAudio), clipShare: clipShare().share, style: tl.style, how: result.how, ext: result.ext, seconds: Math.round(tl.durationMs / 1000), format: tl.format, beats: tl.beats.length, voice: tl.voice.mode, music: Boolean(state.music), target: state.target, warnings: state.lint.warnings, cost: totalSpent(), size: sizeOf(tl).join('x'), recipe: state.plan.recipe || '', look: state.plan.look || '', version: state.versions ? state.versions[state.version].kind : '' });
     } catch (error) {
       els.exportStatus.textContent = error.message === 'cancelled' ? 'Export cancelled.' : (error.message || 'The export failed. Try again.');
     } finally {
-      state.exporting = null;
-      els.exportText.textContent = 'Export MP4';
-      els.exportBtn.classList.remove('es-btn--danger');
-      setTimeout(() => { els.exportProgress.hidden = true; }, 800);
-      draw();
+      exportUi(null);
     }
   }
+  // Everything in one zip: each size as an MP4, plus the caption files.
+  async function exportAll() {
+    if (state.exporting) { state.exporting.cancel?.(); return; }
+    if (!window.FrameUpZip) { els.exportStatus.textContent = 'The zip writer did not load. Export the MP4 by itself.'; return; }
+    if (!await readyToExport()) return;
+    const sizes = esOn() ? ['9:16', '4:5'] : [sizeOf(state.timeline)[1] === 1350 ? '4:5' : '9:16'];
+    const builds = sizes.map(aspect => ({ aspect, ...timelineFor(aspect) }));
+    const bad = builds.find(x => !x.lint.ok);
+    if (bad) { els.exportStatus.textContent = `The ${bad.aspect} version needs a fix first: ${bad.lint.issues.find(i => i.severity === 'critical').message}`; return; }
+    const job = { cancelled: false };
+    const progress = exportUi(job, true);
+    try {
+      await ensureImages();
+      const mix = await renderMix();
+      const files = [];
+      const rows = [];
+      let ext = 'mp4';
+      let audio = false;
+      for (const [i, x] of builds.entries()) {
+        const result = await encodeTimeline(x.tl, mix, p => progress((i + p) / builds.length), job);
+        if (job.cancelled) throw new Error('cancelled');
+        ext = result.ext;
+        audio = audio || Boolean(result.hasAudio);
+        const name = exportName(x.tl, result.ext);
+        files.push({ name, data: new Uint8Array(await result.blob.arrayBuffer()), date: new Date() });
+        rows.push(`${sizeOf(x.tl).join('×')} ${result.ext.toUpperCase()}`);
+      }
+      const caps = mods().captions;
+      const base = `es-reel-${slug(state.plan.title)}`;
+      const text = new TextEncoder();
+      let capFiles = 0;
+      if (caps) {
+        const capName = window.ReelCaptionsExport && window.ReelCaptionsExport.fileName;
+        [['srt', `${base}-captions.srt`], ['vtt', `${base}-captions.vtt`], ['transcript', `${base}-transcript.txt`]].forEach(([kind, fallback]) => {
+          const name = capName ? capName(state.timeline, kind) : fallback;
+          let body = '';
+          try { body = String(caps[kind]() || ''); } catch { body = ''; }
+          if (body.trim()) { files.push({ name, data: text.encode(body), date: new Date() }); capFiles += 1; }
+        });
+      }
+      progress(1);
+      const blob = new Blob([window.FrameUpZip.zip(files)], { type: 'application/zip' });
+      if (fileUrl) URL.revokeObjectURL(fileUrl);
+      fileUrl = URL.createObjectURL(blob);
+      const name = `${base}-all.zip`;
+      saveFile(fileUrl, name);
+      window.FrameUpTrack?.track?.('export', { tool: 'reels-studio', action: 'zip', label: name, meta: { kind: 'reel-all', count: files.length, format: state.plan.format } });
+      els.files.hidden = false;
+      els.files.innerHTML = `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(blob.size / 1048576).toFixed(1)} MB · ${files.length} files</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`;
+      els.files.querySelector('a[download]')?.addEventListener('click', () => window.FrameUpTrack?.track?.('download', { tool: 'reels-studio', action: 'download-again', label: name }));
+      els.exportStatus.textContent = `Exported ${files.length} files in one zip: ${rows.join(', ')}${capFiles ? `, and ${capFiles} caption file${capFiles > 1 ? 's' : ''}` : ''}. ${aiLine(state.timeline)}`;
+      state.status = 'exported';
+      autosave(true);
+      toast('Everything exported', { tone: 'good' });
+      logEvent('export', { how: 'all', ext, audio, sizes: builds.map(x => sizeOf(x.tl).join('x')), captions: capFiles, seconds: Math.round(state.timeline.durationMs / 1000), format: state.timeline.format, beats: state.timeline.beats.length, target: state.target, cost: totalSpent(), recipe: state.plan.recipe || '', look: state.plan.look || '', version: state.versions ? state.versions[state.version].kind : '' });
+    } catch (error) {
+      els.exportStatus.textContent = error.message === 'cancelled' ? 'Export cancelled.' : (error.message || 'The export failed. Try again.');
+    } finally {
+      exportUi(null);
+    }
+  }
+  els.exportAll.addEventListener('click', exportAll);
   els.exportBtn.addEventListener('click', exportReel);
 
   // ─── Projects: local first, cloud when the table exists ─────────────────
@@ -2415,6 +2944,9 @@
     // Photos, team tiles and clips with a remote source come back on reopen
     // (uploads and AI media live in this tab only).
     Object.entries(state.assets).forEach(([id, a]) => { if (a.kind === 'photo' || a.kind === 'tile' || a.kind === 'design' || (a.kind === 'logo' && id.startsWith('logo:lib:')) || (a.kind === 'clip' && a.remote)) assets[id] = { ...a, src: a.kind === 'clip' ? '' : a.src }; });
+    // ── Reels 2.0: C (inputs) ── your own uploads keep their details (the files stay in this browser, reel-media-tray.js).
+    Object.entries(state.assets).forEach(([id, a]) => { if (a.local) assets[id] = { ...a, src: '' }; });
+    const inputs = window.ReelMakerCtx?.modules || {};
     return {
       id: state.projectId, title: state.plan?.title || 'Untitled reel', format: state.plan?.format || 'explainer', sport: state.plan?.sport || null,
       status: state.status, cost_usd: totalSpent(), updatedAt: Date.now(),
@@ -2425,6 +2957,8 @@
         trend: state.trendRef || null, brief: state.brief || '', planSource: state.planSource,
         music: state.music ? { title: state.music.title, source: state.music.source } : null,
         durationMs: state.timeline?.durationMs || 0,
+        ...(inputs.voiceInput?.snapshot() ? { voiceOwn: inputs.voiceInput.snapshot() } : {}),
+        ...(inputs.tray?.missing().length ? { mediaMissing: inputs.tray.missing() } : {}),
         ...(G && TL ? dataSnapshot() || {} : {}),
       },
     };
@@ -2471,6 +3005,10 @@
     if (typeof t.voiceOn === 'boolean') state.voiceOn = t.voiceOn;
     if (t.style && S.STYLES[t.style]) state.plan.style = t.style;
     state.selected = state.plan.beats[0]?.id || '';
+    // ── Reels 2.0: C (inputs) ── your uploads come back from this browser first; the ones
+    // that are not here are dropped below and asked for again ("Re-add N files").
+    const inputs = window.ReelMakerCtx?.modules || {};
+    if (inputs.tray && (Object.values(t.assets || {}).some(a => a && a.local) || t.mediaMissing?.length)) await inputs.tray.rehydrate(t);
     // Drop picks whose media is gone (uploads, AI media): those beats refill.
     Object.keys(state.photos).forEach(k => { state.photos[k] = (state.photos[k] || []).filter(id => state.assets[id]); if (!state.photos[k].length) { delete state.photos[k]; delete state.visualSrc[k]; } });
     state.captionStyle = t.captionStyle === 'box' ? 'box' : 'highlight';
@@ -2483,10 +3021,13 @@
     state.planSource = t.planSource || '';
     state.notice = t.music ? `Re-add the music track “${t.music.title}” to export with it.` : '';
     state.voice = {};
+    state.versions = null; state.version = 0; state.scene = -1; // ── Reels 2.0: D (interface) ──
     loadTeamLogo();
     rebuild();
     renderEdit();
+    syncStart();
     goStep('edit', { focus: false });
+    emit('plan', { source: 'restore' }); // ── Reels 2.0: D (interface) ──
     // Photos load again; the voiceover comes back from this browser's cache for free.
     Object.values(state.photos).flat().forEach(id => {
       const a = state.assets[id];
@@ -2497,6 +3038,9 @@
     });
     Object.values(state.assets).filter(a => a.kind === 'logo' && a.src).forEach(a => { const id = Object.keys(state.assets).find(k => state.assets[k] === a); if (!state.images[id]) loadImage(a.src, /^https?:/.test(a.src)).then(img => { if (img) { state.images[id] = img; draw(); } }); });
     fillVisuals();
+    // ── Reels 2.0: C (inputs) ── a reel with the person's own voiceover gets it back (never the AI voice over it).
+    if (t.voiceOwn && inputs.voiceInput) { if (!await inputs.voiceInput.restore(t.voiceOwn) && state.config.voice.ready && !inputs.voiceInput.snapshot()) restoreVoiceFromCache(); return; }
+    inputs.voiceInput?.restore(null);
     if (state.config.voice.ready) restoreVoiceFromCache();
   }
   async function restoreVoiceFromCache() {
@@ -2543,63 +3087,10 @@
     keyPlays: [], clipMatches: [], digestState: 'idle', digestError: '', researchState: 'idle', view: 'reel', slide: 0, slides: null,
   });
 
-  // ── Gallery ──
-  function galleryModel() { return G.galleryModel(F, modes(), { aiFramePick: true }); }
-  // The "Start from data" panel expands in place ("All formats"); the choice
-  // is remembered per browser (try/catch: private windows can throw).
-  const ENTRY_KEY = 'frameup.reels.allFormats.v1';
-  let entryOpen = (() => { try { return localStorage.getItem(ENTRY_KEY) === '1'; } catch { return false; } })();
-  function renderGallery() {
-    if (!G || !TL) { els.fmtEntry.hidden = true; return; }
-    const model = galleryModel();
-    const selected = dataFmt() || (state.format !== 'auto' ? state.format : '');
-    els.gallery.innerHTML = G.galleryHtml(model, { selected });
-    els.fmtEntry.innerHTML = G.entryHtml(model, { expanded: entryOpen, selected });
-    els.fmtEntry.classList.toggle('is-open', entryOpen);
-    els.fmtEntry.hidden = Boolean(dataFmt());
-  }
-  function setEntryOpen(open, { focus = false } = {}) {
-    entryOpen = Boolean(open);
-    try { localStorage.setItem(ENTRY_KEY, entryOpen ? '1' : '0'); } catch { /* per-browser convenience only */ }
-    const k = entryOpen ? 'open' : 'closed';
-    const toggle = els.fmtEntry.querySelector('[data-gall]');
-    const more = els.fmtEntry.querySelector(`#${G.ENTRY_MORE_ID}`);
-    const title = els.fmtEntry.querySelector('[data-gtitle]');
-    els.fmtEntry.classList.toggle('is-open', entryOpen);
-    if (toggle) { toggle.setAttribute('aria-expanded', String(entryOpen)); toggle.textContent = G.ENTRY_TOGGLE[k]; }
-    if (title) title.textContent = G.ENTRY_TITLE[k];
-    if (more) more.toggleAttribute('inert', !entryOpen);
-    if (focus && toggle) toggle.focus({ preventScroll: true });
-    // Bring the newly shown formats into view without jumping the page.
-    if (entryOpen && more) requestAnimationFrame(() => more.scrollIntoView?.({ block: 'nearest', behavior: calmMotion() ? 'auto' : 'smooth' }));
-  }
-  function openGallery() {
-    if (state.flow.making) return;
-    renderGallery();
-    goStep('format');
-  }
-  function onGalleryClick(event) {
-    const btn = event.target.closest('[data-gformat]');
-    if (!btn) return;
-    const id = btn.dataset.gformat;
-    if (btn.getAttribute('aria-disabled') === 'true') {
-      toast(`${F.FORMATS[id].label} is coming soon. Its data server lands next; the news formats work today.`);
-      return;
-    }
-    const fromEntry = els.fmtEntry.contains(btn);
-    pickFormat(id);
-    // A news tile keeps the editor on the Story step: put focus back on it.
-    if (fromEntry && !F.isDataFormat(id)) els.fmtEntry.querySelector(`[data-gformat="${id}"]`)?.focus({ preventScroll: true });
-  }
-  function onEntryClick(event) {
-    if (event.target.closest('[data-gall]')) { setEntryOpen(!entryOpen); return; }
-    onGalleryClick(event);
-  }
-  function onEntryKey(event) {
-    if (event.key !== 'Escape' || !entryOpen) return;
-    event.preventDefault();
-    setEntryOpen(false, { focus: true });
-  }
+  // ── Start tiles ── (Reels 2.0, lane D: Game, Clip and Player on the Start
+  // screen took the place of the format gallery and its "Start from data" panel.)
+  function renderGallery() { renderStart(); }
+  function openGallery() { if (!state.flow.making) goStep('topic'); }
   // A new reel when the editor switches format family or data format while a
   // reel is open (the old one is kept under "Continue a reel").
   function startFresh() {
@@ -2612,7 +3103,9 @@
     setView('reel');
     els.emptyStage.hidden = false; els.play.disabled = true; els.scrub.disabled = true;
     els.stageMeta.textContent = '';
-    els.stripwrap.hidden = true;
+    state.versions = null; state.version = 0;
+    els.work.classList.remove('has-reel');
+    syncCanvasSize();
     draw();
     renderRecent();
     toast(`“${title}” is saved under Continue a reel.`);
@@ -2638,8 +3131,8 @@
       renderStyles();
       renderVoicePickers();
       renderCost();
-      renderGallery();
-      goStep(FLOW.sourceReady(id, state.flow.source) && was === id ? 'topic' : 'source');
+      syncStart();
+      goStep(FLOW.sourceReady(id, state.flow.source) && was === id ? 'topic' : 'source', { focus: false });
       logEvent('edit', { what: 'format', format: id });
       return;
     }
@@ -2655,7 +3148,7 @@
     renderFormats();
     renderStyles();
     renderCost();
-    renderGallery();
+    syncStart();
     goStep('topic');
   }
   function leaveDataPrefs() {
@@ -2669,22 +3162,10 @@
     state.research = null; state.replay = null; state.keyPlays = []; state.clipMatches = []; state.digestState = 'idle'; state.researchState = 'idle';
     state.gp.selected = ''; state.pp.selected = ''; state.pp.candidate = null; state.cp.clip = null; state.cp.asset = ''; state.cp.segment = null;
   }
-  els.gallery.addEventListener('click', onGalleryClick);
-  els.fmtEntry.addEventListener('click', onEntryClick);
-  els.fmtEntry.addEventListener('keydown', onEntryKey);
-  els.galleryClose.addEventListener('click', () => goStep(dataFmt() ? (FLOW.sourceReady(dataFmt(), state.flow.source) ? 'topic' : 'source') : 'topic'));
 
-  // Steps: Format and Source appear for data formats (and while the gallery
-  // is open); numbers follow what is visible.
-  function renderStepsNav() {
-    const data = Boolean(dataFmt()) || state.step === 'format';
-    els.steps.querySelectorAll('[data-dataflow]').forEach(li => { li.hidden = !data; });
-    els.steps.querySelector('ol').classList.toggle('is-data', data);
-    const order = data ? ['format', 'source', 'topic', 'edit', 'export'] : ['topic', 'edit', 'export'];
-    order.forEach((id, i) => { const num = els.steps.querySelector(`[data-step="${id}"] .rm-step__num`); if (num) num.textContent = String(i + 1); });
-    const label = $('rm-step-source-label');
-    if (label) label.textContent = dataFmt() ? (G.SOURCE_LABEL[srcKind()] || 'Source') : 'Source';
-  }
+  // Steps: always Start, Storyboard, Export (the source of a game, clip or
+  // player reel is picked on the Start screen).
+  function renderStepsNav() { /* three fixed steps */ }
 
   // ── Source step ──
   const seg = (id, label, items, value, attr) => `<div class="es-segmented rm-seg" role="radiogroup" aria-label="${esc(label)}" id="${id}">${items.map(([v, l]) => `<button class="es-segmented__item" type="button" role="radio" aria-checked="${v === value}" tabindex="${v === value ? 0 : -1}" data-${attr}="${esc(v)}">${esc(l)}</button>`).join('')}</div>`;
@@ -2746,7 +3227,7 @@
   }
   function onSourceClick(event) {
     const t = event.target;
-    if (t.closest('[data-news]')) { pickFormat('explainer'); return; }
+    if (t.closest('[data-news]')) { setStart('trend'); return; }
     const gs = t.closest('[data-gsport]');
     if (gs) { state.gp.sport = gs.dataset.gsport; radios($('rm-g-sport'), 'gsport', state.gp.sport); loadGames(); return; }
     const gt = t.closest('[data-gtab]');
@@ -2839,7 +3320,7 @@
   }
   function markSoon(mode) {
     state.config.formatModes = { ...modes(), [mode]: false };
-    renderGallery();
+    renderStart();
   }
   function renderGameList() {
     const list = $('rm-games');
@@ -3217,9 +3698,8 @@
     const fmt = dataFmt();
     const box = els.dataStory;
     const hint = els.emptyStage.querySelector('span');
-    if (hint) hint.textContent = fmt ? EMPTY_HINT[srcKind()] : 'Pick a trend or write a brief, then Make my reel.';
+    if (hint) hint.textContent = fmt ? EMPTY_HINT[srcKind()] : 'Pick what to start from, then Make my reel.';
     els.topic.hidden = Boolean(fmt);
-    $('rm-set-format').hidden = Boolean(fmt);
     els.factcheckRow.hidden = Boolean(fmt) || !state.config.ai;
     $('rm-set-clips').hidden = Boolean(fmt) && fmt !== 'gameswing';
     els.recent.hidden = Boolean(fmt) || !store.get(LOCAL_KEY, []).length;
@@ -3228,6 +3708,7 @@
     const f = F.FORMATS[fmt];
     const src = state.flow.source;
     const change = `<button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dsrc>Change</button>`;
+    els.recipeSec.hidden = true;
     let body = '';
     if (!src) body = `<p class="rm-hint">Pick a ${esc(G.SOURCE_LABEL[srcKind()].toLowerCase())} first.</p><button class="es-btn es-btn--sm" type="button" data-dsrc>Pick one</button>`;
     else if (src.kind === 'game') {
@@ -3301,6 +3782,7 @@
     els.writeStatus.textContent = '';
     els.making.scrollIntoView?.({ block: 'nearest', behavior: calmMotion() ? 'auto' : 'smooth' });
     const started = Date.now();
+    logStart();
     const ctxRun = { brief: '', title: '' };
     for (const stage of state.flow.stages.map(s => s.id)) {
       if (!state.flow.making) break;
@@ -3314,22 +3796,18 @@
     }
     if (els.makingLive) els.makingLive.textContent = 'Your reel is ready.';
     renderEdit();
-    goStep('edit', { focus: false });
-    toast(F.FORMATS[fmt].outputs.includes('carousel') ? 'Your reel and carousel are ready.' : 'Your reel is ready. Tap a beat under the preview to change it.');
-    logEvent('make', { ms: Date.now() - started, style: styleId(), seconds: Math.round(state.timeline.durationMs / 1000), format: fmt, clipShare: clipShare().share });
+    goStep('edit', { focus: true });
+    toast(F.FORMATS[fmt].outputs.includes('carousel') ? 'Your reel and carousel are ready.' : 'Your reel is ready. Change any scene on its card.');
+    logEvent('make', { ms: Date.now() - started, style: styleId(), seconds: Math.round(state.timeline.durationMs / 1000), format: fmt, clipShare: clipShare().share, start: startOf() });
   }
   // "Use a brief instead": the news flow with a brief seeded from what the
   // data step did get (the game line, the player), never invented.
   els.writeStatus.addEventListener('click', event => {
     if (!event.target.closest('[data-news]')) return;
     const seed = (dataBrief() || state.flow.source?.label || state.flow.source?.name || '').slice(0, 2400);
-    pickFormat('explainer');
-    state.source = 'brief';
-    radios(els.source, 'source', 'brief');
-    els.sourceTrend.hidden = true;
-    els.sourceBrief.hidden = false;
+    state.words = 'brief';
+    setStart('words');
     if (!els.brief.value.trim()) els.brief.value = seed;
-    renderPicked();
     els.writeStatus.textContent = '';
     els.brief.focus();
   });
@@ -3801,7 +4279,8 @@
     radios(els.view, 'view', view);
     const slide = view === 'carousel';
     els.device.classList.toggle('is-slide', slide);
-    els.canvas.height = slide ? 1350 : 1920;
+    els.canvas.height = slide ? 1350 : ((state.timeline && state.timeline.size && state.timeline.size[1]) || 1920);
+    els.device.classList.toggle('is-45', !slide && els.canvas.height === 1350);
     els.transport.hidden = slide;
     els.slidenav.hidden = !slide;
     els.canvas.setAttribute('aria-label', slide ? 'Carousel slide preview' : 'Reel preview');
@@ -3905,7 +4384,7 @@
   function restoreData(t, format) {
     if (!G || !TL || !F.isDataFormat(format)) {
       if (dataFmt()) { state.flow = FLOW.initial(); leaveDataPrefs(); }
-      renderStepsNav(); renderDataStory(); renderGallery();
+      renderStepsNav(); renderDataStory(); renderStart();
       return;
     }
     if (!dataFmt()) newsPrefs = { voiceOn: state.voiceOn, useClips: state.useClips, style: state.style };
@@ -3921,7 +4400,7 @@
     state.researchState = state.research ? 'ready' : 'idle';
     if (t.source?.kind === 'player') { state.pp.selected = t.source.athleteId; state.pp.candidate = { athleteId: t.source.athleteId, name: t.source.name, sport: t.source.sport }; state.pp.angle = t.source.angle; }
     if (t.source?.kind === 'game') state.gp.selected = t.source.eventId;
-    renderStepsNav(); renderSourceStep(); renderDataStory(); renderGallery();
+    renderStepsNav(); renderSourceStep(); renderDataStory(); renderStart();
   }
 
   // ─── Boot ────────────────────────────────────────────────────────────────
@@ -3933,7 +4412,8 @@
     } catch (error) {
       state.config = { ai: false, voice: { mode: 'off', ready: false, label: 'Captions only', reason: 'The voice server is not reachable from here.' }, offline: Boolean(error.offline), formatModes: {} };
     }
-    if (G && TL) { renderGallery(); renderDataStory(); }
+    if (G && TL) renderDataStory();
+    syncStart();
     els.factcheckRow.hidden = !state.config.ai;
     const gen = $('rm-music-gen-row');
     if (gen) {
@@ -3955,22 +4435,19 @@
       const m = h && (!q.get('trend') || h.id === q.get('trend')) ? h
         : q.get('moment') ? { id: q.get('trend') || 'trend-link', title: q.get('moment'), sport: q.get('sport') || '', team: q.get('team') || '', related: [] } : null;
       if (q.get('brief')) {
-        state.source = 'brief';
+        state.source = 'brief'; state.words = 'brief'; state.start = 'words';
         els.brief.value = q.get('brief').slice(0, 2400);
       } else if (m && m.title) {
-        state.trend = { id: String(m.id || 'trend-link'), title: String(m.title).slice(0, 300), sport: ['nfl', 'cfb', 'mlb', 'golf'].includes(m.sport) ? m.sport : '', team: m.team || '', url: m.url || '', why: m.why || '', related: Array.isArray(m.related) ? m.related.slice(0, 4) : [] };
+        state.trend = { id: String(m.id || 'trend-link'), title: String(m.title).slice(0, 300), sport: TREND_SPORTS.includes(m.sport) ? m.sport : '', team: m.team || '', url: m.url || '', why: m.why || '', related: Array.isArray(m.related) ? m.related.slice(0, 4) : [] };
         if (!state.trends.some(t => t.id === state.trend.id)) state.trends.unshift({ ...state.trend, format: F.routeFormat(state.trend.title).format });
       }
       sessionStorage.removeItem(HANDOFF_KEY);
       if (m || q.get('brief')) history.replaceState(null, '', location.pathname);
     } catch { /* no hand-off */ }
-    radios(els.source, 'source', state.source);
-    els.sourceTrend.hidden = state.source !== 'trend';
-    els.sourceBrief.hidden = state.source !== 'brief';
+    syncStart();
   }
 
   renderLeagues();
-  if (G && TL) { renderGallery(); renderStepsNav(); }
   readHandoff();
   renderTrends();
   renderPicked();
@@ -3991,4 +4468,55 @@
   window.addEventListener('beforeunload', () => { if (state.plan) store.set(LOCAL_KEY, [snapshot(), ...store.get(LOCAL_KEY, []).filter(p => p.id !== state.projectId)].slice(0, 12)); });
 
   window.ReelMakerPage = { pickFormat: G && TL ? pickFormat : null, openGallery: G && TL ? openGallery : null, setSource: G && TL ? setSource : null, setView: G && TL ? setView : null, state, rebuild, applyPlan, draw, seek, play, stop, goStep, renderMix, exportReel, makeVoice, restore, loadConfig, loadTrends, makeReel, fillVisuals, selectBeat, renderEdit, renderStyles, visualAction, addClipAsset, setVisual, clipShare };
+  // ── Page context for add-on modules (Reels Studio 2.0) ────────────────────
+  // New features (storyboard, media tray, voice input, ideas room, radar,
+  // a11y) live in their own files and attach here instead of growing this
+  // one. No behaviour change: this only publishes what the page already has.
+  //   ctx.on(event, fn) / ctx.emit(event, data): 'plan' (a plan was applied),
+  //   'rebuild' (timeline rebuilt), 'beat' (selection changed), 'step'.
+  //   ctx.register(name, api): a module publishes its own API for others.
+  const ctxListeners = new Map();
+  const pageCtx = {
+    state, els, store, F, R, ES: window.ReelES || null,
+    api, toast, logEvent, goStep, rebuild, draw, seek, play, stop, applyPlan, restore, snapshot,
+    selectBeat, addBeat, renderBeats, renderStrip, renderEdit, renderExport, renderLint, renderAutoline, renderStyles, renderTrends, renderRecent,
+    setEsField, setField, esFields, beatFields, visualCard, visualAction, setVisual,
+    addClipAsset, loadClip, useXClip, usePhoto, searchPhotos, fillVisuals, setMusic,
+    makeReel, makeFromScript, makeVoice, ensureVoice, restoreVoiceFromCache, renderMix, exportReel, exportCarousel, costHtml, readHandoff,
+    modules: {},
+    register(name, moduleApi) { pageCtx.modules[name] = moduleApi; pageCtx.emit('module', { name }); return moduleApi; },
+    on(event, fn) { if (!ctxListeners.has(event)) ctxListeners.set(event, new Set()); ctxListeners.get(event).add(fn); return () => ctxListeners.get(event)?.delete(fn); },
+    emit(event, data) { (ctxListeners.get(event) || []).forEach(fn => { try { fn(data); } catch (error) { window.FrameUpErrors?.report?.(error, `reels ctx ${event}`); } }); },
+  };
+  // ── Reels 2.0: D (interface) ── what the storyboard and accessibility modules
+  // read from the page (additive: nothing above changes shape).
+  pageCtx.ui = {
+    ICON, esc, fmtTime, debounce, measure, envFor, grain,
+    esOn, scriptLocked, beatName, styleId, seekBeat, sceneAt, wipeMs, setCalm, setStart, syncStart, useVersion, makeVersions,
+    edited: () => { rebuildSoon(); editedSoon(); },
+    voiceSoon, openPhotos, count,
+  };
+  // Where each add-on module sits in the new interface. A module registers
+  // (ctx.register) and is mounted at once into its place: the media tray under
+  // the storyboard, "Use my own voice" in the rail's Voice row, the caption
+  // files on the Export step, the looks in the rail, lane B's panels on Start.
+  pageCtx.on('module', ({ name }) => {
+    const m = pageCtx.modules[name];
+    if (name === 'tray') m.mount($('ri-tray'));
+    if (name === 'voiceInput') m.mount($('ri-voice-panel'));
+    if (name === 'captions') m.mount($('rm-captions-host'));
+    if (name === 'looks') { renderLooks(); pageCtx.on('look', () => { renderLooks(); renderStoryboardSoon(); }); }
+    // Lane B's panels: their temporary buttons under the trend list give way to the Inspiration tile and "Brainstorm angles".
+    if (name === 'ideas' || name === 'radar') { queueMicrotask(() => document.getElementById('rb-entry')?.remove()); syncStart(); if (startOf() === 'inspo') mountInspo(); }
+    if (name === 'storyboard' && state.plan) renderBeats();
+  });
+  // Lane B: "Make our version" in the radar hands over to the ideas room.
+  pageCtx.on('radar-handoff', () => { if (startOf() === 'inspo') mountInspo('ideas'); });
+  // Room for the rail in a column of its own? (The work area's own width: the app sidebar takes a share of the window.)
+  if (window.ResizeObserver) new ResizeObserver(entries => { const w = entries[0].contentRect.width; els.work.classList.toggle('is-wide', w >= 1340); els.work.classList.toggle('is-tight', w < 900 && w > 0); }).observe(els.work);
+  try { if (localStorage.getItem('frameup.reels.calm.v1') === '1' || (localStorage.getItem('frameup.reels.calm.v1') == null && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)) setCalm(true); } catch { /* default: full motion */ }
+  // ── Reels 2.0: C (inputs) ── the voice badge and pickers follow the person's own voiceover.
+  pageCtx.on('voice-own', () => { renderVoicePickers(); renderVoice(); renderCost(); });
+  window.ReelMakerCtx = pageCtx;
+  document.dispatchEvent(new CustomEvent('reelmaker:ready', { detail: { ctx: pageCtx } }));
 })();

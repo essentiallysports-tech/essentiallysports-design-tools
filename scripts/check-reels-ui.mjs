@@ -203,6 +203,7 @@ async function audit(name, w) {
     // Page-specific: the step bar and the tour help stay on one row.
     const head = await evaluate(`(() => { const h = document.querySelector('.rm-head'); if (!h) return ''; const kids = [...h.children].filter(k => k.getBoundingClientRect().height > 1 && getComputedStyle(k).display !== 'none' && getComputedStyle(k).position !== 'absolute'); const rs = kids.map(k => k.getBoundingClientRect()); return rs.some(a => rs.some(b => a.top >= b.bottom - 2)) ? 'the step bar wraps: ' + kids.map(k => k.className || k.tagName).join(' / ') : ''; })()`);
     if (head) r.issues.push(head);
+    if (process.env.REELS_DEBUG && r.issues.some(i => /horizontal page scroll/.test(i))) console.log('WIDE', name, theme, await evaluate(`[...document.querySelectorAll('body *')].filter(e => e.getBoundingClientRect().right > innerWidth + 2).slice(0, 12).map(e => e.tagName + '#' + e.id + '.' + String(e.className).slice(0, 40) + ' ' + Math.round(e.getBoundingClientRect().right)).join(' | ')`));
     const errs = consoleErrors.splice(0);
     const issues = [...r.issues, ...errs];
     stateCount++;
@@ -230,6 +231,10 @@ const scrollTop = () => evaluate('(window.scrollTo(0, 0), document.querySelector
 const openFold = (sel, open = true) => evaluate(`(() => { const d = document.querySelector(${JSON.stringify(sel)}); if (!d) return false; d.open = ${open}; d.scrollIntoView({ block: 'start' }); return true; })()`);
 const visible = sel => evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; })()`);
 
+const key = async (k, { code = k, vk = 0, shift = false, alt = false } = {}) => { const mod = (alt ? 1 : 0) | (shift ? 8 : 0); await send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code, windowsVirtualKeyCode: vk, modifiers: mod }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code, windowsVirtualKeyCode: vk, modifiers: mod }); await sleep(60); };
+const KEYS = { Tab: 9, ArrowLeft: 37, ArrowRight: 39, Home: 36, End: 35 };
+const press = (k, opts = {}) => key(k, { vk: KEYS[k] || k.toUpperCase().charCodeAt(0), code: KEYS[k] ? k : `Key${k.toUpperCase()}`, ...opts });
+const expect = (ok, what) => { if (!ok) throw new Error(what); };
 const behaviour = []; // flow failures (a step that did not do what it says)
 async function step(name, fn) {
   try { await fn(); } catch (error) { behaviour.push(`${name}: ${error.message}`); }
@@ -248,15 +253,21 @@ for (const w of WIDTHS) {
   await audit('story-trends', w);
   await step('pick a trend', async () => {
     await must('#rm-trends [data-trend], #rm-trends button', 'trend row');
-    await waitFor(`!document.querySelector('#rm-picked').hidden`, 3000, 'picked card');
+    await waitFor(`document.querySelector('#rm-trends [data-trend]').getAttribute('aria-checked') === 'true' && window.ReelMakerCtx.state.trend`, 3000, 'picked story');
+    // Three clicks to a reel: the Trend tile is already open, so a story and Make my reel are enough.
+    expect(await evaluate(`!document.querySelector('#rm-write').hidden && document.querySelector('#rm-fmt-entry [aria-checked="true"]').dataset.start === 'trend'`), 'Make my reel is not ready after picking a story');
   });
   await audit('story-trend-picked', w);
-  await step('expand Start from data', async () => {
-    await must('#rm-fmt-entry [data-gall]', 'All formats toggle');
-    await waitFor(`document.querySelector('#rm-fmt-entry').classList.contains('is-open')`, 2000, 'expanded entry');
+  await step('Start tiles and recipes', async () => {
+    const tiles = await evaluate(`[...document.querySelectorAll('#rm-fmt-entry [role="radio"]')].map(b => b.dataset.start)`);
+    if (tiles.join() !== 'trend,words,game,clip,player,inspo') throw new Error(`tiles: ${tiles}`);
+    const recipes = await evaluate(`[...document.querySelectorAll('#rm-recipes [role="radio"]')].map(b => b.dataset.recipe)`);
+    if (recipes.length !== 9 || recipes[0] !== '') throw new Error(`recipes: ${recipes}`);
+    await must('#rm-recipes [data-recipe="stat-drop"]');
+    await waitFor(`document.querySelector('#rm-recipes [data-recipe="stat-drop"]').getAttribute('aria-checked') === 'true' && window.ReelMakerCtx.state.format === 'stat'`, 2000, 'recipe picked');
   });
-  await audit('story-data-expanded', w);
-  await click('#rm-fmt-entry [data-gall]');
+  await audit('start-recipe-picked', w);
+  await click('#rm-recipes [data-recipe=""]');
   await step('Brief tab', async () => {
     await must('#rm-source [data-source="brief"]');
     await waitFor(`!document.querySelector('#rm-source-brief').hidden`, 2000, 'brief field');
@@ -268,18 +279,24 @@ for (const w of WIDTHS) {
   });
   await audit('story-brief-empty-error', w);
   await typeInto('#rm-brief', 'Josh Allen threw for 412 yards and 4 TDs as the Bills beat the Chiefs 31-28. It is his third 400-yard game this season.');
-  await step('All settings', async () => { await openFold('#rm-settings'); });
-  await audit('story-all-settings', w);
-  await openFold('#rm-settings', false);
+  for (const fold of ['#rm-voice', '#rm-music', '#rm-captions', '#rm-costs', '#rm-more']) {
+    await openFold(fold);
+    await audit(`start-rail-${fold.slice(4)}`, w);
+    await openFold(fold, false);
+  }
   await scrollTop();
   // Make → Review.
   await step('Make my reel', async () => {
     await must('#rm-write');
     await waitFor(`!document.querySelector('#rm-pane-edit').hidden`, 30000, 'Review step');
   });
+  await step('focus lands on the first scene after Make my reel', async () => {
+    const at = await evaluate(`(() => { const a = document.activeElement; return a && a.matches('#rm-beats [data-sb-face]') ? [...document.querySelectorAll('#rm-beats [data-sb-face]')].indexOf(a) : (a ? a.tagName + '#' + a.id : 'none'); })()`);
+    expect(at === 0, `focus is on ${at}`);
+  });
   await scrollTop();
   await audit('review', w);
-  for (const fold of ['#rm-revise', '#rm-voice', '#rm-style-fold', '#rm-music', '#rm-sources']) {
+  for (const fold of ['#rm-revise', '#rm-voice', '#rm-music', '#rm-captions', '#rm-sources', '#rm-costs', '#rm-more']) {
     if (!(await visible(fold))) continue;
     await openFold(fold);
     await audit(`review-fold-${fold.slice(4)}`, w);
@@ -288,14 +305,19 @@ for (const w of WIDTHS) {
   await step('quality checks', async () => { await must('#rm-statusline'); await waitFor(`!document.querySelector('#rm-lint').hidden`, 2000, 'lint list'); });
   await audit('review-quality-checks', w);
   await click('#rm-statusline');
+  // The rail's Look: the ES looks (lane A's module) when they are loaded, else the page's own style picker.
   await openFold('#rm-style-fold');
-  const styles = await evaluate(`[...document.querySelectorAll('#rm-styles-edit [role="radio"]')].map(b => b.dataset.style || b.getAttribute('data-style') || b.textContent.trim())`);
-  if (!styles || styles.length !== 5) behaviour.push(`review: expected 5 styles, found ${styles?.length || 0}`);
-  if (styles && styles[0] !== 'es') behaviour.push(`review: ES Reels should be the first style, found ${styles[0]}`);
+  const LOOKS = `(document.querySelector('#rm-looks').hidden ? '#rm-styles' : '#rm-looks')`;
+  const styles = await evaluate(`[...document.querySelectorAll(${LOOKS} + ' [role="radio"]')].map(b => b.dataset.look || b.dataset.style || b.textContent.trim())`);
+  const hasLooks = await evaluate(`Boolean(window.ReelMakerCtx.modules.looks)`);
+  if (hasLooks && (styles.length !== 8 || styles[0] !== 'paper')) behaviour.push(`rail: expected the 8 looks, Paper first; found ${styles}`);
+  if (!hasLooks && styles.length < 2) behaviour.push(`rail: expected the style picker, found ${styles?.length || 0}`);
+  if (await evaluate(`[...document.querySelectorAll('#rm-looks, #rm-styles, #rm-styles-edit')].filter(e => e.getBoundingClientRect().height > 0).length`) !== 1) behaviour.push('rail: exactly one look picker should show');
   for (let i = 0; i < (styles?.length || 0); i++) {
-    await step(`style ${styles[i]}`, async () => { await evaluate(`document.querySelectorAll('#rm-styles-edit [role="radio"]')[${i}].click()`); await waitFor(`document.querySelectorAll('#rm-styles-edit [role="radio"]')[${i}].getAttribute('aria-checked') === 'true'`, 3000, 'style picked'); });
+    if (styles[i] === 'auto') continue;
+    await step(`look ${styles[i]}`, async () => { await evaluate(`document.querySelectorAll(${LOOKS} + ' [role="radio"]')[${i}].click()`); await waitFor(`document.querySelectorAll(${LOOKS} + ' [role="radio"]')[${i}].getAttribute('aria-checked') === 'true'`, 3000, 'look picked'); });
     await sleep(300);
-    await audit(`review-style-${i + 1}`, w);
+    await audit(`review-look-${i + 1}`, w);
   }
   await openFold('#rm-style-fold', false);
   // Export.
@@ -312,6 +334,16 @@ for (const w of WIDTHS) {
     });
     await sleep(900);
     await audit('export-done', w);
+    await step('Export all (zip)', async () => {
+      await must('#rm-export-all');
+      await waitFor(`/^Exported \\d+ files in one zip/.test(document.querySelector('#rm-export-status').textContent) || /fail|cancel|did not load/i.test(document.querySelector('#rm-export-status').textContent)`, 150000, 'the zip');
+      const r = await evaluate(`({ status: document.querySelector('#rm-export-status').textContent, row: document.querySelector('#rm-files .rm-files__name')?.textContent || '', busy: document.querySelector('#rm-export').disabled })`);
+      expect(/^Exported \d+ files in one zip: 1080×1920 (MP4|WEBM)/.test(r.status), `export all said: ${r.status}`);
+      expect(/-all\.zip$/.test(r.row), `file row: ${r.row}`);
+      expect(/caption file/.test(r.status), `no caption files in the zip: ${r.status}`);
+      expect(!r.busy, 'Export MP4 stayed disabled');
+    });
+    await audit('export-all-done', w);
   }
   await step('Paid ad', async () => { await must('#rm-target [data-target="paid"]'); await waitFor(`document.querySelector('#rm-target [data-target="paid"]').getAttribute('aria-checked') === 'true'`, 2000, 'paid picked'); });
   await audit('export-paid', w);
@@ -348,11 +380,123 @@ for (const w of WIDTHS) {
   await audit('script-checklist', w);
   await click('#rm-statusline');
   await step('block editor', async () => {
-    await must('#rm-strip [data-pick]:nth-of-type(1)');
-    await evaluate(`document.querySelectorAll('#rm-strip [data-pick]')[3]?.click()`);
-    await waitFor(`document.querySelector('#rm-beats [data-field="es.type"]')`, 3000, 'block picker');
+    await evaluate(`document.querySelectorAll('#rm-beats [data-sb-face]')[3]?.click()`);
+    await waitFor(`document.querySelectorAll('#rm-beats .rm-card')[3]?.classList.contains('is-on') && document.querySelector('#rm-beats .rm-card.is-on [data-field="es.type"]')`, 3000, 'block picker on the picked card');
   });
   await audit('script-block-editor', w);
+  await step('storyboard: a card per scene, live thumbnails, the end card last and fixed', async () => {
+    const r = await evaluate(`(() => { const c = window.ReelMakerCtx; const cards = [...document.querySelectorAll('#rm-beats .rm-card')]; const px = cv => { const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; let n = 0; for (let i = 0; i < d.length; i += 16) n += d[i] + d[i + 1] + d[i + 2]; return n; };
+      return { cards: cards.length, beats: c.state.plan.beats.length, drawn: cards.every(k => px(k.querySelector('[data-sb-thumb]')) > 0), drop: cards.every(k => k.dataset.riBeat === k.dataset.beat), last: cards.at(-1).classList.contains('is-end'), endMoves: cards.at(-1).querySelectorAll('[data-sb-move], [data-remove]').length, endDrag: cards.at(-1).querySelector('[data-sb-face]').draggable, firstLeft: cards[0].querySelector('[data-sb-move="-1"]').disabled, typed: [...document.querySelectorAll('#rm-beats input, #rm-beats textarea')].filter(e => /\\| ?(blue|red|green)/.test(e.value)).length }; })()`);
+    expect(r.cards === r.beats && r.cards >= 4, `cards ${r.cards} / scenes ${r.beats}`);
+    expect(r.drawn, 'a thumbnail is blank');
+    expect(r.drop, 'a card does not take media drops (data-ri-beat)');
+    expect(r.last && r.endMoves === 0 && !r.endDrag, 'the end card can be moved or deleted');
+    expect(r.firstLeft, 'scene 1 offers Move left');
+    expect(r.typed === 0, 'a field still shows the typed colour syntax');
+  });
+  await evaluate(`(document.querySelector('#rm-beats [data-sb-face]').click(), 1)`); // scene 1 is the one being edited (on a phone only its card is open)
+  await step('colour chips set the colour (no typed syntax)', async () => {
+    const r = await evaluate(`(() => { const c = window.ReelMakerCtx; const card = document.querySelector('#rm-beats .rm-card'); const chip = card.querySelector('[data-sb-rows] [data-sb-color="red"]'); chip.click(); const b = c.ES.blockOf(c.state.plan.beats[0]); const input = card.querySelector('[data-sb-text]'); input.value = 'Cubs lost'; input.dispatchEvent(new Event('input', { bubbles: true })); const b2 = c.ES.blockOf(c.state.plan.beats[0]);
+      return { color: b.pills[0].color, checked: chip.getAttribute('aria-checked'), id: input.id, text: b2.pills[0].text, kept: b2.pills[0].color, label: chip.getAttribute('aria-label') }; })()`);
+    expect(r.color === 'red' && r.checked === 'true' && r.kept === 'red', `chip: ${JSON.stringify(r)}`);
+    expect(r.text === 'Cubs lost', `text: ${r.text}`);
+    expect(/^rm-es-pills-0-/.test(r.id), `field id ${r.id}`);
+    expect(/loss/.test(r.label), `chip label ${r.label}`);
+    await evaluate(`(document.querySelector('#rm-beats .rm-card [data-sb-rows] [data-sb-color="ink"]').click(), 1)`);
+  });
+  await step('rows: add a pill, remove it; the stamp switch', async () => {
+    const r = await evaluate(`(async () => { const c = window.ReelMakerCtx; const id = c.state.plan.beats[0].id; const card = () => document.querySelector('#rm-beats [data-beat="' + id + '"]'); const n0 = c.ES.blockOf(c.state.plan.beats[0]).pills.length;
+      card().querySelector('[data-sb-add="pills"]').click(); const n1 = c.ES.blockOf(c.state.plan.beats[0]).pills.length; const focusAdd = document.activeElement.matches('[data-sb-text]');
+      card().querySelectorAll('[data-sb-del]')[n1 - 1].click(); const n2 = c.ES.blockOf(c.state.plan.beats[0]).pills.length; const focusDel = card().contains(document.activeElement);
+      const sw = card().querySelector('[data-sb-stamp]'); sw.checked = true; sw.dispatchEvent(new Event('change', { bubbles: true })); const stamp = c.ES.blockOf(c.state.plan.beats[0]).stamp; const field = Boolean(card().querySelector('[data-field="es.stamp.text"]'));
+      const sw2 = card().querySelector('[data-sb-stamp]'); sw2.checked = false; sw2.dispatchEvent(new Event('change', { bubbles: true }));
+      return { n0, n1, n2, focusAdd, focusDel, stamp, field, off: c.ES.blockOf(c.state.plan.beats[0]).stamp || null }; })()`);
+    expect(r.n1 === r.n0 + 1 && r.n2 === r.n0, `rows ${r.n0} -> ${r.n1} -> ${r.n2}`);
+    expect(r.focusAdd && r.focusDel, 'focus left the card after add / remove');
+    expect(r.stamp && r.stamp.text === 'SUNDAY' && r.field && r.off === null, `stamp ${JSON.stringify(r.stamp)} / off ${JSON.stringify(r.off)}`);
+  });
+  await step('keyboard: Alt + arrow reorders a scene and says so; the end card stays', async () => {
+    await evaluate(`(document.querySelectorAll('#rm-beats [data-sb-face]')[1].focus(), 1)`);
+    const before = await evaluate(`window.ReelMakerCtx.state.plan.beats.map(b => b.id)`);
+    await press('ArrowRight', { alt: true });
+    await sleep(120);
+    let r = await evaluate(`({ order: window.ReelMakerCtx.state.plan.beats.map(b => b.id), live: document.querySelector('#rm-sb-live').textContent, focus: document.activeElement.closest('[data-beat]')?.dataset.beat, face: document.activeElement.matches('[data-sb-face]') })`);
+    expect(r.order[2] === before[1] && r.order[1] === before[2], `order after Alt+Right: ${r.order}`);
+    expect(r.live === `Scene 2 moved to position 3 of ${before.length}`, `announced: “${r.live}”`);
+    expect(r.focus === before[1] && r.face, 'focus did not stay on the moved scene');
+    await press('ArrowLeft', { alt: true });
+    await sleep(120);
+    r = await evaluate(`({ order: window.ReelMakerCtx.state.plan.beats.map(b => b.id), live: document.querySelector('#rm-sb-live').textContent })`);
+    expect(r.order.join() === before.join(), `order after Alt+Left: ${r.order}`);
+    expect(r.live === `Scene 3 moved to position 2 of ${before.length}`, `announced: “${r.live}”`);
+    await evaluate(`([...document.querySelectorAll('#rm-beats [data-sb-face]')].at(-1).focus(), 1)`);
+    await press('ArrowLeft', { alt: true });
+    await sleep(120);
+    r = await evaluate(`({ order: window.ReelMakerCtx.state.plan.beats.map(b => b.id), live: document.querySelector('#rm-sb-live').textContent })`);
+    expect(r.order.join() === before.join() && /end card stays last/i.test(r.live), `end card: ${r.live}`);
+    // Move buttons do the same and keep the keyboard on the card.
+    r = await evaluate(`(async () => { const c = window.ReelMakerCtx; const id = c.state.plan.beats[1].id; document.querySelector('#rm-beats [data-beat="' + id + '"] [data-sb-move="1"]').click(); await new Promise(r => setTimeout(r, 80)); const at = c.state.plan.beats.findIndex(b => b.id === id); const focus = document.activeElement.closest('[data-beat]')?.dataset.beat === id; document.querySelector('#rm-beats [data-beat="' + id + '"] [data-sb-move="-1"]').click(); return { at, focus, back: c.state.plan.beats.findIndex(b => b.id === id), words: c.ES.voMatchesScript(c.state.plan) }; })()`);
+    expect(r.at === 2 && r.focus && r.back === 1 && r.words, `move buttons: ${JSON.stringify(r)}`);
+  });
+  await step('keyboard: scrubber keys and its spoken value', async () => {
+    await evaluate(`(window.ReelMakerCtx.seek(0), document.querySelector('#rm-scrub').focus(), 1)`);
+    const t = () => evaluate(`Math.round(window.ReelMakerCtx.state.t)`);
+    const text = () => evaluate(`document.querySelector('#rm-scrub').getAttribute('aria-valuetext')`);
+    expect(/^0:00, scene 1 of \d+, Hook$/.test(await text()), `valuetext at 0: ${await text()}`);
+    await press('ArrowRight'); expect(await t() === 33, `one frame: ${await t()}`);
+    await press('ArrowRight', { shift: true }); expect(await t() === 1033, `one second: ${await t()}`);
+    await press('ArrowLeft'); expect(await t() === 1000, `back a frame: ${await t()}`);
+    await press('l'); expect(await t() === 3000, `L skips two seconds: ${await t()}`);
+    await press('j'); expect(await t() === 1000, `J skips back: ${await t()}`);
+    await press('End'); const end = await evaluate(`window.ReelMakerCtx.state.timeline.durationMs - 1`); expect(await t() === end, `End: ${await t()}`);
+    expect(/, scene (\d+) of \1, End card$/.test(await text()), `valuetext at the end: ${await text()}`);
+    await press('Home'); expect(await t() === 0, `Home: ${await t()}`);
+    await press('k'); await sleep(250); expect(await evaluate(`window.ReelMakerCtx.state.playing`), 'K did not play');
+    await press('k'); await sleep(120); expect(!(await evaluate(`window.ReelMakerCtx.state.playing`)), 'K did not pause');
+    expect(await evaluate(`document.activeElement.id`) === 'rm-scrub', 'focus left the scrubber');
+  });
+  await step('the scene on screen is described in words, on a scene change only', async () => {
+    const r = await evaluate(`(async () => { const c = window.ReelMakerCtx; const el = document.querySelector('#rm-scene-desc'); const b = c.state.timeline.beats; c.seek(b[2].inMs + 900); const a = el.textContent; let writes = 0; const mo = new MutationObserver(() => { writes += 1; }); mo.observe(el, { childList: true, characterData: true, subtree: true }); c.seek(b[2].inMs + 1200); c.seek(b[2].inMs + 1500); await new Promise(r => setTimeout(r, 50)); const same = writes; c.seek(b[3].inMs + 900); await new Promise(r => setTimeout(r, 50)); mo.disconnect(); return { a, same, next: el.textContent, live: el.getAttribute('aria-live') }; })()`);
+    expect(/^Scene 3 of \d+: \w/.test(r.a) && /Voiceover: /.test(r.a), `description: ${r.a}`);
+    expect(r.same === 0, `described ${r.same} times inside one scene`);
+    expect(/^Scene 4 of /.test(r.next) && r.live === 'polite', `next: ${r.next}`);
+  });
+  await step('focus returns: the guidelines dialog, a deleted scene, a step change', async () => {
+    let r = await evaluate(`(async () => { const link = document.querySelector('#rm-pane-edit [data-open-guide]'); document.querySelector('#rm-lint').hidden = false; link.focus(); link.click(); await new Promise(r => setTimeout(r, 80)); const inDialog = document.querySelector('#rm-guide').contains(document.activeElement); document.querySelector('#rm-guide').close(); await new Promise(r => setTimeout(r, 80)); document.querySelector('#rm-lint').hidden = true; return { inDialog, back: document.activeElement === link }; })()`);
+    expect(r.inDialog && r.back, `guidelines dialog: ${JSON.stringify(r)}`);
+    r = await evaluate(`(async () => { const c = window.ReelMakerCtx; const n = c.state.plan.beats.length; const id = c.state.plan.beats[2].id; document.querySelector('#rm-beats [data-beat="' + id + '"] [data-remove]').click(); await new Promise(r => setTimeout(r, 80)); const a = document.activeElement; const onFace = a.matches('#rm-beats [data-sb-face]') && a.closest('[data-beat]').dataset.beat === c.state.selected; document.querySelector('#rm-toasts .es-toast-action').click(); await new Promise(r => setTimeout(r, 80)); return { onFace, n, after: c.state.plan.beats.length, words: c.ES.voMatchesScript(c.state.plan) }; })()`);
+    expect(r.onFace && r.after === r.n && r.words, `delete + undo: ${JSON.stringify(r)}`);
+    await must('#rm-steps [data-step="topic"]'); await sleep(80);
+    expect(await evaluate(`document.activeElement.matches('#rm-fmt-entry [role="radio"][aria-checked="true"]')`), 'Start: focus is not on the picked tile');
+    await must('#rm-steps [data-step="edit"]'); await sleep(80);
+    expect(await evaluate(`document.activeElement.matches('#rm-beats .rm-card.is-on [data-sb-face]')`), 'Storyboard: focus is not on the picked scene');
+  });
+  await step('Size 4:5: the preview, the thumbnails and the export follow', async () => {
+    await must('#rm-aspect [data-aspect="4:5"]'); await sleep(250);
+    const r = await evaluate(`({ h: document.querySelector('#rm-canvas').height, size: window.ReelMakerCtx.state.timeline.size.join('x'), thumb: document.querySelector('#rm-beats [data-sb-thumb]').height, cls: document.querySelector('#rm-device').classList.contains('is-45'), meta: document.querySelector('#rm-stage-meta').textContent })`);
+    expect(r.h === 1350 && r.size === '1080x1350' && r.thumb === 135 && r.cls && /1080×1350/.test(r.meta), `4:5: ${JSON.stringify(r)}`);
+  });
+  await audit('script-size-45', w);
+  await click('#rm-aspect [data-aspect="9:16"]'); await sleep(200);
+  await step('versions: three ways, a switcher above the storyboard (looks from lane A; a stand-in here when they are not loaded)', async () => {
+    const r = await evaluate(`(async () => { const c = window.ReelMakerCtx; let look = 'paper';
+      if (!c.modules.looks) c.register('looks', { list: () => [{ id: 'paper', label: 'Paper', blurb: 'Paper' }, { id: 'ink', label: 'Ink', blurb: 'Ink' }, { id: 'bold', label: 'Bold', blurb: 'Bold' }], current: () => (c.state.plan && c.state.plan.look) || look, set: id => { look = id; if (c.state.plan) c.state.plan.look = id; c.emit('look', { look: id }); return true; }, thumb: () => {} });
+      c.renderEdit(); await new Promise(r => setTimeout(r, 60));
+      const pickers = [...document.querySelectorAll('#rm-looks, #rm-styles, #rm-styles-edit')].filter(e => e.getBoundingClientRect().height > 0).map(e => e.id);
+      const btn = document.querySelector('#rm-versions-make'); const label = btn.textContent.trim(); const note = document.querySelector('#rm-versions-note').textContent; btn.focus(); btn.click(); await new Promise(r => setTimeout(r, 300));
+      const radios = [...document.querySelectorAll('#rm-version-pick [role="radio"]')]; const labels = radios.map(b => b.textContent); const base = c.state.plan; const words = c.state.plan.beats.map(b => b.vo).join(' ');
+      radios[1].click(); await new Promise(r => setTimeout(r, 200));
+      const v2 = { look: c.state.plan.look, same: c.state.plan.beats.map(b => b.vo).join(' ') === words, ids: c.state.plan.beats.map(b => b.id).join() === base.beats.map(b => b.id).join(), other: c.state.plan !== base, checked: document.querySelectorAll('#rm-version-pick [role="radio"]')[1].getAttribute('aria-checked'), focus: document.activeElement.dataset.version };
+      document.querySelectorAll('#rm-version-pick [role="radio"]')[0].click(); await new Promise(r => setTimeout(r, 200));
+      return { pickers, label, note, labels, v2, back: c.state.plan === base, n: c.state.versions.length }; })()`);
+    expect(r.pickers.join() === 'rm-looks', `look pickers showing: ${r.pickers}`);
+    expect(r.label === 'Make 3 versions' && /Free/.test(r.note), `button: ${r.label} / ${r.note}`);
+    expect(r.n === 3 && r.labels[0] === 'As made' && r.labels.slice(1).every(l => / look$/.test(l)), `versions: ${r.labels}`);
+    expect(r.v2.look && r.v2.look !== 'paper' && r.v2.same && r.v2.ids && r.v2.other && r.v2.checked === 'true' && r.v2.focus === '1', `version 2: ${JSON.stringify(r.v2)}`);
+    expect(r.back, 'version 1 is not the reel as made');
+  });
+  await scrollTop();
+  await audit('script-versions', w);
   await step('guidelines dialog', async () => { await must('#rm-lint [data-open-guide], [data-open-guide]'); await waitFor(`document.querySelector('#rm-guide').open && document.querySelectorAll('#rm-guide-body section').length >= 5`, 2000, 'guidelines'); });
   await audit('script-guidelines', w);
   await evaluate(`document.querySelector('#rm-guide').close()`);
@@ -365,6 +509,76 @@ for (const w of WIDTHS) {
   });
   await scrollTop();
   await audit('script-export-45', w);
+
+  // ── Reduced motion: a calm preview by default, exports untouched ──
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await load();
+  await step('reduced motion: the preview cuts between scenes and says the export does not', async () => {
+    await must('#rm-source [data-source="script"]');
+    await typeInto('#rm-script', SCRIPT);
+    await must('#rm-write');
+    await waitFor(`!document.querySelector('#rm-pane-edit').hidden`, 30000, 'Storyboard step');
+    const r = await evaluate(`(() => { const c = window.ReelMakerCtx; const cv = document.querySelector('#rm-canvas'); const sum = () => { const d = cv.getContext('2d').getImageData(0, 0, 1080, 1920).data; let n = 0; for (let i = 0; i < d.length; i += 64) n = (n + d[i] * 3 + d[i + 1] * 5 + d[i + 2] * 7) % 1000003; return n; };
+      const b = c.state.timeline.beats[2]; const at = t => { c.seek(t); return sum(); };
+      const on = c.state.calm; const pressed = document.querySelector('#rm-calm').getAttribute('aria-pressed'); const note = document.querySelector('#rm-calm-note'); const noteShown = !note.hidden && /export keeps the full motion/i.test(note.textContent);
+      const calmMid = at(b.inMs + 100); const calmHeld = at(b.inMs - 1);
+      document.querySelector('#rm-calm').click(); const fullMid = at(b.inMs + 100); const off = !c.state.calm && note.hidden;
+      document.querySelector('#rm-calm').click();
+      return { on, pressed, noteShown, cut: calmMid === calmHeld, wipe: fullMid !== calmMid, off, exportSame: String(c.exportReel).includes('calm') === false }; })()`);
+    expect(r.on && r.pressed === 'true' && r.noteShown, `calm preview is not on by default: ${JSON.stringify(r)}`);
+    expect(r.cut, 'mid-wipe is not a cut (the old scene is not held)');
+    expect(r.wipe && r.off, 'the full-motion preview did not come back');
+    expect(r.exportSame, 'the export reads the calm setting');
+  });
+  await audit('reduced-motion-storyboard', w);
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+
+  // ── Focus order on Start; Inspiration and Brainstorm with and without lane B ──
+  await load();
+  await waitFor(`document.querySelector('#rm-trends')?.getAttribute('aria-busy') === 'false'`, 8000, 'trends');
+  await step('focus order: steps, Start tiles (one stop), the source, recipes (one stop), Make my reel, then Settings', async () => {
+    const order = await evaluate(`(() => { const main = document.querySelector('#main'); const tab = [...main.querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex]')].filter(e => e.tabIndex >= 0 && !e.disabled && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && !e.closest('[hidden], [inert]') && !(e.closest('details:not([open])') && !e.matches('summary')));
+      const zone = e => e.closest('#rm-steps') ? 'steps' : e.closest('#rm-fmt-entry') ? 'tiles' : e.closest('#rm-topic') ? 'source' : e.closest('#rm-recipes') ? 'recipes' : e.id === 'rm-write' ? 'make' : e.closest('#rm-settings') ? 'rail' : e.closest('#rm-stage') ? 'stage' : 'other';
+      const zones = []; tab.forEach(e => { const z = zone(e); if (zones[zones.length - 1] !== z) zones.push(z); });
+      return { zones, tiles: tab.filter(e => e.closest('#rm-fmt-entry')).length, recipes: tab.filter(e => e.closest('#rm-recipes')).length, positive: tab.filter(e => e.tabIndex > 0).length }; })()`);
+    const want = ['steps', 'tiles', 'source', 'recipes', 'make'];
+    const got = order.zones.filter(z => want.includes(z));
+    expect(got.join() === want.join(), `tab order: ${order.zones}`);
+    expect(order.zones.indexOf('rail') > order.zones.indexOf('make') || w >= 901, `Settings before Make my reel on a phone: ${order.zones}`);
+    expect(order.tiles === 1 && order.recipes === 1 && order.positive === 0, `roving stops: ${JSON.stringify(order)}`);
+    // Real keys: Tab from the picked tile leaves the tiles; arrows move inside them.
+    await evaluate(`(document.querySelector('#rm-fmt-entry [aria-checked="true"]').focus(), 1)`);
+    await press('ArrowRight'); await sleep(80);
+    expect(await evaluate(`document.activeElement.dataset.start === 'words' && window.ReelMakerCtx.state.start === 'words' && !document.querySelector('#rm-source-words').hidden`), 'Arrow right did not move to Script or brief');
+    await press('Tab');
+    expect(await evaluate(`!document.activeElement.closest('#rm-fmt-entry') && Boolean(document.activeElement.closest('#rm-topic'))`), 'Tab from a tile did not go to its source');
+    const ring = await evaluate(`(() => { document.querySelector('#rm-fmt-entry [aria-checked="true"]').focus(); return 1; })()`); void ring;
+    await press('ArrowLeft'); await sleep(80);
+  });
+  await step('Inspiration: off until lane B is loaded, then its panels sit on the Start screen', async () => {
+    const hasB = await evaluate(`Boolean(window.ReelMakerCtx.modules.radar || window.ReelMakerCtx.modules.ideas)`);
+    if (!hasB) {
+      const off = await evaluate(`(() => { const t = document.querySelector('#rm-fmt-entry [data-start="inspo"]'); t.click(); return { disabled: t.getAttribute('aria-disabled'), start: window.ReelMakerCtx.state.start, brainstorm: document.querySelector('#rm-brainstorm-row').hidden, toast: document.querySelector('#rm-toasts').textContent }; })()`);
+      expect(off.disabled === 'true' && off.start !== 'inspo' && off.brainstorm && /coming soon/i.test(off.toast), `without lane B: ${JSON.stringify(off)}`);
+      await evaluate(`(() => { const c = window.ReelMakerCtx; window.__b = { radar: 0, ideas: 0, opened: null }; const panel = (name, title) => ({ mount(el) { window.__b[name] += 1; el.innerHTML = '<div class="rm-sec"><h3 class="rm-sec__title">' + title + '</h3><p class="rm-hint">Stand-in panel for the check.</p></div>'; return this; }, open(o) { window.__b.opened = { name, ...o }; return this; }, close() {} }); c.register('radar', panel('radar', 'What is doing well')); c.register('ideas', panel('ideas', 'Ideas room')); document.querySelectorAll('#rm-toasts .rm-toast').forEach(t => t.remove()); return 1; })()`);
+    }
+    await sleep(80);
+    await must('#rm-trends [data-trend]');
+    const r = await evaluate(`(async () => { const c = window.ReelMakerCtx; const t = document.querySelector('#rm-fmt-entry [data-start="inspo"]'); const row = document.querySelector('#rm-brainstorm-row'); const enabled = t.getAttribute('aria-disabled') !== 'true' && !row.hidden;
+      document.querySelector('#rm-brainstorm').click(); await new Promise(r => setTimeout(r, 120));
+      return { enabled, start: c.state.start, shown: !document.querySelector('#rm-source-inspo').hidden && document.querySelector('#rm-radar-host').childElementCount > 0 && document.querySelector('#rm-ideas-host').childElementCount > 0 && document.querySelector('#rm-radar-host').hidden && !document.querySelector('#rm-ideas-host').hidden && !document.querySelector('#rm-inspo-tabs').hidden, make: document.querySelector('#rm-write').hidden, recipes: document.querySelector('#rm-recipe-sec').hidden, temp: Boolean(document.querySelector('#rb-entry')), stub: window.__b || null }; })()`);
+    expect(r.enabled && r.start === 'inspo' && r.shown, `Inspiration: ${JSON.stringify(r)}`);
+    expect(r.make && r.recipes, 'Make my reel or the recipes still show on Inspiration');
+    expect(!r.temp, 'lane B’s temporary buttons are still on the page');
+    if (r.stub) expect(r.stub.radar === 1 && r.stub.ideas === 1 && r.stub.opened && r.stub.opened.name === 'ideas' && r.stub.opened.trend && r.stub.opened.topic, `stand-in calls: ${JSON.stringify(r.stub)}`);
+  });
+  await audit('start-inspiration', w);
+  await step('Inspiration: one panel at a time', async () => {
+    await must('#rm-inspo-tabs [data-inspo="radar"]');
+    await waitFor(`!document.querySelector('#rm-radar-host').hidden && document.querySelector('#rm-ideas-host').hidden`, 2000, 'the radar panel');
+  });
+  await audit('start-inspiration-radar', w);
+  await step('back to Trend', async () => { await must('#rm-fmt-entry [data-start="trend"]'); await waitFor(`!document.querySelector('#rm-write').hidden && !document.querySelector('#rm-source-trend').hidden`, 2000, 'trend list'); });
 
   // ── Game Swing ──
   await load();
@@ -508,7 +722,7 @@ for (const w of WIDTHS) {
   await audit('offline-review', w);
   Object.assign(scenario, { config: 'ok' });
 
-  if (Date.now() - t0 > 235000 && w !== WIDTHS[WIDTHS.length - 1]) { behaviour.push('time budget hit: some widths not swept'); break; }
+  if (Date.now() - t0 > 900000 && w !== WIDTHS[WIDTHS.length - 1]) { behaviour.push('time budget hit: some widths not swept'); break; }
 }
 
 ws.close(); cleanup();

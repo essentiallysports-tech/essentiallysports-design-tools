@@ -1,0 +1,167 @@
+/* Reels Studio 2.0, lane C (inputs): the media tray, your own voiceover and
+   caption files (reel-media-tray.js, reel-voice-input.js,
+   reel-captions-export.js). Layout only: colours, type, spacing, radius and
+   buttons come from design-tokens.css and es-ui.css. Prefix: ri-. */
+.ri-tray, .ri-voice, .ri-drop, .ri-captions, .ri-vo-host, .ri-script-voice {
+  --ri-surface: var(--es-bg, #fff);
+  --ri-sunk: var(--es-sunk, #f0f2f5);
+  --ri-line: var(--es-line, #dfe2e7);
+  --ri-ink: var(--es-ink, #0e1014);
+  --ri-ink-3: var(--es-ink-3, #565c67);
+  --ri-brand: var(--es-brand, #0a7dfa);
+  --ri-brand-text: var(--es-brand-text, #0a62c7);
+  --ri-brand-soft: var(--es-brand-soft, #e8f2ff);
+  --ri-good: var(--es-good, #0e7a3d);
+  --ri-warn: var(--es-warn, #b45309);
+  --ri-warn-soft: var(--es-warn-soft, #fff8ed);
+  --ri-bad: var(--es-bad, #c42323);
+  --ri-bad-soft: var(--es-bad-soft, #fdeeee);
+}
+html[data-theme="dark"] :is(.ri-tray, .ri-voice, .ri-drop, .ri-captions, .ri-vo-host, .ri-script-voice) {
+  --ri-surface: #1F2126;
+  --ri-sunk: #2A2D34;
+  --ri-line: #3B4049;
+  --ri-ink: #FFFFFF;
+  --ri-ink-3: #98A6BF;
+  --ri-brand-text: #9DCBFD;
+  --ri-brand-soft: rgb(10 125 250 / .2);
+  --ri-good: var(--es-good-on-dark, #4cc985);
+  --ri-warn: var(--es-warn-on-dark, #fcd34d);
+  --ri-warn-soft: var(--es-warn-soft-on-dark, rgb(245 158 11 / .16));
+  --ri-bad: var(--es-bad-on-dark, #ff8a8a);
+  --ri-bad-soft: var(--es-bad-soft-on-dark, rgb(255 138 138 / .14));
+}
+
+/* ── Caption files (Export) ─────────────────────────────────────────────── */
+.ri-captions { margin-top: var(--es-space-4, 16px); }
+.ri-captions__row { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
+.ri-captions__row .es-btn { flex: 1 1 88px; }
+
+/* ── Media tray ─────────────────────────────────────────────────────────── */
+.ri-tray { display: flex; flex-direction: column; gap: var(--es-space-3, 12px); width: 100%; min-width: 0; padding: var(--es-space-3, 12px); border-radius: var(--es-radius-control, 12px); background: var(--ri-surface); box-shadow: inset 0 0 0 1px var(--ri-line); color: var(--ri-ink); font-family: var(--es-font-ui); text-align: left; }
+.ri-tray { box-sizing: border-box; max-width: 100%; overflow: hidden; }
+.ri-tray > * { min-width: 0; max-width: 100%; }
+.ri-tray__head { display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-3, 12px); }
+.ri-tray__head > div { min-width: 0; }
+.ri-tray__head .es-btn { flex: none; }
+.ri-tray__title { margin: 0 0 2px; font: 700 14px/1.3 var(--es-font-ui); color: var(--ri-ink); }
+.ri-tray__count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-left: 4px; padding: 0 6px; border-radius: 10px; background: var(--ri-sunk); color: var(--ri-ink-3); font-size: 12px; font-weight: 600; vertical-align: 1px; }
+.ri-tray .rm-hint { margin: 0; color: var(--ri-ink-3); font-size: 13px; line-height: 1.45; }
+/* position: relative keeps the visually hidden labels inside the scroller (else they widen the page). */
+.ri-tray__list { position: relative; display: flex; gap: var(--es-space-2, 8px); margin: 0; padding: 2px; list-style: none; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.ri-tray__item { position: relative; display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: var(--es-space-2, 8px); flex: 0 0 248px; padding: var(--es-space-2, 8px); border-radius: var(--es-radius-control, 12px); background: var(--ri-sunk); }
+.ri-tray__item[draggable="true"] { cursor: grab; }
+.ri-tray__item.is-used { box-shadow: inset 0 0 0 1px var(--ri-line); background: var(--ri-surface); }
+.ri-tray__thumb { position: relative; display: grid; place-items: center; width: 48px; height: 48px; border-radius: 8px; overflow: hidden; background: var(--ri-line); color: var(--ri-ink-3); }
+.ri-tray__thumb :is(img, canvas) { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ri-tray__thumb > svg { width: 20px; height: 20px; }
+.ri-tray__badge { position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; background: rgb(14 16 20 / .72); color: #fff; }
+.ri-tray__badge svg { width: 12px; height: 12px; }
+.ri-tray__meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ri-tray__name { margin: 0; font-size: 13px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ri-tray__select.es-select { min-height: 32px; padding: 0 32px 0 10px; font-size: 13px; background-position: right 10px center; }
+.ri-tray__missing { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); padding: 10px 12px; border-radius: var(--es-radius-control, 12px); background: var(--ri-warn-soft); font-size: 13px; line-height: 1.45; }
+.ri-tray__missing > svg { width: 18px; height: 18px; color: var(--ri-warn); }
+.ri-tray__missing p { margin: 0; }
+/* A scene that will take the drop. */
+.ri-drop-on { outline: 2px solid var(--es-brand, #0a7dfa) !important; outline-offset: 2px; }
+body.ri-dragging-item :is([data-pick], [data-ri-beat]) { cursor: copy; }
+
+/* Drop anywhere: the overlay never takes the pointer, so a scene underneath still gets the drop. */
+.ri-drop { position: fixed; inset: 0; z-index: 2147483000; display: grid; place-items: center; padding: var(--es-space-4, 16px); background: rgb(10 125 250 / .1); box-shadow: inset 0 0 0 3px var(--ri-brand); pointer-events: none; font-family: var(--es-font-ui); }
+.ri-drop[hidden] { display: none; }
+.ri-drop__card { display: grid; justify-items: center; gap: 6px; max-width: 360px; padding: var(--es-space-6, 24px) var(--es-space-8, 32px); border-radius: var(--es-radius-container, 16px); background: var(--ri-surface); color: var(--ri-ink); box-shadow: var(--es-shadow-float, 0 12px 32px rgb(14 16 20 / .18)); text-align: center; }
+.ri-drop__card svg { width: 28px; height: 28px; color: var(--ri-brand-text); }
+.ri-drop__title { margin: 0; font: 700 16px/1.3 var(--es-font-ui); }
+.ri-drop__copy { margin: 0; color: var(--ri-ink-3); font-size: 13px; line-height: 1.45; }
+
+/* ── Your voiceover: the panel in the Voice fold ────────────────────────── */
+.ri-vo { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--es-space-3, 12px); padding: var(--es-space-3, 12px); border-radius: var(--es-radius-control, 12px); background: var(--ri-sunk); color: var(--ri-ink); font-size: 14px; line-height: 1.45; }
+.ri-vo p { margin: 0; }
+.ri-vo .rm-hint { color: var(--ri-ink-3); font-size: 13px; }
+.ri-vo .es-badge { margin-left: 4px; vertical-align: 1px; }
+.ri-vo.is-on { background: var(--ri-surface); box-shadow: inset 0 0 0 1px var(--ri-line); }
+.ri-vo--lost { grid-template-columns: auto minmax(0, 1fr) auto; background: var(--ri-warn-soft); }
+.ri-vo--lost > svg { width: 18px; height: 18px; color: var(--ri-warn); }
+.ri-vo__actions { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); justify-content: flex-end; }
+.ri-vo .es-btn svg, .ri-script-voice svg { width: 16px; height: 16px; }
+.ri-nudge { grid-column: 1 / -1; font-size: 13px; }
+.ri-nudge > summary { width: fit-content; padding: 4px 0; color: var(--ri-brand-text); font-weight: 500; cursor: pointer; border-radius: 4px; }
+.ri-nudge > summary:focus-visible { outline: var(--es-focus-outline, 2px solid #0a6fde); outline-offset: var(--es-focus-offset, 2px); }
+.ri-nudge__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 4px var(--es-space-4, 16px); margin: var(--es-space-2, 8px) 0 0; padding: 0; list-style: none; }
+.ri-nudge__list li { display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); min-height: 36px; }
+.ri-nudge__ctl { display: inline-flex; align-items: center; gap: 4px; }
+.ri-nudge__val { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; color: var(--ri-ink); }
+.ri-script-voice { align-self: flex-start; }
+
+/* ── Your voiceover: the dialog ─────────────────────────────────────────── */
+.ri-voice { box-sizing: border-box; width: min(560px, calc(100vw - 32px)); max-width: calc(100vw - 32px); font-family: var(--es-font-ui); }
+.ri-voice__body { display: flex; flex-direction: column; gap: var(--es-space-4, 16px); min-width: 0; }
+.ri-voice .rm-hint { margin: 0; color: var(--ri-ink-3); font-size: 13px; line-height: 1.45; }
+.ri-voice__actions { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
+.ri-voice__actions .es-btn svg { width: 18px; height: 18px; }
+.ri-voice__status { min-height: 20px; margin: var(--es-space-3, 12px) 0 0; color: var(--ri-ink-3); font-size: 13px; line-height: 1.45; }
+.ri-voice__status:empty { display: none; }
+.ri-voice__error { margin: var(--es-space-3, 12px) 0 0; padding: 10px 12px; border-radius: var(--es-radius-control, 12px); background: var(--ri-bad-soft); color: var(--ri-bad); font-size: 14px; line-height: 1.45; }
+.ri-voice__error[hidden] { display: none; }
+.ri-prompter { max-height: min(40dvh, 320px); overflow: auto; padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border-radius: var(--es-radius-control, 12px); background: var(--ri-sunk); color: var(--ri-ink); }
+.ri-prompter:focus-visible { outline: var(--es-focus-outline, 2px solid #0a6fde); outline-offset: var(--es-focus-offset, 2px); }
+.ri-prompter ol { display: grid; gap: var(--es-space-3, 12px); margin: 0; padding: 0 0 0 28px; }
+.ri-prompter li { font-size: 18px; line-height: 1.4; font-weight: 500; }
+.ri-prompter li::marker { color: var(--ri-ink-3); font-size: 13px; font-weight: 600; }
+.ri-prompter--empty p { margin: 0 0 4px; font-size: 15px; }
+.ri-rec { display: grid; gap: var(--es-space-2, 8px); padding: var(--es-space-3, 12px) var(--es-space-4, 16px); border-radius: var(--es-radius-control, 12px); box-shadow: inset 0 0 0 1px var(--ri-line); }
+.ri-rec__count { min-height: 0; font: 800 56px/1 var(--es-font-display, "Roboto Condensed", sans-serif); color: var(--ri-brand-text); text-align: center; }
+.ri-rec__count:empty { display: none; }
+.ri-rec__row { display: flex; align-items: baseline; gap: var(--es-space-2, 8px); font-variant-numeric: tabular-nums; }
+.ri-rec__dot { align-self: center; width: 10px; height: 10px; border-radius: 50%; background: var(--ri-ink-3); }
+.ri-rec.is-live .ri-rec__dot { background: var(--ri-bad); animation: ri-pulse 1.2s ease-in-out infinite; }
+.ri-rec__time { font-size: 22px; font-weight: 700; color: var(--ri-ink); }
+.ri-rec.is-ending .ri-rec__time { color: var(--ri-warn); }
+.ri-rec__of { color: var(--ri-ink-3); font-size: 13px; }
+.ri-meter { height: 8px; border-radius: 4px; background: var(--ri-sunk); overflow: hidden; }
+.ri-meter > span { display: block; width: 0; height: 100%; border-radius: 4px; background: var(--ri-good); transition: width 80ms linear; }
+.ri-meter.is-hot > span { background: var(--ri-bad); }
+.ri-review { display: grid; gap: var(--es-space-2, 8px); }
+.ri-review__title { margin: 0; font-size: 15px; }
+.ri-review audio { width: 100%; }
+.ri-working { display: grid; gap: var(--es-space-2, 8px); }
+.ri-working__bar { display: block; height: 8px; border-radius: 4px; }
+@keyframes ri-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .ri-rec.is-live .ri-rec__dot { animation: none; }
+  .ri-meter > span { transition: none; }
+}
+@media (forced-colors: active) {
+  .ri-drop { border: 3px solid Highlight; }
+  .ri-meter { border: 1px solid CanvasText; }
+  .ri-meter > span { background: Highlight; }
+  .ri-drop-on { outline-color: Highlight !important; }
+}
+
+/* Phones: stacked, full-width controls, 44px targets. */
+@media (max-width: 600px) {
+  .ri-tray__head { align-items: flex-start; }
+  .ri-tray__item { flex-basis: min(248px, 82vw); }
+  .ri-tray__missing { grid-template-columns: auto minmax(0, 1fr); }
+  .ri-tray__missing .es-btn { grid-column: 1 / -1; }
+  .ri-vo, .ri-vo--lost { grid-template-columns: minmax(0, 1fr); }
+  .ri-vo--lost > svg { display: none; }
+  .ri-vo__actions { justify-content: flex-start; }
+  .ri-voice__actions .es-btn { flex: 1 1 100%; }
+  .ri-prompter li { font-size: 16px; }
+  .ri-script-voice { width: 100%; }
+  /* Touch targets: 44px on phones, whatever the pointer reports. */
+  :is(.ri-tray, .ri-vo, .ri-captions) .es-btn, .es-btn.ri-script-voice, .ri-voice__actions .es-btn { --es-btn-h: 44px; height: auto; min-height: 44px; }
+  .ri-tray__item { grid-template-columns: 44px minmax(0, 1fr) auto; }
+  .ri-tray__thumb { width: 44px; height: 44px; }
+  .ri-tray__select.es-select { min-height: 44px; }
+  .ri-nudge__list li { min-height: 44px; }
+  .ri-tray__remove, .ri-nudge__ctl .rm-icon-btn, .ri-voice .rm-icon-btn { width: 44px; height: 44px; }
+  .ri-nudge > summary { min-height: 44px; display: flex; align-items: center; }
+}
+@media (pointer: coarse) {
+  .ri-tray__select.es-select { min-height: 44px; }
+  .ri-nudge__list li { min-height: 44px; }
+  .ri-tray__remove, .ri-nudge__ctl .rm-icon-btn { width: 44px; height: 44px; }
+}
