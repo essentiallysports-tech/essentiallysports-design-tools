@@ -511,6 +511,10 @@
       if (text != null) $('mx-push-status').textContent = text;
     }
     function putWithProgress(url, blob, onPct) {
+      // Sample data: the sample upload URL is not a real server, so imitate the upload (progress, then done).
+      if (String(url).startsWith('/__qa/') && isDemo(window.location) && !window.__mxRealQaUpload) {
+        return new Promise(resolve => { let p = 0; const t = setInterval(() => { p += 0.25; onPct(Math.min(1, p)); if (p >= 1) { clearInterval(t); resolve(); } }, 120); });
+      }
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', url);
