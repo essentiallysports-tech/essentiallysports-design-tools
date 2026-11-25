@@ -40,7 +40,8 @@ await test('registry: news formats unchanged; gameswing, replay, archive registe
   assert.deepEqual(F.FORMAT_IDS, ['explainer', 'stat', 'top5', 'quote'], 'the picker still lists the four news formats');
   assert.deepEqual(F.DATA_FORMAT_IDS, ['gameswing', 'replay', 'archive'], 'build order');
   assert.deepEqual(F.ALL_FORMAT_IDS, [...F.FORMAT_IDS, ...F.DATA_FORMAT_IDS]);
-  const want = { gameswing: ['series', 'game', ['reel']], replay: ['classic', 'clip', ['reel', 'carousel']], archive: ['countdown', 'player', ['reel', 'carousel']] };
+  // Reels 2.0 (2026-11-25): every data format defaults to the ES style; the look re-skins it.
+  const want = { gameswing: ['es', 'game', ['reel']], replay: ['es', 'clip', ['reel', 'carousel']], archive: ['es', 'player', ['reel', 'carousel']] };
   for (const [id, [style, source, outputs]] of Object.entries(want)) {
     const f = F.FORMATS[id];
     assert.equal(f.id, id);
@@ -143,7 +144,7 @@ await test('elements: stub draws a labelled placeholder in every style and never
     }
   }
   assert.equal(S.drawPlaceholder(null, 'scorebug').element, 'scorebug', 'no context: returns the op only');
-  assert.equal(S.suggestStyle({ format: 'gameswing' }).id, 'series');
+  assert.equal(S.suggestStyle({ format: 'gameswing' }).id, 'es', 'data formats default to the ES style (2026-11-25)');
   assert.equal(S.suggestStyle({ format: 'top5', text: '' }).id, 'es', 'news reels default to the ES house style (2026-11-21)');
   assert.equal(S.legacySuggestStyle({ format: 'top5', text: '' }).id, 'countdown', 'the old suggestion is kept for hand-picked looks');
 });
@@ -255,7 +256,9 @@ await test('schema v2: the three fixture timelines validate; refs resolve to dat
     const out = T.validateTimeline(tl);
     assert.deepEqual(out.errors, [], name);
     assert.ok(F.FORMATS[tl.format] && F.isDataFormat(tl.format));
-    assert.equal(tl.style, F.FORMATS[tl.format].defaultStyle, `${name} uses the default style`);
+    // The fixtures were saved before 2026-11-25, in the styles that are now retired:
+    // they still validate and draw (the legacy code is kept for one release).
+    assert.ok(S.isLegacy(tl.style) || tl.style === F.FORMATS[tl.format].defaultStyle, `${name} is in a known style`);
   }
   const game = fixture('timeline-v2-gameswing.json');
   assert.equal(T.resolveRef(game, 'play:401873063558').text, 'Deebo Samuel Sr. 11 Yd pass from Brock Purdy (Eddy Pineiro Kick)');
@@ -384,7 +387,7 @@ await test('clamps: server plan, project save and event accept the data formats;
     // plan (AI off -> grounded draft) keeps the data format.
     const plan = await _test.plan({ brief: 'The 49ers beat the Cowboys 46-40.', format: 'gameswing', sport: 'nfl' }, { email: 'e' }, { off: true });
     assert.equal(plan.plan.format, 'gameswing');
-    assert.equal(plan.style, 'series', 'the format default style is suggested');
+    assert.equal(plan.style, 'es', 'the format default style (ES, 2026-11-25) is suggested');
     const auth = { user: { email: 'editor@essentiallysports.com' } };
     await _test.projectSave({ project: { id: '00000000-0000-4000-8000-000000000001', format: 'archive', timeline: { v: 2 } } }, auth, 'tok');
     assert.equal(posted.at(-1).body.format, 'archive');

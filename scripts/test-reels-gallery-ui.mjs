@@ -137,33 +137,15 @@ t('entry panel: the data row plus every format in place, wired for expand/collap
   assert.match(open, /data-gformat="top5"[^>]*aria-current="true"/);
 });
 
-t('page: "All formats" expands the panel in place (no step change), remembered, Esc collapses', () => {
-  assert.match(js, /const ENTRY_KEY = 'frameup\.reels\.allFormats\.v1';/);
-  assert.match(js, /try \{ return localStorage\.getItem\(ENTRY_KEY\) === '1'; \} catch \{ return false; \}/);
-  assert.match(js, /try \{ localStorage\.setItem\(ENTRY_KEY, entryOpen \? '1' : '0'\); \} catch/);
-  const entryClick = js.slice(js.indexOf('function onEntryClick'), js.indexOf('function onEntryKey'));
-  assert.match(entryClick, /\[data-gall\]'\)\) \{ setEntryOpen\(!entryOpen\); return; \}/);
-  assert.doesNotMatch(entryClick, /openGallery|goStep/, 'the toggle never changes the step');
-  const setOpen = js.slice(js.indexOf('function setEntryOpen'), js.indexOf('function openGallery'));
-  assert.match(setOpen, /setAttribute\('aria-expanded', String\(entryOpen\)\)/);
-  assert.match(setOpen, /toggleAttribute\('inert', !entryOpen\)/);
-  assert.match(setOpen, /classList\.toggle\('is-open', entryOpen\)/);
-  assert.match(js, /if \(event\.key !== 'Escape' \|\| !entryOpen\) return;[\s\S]{0,80}setEntryOpen\(false, \{ focus: true \}\)/);
-  assert.match(js, /els\.fmtEntry\.addEventListener\('click', onEntryClick\);/);
-  assert.match(js, /els\.fmtEntry\.addEventListener\('keydown', onEntryKey\);/);
-  assert.match(js, /G\.entryHtml\(model, \{ expanded: entryOpen, selected \}\)/);
-  // Tiles in the panel pick exactly as the gallery tiles do.
-  assert.match(js, /function onEntryClick[\s\S]{0,160}onGalleryClick\(event\);/);
-  // The Format step (steps nav) still opens the full gallery.
-  assert.match(js, /if \(btn\.dataset\.step === 'format'\) openGallery\(\)/);
-  // CSS: height animation via grid rows, reduced motion, phone scroll-snap + 2 columns.
-  const block = css.slice(css.indexOf('feature/reels-gallery-expand'));
-  assert.match(block, /\.rm-fmt-entry__more \{ display: grid; grid-template-rows: 0fr;/);
-  assert.match(block, /\.rm-fmt-entry\.is-open \.rm-fmt-entry__more \{ grid-template-rows: 1fr;/);
-  assert.match(block, /prefers-reduced-motion: reduce\)[\s\S]{0,120}transition: none/);
-  assert.match(block, /scroll-snap-type: x mandatory/);
-  assert.match(block, /repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(block, /\.rm-gtile__art \{ aspect-ratio: 4 \/ 5; \}/);
+t('page: Game, Clip and Player are Start tiles (the gallery and its entry panel are retired)', () => {
+  assert.match(js, /\{ id: 'game', [^}]*format: 'gameswing' \}/);
+  assert.match(js, /\{ id: 'clip', [^}]*format: 'replay' \}/);
+  assert.match(js, /\{ id: 'player', [^}]*format: 'archive' \}/);
+  // A tile keeps the data-gformat hook and says "Soon" until its server modes are on.
+  assert.match(js, /data-start="\$\{tile\.id\}"\$\{tile\.format \? ` data-gformat="\$\{tile\.format\}"` : ''\}/);
+  assert.match(js, /G\.formatStatus\(tile\.format, state\.config\.formatModes\) !== 'ready'/);
+  assert.match(js, /if \(tile\.format\) \{ pickFormat\(tile\.format\); return; \}/);
+  assert.doesNotMatch(js, /setEntryOpen|onEntryClick|G\.entryHtml|G\.galleryHtml/, 'no gallery code left in the page');
   ['reel-gallery.js', 'reel-maker.js', 'reel-maker.css'].forEach(f => assert.ok(new RegExp(f.replace(/\./g,'\\.')+'\\?v=[\\w-]+').test(html), `${f} cache key`));
 });
 
@@ -327,13 +309,15 @@ t('page: script tags, panes, steps and tour targets', () => {
   order.forEach(i => assert.ok(i > 0));
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'script load order');
   assert.match(html, /reel-maker\.css\?v=[\w-]+/);
-  for (const id of ['rm-pane-format', 'rm-pane-source', 'rm-gallery', 'rm-fmt-entry', 'rm-data-story', 'rm-data-review', 'rm-view', 'rm-slidenav', 'rm-carousel-out', 'rm-export-carousel']) assert.ok(html.includes(`id="${id}"`), id);
-  assert.equal((html.match(/<li data-dataflow hidden>/g) || []).length, 2, 'Format and Source steps, hidden for the news flow');
+  for (const id of ['rm-pane-source', 'rm-fmt-entry', 'rm-data-story', 'rm-data-review', 'rm-view', 'rm-slidenav', 'rm-carousel-out', 'rm-export-carousel']) assert.ok(html.includes(`id="${id}"`), id);
+  assert.equal((html.match(/data-dataflow/g) || []).length, 0, 'three steps for every reel: the source is picked on the Start screen');
   assert.match(html, /<nav class="rm-steps" id="rm-steps"/, 'existing tour target stays');
   const notes = JSON.parse(readFileSync(path.join(root, 'tours/updates.json'), 'utf8'));
   const entry = notes.entries.find(e => e.id === '2026-11-19-reels-fmt-ui');
   assert.ok(entry && !entry.draft, 'release note');
   entry.items.filter(i => i.target).forEach(i => assert.ok(html.includes(`id="${i.target.slice(1)}"`), i.target));
+  // Reels 2.0: the page loads the recipes, the storyboard and the accessibility module before the page script.
+  ['reel-recipes.js', 'reel-storyboard.js', 'reel-a11y.js'].forEach(f => assert.ok(html.indexOf(`src="${f}`) > 0 && html.indexOf(`src="${f}`) < html.indexOf('src="reel-maker.js'), f));
 });
 
 t('page: news flow untouched; data flow reads formatModes and falls back gracefully', () => {
@@ -346,7 +330,6 @@ t('page: news flow untouched; data flow reads formatModes and falls back gracefu
   assert.match(js, /logEvent\('data'/);
   assert.match(js, /logEvent\('frames'/);
   assert.doesNotMatch(js, /espncdn/, 'no ESPN image hosts in the page');
-  assert.match(css, /\.rm-work\.is-gallery \.rm-stage \{ display: none; \}/);
   assert.doesNotMatch(css.slice(css.indexOf('/* ── Data formats (reels-fmt-ui)')), /#(?:[89a-f][0-9a-f]){1}[0-6][0-9a-f][89a-f][0-9a-f]\b/i, 'no purple hex in the new CSS');
 });
 

@@ -37,11 +37,29 @@ t('picked story is a summary card with Change and Clear', () => {
   assert.match(js, /id="rm-unpick" aria-label="Clear the story">Clear<\/button>/);
 });
 
-t('settings summary has four consistent tiles that open their section', () => {
-  assert.match(js, /\['style', 'Style', st\], \['voice', 'Voice', voice\], \['clips', 'Clips', [^\]]+\], \['format', 'Format', fmt\]/);
-  assert.doesNotMatch(js, /'format auto'/);
-  for (const id of ['rm-set-style', 'rm-set-format', 'rm-set-clips', 'rm-voice-topic']) assert.ok(html.includes(`id="${id}"`), id);
-  assert.match(js, /els\.settings\.open = true/);
+t('one settings rail: Look, Size, Voice, Music, Captions, Sources, Cost; nothing is set in two places', () => {
+  assert.match(html, /<aside class="rm-rail" id="rm-settings" aria-labelledby="rm-rail-title">/);
+  const rail = html.slice(html.indexOf('id="rm-settings"'), html.indexOf('</aside>'));
+  const order = ['rm-style-fold', 'rm-aspect-sec', 'rm-voice"', 'rm-music"', 'rm-captions"', 'rm-sources"', 'rm-costs', 'rm-more'].map(id => rail.indexOf(`id="${id}`));
+  order.forEach((i, k) => assert.ok(i > 0, `rail section ${k}`));
+  assert.deepEqual([...order].sort((x, y) => x - y), order, 'rail order');
+  for (const id of ['rm-aspect', 'rm-voice-edit', 'rm-music-pick', 'rm-capstyle', 'rm-extra-source', 'rm-cost', 'rm-spend', 'rm-clips-on', 'rm-tier', 'rm-factcheck', 'ri-voice-panel']) assert.equal(html.split(`id="${id}"`).length, 2, `${id} once`);
+  for (const gone of ['rm-autoline', 'rm-voice-topic', 'rm-set-style', 'rm-set-format', 'rm-formats', 'rm-stripwrap']) assert.ok(!html.includes(`id="${gone}"`), `${gone} is retired`);
+  assert.match(js, /function renderRail\(\)/);
+  assert.match(js, /function renderAutoline\(\) \{ renderRail\(\); \}/, 'the page context keeps renderAutoline');
+  assert.match(js, /els\.looks\.hidden = !looks;\s+els\.styles\.hidden = Boolean\(looks\);/, 'one look picker shows');
+});
+
+t('Start: six tiles, a recipe row and one primary button; three steps', () => {
+  assert.match(html, /class="rm-tiles" id="rm-fmt-entry" role="radiogroup"/);
+  assert.match(js, /id: 'trend'[\s\S]*?id: 'words'[\s\S]*?id: 'game'[\s\S]*?id: 'clip'[\s\S]*?id: 'player'[\s\S]*?id: 'inspo'/);
+  assert.match(html, /role="radiogroup" aria-labelledby="rm-recipes-label" id="rm-recipes"/);
+  assert.equal((html.match(/es-btn--primary/g) || []).length, 2, 'Make my reel and Export MP4 (Next turns primary on the Storyboard step)');
+  assert.deepEqual([...html.matchAll(/class="rm-step" type="button" data-step="([a-z]+)"/g)].map(m => m[1]), ['topic', 'edit', 'export']);
+  assert.match(html, /<span>Start<\/span>[\s\S]*<span>Storyboard<\/span>[\s\S]*<span>Export<\/span>/);
+  assert.match(js, /logEvent\('start', \{ source: startOf\(\)/);
+  assert.match(js, /logEvent\('recipe', /);
+  assert.match(js, /logEvent\('variant', /);
 });
 
 t('Make my reel stays a primary while busy (aria-disabled, never disabled)', () => {

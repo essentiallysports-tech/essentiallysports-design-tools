@@ -165,5 +165,44 @@ await test('factCheck: two searches, $0.03 cap, tracked as reels-factcheck', asy
   assert.deepEqual(await D.factCheck({ topic: 'x' }), { text: '', urls: [], cost: 0 });
 });
 
+// ─── Reels 2.0: looks ────────────────────────────────────────────────────
+await test('looks: ES_SPEC names every layout preset; the look rides the request and comes back on the plan; a retired style is written in ES', async () => {
+  const ES = require('../reel-es.js');
+  Object.values(ES.LOOK_LAYOUTS).forEach(l => assert.ok(D.ES_SPEC.includes(`- ${l.director}`), `${l.id} line`));
+  assert.match(D.ES_SPEC, /Data-led: at least two of number \/ dots \/ compare/);
+  const seen = [];
+  gateway.gatewayConfigured = () => true;
+  gateway.aiText = async opts => { seen.push(opts); return { text: JSON.stringify(GOOD), model: 'anthropic/claude-haiku-5.5', cost: 0.002 }; };
+  const out = await D.runReelDirector({ brief: BRIEF, format: 'stat', tier: 'economy', style: 'explainer', look: 'data' });
+  assert.equal(out.plan.style, 'es', 'explainer is retired: the plan is an ES plan');
+  assert.equal(out.plan.look, 'data');
+  assert.match(seen[0].messages[0].content, /STYLE: ES Reels/);
+  assert.match(seen[0].messages[0].content, /LOOK: Data-led\. Follow the Data-led line above\./);
+  // (a beat the model left without a block gets one from its fields when the reel is built: ReelES.blockOf)
+  assert.ok(out.plan.beats.every(b => ES.BLOCK_TYPES.includes(ES.blockOf(b).type)), 'every beat lands on an ES block');
+  const plain = await D.runReelDirector({ brief: BRIEF, format: 'stat', tier: 'economy', look: 'not-a-look' });
+  assert.equal(plain.plan.style, 'es');
+  assert.equal('look' in plain.plan, false, 'an unknown look is dropped (the page draws Paper)');
+  assert.doesNotMatch(seen[seen.length - 1].messages[0].content, /^LOOK: /m);
+});
+
+await test('ideas room contract: validatePlan keeps a grounded ES storyboard as it is and drops what the sources do not back', () => {
+  // _reel-ideas.js builds each angle's plan through validatePlan with the gathered corpus.
+  for (const name of ['clean', 'squash', 'extractJson']) assert.equal(typeof D._test[name], 'function', `_test.${name}`);
+  const read = { ...D.readReelBrief({ brief: 'Dak Prescott and the Cowboys' }), corpus: 'Troy Aikman said: "Absolutely a bad decision." Dallas gave Dak Prescott a $60 million extension.', auto: false };
+  const beats = [
+    { text: 'A legend unloads', vo: 'A Cowboys legend just unloaded on the front office over this deal.', block: { type: 'hook', pills: [{ text: 'A LEGEND', color: 'ink' }, { text: 'UNLOADS.', color: 'blue' }] } },
+    { text: 'Absolutely a bad decision', vo: 'Troy Aikman did not hold back when he was asked.', block: { type: 'quote', text: 'Absolutely a bad decision', who: 'TROY AIKMAN' } },
+    { text: 'The extension', vo: 'Dallas gave Dak Prescott a $60 million extension.', block: { type: 'number', kicker: 'THE DEAL', value: 60, prefix: '$', suffix: 'M', label: 'EXTENSION', color: 'green' } },
+    { text: 'An invented stat', vo: 'He has 41 wins in Dallas.', block: { type: 'number', kicker: 'WINS', value: 41, label: 'WINS', color: 'blue' } },
+    { vo: '', text: 'What do you make of it?', block: { type: 'endcard' } },
+  ];
+  const out = D.validatePlan({ format: 'explainer', title: 'Aikman blasts Dallas', beats }, { read, format: 'explainer', style: 'es' });
+  assert.deepEqual(out.plan.beats.map(b => b.block.type), ['hook', 'quote', 'number', 'endcard']);
+  assert.equal(out.dropped, 1);
+  assert.equal(out.plan.beats[2].block.value, 60);
+  assert.equal(out.plan.style, 'es');
+});
+
 Object.assign(gateway, real);
 console.log(process.exitCode ? '\nReel director tests failed.' : `\nAll ${passed} reel director tests passed.`);

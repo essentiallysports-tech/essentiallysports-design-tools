@@ -515,8 +515,115 @@ async function makeMusic({ mood = 'hype', seconds = 30, track = null, env = proc
   }
 }
 
+// ── Reels 2.0: C (inputs) ── a person's own voiceover ─────────────────────
+// The browser sends one take as 16 kHz mono 16-bit WAV (base64). It is
+// transcribed (the free provider first, see transcriptionPlan) and the
+// SCRIPT's words get the transcript's times: the words are never rewritten,
+// only timed. Each beat gets its window of the take; the browser slices the
+// original full-quality audio with those windows.
+//   90 s at 16 kHz mono 16-bit = 2.88 MB, 3.84 MB as base64: one request,
+//   under Vercel's 4.5 MB body cap.
+const TAKE = { maxSeconds: 90, sampleRate: 16000, maxWavBytes: 90 * 16000 * 2 + 4096, maxBeats: 40 };
+const TAKE_CACHE = new Map(); // sha256(audio) -> transcript (a retry is free)
+const plainWords = text => String(text || '').replace(/\*/g, '').trim().split(/\s+/).filter(Boolean);
+
+// Is this a WAV we accept? -> { ok, durationMs } | { ok: false, reason, error }
+function checkTake(buffer) {
+  if (!buffer || buffer.length < 44 || buffer.toString('ascii', 0, 4) !== 'RIFF' || buffer.toString('ascii', 8, 12) !== 'WAVE') return { ok: false, reason: 'bad-audio', error: 'That recording could not be read. Try recording again or upload an MP3 or WAV.' };
+  const durationMs = wavDurationMs(buffer);
+  if (!durationMs) return { ok: false, reason: 'bad-audio', error: 'That recording is empty. Try again.' };
+  if (buffer.length > TAKE.maxWavBytes || durationMs > TAKE.maxSeconds * 1000 + 500) return { ok: false, reason: 'too-long', error: `Voiceovers can be up to ${TAKE.maxSeconds} seconds. Trim this one and try again.` };
+  return { ok: true, durationMs };
+}
+
+async function groqTranscribe(buffer, model, env) {
+  const form = new FormData();
+  form.append('file', new Blob([buffer], { type: 'audio/wav' }), 'voiceover.wav');
+  form.append('model', model);
+  form.append('response_format', 'verbose_json');
+  form.append('timestamp_granularities[]', 'word');
+  form.append('timestamp_granularities[]', 'segment');
+  form.append('language', 'en');
+  form.append('temperature', '0');
+  const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${env.GROQ_API_KEY}` }, body: form, signal: AbortSignal.timeout(40000) });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data) throw Object.assign(new Error(`Groq transcription failed: ${response.status}`), { status: response.status });
+  const words = (Array.isArray(data.words) ? data.words : []).map(w => ({ w: String(w.word || '').trim(), s: Math.round(Number(w.start) * 1000), e: Math.round(Number(w.end) * 1000) })).filter(w => w.w && Number.isFinite(w.s) && Number.isFinite(w.e));
+  return { text: String(data.text || '').trim(), words: words.length ? words : wordsFromTranscript({ segments: data.segments }), language: data.language || '' };
+}
+
+// One take -> { ok, text, words: [{ w, s, e }] (ms), provider, model, cost }.
+// Providers in transcriptionPlan order (Groq is free); a failed one falls
+// through to the next. Usage is logged; the words themselves never are.
+async function transcribeTake({ audio, track = null, env = process.env } = {}) {
+  const gw = gateway();
+  const steps = gw.transcriptionPlan(env).filter(step => step.keyPresent && step.provider !== 'openai');
+  if (!steps.length) return { ok: false, reason: 'off', error: 'Speech recognition is not set up here.' };
+  const key = crypto.createHash('sha256').update(audio).digest('hex');
+  if (TAKE_CACHE.has(key)) return { ...TAKE_CACHE.get(key), cost: 0, cached: true };
+  const feature = (track && track.feature) || 'reels-voice-align';
+  let last = null;
+  for (const step of steps) {
+    const started = Date.now();
+    try {
+      let out;
+      if (step.provider === 'groq') {
+        const got = await groqTranscribe(Buffer.from(audio, 'base64'), step.model, env);
+        await gw.logUsage({ ...(track || {}), feature }, { model: `groq/${step.model}`, ok: true, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started });
+        out = { ok: true, text: got.text, words: got.words, provider: 'groq', model: step.model, cost: 0 };
+      } else {
+        const got = await gw.aiTranscribe({ audio, mediaType: 'audio/wav', model: step.model, track: { ...(track || {}), feature } });
+        const words = (got.words || []).map(w => ({ w: String(w.word || '').trim(), s: Math.round(Number(w.start) * 1000), e: Math.round(Number(w.end) * 1000) })).filter(w => w.w);
+        out = { ok: true, text: String(got.text || '').trim(), words: words.length ? words : wordsFromTranscript({ segments: got.segments }), provider: 'gateway', model: got.model || step.model, cost: Number(got.cost) || 0 };
+      }
+      if (!out.words.length) { last = Object.assign(new Error('No words heard.'), { reason: 'silent' }); continue; }
+      if (TAKE_CACHE.size >= 20) TAKE_CACHE.delete(TAKE_CACHE.keys().next().value);
+      TAKE_CACHE.set(key, out);
+      return out;
+    } catch (error) {
+      if (gw.isBudgetError(error)) return { ok: false, reason: 'budget', error: "This week's AI budget is used up, so AI features are paused until it resets." };
+      if (error && error.code === 'feature-off') return { ok: false, reason: 'off', error: error.message };
+      last = error;
+      console.warn(`reels voice-align: ${step.provider} failed (${(error && error.status) || ''} ${String((error && error.message) || error).slice(0, 120)})`);
+    }
+  }
+  if (last && last.reason === 'silent') return { ok: false, reason: 'silent', error: 'No speech was heard in that recording. Check the microphone and try again.' };
+  return { ok: false, reason: 'error', error: 'The recording could not be transcribed right now.' };
+}
+
+// Beats ([{ id, vo }], in order) + the heard words -> per beat
+// { id, startMs, endMs, words: [{ w, s, e }] } in take time. `w` is always the
+// script's own word. `match` is the share of script words the take contains
+// (a low value means the recording is not this script).
+function alignBeats(beats, heard, durationMs = 0) {
+  const list = (Array.isArray(beats) ? beats : []).map(b => ({ id: String((b && b.id) || ''), words: plainWords(b && b.vo) })).filter(b => b.id && b.words.length);
+  if (!list.length) return { beats: [], match: 0 };
+  const end = Math.max(0, Math.round(durationMs) || (heard.length ? heard[heard.length - 1].e : 0));
+  const timed = alignScript(list.flatMap(b => b.words).join(' '), heard, end);
+  // Monotonic and inside the take.
+  let floor = 0;
+  timed.forEach(word => {
+    word.s = Math.max(floor, Math.min(end || Infinity, Math.round(Number(word.s) || 0)));
+    word.e = Math.max(word.s, Math.min(end || Infinity, Math.round(Number(word.e) || 0)));
+    floor = word.s;
+  });
+  const pool = new Map();
+  heard.forEach(h => { const k = norm(h.w); if (k) pool.set(k, (pool.get(k) || 0) + 1); });
+  let hit = 0;
+  let total = 0;
+  timed.forEach(word => { const k = norm(word.w); if (!k) return; total += 1; if (pool.get(k) > 0) { hit += 1; pool.set(k, pool.get(k) - 1); } });
+  let i = 0;
+  const out = list.map(b => {
+    const words = timed.slice(i, i + b.words.length);
+    i += b.words.length;
+    return { id: b.id, startMs: words[0].s, endMs: Math.max(words[0].s, words[words.length - 1].e), words: words.map(w => ({ w: w.w, s: w.s, e: w.e })) };
+  });
+  return { beats: out, match: total ? Number((hit / total).toFixed(3)) : 0 };
+}
+
 module.exports = {
   voiceStatus, publicStatus, musicStatus, synthesize, sample, diagnose, makeMusic, speakable, audioFromReply, wordsFromAlignment, wordsFromTranscript, alignScript, wavDurationMs, voiceCost, verifyElevenVoice,
+  TAKE, checkTake, transcribeTake, alignBeats,
   MAX_CHARS, VOICES, DEFAULT_VOICE_OPTION, SAMPLE_LINE, FALLBACK_MODELS, VOICE_PRICES, GATEWAY_SPEECH, GATEWAY_TRANSCRIBE, DEFAULT_MODEL, DEFAULT_ALIGN_MODEL, DEFAULT_VOICES, LIBRARY_VOICES, MUSIC_MODEL, MUSIC_RIGHTS, MOODS,
-  _test: { CACHE, verified, sniffMime },
+  _test: { CACHE, verified, sniffMime, TAKE_CACHE },
 };

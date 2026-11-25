@@ -237,7 +237,7 @@ feeds = {
   aiReply = body => {
     const ids = [...body.messages.at(-1).content.matchAll(/^id: (\S+)/gm)].map(m => m[1]);
     return {
-      choices: [{ message: { content: JSON.stringify({ items: ids.map(id => ({ id, why: 'Fans want to know if this changes the playoff race.', titles: ['Chiefs edge Bills again', 'Mahomes does it again', 'Is this Chiefs team back?', 'A fourth idea is dropped'] })) }) }, finish_reason: 'stop' }],
+      choices: [{ message: { content: JSON.stringify({ items: ids.map(id => ({ id, why: 'Fans want to know if this changes the playoff race.', titles: ['Chiefs edge Bills again', 'Mahomes does it again', 'Is this Chiefs team back?', 'A fourth idea is dropped'], angle: { lens: 'fan-first', line: 'What this means for the fans who lived every snap' } })) }) }, finish_reason: 'stop' }],
       usage: { prompt_tokens: 760, completion_tokens: 1150 },
     };
   };
@@ -263,6 +263,10 @@ feeds = {
   const first = res.body.items[nfl[0].id];
   assert.equal(first.titles.length, 3, 'three headlines');
   assert.match(first.why, /playoff race/);
+  // Reels 2.0 (lane B): the ES angle comes back with the other fields, and is cached with them.
+  assert.deepEqual(first.angle, { lens: 'fan-first', line: 'What this means for the fans who lived every snap' });
+  assert.deepEqual(T.cachedEnrichment(nfl[0].id).angle, first.angle);
+  assert.equal(require('../netlify/functions/trend-design.js').cachedEnrichment, T.cachedEnrichment, 'exported for Reels Studio');
   assert.equal(usageRows.length, 1);
   assert.equal(usageRows[0].feature, 'trend-enrich', 'usage logged under its feature name');
   assert.ok(usageRows[0].cost_usd > 0 && usageRows[0].cost_usd < 0.001, `cost per batch is tiny (${usageRows[0].cost_usd})`);
@@ -314,6 +318,24 @@ feeds = {
   assert.equal(bad.status, 200);
   assert.equal(bad.body.ai, false);
   assert.equal(T.cachedEnrichment(nfl[0].id), null, 'failures are not cached');
+
+  // The ES angle: a known lens, one grounded line, no quote marks; the money
+  // and quote lenses need the story to carry a figure / a quote.
+  for (const lens of T.ANGLE_LENSES) assert.ok(T.ENRICH_SYSTEM.includes(lens), `prompt offers ${lens}`);
+  assert.deepEqual(T.ANGLE_LENSES, ['fan-first', 'quote-led', 'verdict', 'money', 'fan-reaction', 'behind-the-moment']);
+  const story = 'Cowboys give Dak Prescott a $60 million extension';
+  assert.deepEqual(T.parseAngle({ lens: 'money', line: 'What $60 million buys the Cowboys.' }, story), { lens: 'money', line: 'What $60 million buys the Cowboys' });
+  assert.equal(T.parseAngle({ lens: 'money', line: 'What $75 million buys the Cowboys' }, story), null, 'an invented figure');
+  assert.equal(T.parseAngle({ lens: 'money', line: 'Follow the money in Dallas' }, 'Cowboys beat the Eagles'), null, 'no figure in the story, no money lens');
+  assert.equal(T.parseAngle({ lens: 'quote-led', line: 'The line that set Dallas off' }, story), null, 'no quote in the story, no quote lens');
+  assert.ok(T.parseAngle({ lens: 'quote-led', line: 'The line that set Dallas off' }, 'Aikman blasts Cowboys: "a bad decision"'));
+  assert.equal(T.parseAngle({ lens: 'verdict', line: 'He called it "a disaster" on air' }, story), null, 'no words put in a mouth');
+  assert.equal(T.parseAngle({ lens: 'hot-take', line: 'Anything' }, story), null, 'unknown lens');
+  assert.equal(T.parseAngle({ lens: 'fan-first', line: 'You won\'t believe what fans did' }, story), null, 'clickbait');
+  const angled = T.parseEnrichment(JSON.stringify({ items: [{ id: 't-a', why: 'Big deal for Dallas', titles: ['Dak gets paid'], hook: 'Dak stays', angle: { lens: 'money', line: 'A $999 million gamble' } }] }), ['t-a'], { 't-a': story });
+  assert.equal(angled['t-a'].angle, undefined, 'a bad angle is left out; the rest of the entry stays');
+  assert.equal(angled['t-a'].why, 'Big deal for Dallas');
+  assert.ok(T.enrichMaxTokens(6) <= 3400 && T.enrichMaxTokens(6) > T.enrichMaxTokens(5));
 
   // parseEnrichment ignores unknown ids and over-long headlines.
   const parsed = T.parseEnrichment('{"items":[{"id":"t-a","why":"Why fans care: big game","titles":["Short one here","This headline is far far far too long to fit in the pill at all"]},{"id":"t-zzz","why":"x","titles":["a b"]}]}', ['t-a']);

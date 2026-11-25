@@ -111,6 +111,9 @@
   // An ES house-style reel (v1 news timelines; data formats in the ES style
   // keep their data layouts and get the ES palette, captions and wipe).
   const isEs = timeline => Boolean(timeline && timeline.v !== 2 && S.get(timeline.style).engine === 'es' && getES());
+  // The style a timeline draws in: the ES style wears the reel's look (the
+  // data formats' palette and overlay tokens come from it; Paper is as before).
+  const styleOf = timeline => (S.withLook ? S.withLook(S.get(timeline.style), timeline.look, timeline.team && Array.isArray(timeline.team.colors) ? timeline.team.colors[0] : '') : S.get(timeline.style));
 
   // ─── Easing ─────────────────────────────────────────────────────────────
   const clamp01 = v => Math.max(0, Math.min(1, Number(v) || 0));
@@ -380,6 +383,9 @@
     // ES house style (reel-es.js): blocks, one shot per scene with the
     // drift, the end card last for exactly 3 s and no voiceover on it.
     const ES = !dm && style.engine === 'es' ? getES() : null;
+    // Data formats in the ES style: their story beats (hook, statement, end
+    // card) are ES blocks; the data beats keep their data layouts.
+    const esData = dm && style.engine === 'es' ? getES() : null;
     const size = ES && (opts.aspect === '4:5' || (plan && plan.aspect === '4:5')) ? [W, 1350] : [W, H];
     const voiceMode = ['elevenlabs', 'gateway'].includes(opts.voiceMode) ? opts.voiceMode : 'off';
     const assets = { ...(opts.assets || {}) };
@@ -465,7 +471,7 @@
       if (ES) { beat.block = block; if (!beat.text) beat.text = clean(ES.blockText(block), 120); }
       graphics.push({
         id: `${id}g`, beat: id, template: layout === 'legacy' ? (TEMPLATE_FOR[kind] || 'text') : layout, kind, inMs: t, outMs: t + dur, index,
-        data: { text: beat.text, emphasis: beat.emphasis, label: beat.label, stat: beat.stat, rank: beat.rank, name: beat.name, detail: beat.detail, quote: beat.quote, visual: beat.visual, ...componentData(raw, id, photos, assets), ...(dm ? { refs: beat.refs, ...frameCaptions(raw) } : {}), ...(ES ? { block } : {}) },
+        data: { text: beat.text, emphasis: beat.emphasis, label: beat.label, stat: beat.stat, rank: beat.rank, name: beat.name, detail: beat.detail, quote: beat.quote, visual: beat.visual, ...componentData(raw, id, photos, assets), ...(dm ? { refs: beat.refs, ...frameCaptions(raw) } : {}), ...(ES ? { block } : {}), ...(esData && String(layout).startsWith('es-') ? { block: esData.blockOf({ ...raw, kind, text: beat.text }) } : {}) },
         ...(ES && picks.length ? { media: true } : {}),
       });
 
@@ -539,6 +545,8 @@
       v: 1, fps: FPS, size: [W, H], durationMs,
       format: fmt, tag: F.FORMATS[fmt].tag, sport: clean(plan && plan.sport, 12), title: clean(plan && plan.title, 140),
       style: style.id, limits: { maxSeconds: style.seconds.max, targetSeconds: style.seconds.target },
+      // The ES look (reel-es-themes.js): the person's pick, the plan's, else Paper.
+      ...(style.engine === 'es' && getES() ? { look: getES().themes.lookId(opts.look || (plan && plan.look)) } : {}),
       eyebrow: clean(plan && plan.eyebrow, 48), series: plan && plan.series && plan.series.tag ? { tag: clean(plan.series.tag, 28) } : null,
       strip: style.chrome.strip ? sx : null,
       team, highlight, captionStyle, voice: { mode: voiceMode },
@@ -555,6 +563,7 @@
       out.timing = { estimate: estimated > 0, wordsPerSecond: F.PACE.wordsPerSecond, ...(voScale !== 1 ? { voLengthMs: Number(plan.voLengthMs) } : {}) };
       if (plan && plan.script && plan.script.locked) out.script = { locked: true };
     }
+    if (esData) out.sourceLine = clean((plan && plan.sourceLine) || sourceLineFrom(opts.sources), 120);
     return dm ? toV2(out, dm, plan) : out;
   }
 
@@ -586,7 +595,7 @@
     // Styled engines move between beats with the style's transition (push,
     // wipe, lift); the outgoing beat is drawn whole until it has left, so it
     // does not fade first. Classic keeps its 180 ms fade and photo cross-fade.
-    const st = S.get(timeline.style);
+    const st = styleOf(timeline);
     const pushes = st.engine !== 'classic' && ['slide', 'wipe', 'flip', 'slab'].includes(st.motion.transition);
     const trMs = st.motion.transitionMs || 0;
     let transition = null;
@@ -668,8 +677,15 @@
 
   // Ops for one graphic. Boxes: every op has x, y (baseline), w, size, so a
   // box is [x, y - size*CAP, w, size*CAP] (what the lint checks against SAFE).
+  // An ES block scene always knows its block: a story beat inside a data
+  // format (or an older saved timeline) gets it from the beat's own fields.
+  function esGraphic(graphic) {
+    if (graphic.data && graphic.data.block) return graphic;
+    const kind = graphic.kind || { 'es-hook': 'hook', 'es-endcard': 'cta', 'es-number': 'stat', 'es-dots': 'dotrank', 'es-compare': 'bars', 'es-quote': 'quote' }[graphic.template] || 'point';
+    return { ...graphic, data: { ...(graphic.data || {}), block: getES().blockOf({ ...(graphic.data || {}), kind }) } };
+  }
   function layoutGraphic(measure, graphic, timeline = {}) {
-    if (ES_TEMPLATES.has(graphic.template) && getES()) return getES().layoutBlock(measure, graphic, timeline);
+    if (ES_TEMPLATES.has(graphic.template) && getES()) return getES().layoutBlock(measure, esGraphic(graphic), timeline);
     if (SLIDE_TEMPLATES.has(graphic.template)) return layoutSlide(measure, graphic, { style: 'classic', tracks: { video: [] }, beats: [], ...timeline });
     if (S.LAYOUTS.includes(graphic.template) && graphic.template !== 'legacy') return layoutStyled(measure, graphic, { style: 'classic', tracks: { video: [] }, beats: [], ...timeline });
     const d = graphic.data || {};
@@ -1178,7 +1194,7 @@
   // the canvas, so a blue jersey or a blue team tile turns it black).
   const hex2 = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
   function markBackground(ctx, frame, timeline, env) {
-    const style = S.get(timeline.style);
+    const style = styleOf(timeline);
     if (style.engine !== 'classic') return style.palette.paper;
     if (typeof ctx.getImageData !== 'function' || env.probeMark === false) return '#101114';
     const key = `${frame.shot ? frame.shot.id : ''}|${frame.shot && frame.shot.local > 400 ? 1 : 0}`;
@@ -1212,6 +1228,8 @@
   }
   function drawEsMark(ctx, frame, timeline, env) {
     if (frame.graphic && !showsMark(timeline, frame.graphic)) return '';
+    // An ES block scene has already drawn its own mark (reel-es.js drawScene).
+    if (frame.graphic && ES_TEMPLATES.has(frame.graphic.template) && getES() && styleOf(timeline).engine === 'es') return 'blue';
     const variant = markVariant(markBackground(ctx, frame, timeline, env));
     drawSquareMark(ctx, ES_MARK.x, ES_MARK.y, ES_MARK.w, variant, env);
     return variant;
@@ -1242,7 +1260,7 @@
   const CW = G.right - G.left; // 904
   const snap = v => Math.round(v / G.unit) * G.unit;
   const CHART_LAYOUTS = new Set(['stat-hero', 'bars', 'versus', 'dotrank', 'chips', 'tiles', 'roles', 'mystery']);
-  const paletteOf = timeline => S.get(timeline.style).palette;
+  const paletteOf = timeline => styleOf(timeline).palette;
   // Colour tokens ('ink', 'accent', 'hi'…) resolve against the palette; a team
   // colour or any CSS colour passes through.
   const tone = (pal, c) => (c && pal[c]) || c || pal.ink;
@@ -1344,7 +1362,7 @@
   }
   // Content box for a beat (below the headline, above the strip or captions).
   function contentBox(timeline, top) {
-    const style = S.get(timeline.style);
+    const style = styleOf(timeline);
     const bottom = style.engine === 'classic' ? ZONE.graphicBottom : (timeline.strip ? 1168 : 1280);
     return { x: G.left, y: snap(top), w: CW, h: Math.max(160, bottom - snap(top)), bottom };
   }
@@ -1366,7 +1384,7 @@
 
   function layoutStyled(measure, graphic, timeline) {
     if (DATA_TEMPLATES.has(graphic.template)) return layoutData(measure, graphic, timeline);
-    const style = S.get(timeline.style);
+    const style = styleOf(timeline);
     const d = graphic.data || {};
     const ops = [];
     const layout = graphic.template;
@@ -1602,7 +1620,7 @@
 
   // Chrome drawn on every frame: eyebrow, ES badge, series tag, data strip, rail.
   function layoutChrome(measure, timeline, frame) {
-    const style = S.get(timeline.style);
+    const style = styleOf(timeline);
     // The ES mark (drawn last by drawEsMark; listed here for the boxes), on
     // the hook and the end card only (ES video system).
     const g0 = frame && frame.graphic;
@@ -1650,7 +1668,7 @@
 
   // Block captions: each word in a dark box, the spoken word in yellow.
   function layoutBlockCaption(measure, card, timeline) {
-    const style = S.get(timeline.style);
+    const style = styleOf(timeline);
     const words = timeline.tracks.captions.words;
     const list = card.words.map(i => ({ i, text: words[i].w.replace(/^[“"]|[”"]$/g, '').toUpperCase() }));
     const [max, min] = style.type.caption;
@@ -1782,7 +1800,7 @@
   function scorebugOps(measure, tl, style, cv, state, delay = 0) {
     const game = gameOf(tl);
     if (!game || !state) return [];
-    const tk = S.elementTokens(style.id, 'scorebug');
+    const tk = S.elementTokens(style, 'scorebug');
     const b = S.elementBox('scorebug', cv);
     const slide = cv.h !== H;
     const chipW = slide ? 128 : 136;
@@ -1826,7 +1844,7 @@
     if (!clockTab(state)) return [];
     const text = [state.period, state.clock].filter(Boolean).join('  ');
     if (!text) return [];
-    const tk = S.elementTokens(style.id, 'clock');
+    const tk = S.elementTokens(style, 'clock');
     const b = S.elementBox('clock', cv);
     const f = fitText(upperMeasure(measure), text, { family: style.type.display, weight: 700, max: b.h * 0.7, min: 22, maxLines: 1, width: b.w - 56 });
     const w = f.lines[0] ? f.lines[0].width : 0;
@@ -1871,7 +1889,7 @@
     const pts = wpPoints(game);
     // Never a WP line without its attribution line.
     if (!game || !pts.length || !hasWp(tl)) return [];
-    const tk = S.elementTokens(style.id, 'wpline');
+    const tk = S.elementTokens(style, 'wpline');
     const pal = style.palette;
     const panel = HEX6.test(String(pal.panel)) ? pal.panel : pal.paper;
     const cols = sideColours(tl, style, panel);
@@ -1982,7 +2000,7 @@
 
   // The play card: play type and yards chips, the beat's line, the play.
   function playcardOps(measure, tl, style, box, g, play, delay = 0, onImage = false) {
-    const tk = S.elementTokens(style.id, 'playcard');
+    const tk = S.elementTokens(style, 'playcard');
     const pal = style.palette;
     const ops = [];
     const pad = 28;
@@ -2154,7 +2172,7 @@
   }
   // The year rail: one node per moment beat; the current one lit.
   function railOps(measure, tl, style, g, rail) {
-    const tk = S.elementTokens(style.id, 'timeline-node');
+    const tk = S.elementTokens(style, 'timeline-node');
     const ops = [];
     const nodes = (tl.beats || []).filter(b => b.kind === 'moment').map(b => ({ id: b.id, info: momentInfo(tl, b.refs || []) })).filter(n => n.info.year != null);
     if (!nodes.length) return ops;
@@ -2246,7 +2264,7 @@
     const ops = [];
     if (!RP) return ops;
     const L = RP.panelLayout(style, cv);
-    const tk = S.elementTokens(style.id, 'panel3');
+    const tk = S.elementTokens(style, 'panel3');
     const r = resolvedRefs(tl, refs);
     const frames = {};
     r.frame.forEach(f => { frames[f.v.role] = f.v; });
@@ -2284,7 +2302,7 @@
     return ops;
   }
   function layoutData(measure, g, tl) {
-    const style = S.get(tl.style);
+    const style = styleOf(tl);
     const cv = canvasOf(tl);
     let ops = [];
     if (g.template === 'play') ops = layoutPlay(measure, g, tl, style, cv);
@@ -2325,7 +2343,7 @@
     return { ops, bottom: top + height, top };
   }
   function layoutSlide(measure, g, tl) {
-    const style = S.get(tl.style);
+    const style = styleOf(tl);
     const pal = style.palette;
     const kind = g.template.slice(6);
     const sl = tl.slide || {};
@@ -2363,7 +2381,7 @@
         const label = RP && role ? RP.ROLE_LABELS[role] : (text || '').toUpperCase();
         ops.push(...tagOps());
         const ih = 820;
-        ops.push({ type: 'panel', role: 'panel', frame: role, key: key ? key.key : '', clip: key ? key.clip : '', x: M, y: 214, w: CWS, h: ih, tilt: style.id === 'classic' ? (sl.index % 2 ? 0.5 : -0.5) : 0, border: style.id === 'classic' ? 6 : (style.id === 'series' ? 4 : 0), borderColor: S.elementTokens(style.id, 'panel3').gutter, r: style.id === 'countdown' ? 20 : 0, empty: pal.panel, delay: 0, anim: 'rise', kb: [1.0, 1.04], kbMs: 2400, refs: f ? [`frame:${role}`] : [] });
+        ops.push({ type: 'panel', role: 'panel', frame: role, key: key ? key.key : '', clip: key ? key.clip : '', x: M, y: 214, w: CWS, h: ih, tilt: style.id === 'classic' ? (sl.index % 2 ? 0.5 : -0.5) : 0, border: style.id === 'classic' ? 6 : (style.id === 'series' ? 4 : 0), borderColor: S.elementTokens(style, 'panel3').gutter, r: style.id === 'countdown' ? 20 : 0, empty: pal.panel, delay: 0, anim: 'rise', kb: [1.0, 1.04], kbMs: 2400, refs: f ? [`frame:${role}`] : [] });
         if (label) ops.push(...chipOp(measure, label, M + 24, 214 + 24, { fill: 'chip', ink: 'chipInk', size: 30, h: 52, role: 'panel-chip', delay: 120 }));
         const cap = String(sl.caption || (f && f.caption) || (text && text.toUpperCase() !== label ? text : '') || '').trim();
         if (cap) ops.push(...slideHeadline(measure, cap, style, M, 214 + ih + 40, CWS, { max: 76, min: 52, maxLines: 2 }).ops);
@@ -2597,7 +2615,7 @@
   // A 1080x1350 carousel slide (ReelReplay.buildSlides): the style's ground,
   // the slide's ops, the ES mark top-right.
   function drawSlideFrame(ctx, timeline, tMs, env) {
-    const style = S.get(timeline.style);
+    const style = styleOf(timeline);
     const pal = style.palette;
     const g = timeline.tracks && timeline.tracks.graphics ? timeline.tracks.graphics[0] : null;
     const t = Math.max(0, Math.min((timeline.durationMs || 2400) - 1, tMs));
@@ -2853,7 +2871,8 @@
     }
     // Depth: light papers catch a soft light from the top-left; the navy gets
     // a low accent glow behind the content.
-    if (typeof ctx.createRadialGradient === 'function') {
+    // (The ES style is flat: no glow behind its data layouts, in any look.)
+    if (style.engine !== 'es' && typeof ctx.createRadialGradient === 'function') {
       const glow = ctx.createRadialGradient(W * 0.2, H * 0.12, 0, W * 0.2, H * 0.12, H * 0.9);
       glow.addColorStop(0, style.theme === 'light' ? 'rgba(255,255,255,0.55)' : 'rgba(47,128,237,0.16)');
       glow.addColorStop(1, 'rgba(255,255,255,0)');
@@ -2883,6 +2902,14 @@
   function drawStyledGraphic(ctx, frame, timeline, env, style, pal) {
     const g = frame.graphic;
     if (!g) return;
+    // A story beat of a data format in the ES style is an ES block scene:
+    // the ES engine draws it (the look's ground, boxed words, its own mark).
+    if (style.engine === 'es' && ES_TEMPLATES.has(g.template) && getES()) {
+      const E = getES();
+      const eg = esGraphic(g);
+      E.drawScene(ctx, eg, timeline, frame, env, { drawVisual, drawBrand, BRAND }, E.sceneTimes(eg, g.local), layoutGraphic);
+      return;
+    }
     const ops = env.layoutCache ? env.layoutCache(g) : layoutGraphic(env.measure, g, timeline);
     const lead = g.inMs === 0 ? 0 : leadFor(style);
     ctx.save();
@@ -2937,7 +2964,7 @@
   // Under the ES mark, never over it (no effects on the logo). The light leak
   // was removed (2026-11-21): lens flares are banned in the ES video system.
   function drawFinish(ctx, frame, timeline, env) {
-    const style = S.get(timeline.style);
+    const style = styleOf(timeline);
     const dark = style.theme === 'dark';
     ctx.save();
     if (typeof ctx.createRadialGradient === 'function') {
@@ -2973,7 +3000,7 @@
       // ES slab wipe (data formats in the ES style): the cut under the ink.
       if (tr.p < 0.5) drawStyledGraphic(ctx, out, timeline, env, style, pal);
       else { drawBackground(ctx, timeline, frame, env, style, pal); drawStyledGraphic(ctx, frame, timeline, env, style, pal); }
-      getES().drawSlab(ctx, tr.p, getES().geometry(timeline.size));
+      getES().drawSlab(ctx, tr.p, getES().geometry(timeline.size), getES().themeOf(timeline));
       return;
     }
     if (tr.kind === 'slide') {
@@ -2996,7 +3023,7 @@
     }
   }
   function drawStyledFrame(ctx, timeline, frame, env) {
-    const style = S.get(timeline.style);
+    const style = styleOf(timeline);
     const pal = style.palette;
     drawBackground(ctx, timeline, frame, env, style, pal);
     drawStyledGraphics(ctx, frame, timeline, env, style, pal);
@@ -3020,7 +3047,7 @@
       return frame;
     }
     ctx.save();
-    if (S.get(timeline.style).engine !== 'classic') {
+    if (styleOf(timeline).engine !== 'classic') {
       drawStyledFrame(ctx, timeline, frame, env);
     } else {
       ctx.fillStyle = '#000000';
@@ -3031,7 +3058,8 @@
       drawGraphic(ctx, frame, timeline, env);
       drawCaption(ctx, frame, timeline, env);
     }
-    drawFinish(ctx, frame, timeline, env);
+    // The ES style is flat 2D: no vignette or moving grain, on data formats too.
+    if (styleOf(timeline).engine !== 'es') drawFinish(ctx, frame, timeline, env);
     drawEsMark(ctx, frame, timeline, env);
     ctx.restore();
     return frame;
@@ -3044,10 +3072,11 @@
     buildTimeline, frameAt, wrap, fitText, layoutGraphic, layoutCaption, layoutChrome, textBoxes, drawFrame,
     clipTimes, clipTime, drawVisual, allBoxes, CHART_LAYOUTS,
     BRAND, ES_MARK, WORDMARK, CAPTION_W, LOGO_CLEAR, markVariant, drawBrand, logoPlacements, wordmarkFor, drawFinish,
-    isEs, showsMark, drawSquareMark, ES_TEMPLATES, sourceLineFrom, parseVoEmphasis,
+    isEs, styleOf, styleRetired: timeline => Boolean(timeline && S.isLegacy && S.isLegacy(timeline.style)), showsMark, drawSquareMark, ES_TEMPLATES, sourceLineFrom, parseVoEmphasis,
     // Data formats (Phase 1)
     DATA_TEMPLATES, SLIDE_TEMPLATES, SLIDE_MARK, SLIDE_SAFE, DATA_MIN_MS, canvasOf, scoreState, swingFor, momentInfo, periodLabel, teamColours, bestInk,
     provenanceNumbers, unbackedNumbers, wpOnScreen, drawSlideFrame,
-    buildSlides: (timeline, opts) => { const RP = getRP(); return RP ? RP.buildSlides(timeline, opts) : []; },
+    // Slides wear the reel's look (the ES style only; reel-es-themes.js).
+    buildSlides: (timeline, opts) => { const RP = getRP(); return RP ? RP.buildSlides(timeline, opts).map(sl => (timeline && timeline.look && S.get(sl.style).engine === 'es' ? { ...sl, look: timeline.look } : sl)) : []; },
   };
 }));

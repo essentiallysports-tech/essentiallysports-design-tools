@@ -26,11 +26,21 @@
 // "ES Moneyball" analytics series) and rebuilt on one 8-pt grid inside the
 // Reels safe zone (x 65-1015, y 270-1580). Fonts: Acumin Pro Condensed,
 // Roboto and Roboto Condensed only. Team colours are content, never chrome.
+//
+// Reels 2.0 (2026-11-25): 'es' is the only style offered (STYLE_IDS). What a
+// person picks now is an ES LOOK (reel-es-themes.js). The four older styles
+// (classic, explainer, series, countdown) are retired: LEGACY_STYLE_IDS keeps
+// their data and reel-render.js keeps their draw code for one release as a
+// safety net, saved reels in them open in the closest look, and nothing
+// offers them. The data formats (Game Swing, Replay, Archive) default to 'es';
+// withLook() / elementTokens(style, element, look) re-skin their overlays.
 (function (root, factory) {
-  const api = factory();
-  if (typeof module === 'object' && module.exports) module.exports = api;
+  const node = typeof module === 'object' && module.exports;
+  // The looks are read when asked for, so the script order in a page does not matter.
+  const api = factory(() => (node ? require('./reel-es-themes.js') : root.ReelESThemes) || null);
+  if (node) module.exports = api;
   else root.ReelStyles = api;
-}(typeof self !== 'undefined' ? self : this, () => {
+}(typeof self !== 'undefined' ? self : this, getTH => {
   'use strict';
 
   const CONDENSED = '"Acumin Pro Condensed Local", "Roboto Condensed", sans-serif';
@@ -168,7 +178,13 @@
       voWords: [55, 130],
     },
   };
-  const STYLE_IDS = ['es', 'classic', 'explainer', 'series', 'countdown'];
+  // The picker offers ES only; the look (reel-es-themes.js) is the choice.
+  const STYLE_IDS = ['es'];
+  // Retired 2026-11-25. Kept for one release so an old timeline still draws.
+  const LEGACY_STYLE_IDS = ['classic', 'explainer', 'series', 'countdown'];
+  const isLegacy = id => LEGACY_STYLE_IDS.includes(id);
+  // The style a plan is built in now: 'es' for anything retired or unknown.
+  const currentStyle = id => (STYLE_IDS.includes(id) ? id : 'es');
   // The house style for news reels (ES video team, 2026-11-21).
   const DEFAULT_STYLE = 'es';
   const get = id => STYLES[id] || STYLES.classic;
@@ -203,10 +219,42 @@
     series: { scorebug: { fill: 'ink', ink: 'paper', muted: 'hi' }, clock: { fill: 'hi', ink: 'hiInk' } },
     countdown: { 'timeline-node': { node: 'hi' }, clock: { fill: 'hi', ink: 'hiInk' } },
   };
+  // ─── Looks on the data formats ───────────────────────────────────────────
+  // The ES style's palette for a look: the ground the look puts its figures
+  // on (paper, white, ink or a dark team colour), with the chip in the look's
+  // pill colour and the rule in its accent. Paper returns the style as is.
+  const lookArgs = look => (look && typeof look === 'object' ? { id: look.look || look.id, team: look.team || '' } : { id: look, team: '' });
+  const lookCache = new Map();
+  function withLook(styleOrId, look, team = '') {
+    const style = typeof styleOrId === 'object' && styleOrId ? styleOrId : get(styleOrId);
+    const TH = getTH();
+    const a = lookArgs(look);
+    const teamHex = a.team || team || '';
+    if (!TH || style.engine !== 'es' || !a.id || TH.lookId(a.id) === 'paper') return style;
+    const key = `${style.id}|${TH.lookId(a.id)}|${teamHex}`;
+    if (lookCache.has(key)) return lookCache.get(key);
+    const theme = TH.resolve(a.id, { team: teamHex });
+    const D = theme.surfaceFor('number');
+    const ground = theme.hex(D.ground);
+    const dark = TH.luminance(ground) < 0.18;
+    const chip = D.fill.ink || 'ink';
+    const base = style.palette;
+    const palette = dark
+      ? { ...base, bg: ground, paper: ground, panel: '#1E1E1E', ink: '#FFFFFF', muted: 'rgba(255,255,255,0.72)', line: 'rgba(255,255,255,0.22)', mystery: '#2A2A2A' }
+      : { ...base, bg: ground, paper: ground, panel: ground.toUpperCase() === '#FFFFFF' ? BRAND.paper : '#FFFFFF' };
+    palette.chip = theme.hex(chip);
+    palette.chipInk = theme.hex(theme.inkOn(chip));
+    palette.rule = theme.team && theme.id === 'team' && TH.contrast(theme.team, ground) >= 1.6 ? theme.team : BRAND.blue;
+    const out = { ...style, theme: dark ? 'dark' : 'light', palette, look: theme.id };
+    if (lookCache.size > 64) lookCache.clear();
+    lookCache.set(key, out);
+    return out;
+  }
   // Resolve an element's tokens for a style: palette keys become colours,
-  // type roles ('display', 'label', 'body') become ES font stacks.
-  function elementTokens(styleId, elementId) {
-    const style = get(styleId);
+  // type roles ('display', 'label', 'body') become ES font stacks. look (an
+  // id, or { look, team }) re-skins the ES style for that look.
+  function elementTokens(styleId, elementId, look = null) {
+    const style = withLook(typeof styleId === 'object' && styleId ? styleId : get(styleId), look);
     const el = ELEMENTS[elementId];
     if (!el) return null;
     const over = (ELEMENT_TOKENS[style.id] || {})[elementId] || {};
@@ -263,7 +311,8 @@
   const DATA_RE = /\b(?:per (?:game|throw|attempt|carry)|average|rate|percent|percentile|rank(?:ed|s)?|since \d{4}|seasons?|out of|compared|vs\.?|versus|efficiency|epa|yards per|completion|analytics|data|chart)\b|\d+(?:\.\d+)?%|\b1 in \d+\b/i;
   // Default style per data format (owner, 2026-11-18); reel-formats.js
   // DATA_FORMATS[id].defaultStyle says the same (a test keeps them equal).
-  const FORMAT_STYLES = { gameswing: 'series', replay: 'classic', archive: 'countdown' };
+  // 2026-11-25: every data format is drawn in the ES style (the look re-skins it).
+  const FORMAT_STYLES = { gameswing: 'es', replay: 'es', archive: 'es' };
   function suggestStyle({ format = '', text = '' } = {}) {
     if (FORMAT_STYLES[format]) return { id: FORMAT_STYLES[format], why: `The ${get(FORMAT_STYLES[format]).label} look is the house style for this format.` };
     void text;
@@ -325,7 +374,7 @@
   }
 
   return {
-    STYLES, STYLE_IDS, DEFAULT_STYLE, BRAND, ES_LAYOUTS, legacySuggestStyle, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
+    STYLES, STYLE_IDS, LEGACY_STYLE_IDS, isLegacy, currentStyle, withLook, DEFAULT_STYLE, BRAND, ES_LAYOUTS, legacySuggestStyle, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
     ELEMENTS, ELEMENT_IDS, ELEMENT_TOKENS, FORMAT_STYLES, elementTokens, elementBox, drawPlaceholder,
   };
 }));

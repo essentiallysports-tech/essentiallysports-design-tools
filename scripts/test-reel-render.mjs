@@ -445,4 +445,30 @@ test('slides: drawn on a 1080x1350 canvas with the ES mark top-right; logo place
   });
 });
 
+// ─── Reels 2.0: looks ────────────────────────────────────────────────────
+test('looks: an ES timeline carries its look (opts.look, else plan.look, else paper); a retired style carries none; data formats default to ES and wear it', () => {
+  const es = extra => R.buildTimeline({ ...STAT_PLAN, ...(extra.plan || {}) }, { style: 'es', ...(extra.opts || {}) });
+  assert.equal(es({}).look, 'paper');
+  assert.equal(es({ plan: { look: 'ink' } }).look, 'ink');
+  assert.equal(es({ plan: { look: 'ink' }, opts: { look: 'blue' } }).look, 'blue');
+  assert.equal(es({ opts: { look: 'nope' } }).look, 'paper');
+  assert.equal('look' in R.buildTimeline(STAT_PLAN, { style: 'classic', look: 'ink' }), false);
+  assert.equal(R.styleRetired(R.buildTimeline(STAT_PLAN, { style: 'classic' })), true);
+  assert.equal(R.styleRetired(es({})), false);
+  for (const id of Object.keys(FIX)) {
+    assert.equal(F.FORMATS[id].defaultStyle, 'es');
+    const paper = build(id, 'es');
+    const ink = build(id, 'es', { opts: { look: 'ink' } });
+    assert.equal(paper.v, 2);
+    assert.equal(paper.look, 'paper');
+    assert.equal(ink.look, 'ink');
+    assert.equal(R.styleOf(paper), S.STYLES.es, `${id}: Paper is the ES style as it was`);
+    assert.equal(R.styleOf(ink).palette.paper, '#121212', `${id}: Ink re-skins the data layouts`);
+    assert.equal(R.styleOf(ink).theme, 'dark');
+    R.buildSlides(ink, { style: 'es' }).forEach(sl => assert.equal(sl.look, 'ink'));
+    for (let t = 0; t < ink.durationMs; t += 1500) { const c = recCtx(); assert.doesNotThrow(() => R.drawFrame(c.ctx || c, ink, t, { measure })); }
+  }
+});
+
+
 console.log(process.exitCode ? '\nReel render tests failed.' : `\nAll ${passed} reel render tests passed.`);

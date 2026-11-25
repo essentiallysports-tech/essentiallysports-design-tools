@@ -127,7 +127,7 @@
       description: 'Pick a finished or live game. FrameUp picks the biggest win-probability swings and the scoring plays, draws an ES scorebug, clock and win-probability line over each clip, and writes short captions from the play-by-play.',
       source: 'game',
       sports: ['nfl', 'cfb', 'mlb'],
-      defaultStyle: 'series', // ES Analytics Series (owner, 2026-11-18)
+      defaultStyle: 'es', // ES Reels (2026-11-25: the older styles are retired; the look re-skins it)
       outputs: ['reel'],
       beats: { min: 4, max: 8 },
       // Story kinds keep today's director and renderer working; dataKinds are
@@ -151,7 +151,7 @@
       description: 'Paste an X clip, pick one from the clip library, or upload an ES clip. FrameUp finds the setup, the play and the reaction frames (code first, an optional AI pick), lays them out as a 3-panel strip, and exports a short reel and a 1080x1350 carousel.',
       source: 'clip',
       sports: ['nfl', 'cfb', 'mlb', 'golf'],
-      defaultStyle: 'classic', // ES Classic
+      defaultStyle: 'es', // ES Reels (2026-11-25: the older styles are retired; the look re-skins it)
       outputs: ['reel', 'carousel'],
       beats: { min: 3, max: 5 },
       kinds: ['hook', 'point', 'payoff', 'cta'],
@@ -176,7 +176,7 @@
       description: 'Search a player. FrameUp gathers ES articles, ES photos and career stats, proposes the best moments with a source for every year and number, and builds a year-by-year reel and a carousel.',
       source: 'player',
       sports: ['nfl', 'cfb', 'mlb', 'golf'],
-      defaultStyle: 'countdown', // ES Countdown
+      defaultStyle: 'es', // ES Reels (2026-11-25: the older styles are retired; the look re-skins it)
       outputs: ['reel', 'carousel'],
       beats: { min: 5, max: 8 },
       kinds: ['hook', 'context', 'point', 'stat', 'payoff', 'cta'],

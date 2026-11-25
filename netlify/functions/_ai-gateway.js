@@ -154,6 +154,9 @@ const FEATURE_NAMES = [
   ['merch-refine', 'The merch design chat'],
   ['merch-moments', 'Merch moments'],
   ['reels-transcription', 'Automatic captions'],
+  ['reels-ideas', 'The Reels ideas room'],
+  ['reels-radar', 'The Reels trend radar'],
+  ['reels-voice-align', 'Voiceover sync'],
 ];
 // A call is switched off when its feature or its task is listed.
 function trackDisabled(track) {

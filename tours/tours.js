@@ -145,12 +145,12 @@
     kicker: 'Reels Studio',
     icon: I.film,
     steps: [
-      { page: 'reel-maker.html', pageLabel: 'Reels Studio', navTarget: '.es-sidebar [data-shell-id="reel-maker"]', target: '#rm-steps', icon: I.steps, title: 'Story, Review, Export', text: 'Three steps, one main button each.' },
-      { page: 'reel-maker.html', target: '#rm-topic', placement: 'left', icon: I.trending, title: "What's the story?", text: 'Pick a trend from the last 48 hours, or write a brief.' },
-      { page: 'reel-maker.html', target: '#rm-write', placement: 'left', icon: I.sparkles, title: 'Make my reel', text: 'Script, voice, clips and captions, made for you.' },
-      { page: 'reel-maker.html', target: '#rm-settings', placement: 'left', icon: I.grid, title: 'Settings, when you want them', text: 'Style, voice, clips and cost. Auto picks for you.' },
-      { page: 'reel-maker.html', target: '#rm-stage', placement: 'right', icon: I.phone, title: 'Review it big', text: 'Tap a beat under the preview to change just that beat.' },
-      { page: 'reel-maker.html', target: '.rm-step[data-step="export"]', icon: I.download, title: 'Check and export', text: 'Rights, checks and cost, then an MP4 with voice.' },
+      { page: 'reel-maker.html', pageLabel: 'Reels Studio', navTarget: '.es-sidebar [data-shell-id="reel-maker"]', target: '#rm-steps', icon: I.steps, title: 'Start, Storyboard, Export', text: 'Three steps, built on the ES video system.' },
+      { page: 'reel-maker.html', target: '#rm-fmt-entry', placement: 'left', icon: I.trending, title: 'Start from anything', text: 'A trend, your script, a game, a clip, a player, or inspiration.' },
+      { page: 'reel-maker.html', target: ['#rm-recipes', '#rm-write'], placement: 'left', icon: I.sparkles, title: 'Pick a recipe, then make it', text: 'Stat drop, Quote reaction, Verdict and more. One button makes the reel.' },
+      { page: 'reel-maker.html', target: ['#rm-storyboard', '#rm-stage'], placement: 'top', icon: I.grid, title: 'Every scene on one board', text: 'Change words and colours, drop in media, drag to reorder.' },
+      { page: 'reel-maker.html', target: '#rm-settings', placement: 'left', icon: I.sliders, title: 'One settings rail', text: 'Look, size, voice (or your own), music, captions and cost.' },
+      { page: 'reel-maker.html', target: '.rm-step[data-step="export"]', icon: I.download, title: 'Check and export', text: 'MP4 in 9:16 and 4:5, plus caption files, or export it all at once.' },
     ],
   });
 

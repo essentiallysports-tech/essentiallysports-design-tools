@@ -185,6 +185,9 @@
     "api/meta-ads.js": {
       "maxDuration": 120
     },
+    "api/reel-radar.js": {
+      "maxDuration": 60
+    },
     "api/merch.js": {
       "maxDuration": 120
     },
