@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="merch.css?v=20261125-merch">
+  <link rel="stylesheet" href="merch.css?v=20261125-merch2">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -60,7 +60,11 @@
         <h1 class="mx-title" id="mx-title">Merch Designs</h1>
         <span class="mx-conn" id="mx-conn" role="status" aria-live="polite"></span>
       </div>
-      <nav class="mx-steps" aria-label="Merch steps">
+      <div class="es-tabs mx-tabs" role="tablist" aria-label="Merch">
+        <button class="es-tab" type="button" role="tab" id="mx-tab-make" aria-selected="true" aria-controls="main" data-tab="make">Create merch</button>
+        <button class="es-tab" type="button" role="tab" id="mx-tab-list" aria-selected="false" aria-controls="mx-view-list" tabindex="-1" data-tab="list">Your merch</button>
+      </div>
+      <nav class="mx-steps" id="mx-steps-nav" aria-label="Merch steps">
         <ol id="mx-steps">
           <li><button class="mx-step" type="button" data-step="content"><span class="mx-step__num" aria-hidden="true">1</span><span>Content</span></button></li>
           <li><button class="mx-step" type="button" data-step="designs"><span class="mx-step__num" aria-hidden="true">2</span><span>Designs</span></button></li>
@@ -126,10 +130,11 @@
         <div class="mx-card mx-setup">
           <h2 class="mx-h2" id="mx-h-setup">Set up the product</h2>
           <div class="mx-block">
-            <span class="mx-label" id="mx-blank-label">Blank</span>
-            <div class="mx-blanks" id="mx-blanks" role="radiogroup" aria-labelledby="mx-blank-label"></div>
+            <span class="mx-label" id="mx-blank-label">Product</span>
+            <div class="mx-blanks" id="mx-blanks" role="radiogroup" aria-labelledby="mx-blank-label" aria-describedby="mx-blank-detail"></div>
+            <p class="mx-meta" id="mx-blank-detail"></p>
           </div>
-          <div class="mx-block">
+          <div class="mx-block" id="mx-colors-block">
             <span class="mx-label" id="mx-colors-label">Tee colour</span>
             <div class="mx-chips" id="mx-colors" role="radiogroup" aria-labelledby="mx-colors-label"></div>
           </div>
@@ -159,11 +164,15 @@
             </label>
             <p class="mx-earn" id="mx-earn"></p>
           </div>
-          <label class="es-field" id="mx-fw-collection-field" hidden>
-            <span class="es-field__label">Collection on Fourthwall</span>
-            <select class="mx-input" id="mx-fw-collection"></select>
-            <span class="es-field__hint">Fourthwall has no tags, so collections are how products are grouped.</span>
-          </label>
+          <div class="mx-block" id="mx-checks-block">
+            <span class="mx-label" id="mx-checks-label">Print check</span>
+            <ul class="mx-checks" id="mx-checks" aria-labelledby="mx-checks-label" aria-live="polite"></ul>
+          </div>
+          <fieldset class="mx-fieldset mx-shopcolls" id="mx-shopcolls-setup">
+            <legend class="mx-label">Shop collections</legend>
+            <p class="mx-meta">Fourthwall has no tags, so collections are how products are grouped in the shop. Pick any.</p>
+            <div class="mx-shopcolls__body" data-colls="setup"></div>
+          </fieldset>
           <div class="mx-rights" id="mx-rights">
             <strong>Rights check</strong>
             <ul class="mx-rights__list" id="mx-rights-list"></ul>
@@ -191,14 +200,40 @@
         </div>
       </div>
       <div class="mx-card mx-live" id="mx-live" hidden></div>
-      <div class="mx-card mx-history" id="mx-history" hidden>
-        <div class="mx-row mx-row--between">
-          <h2 class="mx-h2">Past merch</h2>
-          <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-list-refresh">Refresh</button>
-        </div>
-        <div id="mx-list" aria-live="polite"></div>
-      </div>
     </section>
+
+    <!-- Your merch -->
+    <section class="mx-view" id="mx-view-list" data-view="list" role="tabpanel" aria-labelledby="mx-h-list" hidden>
+      <div class="mx-row mx-row--between">
+        <div>
+          <h2 class="mx-h2" id="mx-h-list">Your merch</h2>
+          <p class="mx-sub">Everything FrameUp has put on Fourthwall. Units and revenue are for the last 30 days.</p>
+        </div>
+        <div class="mx-row">
+          <span class="mx-meta" id="mx-list-updated" role="status" aria-live="polite"></span>
+          <button class="es-btn" type="button" id="mx-list-refresh">Refresh</button>
+        </div>
+      </div>
+      <p class="mx-banner mx-banner--setup" id="mx-list-source" hidden></p>
+      <div class="mx-totals" id="mx-list-totals" hidden></div>
+      <div class="mx-card mx-list-card" id="mx-list" aria-live="polite" aria-busy="false"></div>
+    </section>
+
+    <dialog class="es-dialog mx-dialog" id="mx-archive" aria-labelledby="mx-archive-h" aria-describedby="mx-archive-copy">
+      <form method="dialog" class="mx-dialog__form" id="mx-archive-form">
+        <h2 class="mx-dialog__title" id="mx-archive-h">Archive this product?</h2>
+        <p class="mx-dialog__copy" id="mx-archive-copy">This removes <strong id="mx-archive-name"></strong> from the Fourthwall shop for good. It can’t be undone, and past orders stay in Fourthwall.</p>
+        <label class="es-field">
+          <span class="es-field__label">Type the product name to confirm</span>
+          <input class="mx-input" id="mx-archive-input" type="text" autocomplete="off" spellcheck="false">
+        </label>
+        <p class="mx-meta" id="mx-archive-status" role="status" aria-live="polite"></p>
+        <div class="mx-dialog__actions">
+          <button class="es-btn" type="button" id="mx-archive-cancel">Cancel</button>
+          <button class="es-btn es-btn--danger" type="button" id="mx-archive-go" disabled>Archive for good</button>
+        </div>
+      </form>
+    </dialog>
   </main>
 
   <script src="es-motion.js?v=20261115-ds1"></script>
@@ -207,7 +242,7 @@
   <script src="brand-kit.js?v=20261111-tennis1"></script>
   <script src="video-ads-teams.js?v=20261122-rel"></script>
   <script src="merch-rules.js?v=20261125-merch"></script>
-  <script src="merch-print.js?v=20261125-merch"></script>
-  <script src="merch.js?v=20261125-merch"></script>
+  <script src="merch-print.js?v=20261125-merch2"></script>
+  <script src="merch.js?v=20261125-merch2"></script>
 </body>
 </html>
