@@ -95,7 +95,7 @@ body.ri-dragging-item :is([data-pick], [data-ri-beat]) { cursor: copy; }
 .ri-script-voice { align-self: flex-start; }
 
 /* ── Your voiceover: the dialog ─────────────────────────────────────────── */
-.ri-voice { width: min(560px, calc(100vw - 32px)); font-family: var(--es-font-ui); }
+.ri-voice { box-sizing: border-box; width: min(560px, calc(100vw - 32px)); max-width: calc(100vw - 32px); font-family: var(--es-font-ui); }
 .ri-voice__body { display: flex; flex-direction: column; gap: var(--es-space-4, 16px); min-width: 0; }
 .ri-voice .rm-hint { margin: 0; color: var(--ri-ink-3); font-size: 13px; line-height: 1.45; }
 .ri-voice__actions { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }

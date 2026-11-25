@@ -560,6 +560,10 @@ try {
   await audit('375-voice-panel', ['#ri-voice-panel']);
   await evaluate(`(qa.ctx().modules.voiceInput.open(), 1)`);
   await sleep(200);
+  await step('375: the voiceover dialog sits inside the screen', async () => {
+    const r = await evaluate(`(() => { const d = document.querySelector('#ri-voice'); const b = d.getBoundingClientRect(); const inner = [...d.querySelectorAll('button, .ri-prompter')].map(e => e.getBoundingClientRect()).filter(x => x.width > 0); return { left: Math.round(b.left), right: Math.round(b.right), vw: document.documentElement.clientWidth, worst: Math.round(Math.max(...inner.map(x => x.right))) }; })()`);
+    expect(r.left >= 0 && r.right <= r.vw && r.worst <= r.right, JSON.stringify(r));
+  });
   await audit('375-voice-dialog', ['#rm-toasts']); // the audit adds every open dialog itself
   await click('#ri-voice [data-ri-close]');
   await click('#rm-next');
