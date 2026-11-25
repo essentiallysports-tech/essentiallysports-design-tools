@@ -55,7 +55,7 @@ await test('looks: Paper (the default), Ink, Blue, Team colour, Photo-led, Data-
   TH.LOOK_IDS.forEach(id => {
     const l = TH.LOOKS[id];
     assert.equal(l.id, id);
-    assert.ok(l.label && l.blurb && l.blurb.length <= 110, `${id} has a short blurb`);
+    assert.ok(l.label && l.blurb && l.blurb.length <= 62, `${id} has a short blurb`);
     assert.ok(TH.GROUNDS.includes(l.ground), `${id} ground`);
     ['text', 'accent', 'pillFill', 'pillInk', 'pillAlt', 'captionFill', 'captionInk', 'captionEmphasis', 'mark', 'wipe', 'dotBase', 'grain'].forEach(r => assert.ok(l.roles[r] != null, `${id} role ${r}`));
     assert.ok(['boxed', 'plain', 'big'].includes(l.pill), `${id} pill treatment`);

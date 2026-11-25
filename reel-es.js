@@ -512,7 +512,9 @@
       let bottom = top;
       (block.pills || []).forEach((p, i) => {
         const text = String(p.text).toUpperCase();
-        const max = Math.min(160, (p.size || 128) * LY.pillScale) * T;
+        // Bigger pills (Bold) still leave the caption line clear: the stack ends 110 px above it.
+        const room = LY.pillScale > 1 ? ((geo.captionY - 110 * geo.k - geo.top.hook) / Math.max(1, (block.pills || []).length) - 12 * T) / (TYPE.cap + 2 * TYPE.pad) : Infinity;
+        const max = Math.min(160 * T, (p.size || 128) * LY.pillScale * T, room);
         // Bigger pills (Bold) stop short of the ES mark's clear space when they sit beside it.
         const beside = LY.pillScale > 1 && top < geo.mark.y + geo.mark.size + geo.mark.clear;
         if (LY.pillBoxed) {
@@ -531,10 +533,13 @@
       });
       if (graphic.media && !full) { const md = mediaBelow(bottom); if (md) ops.unshift(md); }
       if (block.stamp && block.stamp.text) {
-        const size = (block.stamp.size || 170) * T;
+        // Bigger pills (Bold) push the stamp down, and it shrinks to stay above the caption line.
+        const below = bottom + 64 * T;
+        const fitH = LY.pillScale > 1 && block.stamp.y == null ? (geo.captionY - 84 * geo.k - below) / (TYPE.cap + 2 * TYPE.pad) / 1.25 : Infinity;
+        const size = Math.max(88 * T, Math.min((block.stamp.size || 170) * T, fitH));
         const text = block.stamp.text.toUpperCase();
         const sx = block.stamp.x != null ? block.stamp.x : 300;
-        const sy = (block.stamp.y != null ? block.stamp.y : 860) * geo.k;
+        const sy = block.stamp.y != null ? block.stamp.y * geo.k : (LY.pillScale > 1 ? Math.max(Math.min(860 * geo.k, geo.captionY - 84 * geo.k - size * (TYPE.cap + 2 * TYPE.pad) * 1.2), below) : 860 * geo.k);
         const op = boxed(text, sx, sy, size, 'red', { role: 'stamp', enter: 'stamp', at: graphic.stampAt != null ? graphic.stampAt : 1200, rot: MOTION.stampRotDeg });
         // Keep the tilted stamp inside the column.
         const b = rotatedBox(op);
