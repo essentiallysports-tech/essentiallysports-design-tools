@@ -181,7 +181,7 @@ async function flow(width, theme) {
   ok(await evaluate("/300 DPI/.test(document.getElementById('mx-side').textContent)"), `${tag}: print area shows its DPI`);
   // Sizes come from the template's printSpec (register rejects any other size).
   ok(await evaluate("(() => { const t = MerchUI.state.templates.find(x => x.kind === 'mug'); return /2700 × 1050 px at 300 DPI/.test(document.getElementById('mx-checks').textContent) && t.printSpec.pixelsWidth === 2700; })()"), `${tag}: mug draws at the template's 2700 × 1050`);
-  ok(await evaluate("/Mug preview, ES logo inside the design/.test(document.getElementById('mx-stage-canvas').getAttribute('aria-label'))"), `${tag}: mug preview label`);
+  await until("/Mug preview, ES logo inside the design/.test(document.getElementById('mx-stage-canvas').getAttribute('aria-label'))", `${tag}: mug preview label`);
   await audit(`${tag}-setup-mug`);
   await click('#mx-blanks [data-kind="sticker"]');
   await until("/cut line/.test(document.getElementById('mx-checks').textContent)", `${tag} sticker cut check`);
