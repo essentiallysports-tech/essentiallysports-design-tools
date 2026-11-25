@@ -3053,6 +3053,7 @@
     // Data formats (Phase 1)
     DATA_TEMPLATES, SLIDE_TEMPLATES, SLIDE_MARK, SLIDE_SAFE, DATA_MIN_MS, canvasOf, scoreState, swingFor, momentInfo, periodLabel, teamColours, bestInk,
     provenanceNumbers, unbackedNumbers, wpOnScreen, drawSlideFrame,
-    buildSlides: (timeline, opts) => { const RP = getRP(); return RP ? RP.buildSlides(timeline, opts) : []; },
+    // Slides wear the reel's look (the ES style only; reel-es-themes.js).
+    buildSlides: (timeline, opts) => { const RP = getRP(); return RP ? RP.buildSlides(timeline, opts).map(sl => (timeline && timeline.look && S.get(sl.style).engine === 'es' ? { ...sl, look: timeline.look } : sl)) : []; },
   };
 }));

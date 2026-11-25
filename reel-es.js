@@ -513,8 +513,10 @@
       (block.pills || []).forEach((p, i) => {
         const text = String(p.text).toUpperCase();
         const max = Math.min(160, (p.size || 128) * LY.pillScale) * T;
+        // Bigger pills (Bold) stop short of the ES mark's clear space when they sit beside it.
+        const beside = LY.pillScale > 1 && top < geo.mark.y + geo.mark.size + geo.mark.clear;
         if (LY.pillBoxed) {
-          const size = fitSize(m, [text], { max, min: 64 * T, width: CW, boxed: true });
+          const size = fitSize(m, [text], { max, min: 64 * T, width: beside ? geo.mark.x - geo.mark.clear - X : CW, boxed: true });
           ops.push(boxed(text, X, top, size, p.color || 'ink', { role: 'pill', enter: 'left', delay: i * st }));
           bottom = top + size * (TYPE.cap + 2 * TYPE.pad);
           top += boxStep(size);
@@ -1052,7 +1054,10 @@
     const theme = themeOf(timeline);
     const name = theme.look.label;
     if (raw && !TH.LOOKS[raw]) out.push(issue('look', 'warning', `“${String(raw).slice(0, 24)}” is not an ES look, so this reel is drawn in Paper.`, 'Pick a look.'));
-    TH.validateLook(theme.look, { team: theme.team }).forEach(msg => out.push(issue('look', 'critical', `The ${name} look breaks an ES rule (${msg})`, 'Pick another look.')));
+    // A team colour that cannot carry text is not used as the ground (the look
+    // falls back to ink and keeps the colour for a pill and the wipe).
+    if (theme.teamWeak) out.push(issue('look', 'info', `Text on this team colour (${theme.team}) would be under 4.5:1, so the reel stays on ink and uses the colour for a pill and the wipe.`, ''));
+    TH.validateLook(theme.look, { team: theme.teamWeak ? '' : theme.team }).forEach(msg => out.push(issue('look', 'critical', `The ${name} look breaks an ES rule (${msg})`, 'Pick another look.')));
     if (theme.teamMissing) out.push(issue('look', 'info', 'The Team colour look needs a team. This reel has none, so it is drawn in ES blue.', 'Pick a team, or another look.'));
     const graphics = (timeline.tracks && timeline.tracks.graphics) || [];
     const blocks = graphics.map(g => (g.data && g.data.block) || null).filter(Boolean);
@@ -1078,7 +1083,7 @@
           const under = op.fill || (op.role === 'cta' && panel ? panel.fill : S.ground);
           const kit = !S.plate && ['paper', 'white'].includes(S.ground) && !op.fill && SIGNALS.includes(op.color);
           if (kit) return;
-          const accent = SIGNALS.includes(op.color) || (!op.fill && op.color === (S.text.blue || 'blue') && op.color !== (S.text.ink || 'ink')) || ['blue', 'red'].includes(under);
+          const accent = SIGNALS.includes(op.color) || (!op.fill && op.color === (S.text.blue || 'blue') && op.color !== (S.text.ink || 'ink')) || (['blue', 'red', 'team'].includes(under) && !op.small); // boxed display words (64 px and up) on a colour
           const min = accent ? TH.ACCENT_MIN : TH.TEXT_MIN;
           let fg = colorOf(op.color, theme);
           const bg = colorOf(under, theme);

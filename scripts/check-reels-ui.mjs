@@ -289,9 +289,10 @@ for (const w of WIDTHS) {
   await audit('review-quality-checks', w);
   await click('#rm-statusline');
   await openFold('#rm-style-fold');
-  const styles = await evaluate(`[...document.querySelectorAll('#rm-styles-edit [role="radio"]')].map(b => b.dataset.style || b.getAttribute('data-style') || b.textContent.trim())`);
-  if (!styles || styles.length !== 5) behaviour.push(`review: expected 5 styles, found ${styles?.length || 0}`);
-  if (styles && styles[0] !== 'es') behaviour.push(`review: ES Reels should be the first style, found ${styles[0]}`);
+  // Reels 2.0 (lane A): the picker offers the eight ES looks, Paper first (the old styles are retired).
+  const styles = await evaluate(`[...document.querySelectorAll('#rm-styles-edit [role="radio"]')].map(b => b.dataset.look || b.dataset.style || b.textContent.trim())`);
+  if (!styles || styles.length !== 8) behaviour.push(`review: expected 8 looks, found ${styles?.length || 0}`);
+  if (styles && styles[0] !== 'paper') behaviour.push(`review: Paper should be the first look, found ${styles[0]}`);
   for (let i = 0; i < (styles?.length || 0); i++) {
     await step(`style ${styles[i]}`, async () => { await evaluate(`document.querySelectorAll('#rm-styles-edit [role="radio"]')[${i}].click()`); await waitFor(`document.querySelectorAll('#rm-styles-edit [role="radio"]')[${i}].getAttribute('aria-checked') === 'true'`, 3000, 'style picked'); });
     await sleep(300);
@@ -344,7 +345,7 @@ for (const w of WIDTHS) {
     const st = await evaluate(`document.querySelector('#rm-statusline-text').textContent`);
     if (!/Safe frame ✓/.test(st)) throw new Error(`status line: ${st}`);
   });
-  await step('ES checklist', async () => { await must('#rm-statusline'); await waitFor(`!document.querySelector('#rm-checklist').hidden && document.querySelectorAll('#rm-checklist li').length === 8`, 2000, 'checklist rows'); });
+  await step('ES checklist', async () => { await must('#rm-statusline'); await waitFor(`!document.querySelector('#rm-checklist').hidden && document.querySelectorAll('#rm-checklist li').length === 9`, 2000, 'checklist rows'); });
   await audit('script-checklist', w);
   await click('#rm-statusline');
   await step('block editor', async () => {

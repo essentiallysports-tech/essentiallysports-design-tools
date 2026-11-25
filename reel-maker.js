@@ -129,7 +129,16 @@
   };
   state.spent.clips = 0;
   state.spent.scenes = 0;
-  const styleId = () => (state.plan && state.plan.style) || (state.style === 'auto' ? state.styleSuggested.id : state.style);
+  // ── Reels 2.0: A (looks) ── ES is the only style now; a retired or unknown one resolves to it.
+  const styleId = () => S.currentStyle((state.plan && state.plan.style) || (state.style === 'auto' ? state.styleSuggested.id : state.style));
+  // The reel's look (reel-es-themes.js). Picked before a plan exists it waits
+  // in state.look; the plan carries it from its first build on (so it saves).
+  state.look = 'paper';
+  const lookId = () => {
+    if (!ES) return 'paper';
+    if (state.plan && !ES.LOOKS[state.plan.look]) state.plan.look = ES.themes.lookId(state.look);
+    return state.plan ? state.plan.look : ES.themes.lookId(state.look);
+  };
   // The ES house style is on (and reel-es.js loaded).
   const esOn = () => Boolean(ES && S.get(styleId()).engine === 'es' && !(state.plan && F.isDataFormat && F.isDataFormat(state.plan.format)));
   const scriptLocked = () => Boolean(state.plan && state.plan.script && state.plan.script.locked);
@@ -472,23 +481,27 @@
     renderStyles();
   });
 
-  // ─── Styles: picker with live thumbnails drawn by the renderer ──────────
+  // ─── Looks: picker with live thumbnails drawn by the renderer ───────────
+  // ── Reels 2.0: A (looks) ── The four older styles are retired: the picker
+  // offers the ES looks (reel-es-themes.js), every thumbnail is the same
+  // sample plan drawn by the real renderer in that look. The legacy draw code
+  // stays in reel-render.js for one release; nothing here offers it.
   const SAMPLE = {
-    es: { beats: [{ id: 's1', kind: 'hook', block: { type: 'hook', pills: [{ text: 'ALLEN BROKE', color: 'ink' }, { text: 'THE RECORD.', color: 'blue' }], stamp: { text: 'RECORD' } }, text: 'Allen broke the record', vo: 'Josh Allen broke the *record.*' }] },
-    classic: { beats: [{ id: 's1', kind: 'hook', text: 'Allen breaks the Bills record', vo: 'Josh Allen just broke the Bills record.', emphasis: 'record' }] },
-    explainer: { eyebrow: 'Josh Allen · Every season', beats: [{ id: 's1', kind: 'stat', text: 'Average throw depth', vo: 'His average throw travels 8.4 yards.', stat: { value: '8.4', label: 'Yards per throw' }, visual: 'chart', chips: { filled: '1', total: '5', label: 'Deep shots' } }] },
-    series: { series: { tag: 'ES Moneyball' }, strip: { label: 'Cap space', value: '-$12.3M', of: '$40M', tone: 'bad' }, beats: [{ id: 's1', kind: 'roles', text: 'Where the holes are', vo: 'Here is where the holes are.', roles: [{ role: 'WR', value: '#31', tone: 'bad' }, { role: 'LB', value: 'FA', tone: 'bad' }, { role: 'DB', value: '3 FAs', tone: 'bad' }, { role: 'DL', value: '#2', tone: 'good' }] }] },
-    countdown: { beats: [{ id: 's1', kind: 'rank', rank: 1, name: 'Josh Allen', text: 'Josh Allen', vo: 'Number one is Josh Allen.', detail: 'MVP favourite' }, { id: 's0', kind: 'rank', rank: 2, name: 'Lamar', text: 'Lamar', vo: 'Two.' }] },
+    es: { format: 'explainer', title: 'Sample', sourceLine: 'Source: ES', beats: [{ id: 's1', kind: 'hook', block: { type: 'hook', pills: [{ text: 'ALLEN BROKE', color: 'ink' }, { text: 'THE RECORD.', color: 'blue' }], stamp: { text: 'RECORD' } }, text: 'Allen broke the record', vo: 'Josh Allen broke the *record.*' }] },
   };
-  const thumbCache = new Map();
+  const SAMPLE_TEAM = { name: 'Sample', colors: ['#0A2342', '#0A6FDE'] };
+  const lookList = () => (ES ? ES.LOOK_IDS.map(id => ES.LOOKS[id]) : []);
   function drawThumb(canvas, id) {
+    if (!ES || !canvas) return;
     const c = canvas.getContext('2d');
-    const plan = { format: id === 'countdown' ? 'top5' : 'explainer', title: 'Sample', ...SAMPLE[id] };
-    const team = state.plan?.team || { name: 'Sample', colors: ['#0A2342', '#0A6FDE'] };
-    const assets = { 'design:bg': { kind: 'design', label: 'Designed background', rights: {} } };
-    const photos = Object.fromEntries(plan.beats.map(b => [b.id, ['design:bg']]));
-    const tl = R.buildTimeline(plan, { style: id, team, photos, assets });
+    const look = ES.themes.lookId(id);
+    const team = state.plan?.team && (state.plan.team.colors || []).length ? state.plan.team : SAMPLE_TEAM;
+    // Photo-led shows a photo: the reel's first loaded one, else a team tile.
+    const photoId = look === 'photo' ? (Object.values(state.photos || {}).flat().find(a => state.images[a] && state.assets[a] && state.assets[a].kind === 'photo') || 'thumb:tile') : '';
+    const assets = photoId ? { [photoId]: state.assets[photoId] || { kind: 'tile', label: 'Sample', colors: team.colors, rights: {} } } : {};
+    const tl = R.buildTimeline(SAMPLE.es, { style: 'es', look, team, photos: photoId ? { s1: [photoId] } : {}, assets });
     c.save();
+    c.setTransform(1, 0, 0, 1, 0, 0);
     c.scale(canvas.width / 1080, canvas.height / 1920);
     R.drawFrame(c, tl, 1600, { measure, images: state.images, videos: {}, cutouts: {}, grain });
     c.restore();
@@ -496,43 +509,89 @@
   function renderStyles() {
     const suggestion = S.suggestStyle({ format: (G && TL && dataFmt()) || state.format, text: topicText() });
     state.styleSuggested = suggestion;
-    const current = state.plan ? state.plan.style || 'classic' : state.style;
-    const items = [{ id: 'auto', label: 'Auto', blurb: `Suggested: ${S.get(suggestion.id).label}` }, ...S.STYLE_IDS.map(id => S.STYLES[id])];
-    const html = (prefix, withAuto) => (withAuto ? items : items.slice(1)).map(st => {
-      const on = current === st.id;
-      const sug = st.id === suggestion.id && topicText().trim().length > 8;
-      return `<button class="rm-style" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-style="${st.id}">
-        ${st.id === 'auto' ? `<span class="rm-style__auto" aria-hidden="true">${ICON.sparkles}</span>` : `<canvas class="rm-style__thumb" width="108" height="192" data-thumb="${st.id}" aria-hidden="true"></canvas>`}
-        <span class="rm-style__name">${esc(st.label)}${sug ? '<span class="rm-format__dot" title="Suggested for this story"><span class="es-sr-only">, suggested</span></span>' : ''}</span>
-        <span class="rm-style__blurb">${esc(st.blurb)}</span></button>`;
+    const current = lookId();
+    const html = () => lookList().map(lk => {
+      const on = current === lk.id;
+      return `<button class="rm-style" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-look="${lk.id}" data-style="es">
+        <canvas class="rm-style__thumb" width="216" height="384" data-thumb="${lk.id}" aria-hidden="true"></canvas>
+        <span class="rm-style__name">${esc(lk.label)}</span>
+        <span class="rm-style__blurb">${esc(lk.blurb)}</span></button>`;
     }).join('');
-    els.styles.innerHTML = html('t', true);
-    els.stylesEdit.innerHTML = html('e', false);
+    els.styles.innerHTML = html();
+    els.stylesEdit.innerHTML = html();
     [els.styles, els.stylesEdit].forEach(root => root.querySelectorAll('[data-thumb]').forEach(cv => drawThumb(cv, cv.dataset.thumb)));
-    els.styleWhy.textContent = topicText().trim().length > 8 ? `Suggested: ${S.get(suggestion.id).label}` : '';
-    if (els.styleMeta) els.styleMeta.textContent = state.plan ? S.get(styleId()).label : '';
+    const label = ES ? ES.LOOKS[current].label : '';
+    els.styleWhy.textContent = label ? `${label} look` : '';
+    if (els.styleMeta) els.styleMeta.textContent = label;
     renderAutoline();
   }
-  function onStylePick(event) {
-    const btn = event.target.closest('[data-style]');
-    if (!btn) return;
-    const id = btn.dataset.style;
+  // Pick a look: before a plan it waits in state.look; with one, the reel is redrawn.
+  function setLook(id, { quiet = false } = {}) {
+    if (!ES || !ES.LOOKS[id]) return false;
+    const was = lookId();
+    state.look = id;
     if (state.plan) {
-      if (id === 'auto' || id === state.plan.style) return;
-      state.plan.style = id;
-      state.style = id;
-      // A style that lacks a component shows it with its own layout; the
-      // director is asked again only if the editor wants (Revise).
-      if (S.get(id).caption.mode !== 'user') els.capstyleField.hidden = true; else els.capstyleField.hidden = false;
-      rebuild();
-      renderEdit();
-      if (S.get(id).cutout) autoCutout();
-      logEvent('edit', { what: 'style', style: id });
-    } else state.style = id;
+      state.plan.style = styleId();
+      state.plan.look = id;
+      if (was !== id) { rebuild(); if (!quiet) logEvent('edit', { what: 'look', look: id }); }
+    }
     renderStyles();
+    if (was !== id && window.ReelMakerCtx) window.ReelMakerCtx.emit('look', { look: id });
+    return true;
+  }
+  function onStylePick(event) {
+    const btn = event.target.closest('[data-look]');
+    if (!btn) return;
+    setLook(btn.dataset.look);
+    // The new render replaced the buttons: keep the keyboard on the picked one.
+    const again = event.currentTarget.querySelector(`[data-look="${btn.dataset.look}"]`);
+    if (again && document.activeElement === document.body) again.focus();
+  }
+  // Arrow keys move through the looks (a radiogroup), Home and End jump.
+  function onStyleKey(event) {
+    const keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    if (!(event.key in keys) && event.key !== 'Home' && event.key !== 'End') return;
+    const list = [...event.currentTarget.querySelectorAll('[data-look]')];
+    const at = list.indexOf(event.target.closest('[data-look]'));
+    if (at < 0) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? list.length - 1 : (at + keys[event.key] + list.length) % list.length;
+    const id = list[next].dataset.look;
+    setLook(id);
+    const btn = event.currentTarget.querySelector(`[data-look="${id}"]`);
+    if (btn) btn.focus();
   }
   els.styles.addEventListener('click', onStylePick);
   els.stylesEdit.addEventListener('click', onStylePick);
+  els.styles.addEventListener('keydown', onStyleKey);
+  els.stylesEdit.addEventListener('keydown', onStyleKey);
+  // A saved reel in a retired style opens in the closest look (classic ->
+  // Photo-led, explainer -> Data-led, series -> Ink, countdown -> Paper): each
+  // beat gets its ES block from the fields it already has (ReelES.blockOf), so
+  // no words change. Returns the line for the toast ('' when nothing changed).
+  function adoptLook(plan, savedStyle = '') {
+    if (!plan || !ES) return '';
+    const old = [savedStyle, plan.style].find(id => S.isLegacy(id)) || '';
+    plan.style = S.currentStyle(plan.style);
+    if (!old) { if (!ES.LOOKS[plan.look]) plan.look = 'paper'; return ''; }
+    plan.look = ES.lookForStyle(old);
+    if (!(F.isDataFormat && F.isDataFormat(plan.format))) {
+      (plan.beats || []).forEach(beat => {
+        if (beat.block && ES.BLOCK_TYPES.includes(beat.block.type)) return;
+        const block = ES.blockOf(beat);
+        beat.block = block;
+        beat.kind = ES.KIND_FOR[block.type];
+      });
+    }
+    return `The ${S.STYLES[old].label} style has been retired. This reel now opens in the ${ES.LOOKS[plan.look].label} look.`;
+  }
+  // Published as ctx.modules.looks (registered where the page context is made).
+  const looksApi = {
+    list: () => lookList().map(lk => ({ id: lk.id, label: lk.label, blurb: lk.blurb, layout: lk.layout, motion: lk.motion })),
+    set: id => setLook(id),
+    current: () => lookId(),
+    thumb: (canvas, id) => drawThumb(canvas, id || lookId()),
+  };
 
   // The Settings summary above Make my reel: Style · Voice · Clips · Format.
   // Each tile opens All settings at that section.
@@ -1392,7 +1451,7 @@
     const voice = voiceFor();
     const voiceMode = Object.keys(voice).length ? state.config.voice.mode : 'off';
     return {
-      style: styleId(), voice, photos: state.photos, assets: { ...state.assets }, team: state.plan.team, captionStyle: state.captionStyle,
+      style: styleId(), look: lookId(), voice, photos: state.photos, assets: { ...state.assets }, team: state.plan.team, captionStyle: state.captionStyle,
       voiceMode, music: state.music ? { asset: 'music' } : null, sources: state.sources, corpus: state.corpus,
       // Clip sound is muted unless "Original clip audio" is on (then only clips that have a sound track).
       clipAudio: state.clipAudio ? Object.keys(state.buffers).filter(k => k.startsWith('clipaudio:') && state.buffers[k]).map(k => k.slice(10)) : false,
@@ -2469,7 +2528,10 @@
     state.visualSrc = t.visualSrc || {};
     if (t.voiceId) state.voiceId = t.voiceId;
     if (typeof t.voiceOn === 'boolean') state.voiceOn = t.voiceOn;
-    if (t.style && S.STYLES[t.style]) state.plan.style = t.style;
+    // ── Reels 2.0: A (looks) ── a reel saved in a retired style opens in the closest look.
+    const lookNote = adoptLook(state.plan, t.style);
+    state.look = state.plan.look || 'paper';
+    if (lookNote) toast(lookNote);
     state.selected = state.plan.beats[0]?.id || '';
     // Drop picks whose media is gone (uploads, AI media): those beats refill.
     Object.keys(state.photos).forEach(k => { state.photos[k] = (state.photos[k] || []).filter(id => state.assets[id]); if (!state.photos[k].length) { delete state.photos[k]; delete state.visualSrc[k]; } });
@@ -4011,6 +4073,7 @@
     on(event, fn) { if (!ctxListeners.has(event)) ctxListeners.set(event, new Set()); ctxListeners.get(event).add(fn); return () => ctxListeners.get(event)?.delete(fn); },
     emit(event, data) { (ctxListeners.get(event) || []).forEach(fn => { try { fn(data); } catch (error) { window.FrameUpErrors?.report?.(error, `reels ctx ${event}`); } }); },
   };
+  pageCtx.register('looks', looksApi); // ── Reels 2.0: A (looks) ──
   window.ReelMakerCtx = pageCtx;
   document.dispatchEvent(new CustomEvent('reelmaker:ready', { detail: { ctx: pageCtx } }));
 })();

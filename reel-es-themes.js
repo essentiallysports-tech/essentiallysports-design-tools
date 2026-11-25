@@ -111,6 +111,12 @@
     return { id: 'team', ground: 'team', text: { ink: text, white: text, blue: accent }, fill: { ink: text, white: text, blue: alt }, plate: 'ink', dot: text, cta: text, logo: nearBlue ? 'black' : 'blue', mark: nearBlue ? 'black' : 'blue', small: 1 };
   }
 
+  // A few mid-tone colours (a pure red, say) carry neither white nor ink text
+  // at 4.5:1. validateLook refuses them as a ground, and the Team colour look
+  // then keeps the reel on ink and uses the colour for a pill and the wipe.
+  const teamCarriesText = hex => Math.max(contrast('#FFFFFF', hex), contrast(TOKENS.ink, hex)) >= TEXT_MIN;
+  const TEAM_ON_INK = { id: 'team', ground: 'ink', text: { ink: 'white' }, fill: { ink: 'white', blue: 'team' }, plate: null, dot: 'white', cta: 'blue', logo: 'blue', mark: 'blue', small: 0.72 };
+
   // ─── The looks ──────────────────────────────────────────────────────────
   // ground: the token every scene starts on. scenes: blocks that leave it for
   // another surface (the kit's quote sits on ink). roles: the look's colour
@@ -188,17 +194,18 @@
     if (cache.has(key)) return cache.get(key);
     const colors = { ...TOKENS, team: teamHex || TOKENS.blue };
     // Team colour with no team on the reel draws as ES blue (the lint says so).
-    const surfaces = { ...SURFACES, team: look.teamColour ? (teamHex ? teamSurface(teamHex) : { ...SURFACES.blue, id: 'team', ground: 'team' }) : null };
+    const teamWeak = Boolean(teamHex) && !teamCarriesText(teamHex);
+    const surfaces = { ...SURFACES, team: look.teamColour ? (teamWeak ? TEAM_ON_INK : teamHex ? teamSurface(teamHex) : { ...SURFACES.blue, id: 'team', ground: 'team' }) : null };
     const base = surfaces[look.surface];
     // A team colour close to ink keeps every scene on it (ink boards beside a
     // near-black ground read as a mistake), and the wipe leads with white.
-    const teamDark = Boolean(teamHex) && contrast(TOKENS.ink, teamHex) < 2.2 && SIGNALS.concat('blue').every(n => contrast(TOKENS[n], teamHex) >= ACCENT_MIN);
+    const teamDark = teamWeak || Boolean(teamHex) && contrast(TOKENS.ink, teamHex) < 2.2 && SIGNALS.concat('blue').every(n => contrast(TOKENS[n], teamHex) >= ACCENT_MIN);
     // The first slab, then the slab the cut happens under. On a team colour
     // close to ink the cover slab is white, so the wipe never vanishes.
     const wipe = look.roles.wipe.slice();
-    if (teamDark) { wipe[0] = 'white'; wipe[1] = 'ink'; }
+    if (teamDark) { wipe[0] = teamWeak ? 'team' : 'white'; wipe[1] = teamWeak ? 'white' : 'ink'; }
     const theme = {
-      id: look.id, look, colors, team: teamHex, teamMissing: Boolean(look.teamColour && !teamHex),
+      id: look.id, look, colors, team: teamHex, teamMissing: Boolean(look.teamColour && !teamHex), teamWeak,
       base, surfaces,
       surfaceFor: type => (teamDark ? base : surfaces[look.scenes[type]] || base),
       caption: { fill: look.roles.captionFill, ink: look.roles.captionInk, em: look.roles.captionEmphasis, mode: look.caption.emphasis, box: look.caption.box },
@@ -309,7 +316,9 @@
       seen.add(s.id);
       const g = theme.hex(s.ground);
       const t = n => s.text[n] || n;
-      rows.push({ surface: s.id, ground: g, text: contrast(theme.hex(t('ink')), g), accent: contrast(theme.hex(t('blue')), g), pill: contrast(theme.hex(theme.inkOn(s.fill.ink || 'ink')), theme.hex(s.fill.ink || 'ink')), green: contrast(TOKENS.green, s.plate && contrast(TOKENS.green, g) < ACCENT_MIN ? theme.hex(s.plate) : g), red: contrast(TOKENS.red, s.plate && contrast(TOKENS.red, g) < ACCENT_MIN ? theme.hex(s.plate) : g) });
+      // on(): against the ground, or against the plate when the surface would plate it.
+      const on = n => contrast(theme.hex(n), s.plate && contrast(theme.hex(n), g) < ACCENT_MIN ? theme.hex(s.plate) : g);
+      rows.push({ surface: s.id, ground: g, plate: s.plate || '', text: contrast(theme.hex(t('ink')), g), accent: on(t('blue')), pill: contrast(theme.hex(theme.inkOn(s.fill.ink || 'ink')), theme.hex(s.fill.ink || 'ink')), green: contrast(TOKENS.green, s.plate && contrast(TOKENS.green, g) < ACCENT_MIN ? theme.hex(s.plate) : g), red: contrast(TOKENS.red, s.plate && contrast(TOKENS.red, g) < ACCENT_MIN ? theme.hex(s.plate) : g) });
     });
     rows.push({ surface: 'caption', ground: theme.hex(theme.caption.fill), text: contrast(theme.hex(theme.caption.ink), theme.hex(theme.caption.fill)), accent: theme.caption.mode === 'text' ? contrast(TOKENS.yellow, theme.hex(theme.caption.fill)) : contrast(TOKENS.ink, TOKENS.yellow) });
     return rows;
@@ -318,6 +327,6 @@
   return {
     TOKENS, SIGNALS, SIGNAL_MEANING, NEUTRALS, GROUNDS, TEXT_MIN, ACCENT_MIN,
     LOOKS, LOOK_IDS, DEFAULT_LOOK, LAYOUTS, MOTIONS, MOTION_LIMITS, SURFACES, LEGACY_STYLE_LOOKS,
-    lookId, lookForStyle, resolve, validateLook, contrastMatrix, teamSurface, inkOn, contrast, luminance, blend,
+    lookId, lookForStyle, teamCarriesText, resolve, validateLook, contrastMatrix, teamSurface, inkOn, contrast, luminance, blend,
   };
 }));
