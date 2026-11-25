@@ -115,6 +115,24 @@ async function liveProductIds(limit = 200) {
   const rows = await req(`${T.products}?select=product_id&state=neq.ARCHIVED&order=created_at.desc&limit=${Math.min(500, limit)}`);
   return (rows || []).map(r => r.product_id);
 }
+// Every product id FrameUp made (archived too): orders are kept only when
+// they include one of these.
+async function ourProductIds(limit = 2000) {
+  const rows = await req(`${T.products}?select=product_id&order=created_at.desc&limit=${Math.min(5000, limit)}`);
+  return (rows || []).map(r => r.product_id);
+}
+// The stored fields a fresh Fourthwall product read updates (refresh, sync,
+// PRODUCT_UPDATED webhooks). `product` is _fourthwall.normalizeProduct().
+function patchFromProduct(product, now = new Date().toISOString()) {
+  const round2 = n => Math.round(Number(n) * 100) / 100;
+  return {
+    state: product.state, title: product.name || undefined, slug: product.slug || undefined, productUrl: product.url || undefined,
+    thumb: product.thumbnail || undefined, images: product.images, variants: product.variants,
+    ...(product.price != null ? { price: { retail: product.price, base: product.cost, margin: product.cost != null ? round2(product.price - product.cost) : null } } : {}),
+    ...(product.state === 'ARCHIVED' ? { archivedAt: now } : {}),
+    refreshedAt: now,
+  };
+}
 // Products this person created since `sinceIso` (daily caps that survive cold starts).
 async function createdSince(sinceIso, email) {
   const who = email ? `&created_by=eq.${enc(String(email).toLowerCase())}` : '';
@@ -133,6 +151,10 @@ async function recordEvent({ id, source = 'frameup', type, productId = null, ord
     },
   });
   return { inserted: Array.isArray(rows) ? rows.length > 0 : true };
+}
+async function hasEvent(id) {
+  const rows = await req(`${T.events}?select=id&id=eq.${enc(id)}&limit=1`);
+  return Array.isArray(rows) && rows.length > 0;
 }
 async function lastEvent(type) {
   const rows = await req(`${T.events}?select=id,created_at,payload&type=eq.${enc(type)}&order=created_at.desc&limit=1`);
@@ -161,6 +183,15 @@ async function ordersFor(productIds = null, { limit = 5000 } = {}) {
     ? `&product_ids=ov.${enc(`{${productIds.map(id => `"${String(id).replace(/"/g, '')}"`).join(',')}}`)}`
     : '';
   return req(`${T.orders}?select=order_id,status,placed_at,lines,test_mode,updated_at${filter}&test_mode=is.false&order=placed_at.desc&limit=${Math.min(10000, limit)}`);
+}
+async function getOrder(orderId) {
+  const rows = await req(`${T.orders}?select=order_id,status,fw_updated_at&order_id=eq.${enc(orderId)}&limit=1`);
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+// Keep only the lines for FrameUp's products; null when none are ours.
+function onlyOurs(order, ours) {
+  const lines = (order?.lines || []).filter(l => ours.has(l.productId));
+  return lines.length ? { ...order, lines } : null;
 }
 async function latestOrderUpdate() {
   const rows = await req(`${T.orders}?select=fw_updated_at,updated_at&order=fw_updated_at.desc.nullslast&limit=1`);
@@ -223,7 +254,7 @@ async function removeArt(path) {
 
 module.exports = {
   T, BUCKET, available, soft,
-  recordDesign, upsertProduct, updateProduct, getProduct, listProducts, liveProductIds, createdSince,
-  recordEvent, lastEvent, upsertOrders, ordersFor, latestOrderUpdate, aggregateSales,
+  recordDesign, upsertProduct, updateProduct, getProduct, listProducts, liveProductIds, ourProductIds, createdSince, patchFromProduct,
+  recordEvent, hasEvent, lastEvent, upsertOrders, getOrder, onlyOurs, ordersFor, latestOrderUpdate, aggregateSales,
   downloadArt, removeArt, orderRow, productRow,
 };

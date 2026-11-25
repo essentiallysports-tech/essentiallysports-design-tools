@@ -187,6 +187,12 @@
     },
     "api/merch.js": {
       "maxDuration": 120
+    },
+    "api/fourthwall-webhook.js": {
+      "maxDuration": 15
+    },
+    "api/merch-sync.js": {
+      "maxDuration": 60
     }
   },
   "crons": [

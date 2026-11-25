@@ -719,15 +719,7 @@ async function productMode(body, track) {
   const rec = HISTORY.find(h => h.productId === id); if (rec) { rec.state = product.state; rec.thumb = product.thumbnail || rec.thumb; }
   return json(200, { ok: true, product: { ...product, productId: id, ...(row ? { blank: row.blank, color: row.color, createdBy: row.created_by, createdAt: row.created_at, collectionIds: row.collection_ids || [] } : {}) }, refreshed: true, history: row ? 'db' : historyMode() === 'db' ? 'not-ours' : 'memory' });
 }
-function refreshPatch(product) {
-  return {
-    state: product.state, title: product.name || undefined, slug: product.slug || undefined, productUrl: product.url || undefined,
-    thumb: product.thumbnail || undefined, images: product.images, variants: product.variants,
-    ...(product.price != null ? { price: { retail: product.price, base: product.cost, margin: product.cost != null ? round2(product.price - product.cost) : null } } : {}),
-    ...(product.state === 'ARCHIVED' ? { archivedAt: new Date().toISOString() } : {}),
-    refreshedAt: new Date().toISOString(),
-  };
-}
+const refreshPatch = product => store.patchFromProduct(product);
 
 async function statusMode(track) {
   const configured = fourthwall.configured();
