@@ -9,6 +9,8 @@
   const area = (regionId, name, w, h, design, logo, dpi = 150) => ({ regionId, name, pixelsWidth: w, pixelsHeight: h, dpi, renderable: true, available: true, suitsDesign: design, suitsLogo: logo });
   const spec = (id, regionId, w, h, dpi) => ({ templateId: id, region: 'front', regionId, pixelsWidth: w, pixelsHeight: h, dpi, placementStrategy: 'CENTER', garmentColor: '#FFFFFF' });
   const WHITE = [{ name: 'White', hex: '#FFFFFF' }];
+  // Server v2 fields: kind, apparel, minDpi, wrap, logo 'area'|'inside', pricing { suggested, margin, base }.
+  const v2 = (t, apparel, minDpi, wrap = false) => ({ ...t, apparel, minDpi, wrap, logo: apparel ? 'area' : 'inside', printSpec: { ...t.printSpec, kind: t.kind, minDpi, wrap }, pricing: { suggested: t.suggestedPrice, base: t.basePrice, margin: Math.round((t.suggestedPrice - t.basePrice) * 100) / 100 } });
   // One sample template per blank (merch v2: templates with no `blank` = all blanks).
   const TEMPLATES = [
     { blank: 'tee', kind: 'tee', label: 'T-shirt', templateId: 'tpl-tee-sample', name: 'Classic tee (sample)', basePrice: 13.5, suggestedPrice: 25.99, source: 'sample', defaultColor: 'White',
@@ -17,20 +19,20 @@
       sizes: ['S', 'M', 'L', 'XL', '2XL'],
       areas: [area('front_large', 'Front', 2250, 2700, true, false), area('back_large', 'Back', 2250, 2700, true, false), area('sleeve_left', 'Left sleeve', 600, 525, false, true), area('sleeve_right', 'Right sleeve', 600, 525, false, true)] },
     { blank: 'hoodie', kind: 'hoodie', label: 'Hoodie', templateId: 'tpl-hoodie-sample', name: 'Pullover hoodie (sample)', basePrice: 29.5, suggestedPrice: 47.99, source: 'sample', defaultColor: 'Black',
-      printSpec: spec('tpl-hoodie-sample', 'front_large', 1800, 1650, 150),
+      printSpec: spec('tpl-hoodie-sample', 'front_large', 1650, 1650, 150),
       colors: [{ name: 'Black', hex: '#101114' }, { name: 'White', hex: '#FFFFFF' }, { name: 'Navy', hex: '#0B1F3A' }, { name: 'Grey', hex: '#8A8D8F' }],
       sizes: ['S', 'M', 'L', 'XL', '2XL'],
-      areas: [area('front_large', 'Front', 1800, 1650, true, false), area('back_large', 'Back', 2250, 2700, true, false), area('sleeve_left', 'Left sleeve', 600, 525, false, true), area('back_neck', 'Back neck', 750, 300, false, true)] },
-    { blank: 'poster', kind: 'poster', label: 'Poster', templateId: 'tpl-poster-sample', name: 'Matte poster 18×24 (sample)', basePrice: 11.2, suggestedPrice: 21.99, source: 'sample', defaultColor: 'White',
-      printSpec: spec('tpl-poster-sample', 'default', 5400, 7200, 300), colors: WHITE, sizes: ['18×24'],
-      areas: [area('default', 'Print', 5400, 7200, true, false, 300)] },
-    { blank: 'sticker', kind: 'sticker', label: 'Sticker', templateId: 'tpl-sticker-sample', name: 'Kiss-cut sticker 4×4 (sample)', basePrice: 2.6, suggestedPrice: 6.99, source: 'sample', defaultColor: 'White',
-      printSpec: spec('tpl-sticker-sample', 'default', 1200, 1200, 300), colors: WHITE, sizes: ['4×4'],
-      areas: [area('default', 'Print', 1200, 1200, true, false, 300)] },
+      areas: [area('front_large', 'Front', 1650, 1650, true, false), area('back_large', 'Back', 2250, 2700, true, false), area('sleeve_left', 'Left sleeve', 600, 525, false, true), area('back_neck', 'Back neck', 750, 300, false, true)] },
+    { blank: 'poster', kind: 'poster', label: 'Poster', templateId: 'tpl-poster-sample', name: 'Matte poster 5×7 (sample)', basePrice: 11.2, suggestedPrice: 21.99, source: 'sample', defaultColor: 'White',
+      printSpec: spec('tpl-poster-sample', 'default', 1500, 2100, 300), colors: WHITE, sizes: ['5×7'],
+      areas: [area('default', 'Print', 1500, 2100, true, false, 300)] },
+    { blank: 'sticker', kind: 'sticker', label: 'Sticker', templateId: 'tpl-sticker-sample', name: 'Kiss-cut sticker 3×3 (sample)', basePrice: 2.6, suggestedPrice: 6.99, source: 'sample', defaultColor: 'White',
+      printSpec: spec('tpl-sticker-sample', 'default', 900, 900, 300), colors: WHITE, sizes: ['3×3'],
+      areas: [area('default', 'Print', 900, 900, false, true, 300)] },
     { blank: 'mug', kind: 'mug', label: 'Mug', templateId: 'tpl-mug-sample', name: 'Ceramic mug 11 oz (sample)', basePrice: 7.9, suggestedPrice: 15.99, source: 'sample', defaultColor: 'White',
-      printSpec: spec('tpl-mug-sample', 'default', 2550, 1050, 300), colors: WHITE, sizes: ['11 oz'],
-      areas: [area('default', 'Wrap', 2550, 1050, true, false, 300)] },
-  ];
+      printSpec: spec('tpl-mug-sample', 'default', 2700, 1050, 300), colors: WHITE, sizes: ['11 oz'],
+      areas: [area('default', 'Wrap', 2700, 1050, true, false, 300)] },
+  ].map(t => v2(t, ['tee', 'hoodie'].includes(t.kind), ['tee', 'hoodie'].includes(t.kind) ? 150 : 300, t.kind === 'mug'));
   const CONCEPTS = [
     { id: 's1', collection: 'replay', title: 'Sample Lakers bench era', team: { id: 'lal', name: 'Los Angeles Lakers' }, palette: { a: '#552583', b: '#FDB927', ink: '#FFFFFF' }, garment: { color: '#FFFFFF', name: 'White' },
       stack: [{ text: 'Kobe', size: 'big', fill: 'a', ink: 'ink' }, { text: 'Smush', size: 'big', fill: 'b', ink: 'ink' }, { text: 'Luke', size: 'big', fill: 'a', ink: 'ink' }, { text: 'Kwame', size: 'big', fill: 'b', ink: 'ink' }, { text: 'Mihm', size: 'big', fill: 'a', ink: 'ink' }],
@@ -59,7 +61,7 @@
     { productId: 'prod_s3', title: 'We center fans Mug (sample)', url: SHOP + 'we-center-fans-mug', state: 'PUBLIC', thumb: MOCK, blank: 'mug', color: 'White', createdAt: day(9), createdBy: 'designer@essentiallysports.com', units30: 6, revenue30: 95.94 },
     { productId: 'prod_s4', title: 'Sample Lakers bench era Poster (sample)', url: '', state: 'ARCHIVED', thumb: '', blank: 'poster', color: 'White', createdAt: day(21), createdBy: 'designer@essentiallysports.com', units30: 1, revenue30: 21.99 },
   ];
-  const listNow = () => LIST.map(p => ({ ...p }));
+  const listNow = () => LIST.map(p => ({ ...p, state: String(p.state).toLowerCase() })); // the server's list uses lowercase states
   // reply(body, scenario) -> [httpStatus, json]. Shapes follow netlify/functions/merch.js.
   function reply(body = {}, scenario = 'ok') {
     const m = body.mode;
@@ -69,7 +71,7 @@
     if (scenario === 'cant-push' && pushModes.includes(m)) return [403, { ok: false, reason: 'cant-push', error: 'Only admins can put merch on Fourthwall. Ask an admin to publish this.' }];
     if (scenario === 'cap' && m === 'create') return [429, { ok: false, reason: 'daily-cap', error: 'You’ve sent 10 products to the shop today, the daily limit. More tomorrow.' }];
     switch (m) {
-      case 'status': return [200, { ok: true, configured: scenario !== 'not-set-up', shop: scenario === 'not-set-up' ? null : { name: 'Sample shop', publicDomain: 'sample-shop.example', status: 'ACTIVE' }, canPush: scenario !== 'cant-push', caps: { person: { used: 0, limit: 10, left: 10 }, team: { used: 0, limit: 30, left: 30 } }, rightsPolicy: 'acknowledge', blanks: ['tee', 'hoodie', 'poster', 'sticker', 'mug'], notice: '' }];
+      case 'status': return [200, { ok: true, configured: scenario !== 'not-set-up', shop: scenario === 'not-set-up' ? null : { name: 'Sample shop', publicDomain: 'sample-shop.example', status: 'ACTIVE' }, canPush: scenario !== 'cant-push', canArchive: scenario !== 'cant-push', history: scenario === 'no-db' ? 'memory' : 'db', caps: { person: { used: 0, limit: 10, left: 10 }, team: { used: 0, limit: 30, left: 30 } }, rightsPolicy: 'acknowledge', blanks: ['tee', 'hoodie', 'poster', 'sticker', 'mug'], notice: '' }];
       case 'templates': return [200, { ok: true, templates: body.blank ? TEMPLATES.filter(t => t.blank === body.blank) : TEMPLATES }];
       case 'concepts': return scenario === 'free' ? [200, { ok: true, concepts: null, free: true }] : [200, { ok: true, concepts: CONCEPTS }];
       case 'copy': {
@@ -102,15 +104,19 @@
       case 'archive': {
         if (body.confirm !== true) return [400, { ok: false, reason: 'confirm', error: 'Archiving is permanent. Confirm it first.' }];
         const row = LIST.find(p => p.productId === body.productId);
+        if (!row) return [409, { ok: false, reason: 'not-ours', error: 'FrameUp only archives products it made. Archive this one in the Fourthwall dashboard.' }];
+        if (body.confirmName != null && String(body.confirmName).trim().toLowerCase() !== String(row.title).trim().toLowerCase()) return [400, { ok: false, reason: 'confirm', error: 'The name you typed does not match the product. Type it exactly to archive.' }];
         if (row) row.state = 'ARCHIVED';
         if (product?.id === body.productId) product.state = 'ARCHIVED';
-        return [200, { ok: true, product: { id: body.productId, state: 'archived' } }];
+        return [200, { ok: true, product: { productId: body.productId, id: body.productId, title: row.title, state: 'archived' } }];
       }
       case 'list': return scenario === 'empty-list' ? [200, { ok: true, products: [], source: 'db' }] : [200, { ok: true, products: listNow(), source: scenario === 'no-db' ? 'fourthwall' : 'db' }];
       case 'collections': return [200, { ok: true, collections: COLLECTIONS.map(c => ({ ...c })) }];
       case 'collection-create': {
         const name = String(body.name || '').trim().slice(0, 60);
         if (name.length < 2) return [400, { ok: false, error: 'Give the collection a name.' }];
+        const same = COLLECTIONS.find(c => c.name.toLowerCase() === name.toLowerCase());
+        if (same) return [200, { ok: true, collection: { ...same }, existed: true }];
         const collection = { id: 'col_' + name.toLowerCase().replace(/\W+/g, '-').slice(0, 24) + '_' + COLLECTIONS.length, name, count: 0 };
         COLLECTIONS.push(collection);
         return [200, { ok: true, collection }];
@@ -118,11 +124,11 @@
       case 'collection-set': {
         const ids = (Array.isArray(body.collectionIds) ? body.collectionIds : []).filter(id => COLLECTIONS.some(c => c.id === id));
         memberOf[body.productId] = ids;
-        return [200, { ok: true, collections: COLLECTIONS.filter(c => ids.includes(c.id)).map(c => ({ ...c })) }];
+        return [200, { ok: true, collections: COLLECTIONS.map(c => ({ ...c, has: ids.includes(c.id) })), changed: ids }];
       }
       case 'sales': {
         const rows = LIST.filter(p => !body.productId || p.productId === body.productId).map(p => ({ productId: p.productId, units7: Math.round(p.units30 / 3), revenue7: Math.round(p.revenue30 / 3 * 100) / 100, units30: p.units30, revenue30: p.revenue30, unitsAll: p.units30 + 2, revenueAll: Math.round((p.revenue30 * 1.2) * 100) / 100 }));
-        return [200, { ok: true, products: rows, updatedAt: new Date().toISOString() }];
+        return [200, { ok: true, products: rows, updatedAt: new Date().toISOString(), source: 'db' }];
       }
       default: return [200, { ok: true }];
     }

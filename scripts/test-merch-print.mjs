@@ -166,10 +166,11 @@ test('fallback concepts: no team, no names -> ES core lines still come back', ()
 
 // ─── Merch v2: per-kind print (hard goods at 300 DPI, mug wrap, sticker, poster) ─
 const KINDS = {
-  poster: { kind: 'poster', pixelsWidth: 5400, pixelsHeight: 7200, dpi: 300 },
-  sticker: { kind: 'sticker', pixelsWidth: 1200, pixelsHeight: 1200, dpi: 300 },
-  mug: { kind: 'mug', pixelsWidth: 2550, pixelsHeight: 1050, dpi: 300 },
-  hoodie: { kind: 'hoodie', pixelsWidth: 1800, pixelsHeight: 1650, dpi: 150, garmentColor: '#FFFFFF' },
+  // Live Fourthwall sizes (merch v2 server).
+  poster: { kind: 'poster', pixelsWidth: 1500, pixelsHeight: 2100, dpi: 300 },
+  sticker: { kind: 'sticker', pixelsWidth: 900, pixelsHeight: 900, dpi: 300 },
+  mug: { kind: 'mug', pixelsWidth: 2700, pixelsHeight: 1050, dpi: 300 },
+  hoodie: { kind: 'hoodie', pixelsWidth: 1650, pixelsHeight: 1650, dpi: 150, garmentColor: '#FFFFFF' },
 };
 test('every blank lays out inside its area with no blocking checks', () => {
   for (const [k, spec] of Object.entries(KINDS)) {
@@ -185,6 +186,14 @@ test('hard goods need 300 DPI', () => {
     assert.match(c.dpi.text, /300 DPI/);
   }
   assert.ok(ids(P.checks(roster(), KINDS.hoodie)).dpi.ok, 'hoodies print at 150');
+});
+test('the print file is the printSpec size exactly, for every blank', () => {
+  for (const spec of Object.values(KINDS)) {
+    const s = P.layout(roster(), spec);
+    assert.deepEqual([s.w, s.h, s.dpi], [spec.pixelsWidth, spec.pixelsHeight, spec.dpi]);
+    assert.deepEqual([P.areaOf({}, spec.kind).w, P.areaOf({}, spec.kind).h], [spec.pixelsWidth, spec.pixelsHeight], `${spec.kind} default = live size`);
+  }
+  assert.ok(P.layout(roster(), { ...KINDS.poster, logo: 'inside' }).items.some(i => i.type === 'logo'), "server's logo:'inside' works too");
 });
 test('mug: the design sits on the face, clear of the handle seam', () => {
   const s = P.layout(roster(), KINDS.mug);

@@ -174,12 +174,14 @@ async function flow(width, theme) {
   // ── Blank picker: each kind has its own area, logo spot, price and checks.
   await click('#mx-blanks [data-kind="mug"]');
   await until("/Mug$/.test(document.getElementById('mx-title-input').value)", `${tag} mug copy`);
-  ok(await evaluate("[...document.getElementById('mx-logo').options].map(o => o.textContent).join('|') === 'Under the design|No logo'"), `${tag}: mug logo goes under the design`);
+  ok(await evaluate("[...document.getElementById('mx-logo').options].map(o => o.textContent).join('|') === 'Inside the design (small ES pill at the bottom)|No logo'"), `${tag}: mug logo goes under the design`);
   ok(await evaluate("document.getElementById('mx-colors-block').hidden"), `${tag}: one-colour blank hides the colour picker`);
   ok(await evaluate("Number(document.getElementById('mx-price').value) === 15.99 && /suggested \\$15\\.99/.test(document.getElementById('mx-earn').textContent)"), `${tag}: mug price + suggestion (${await evaluate("document.getElementById('mx-price').value")})`);
   ok(await evaluate("/handle/.test(document.getElementById('mx-checks').textContent) && /300 DPI/.test(document.getElementById('mx-checks').textContent)"), `${tag}: mug wrap + 300 DPI checks`);
   ok(await evaluate("/300 DPI/.test(document.getElementById('mx-side').textContent)"), `${tag}: print area shows its DPI`);
-  ok(await evaluate("/Mug preview, ES logo under the design/.test(document.getElementById('mx-stage-canvas').getAttribute('aria-label'))"), `${tag}: mug preview label`);
+  // Sizes come from the template's printSpec (register rejects any other size).
+  ok(await evaluate("(() => { const t = MerchUI.state.templates.find(x => x.kind === 'mug'); return /2700 × 1050 px at 300 DPI/.test(document.getElementById('mx-checks').textContent) && t.printSpec.pixelsWidth === 2700; })()"), `${tag}: mug draws at the template's 2700 × 1050`);
+  ok(await evaluate("/Mug preview, ES logo inside the design/.test(document.getElementById('mx-stage-canvas').getAttribute('aria-label'))"), `${tag}: mug preview label`);
   await audit(`${tag}-setup-mug`);
   await click('#mx-blanks [data-kind="sticker"]');
   await until("/cut line/.test(document.getElementById('mx-checks').textContent)", `${tag} sticker cut check`);
@@ -258,7 +260,7 @@ async function flow(width, theme) {
   await click('#mx-archive-go');
   await until("!document.getElementById('mx-archive').open && /Archived/.test(document.querySelector('#mx-live .es-badge')?.textContent || '')", `${tag} archived`);
   const arch = bodies.filter(b => b.mode === 'archive').pop();
-  ok(arch && arch.confirm === true && arch.productId, `${tag}: archive sends confirm:true`);
+  ok(arch && arch.confirm === true && arch.productId && arch.confirmName.toLowerCase() === arch.confirmName && arch.confirmName.length > 3, `${tag}: archive sends confirm:true and the typed name`);
   ok(await evaluate("!document.querySelector('#mx-live [data-live=publish], #mx-live [data-live=hide], #mx-live [data-live=archive]')"), `${tag}: archived product has no actions`);
   // ── Your merch.
   calls.length = 0;

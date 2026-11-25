@@ -386,11 +386,20 @@
     // templates → [{ blank, label, templateId, name, basePrice, suggestedPrice?, printSpec,
     //   areas:[{ regionId, pixelsWidth, pixelsHeight, dpi, renderable, suitsLogo, suitsDesign, available }], colors, defaultColor, sizes }]
     const template = () => (state.templates || []).find(t => t.templateId === state.templateId) || null;
-    const kindOf = t => (BLANK_INFO[t?.blank] ? t.blank : BLANK_INFO[t?.kind] ? t.kind : 'tee');
+    const kindOf = t => (BLANK_INFO[t?.kind] ? t.kind : BLANK_INFO[t?.blank] ? t.blank : 'tee');
     const kind = () => kindOf(template());
-    const apparel = () => BLANK_INFO[kind()].apparel;
+    const apparel = () => (typeof template()?.apparel === 'boolean' ? template().apparel : BLANK_INFO[kind()].apparel);
     const usable = a => a && a.renderable !== false && a.available !== false;
-    const designAreas = () => { const t = template(); const list = (t?.areas || []).filter(a => usable(a) && a.suitsDesign); return list.length ? list : (t?.printSpec ? [{ ...t.printSpec, regionId: t.printSpec.regionId || 'front' }] : []); };
+    // Sizes always come from the template: register rejects files that aren't the area's
+    // exact size. Hard goods have one area (the printSpec); apparel areas keep the
+    // printSpec's numbers for the printSpec's own region.
+    const specArea = t => (t?.printSpec ? [{ ...t.printSpec, name: t.printSpec.name || (kindOf(t) === 'mug' ? 'Wrap' : 'Print'), regionId: t.printSpec.regionId || 'front' }] : []);
+    const designAreas = () => {
+      const t = template();
+      if (!apparel() || t?.logo === 'inside') return specArea(t);
+      const list = (t?.areas || []).filter(a => usable(a) && a.suitsDesign).map(a => (a.regionId === t.printSpec?.regionId ? { ...a, pixelsWidth: t.printSpec.pixelsWidth, pixelsHeight: t.printSpec.pixelsHeight, dpi: t.printSpec.dpi } : a));
+      return list.length ? list : specArea(t);
+    };
     // Apparel: the ES logo is its own print in a small area. Hard goods have one
     // print area, so the logo goes under the design in the same print ('inline').
     const logoAreas = () => (apparel() ? (template()?.areas || []).filter(a => usable(a) && a.suitsLogo && a.regionId !== state.side) : []);
@@ -399,13 +408,13 @@
     const logoArea = () => logoAreas().find(a => a.regionId === state.logo) || null;
     const logoInline = () => !apparel() && state.logo === 'inline';
     const logoSpot = () => { if (logoInline()) return 'inline'; const la = logoArea(); if (!la) return 'none'; const r = la.regionId.toLowerCase(); return /sleeve/.test(r) ? 'sleeve' : /back/.test(r) ? 'back-neck' : /label/.test(r) ? 'label' : 'neck'; };
-    const logoText = () => (logoInline() ? 'ES logo under the design' : logoArea() ? `ES logo on the ${areaLabel(logoArea()).toLowerCase()}` : 'no ES logo');
+    const logoText = () => (logoInline() ? 'ES logo inside the design' : logoArea() ? `ES logo on the ${areaLabel(logoArea()).toLowerCase()}` : 'no ES logo');
     const garmentHex = () => (template()?.colors || []).find(x => x.name === state.colors[0])?.hex || (apparel() ? selectedConcept()?.garment?.color : '#FFFFFF');
     // The print spec for the chosen blank and area (what render and checks use).
     function printSpec() {
       const a = area() || { regionId: state.side, ...(window.MerchPrint?.DEFAULT_AREAS?.[kind()] || { pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150 }) };
       const spec = { ...(template()?.printSpec || {}), templateId: state.templateId, kind: kind(), region: /back/i.test(a.regionId) ? 'back' : 'front', regionId: a.regionId, pixelsWidth: a.pixelsWidth, pixelsHeight: a.pixelsHeight, dpi: a.dpi, garmentColor: garmentHex() };
-      if (logoInline()) spec.logo = 'inline';
+      if (logoInline()) spec.logo = 'inside';
       return spec;
     }
     async function drawStage() {
@@ -446,7 +455,7 @@
       const match = (apparel() && (t?.colors?.find(x => x.hex?.toLowerCase() === String(c?.garment?.color || '').toLowerCase()) || t?.colors?.find(x => x.name === c?.garment?.name))) || t?.colors?.find(x => x.name === t.defaultColor) || t?.colors?.[0];
       state.colors = match ? [match.name] : [];
     }
-    const suggested = () => { const t = template(); if (!t) return 0; if (Number(t.suggestedPrice) > 0) return Number(t.suggestedPrice); return window.MerchRules?.suggestedPrice ? window.MerchRules.suggestedPrice(kind(), base()) : Math.ceil(base() * 1.8); };
+    const suggested = () => { const t = template(); if (!t) return 0; const sp = Number(t.pricing?.suggested ?? t.suggestedPrice); if (sp > 0) return sp; return window.MerchRules?.suggestedPrice ? window.MerchRules.suggestedPrice(kind(), base()) : Math.ceil(base() * 1.8); };
     function pickTemplate(id, render = true) {
       const before = kind();
       state.templateId = id;
@@ -468,7 +477,7 @@
       const k = kindOf(x);
       const on = x.templateId === state.templateId;
       const fits = (selectedConcept()?.blanks || []).includes(k);
-      const sug = Number(x.suggestedPrice) > 0 ? Number(x.suggestedPrice) : (window.MerchRules?.suggestedPrice ? window.MerchRules.suggestedPrice(k, x.basePrice) : null);
+      const sug = Number(x.pricing?.suggested ?? x.suggestedPrice) > 0 ? Number(x.pricing?.suggested ?? x.suggestedPrice) : (window.MerchRules?.suggestedPrice ? window.MerchRules.suggestedPrice(k, x.basePrice) : null);
       return `<button class="mx-blank" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-tpl="${esc(x.templateId)}" data-kind="${esc(k)}" aria-label="${esc(x.label || BLANK_INFO[k].label)}, base cost ${x.basePrice != null ? money(x.basePrice) : 'unknown'}${sug ? `, suggested price ${money(sug)}` : ''}${fits ? ', suits this design' : ''}">
         <span class="mx-blank__icon" aria-hidden="true">${BLANK_ICON[k] || ''}${fits ? '<span class="mx-blank__fit"></span>' : ''}</span>
         <span class="mx-blank__name">${esc(x.label || BLANK_INFO[k].label)}</span>
@@ -499,10 +508,10 @@
       const logos = logoAreas();
       $('mx-logo').innerHTML = apparel()
         ? `${logos.map(a => `<option value="${esc(a.regionId)}">${esc(areaLabel(a))}</option>`).join('')}<option value="">No logo</option>`
-        : '<option value="inline">Under the design</option><option value="">No logo</option>';
+        : '<option value="inline">Inside the design (small ES pill at the bottom)</option><option value="">No logo</option>';
       $('mx-logo').value = (apparel() ? state.logo : (state.logo === 'inline' ? 'inline' : '')) || '';
       $('mx-logo-hint').textContent = !apparel()
-        ? `A ${BLANK_INFO[k].label.toLowerCase()} has one print area, so the small ESSENTIALLYSPORTS wordmark sits under the design.`
+        ? `A ${BLANK_INFO[k].label.toLowerCase()} has one print area, so the small ESSENTIALLYSPORTS pill is printed at the bottom of the design, in the same file.`
         : logos.length ? 'The ES logo is the small ESSENTIALLYSPORTS pill, printed in its own area. The preview shows where.' : `This ${BLANK_INFO[k].label.toLowerCase()} has no small print areas, so it goes without the ES logo.`;
       drawStage();
       renderMockups();
@@ -660,11 +669,11 @@
         const data = await api({ mode: 'collection-create', name });
         const col = data.collection;
         if (!col?.id) throw new Error('Fourthwall didn’t create the collection. Try again.');
-        state.shopColls = [...(state.shopColls || []), { count: 0, ...col }];
-        state.pick[where] = [...state.pick[where], col.id];
+        if (!(state.shopColls || []).some(c => c.id === col.id)) state.shopColls = [...(state.shopColls || []), { count: 0, ...col }];
+        state.pick[where] = [...new Set([...state.pick[where], col.id])];
         state.newColl = '';
         renderShopColls();
-        collStatus(where, `Added “${col.name}”.${where === 'live' ? ' Save to put this product in it.' : ''}`);
+        collStatus(where, `${data.existed ? 'Ticked the existing' : 'Added'} “${col.name}”.${where === 'live' ? ' Save to put this product in it.' : ''}`);
         document.querySelector(`[data-colls="${where}"] [data-coll-id="${CSS.escape(col.id)}"]`)?.focus();
       } catch (error) { collStatus(where, explain(error).text); }
     }
@@ -695,6 +704,8 @@
     });
     async function setCollections(productId, ids) {
       const data = await api({ mode: 'collection-set', productId, collectionIds: ids });
+      // The server answers with fresh counts.
+      (data.collections || []).forEach(c => { const mine = (state.shopColls || []).find(x => x.id === c.id); if (mine && c.count != null) mine.count = c.count; });
       return data;
     }
 
@@ -893,7 +904,6 @@
       const [label, tone] = STATE_LABEL[st] || [p.state || 'Unknown', 'ink'];
       const live = st === 'PUBLIC' || st === 'AVAILABLE';
       const archived = st === 'ARCHIVED';
-      const can = pushAllowed();
       box.innerHTML = `
         <div class="mx-row mx-row--between">
           <div class="mx-live__head">
@@ -920,7 +930,7 @@
         </div>
         <div class="mx-danger">
           <div><p class="mx-label">Archive</p><p class="mx-meta">Removes the product from Fourthwall for good. Admins only.</p></div>
-          <button class="es-btn es-btn--danger es-btn--sm" type="button" data-live="archive"${can.ok ? '' : ` disabled title="${esc(can.text)}"`}>Archive…</button>
+          <button class="es-btn es-btn--danger es-btn--sm" type="button" data-live="archive"${archiveAllowed().ok ? '' : ` disabled title="${esc(archiveAllowed().text)}"`}>Archive…</button>
         </div>`}
         <p class="mx-meta" id="mx-live-status" role="status" aria-live="polite"></p>`;
       if (!archived) { renderShopColls(); syncLiveColls(); if (!state.shopColls) loadShopColls(); }
@@ -967,9 +977,15 @@
     // ── Archive (permanent; typed-name confirm) ──
     const norm = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
     let archiveReturn = null;
-    function openArchive(target, from) {
+    // Archive: admins only (status.canArchive), on top of the push gate.
+    function archiveAllowed() {
       const gate = pushAllowed();
-      if (!gate.ok) return;
+      if (!gate.ok) return gate;
+      if (state.status && state.status.canArchive === false) return { ok: false, text: 'Only admins can archive products.' };
+      return { ok: true };
+    }
+    function openArchive(target, from) {
+      if (!archiveAllowed().ok) return;
       state.archiving = target;
       archiveReturn = from || null;
       $('mx-archive-name').textContent = target.title;
@@ -999,7 +1015,7 @@
       go.disabled = true; go.setAttribute('aria-busy', 'true');
       $('mx-archive-status').textContent = 'Archiving…';
       try {
-        await api({ mode: 'archive', productId: t.productId, confirm: true });
+        await api({ mode: 'archive', productId: t.productId, confirm: true, confirmName: $('mx-archive-input').value.trim() });
         if (state.product?.id === t.productId) state.product.state = 'ARCHIVED';
         const row = (state.list || []).find(r => r.productId === t.productId);
         if (row) row.state = 'ARCHIVED';
@@ -1029,10 +1045,11 @@
       renderList();
       try {
         const [list, sales] = await Promise.all([api({ mode: 'list' }), api({ mode: 'sales' }).catch(() => null)]);
-        const bySales = new Map(((sales && sales.products) || []).map(r => [r.productId, r]));
+        const salesOn = sales && sales.source !== 'none';
+        const bySales = new Map(((salesOn && sales.products) || []).map(r => [r.productId, r]));
         state.list = (list.products || []).map(p => { const s = bySales.get(p.productId); return s ? { ...p, units30: s.units30 ?? p.units30, revenue30: s.revenue30 ?? p.revenue30, units7: s.units7, unitsAll: s.unitsAll } : { ...p }; });
         state.listSource = list.source || '';
-        state.salesAt = sales?.updatedAt || '';
+        state.salesAt = salesOn ? sales.updatedAt || '' : '';
       } catch (error) {
         state.listError = explain(error).text;
       }
@@ -1046,7 +1063,7 @@
       const [label, tone] = STATE_LABEL[st] || [p.state || 'Unknown', 'ink'];
       const archived = st === 'ARCHIVED';
       const k = BLANK_INFO[p.blank] ? p.blank : 'tee';
-      const can = pushAllowed();
+      const can = archiveAllowed();
       return `<tr data-pid="${esc(p.productId)}">
         <td class="mx-lt__thumb">${p.thumb ? `<img src="${esc(imgUrl(p.thumb))}" alt="" width="56" height="56" loading="lazy">` : `<span class="mx-lt__ph" aria-hidden="true">${BLANK_ICON[k] || ''}</span>`}</td>
         <th scope="row" class="mx-lt__name"><span class="mx-lt__title">${esc(p.title)}</span><span class="mx-meta">${esc(BLANK_INFO[k].label)}${p.color ? ` · ${esc(p.color)}` : ''}${p.createdAt ? ` · ${esc(dateText(p.createdAt))}` : ''}${p.createdBy ? ` · ${esc(String(p.createdBy).split('@')[0])}` : ''}</span></th>

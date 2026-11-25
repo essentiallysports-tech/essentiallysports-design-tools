@@ -62,10 +62,12 @@
   // Print areas used when the page has no template yet (previews, tests).
   const DEFAULT_AREAS = {
     tee: { pixelsWidth: 1800, pixelsHeight: 2400, dpi: 150 },
-    hoodie: { pixelsWidth: 1800, pixelsHeight: 1650, dpi: 150 },
-    poster: { pixelsWidth: 5400, pixelsHeight: 7200, dpi: 300 },
-    sticker: { pixelsWidth: 1200, pixelsHeight: 1200, dpi: 300 },
-    mug: { pixelsWidth: 2550, pixelsHeight: 1050, dpi: 300 },
+    // Live Fourthwall sizes (merch v2 server, 2026-11-25). Only used when no printSpec is given:
+    // register rejects files that aren't the area's exact size, so the page always passes printSpec.
+    hoodie: { pixelsWidth: 1650, pixelsHeight: 1650, dpi: 150 },
+    poster: { pixelsWidth: 1500, pixelsHeight: 2100, dpi: 300 },
+    sticker: { pixelsWidth: 900, pixelsHeight: 900, dpi: 300 },
+    mug: { pixelsWidth: 2700, pixelsHeight: 1050, dpi: 300 },
   };
 
   const contrast = (a, b) => FrameUpRules.contrastRatio(a, b);
@@ -257,7 +259,7 @@
     }
     if (single && longest > 3) box.h = Math.min(box.h, Math.round(box.w * 0.34));
     // Hard goods have one print area, so the ES wordmark goes under the design.
-    const inlineLogo = !blank.apparel && spec.logo === 'inline';
+    const inlineLogo = !blank.apparel && (spec.logo === 'inline' || spec.logo === 'inside');
     let logoW = 0;
     let logoH = 0;
     let gap = 0;
