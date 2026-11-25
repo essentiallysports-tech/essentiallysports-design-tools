@@ -162,7 +162,7 @@
       "maxDuration": 10
     },
     "api/ai-budget-watch.js": {
-      "maxDuration": 30
+      "maxDuration": 90
     },
     "api/ai-status.js": {
       "maxDuration": 10
@@ -203,10 +203,6 @@
     {
       "path": "/api/clips-prefetch?batch=1&chain=1",
       "schedule": "0 10 * * *"
-    },
-    {
-      "path": "/api/merch-sync",
-      "schedule": "30 9 * * *"
     }
   ]
 }

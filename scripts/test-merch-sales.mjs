@@ -358,10 +358,10 @@ await test('vercel.json: functions for the webhook and the sync; the sync cron r
   const v = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
   assert.ok(v.functions['api/fourthwall-webhook.js']?.maxDuration > 0);
   assert.ok(v.functions['api/merch-sync.js']?.maxDuration >= 30);
-  const cron = (v.crons || []).filter(c => c.path.startsWith('/api/merch-sync'));
-  assert.equal(cron.length, 1, 'one merch-sync cron');
-  assert.match(cron[0].schedule, /^\d+ \d+ \* \* \*$/, 'once a day');
-  assert.equal(cron[0].schedule, S.CRON_SCHEDULE);
+  // The sync rides the daily ai-budget-watch cron (the project keeps to two crons).
+  assert.equal((v.crons || []).filter(c => c.path.startsWith('/api/merch-sync')).length, 0, 'no separate merch-sync cron');
+  assert.ok((v.crons || []).some(c => c.path === '/api/ai-budget-watch' && /^\d+ \d+ \* \* \*$/.test(c.schedule)), 'budget watch runs daily');
+  assert.match(fs.readFileSync('netlify/functions/ai-budget-watch.js', 'utf8'), /require\('\.\/merch-sync\.js'\)/, 'budget watch runs the merch sync');
   const adapter = fs.readFileSync('api/merch-sync.js', 'utf8');
   assert.match(adapter, /netlify\/functions\/merch-sync\.js/);
 });
