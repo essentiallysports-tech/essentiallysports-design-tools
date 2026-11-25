@@ -410,7 +410,7 @@ for (const w of WIDTHS) {
       return { n0, n1, n2, focusAdd, focusDel, stamp, field, off: c.ES.blockOf(c.state.plan.beats[0]).stamp || null }; })()`);
     expect(r.n1 === r.n0 + 1 && r.n2 === r.n0, `rows ${r.n0} -> ${r.n1} -> ${r.n2}`);
     expect(r.focusAdd && r.focusDel, 'focus left the card after add / remove');
-    expect(r.stamp && r.stamp.text === 'PAID' && r.field && r.off === null, `stamp ${JSON.stringify(r.stamp)} / off ${JSON.stringify(r.off)}`);
+    expect(r.stamp && r.stamp.text === 'SUNDAY' && r.field && r.off === null, `stamp ${JSON.stringify(r.stamp)} / off ${JSON.stringify(r.off)}`);
   });
   await step('keyboard: Alt + arrow reorders a scene and says so; the end card stays', async () => {
     await evaluate(`(document.querySelectorAll('#rm-beats [data-sb-face]')[1].focus(), 1)`);

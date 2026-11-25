@@ -146,13 +146,6 @@
   };
   state.spent.clips = 0;
   state.spent.scenes = 0;
-  // ── Reels 2.0: D (interface) ── what the reel starts from (a Start tile), the words tab last used,
-  // the recipe ('' = Auto), the versions of this reel and a calm (cuts, no wipes) preview.
-  Object.assign(state, { start: 'trend', words: 'script', recipe: '', lookPicked: false, versions: null, version: 0, versionsBusy: false, calm: false, scene: -1 });
-  const mods = () => (window.ReelMakerCtx ? window.ReelMakerCtx.modules : {});
-  const emit = (event, data) => { if (window.ReelMakerCtx) window.ReelMakerCtx.emit(event, data); };
-  const RC = window.ReelRecipes || null;
-  const A11Y = window.ReelA11yCore || null;
   const styleId = () => (state.plan && state.plan.style) || (state.style === 'auto' ? state.styleSuggested.id : state.style);
   // The ES house style is on (and reel-es.js loaded).
   const esOn = () => Boolean(ES && S.get(styleId()).engine === 'es' && !(state.plan && F.isDataFormat && F.isDataFormat(state.plan.format)));
@@ -161,6 +154,13 @@
   const ownVoice = () => (state.voiceOwn && state.voiceOwn.plan === state.plan ? state.voiceOwn : null);
   // A beat's name in the strip and the editor (its ES block in the ES style).
   const beatName = beat => (esOn() ? ES.BLOCKS[ES.blockOf(beat).type].label : (KIND_NAME[beat.kind] || beat.kind));
+  // ── Reels 2.0: D (interface) ── what the reel starts from (a Start tile), the words tab last used,
+  // the recipe ('' = Auto), the versions of this reel and a calm (cuts, no wipes) preview.
+  Object.assign(state, { start: 'trend', words: 'script', recipe: '', lookPicked: false, versions: null, version: 0, versionsBusy: false, calm: false, scene: -1 });
+  const mods = () => (window.ReelMakerCtx ? window.ReelMakerCtx.modules : {});
+  const emit = (event, data) => { if (window.ReelMakerCtx) window.ReelMakerCtx.emit(event, data); };
+  const RC = window.ReelRecipes || null;
+  const A11Y = window.ReelA11yCore || null;
 
   // ─── Small helpers ───────────────────────────────────────────────────────
   function toast(text, { tone = '', action = null } = {}) {
@@ -1847,7 +1847,7 @@
       const plan = versionsPlan();
       const can = plan.total >= 2;
       const why = !can ? 'Versions need a second look or a second hook, and this reel has neither yet.' : `${plan.hook ? 'A new hook and a new look' : 'Two more looks'}, same story. ${plan.cost ? `About ${F.money(plan.cost)}.` : 'Free.'}`;
-      els.versions.innerHTML = `<button class="es-btn es-btn--sm" type="button" id="rm-versions-make" ${can ? '' : 'disabled'} aria-describedby="rm-versions-note">${ICON.layers}<span>Make ${Math.max(2, plan.total)} versions</span></button><span class="rm-hint" id="rm-versions-note">${esc(why)}</span>`;
+      els.versions.innerHTML = `<button class="es-btn es-btn--sm" type="button" id="rm-versions-make" ${can ? '' : 'disabled'} aria-describedby="rm-versions-note">${ICON.layers}<span>Make ${can ? plan.total : 3} versions</span></button><span class="rm-hint" id="rm-versions-note">${esc(why)}</span>`;
     } else els.versions.innerHTML = '';
     if (refocus) (els.versions.querySelector(refocus === 'make' ? '#rm-versions-make' : `[data-version="${refocus}"]`) || els.versions.querySelector('[aria-checked="true"], button'))?.focus({ preventScroll: true });
   }
@@ -2232,7 +2232,9 @@
     els.voiceState.innerHTML = on && state.voiceError && !state.voiceMaking
       ? `<div class="rm-voicefail">${ICON.warn}<div><p><b>The voiceover didn't record.</b> ${esc(state.voiceError)}</p><span>You can still export with captions only.</span></div><button class="es-btn es-btn--sm" type="button" data-voice-retry>Retry</button></div>`
       : '';
-    els.voiceBtn.hidden = !on || all || state.voiceMaking || Boolean(state.voiceError);
+    // ── Reels 2.0: D (interface) ── before a reel exists the rail's Voice row names the voice it will use.
+    if (!state.plan && on) { els.voiceBadge.className = 'es-badge es-badge--brand'; els.voiceBadge.textContent = ((v.voices || []).find(x => x.id === state.voiceId) || {}).name || 'AI voice'; }
+    els.voiceBtn.hidden = !on || all || state.voiceMaking || Boolean(state.voiceError) || !state.plan;
     els.voiceBtn.disabled = Boolean(state.busy) || !withVo || all;
     els.voiceBtn.textContent = voiced ? 'Voice the edited lines' : 'Make the voiceover';
   }
@@ -4475,8 +4477,6 @@
     on(event, fn) { if (!ctxListeners.has(event)) ctxListeners.set(event, new Set()); ctxListeners.get(event).add(fn); return () => ctxListeners.get(event)?.delete(fn); },
     emit(event, data) { (ctxListeners.get(event) || []).forEach(fn => { try { fn(data); } catch (error) { window.FrameUpErrors?.report?.(error, `reels ctx ${event}`); } }); },
   };
-  // ── Reels 2.0: C (inputs) ── the voice badge and pickers follow the person's own voiceover.
-  pageCtx.on('voice-own', () => { renderVoicePickers(); renderVoice(); renderCost(); });
   // ── Reels 2.0: D (interface) ── what the storyboard and accessibility modules
   // read from the page (additive: nothing above changes shape).
   pageCtx.ui = {
@@ -4500,8 +4500,10 @@
     if (name === 'storyboard' && state.plan) renderBeats();
   });
   // Room for the rail in a column of its own? (The work area's own width: the app sidebar takes a share of the window.)
-  if (window.ResizeObserver) new ResizeObserver(entries => { els.work.classList.toggle('is-wide', entries[0].contentRect.width >= 1340); }).observe(els.work);
+  if (window.ResizeObserver) new ResizeObserver(entries => { const w = entries[0].contentRect.width; els.work.classList.toggle('is-wide', w >= 1340); els.work.classList.toggle('is-tight', w < 900 && w > 0); }).observe(els.work);
   try { if (localStorage.getItem('frameup.reels.calm.v1') === '1' || (localStorage.getItem('frameup.reels.calm.v1') == null && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)) setCalm(true); } catch { /* default: full motion */ }
+  // ── Reels 2.0: C (inputs) ── the voice badge and pickers follow the person's own voiceover.
+  pageCtx.on('voice-own', () => { renderVoicePickers(); renderVoice(); renderCost(); });
   window.ReelMakerCtx = pageCtx;
   document.dispatchEvent(new CustomEvent('reelmaker:ready', { detail: { ctx: pageCtx } }));
 })();
