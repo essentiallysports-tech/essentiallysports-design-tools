@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Merch Designs | FrameUp</title>
+  <meta name="description" content="Turn a line, quote or story into ES fan merch and create it on Fourthwall, hidden until someone publishes it.">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
+  <script src="frameup-errors.js?v=20261121-rel2"></script>
+  <script src="es-auth-config.js?v=20260707-auth4"></script>
+  <script src="es-auth.js?v=20261121-rel2"></script>
+  <script src="frameup-track.js?v=20261125-tracking"></script>
+  <script>
+    window.ESAuth?.requireAuth(`merch.html${window.location.search}${window.location.hash}`);
+  </script>
+  <script src="frameup-shell-first.js?v=20261118-rel1" data-skeleton="studio"></script>
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&amp;family=Roboto+Condensed:wght@700;800&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
+  <link rel="stylesheet" href="theme.css?v=20261117-ready1">
+  <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
+  <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
+  <link rel="stylesheet" href="design-tokens.css?v=20261121-rel2">
+  <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
+  <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
+  <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
+  <link rel="stylesheet" href="merch.css?v=20261125-merch">
+  <script src="theme.js?v=20261120-rel2"></script>
+  <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
+  <script src="site-chrome.js?v=20261120-rel2"></script>
+  <script src="frameup-ai-mode.js?v=20261121-rel"></script>
+  <script src="app-shell.js?v=20261125-merch"></script>
+  <link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
+  <script src="frameup-tour.js?v=20261117-tour1"></script>
+  <script src="tours/updates.js?v=20261121-notes"></script>
+  <script src="tours/tours.js?v=20261123-tours"></script>
+  <script src="tours/tour-launcher.js?v=20261120-rel2"></script>
+</head>
+<body class="mx-body">
+  <nav class="navbar">
+    <a class="navbar-logo" href="index.html" aria-label="EssentiallySports home">
+      <img src="brand-logo-blue.svg" alt="EssentiallySports">
+    </a>
+    <div class="navbar-menu">
+      <a href="generate.html">Generate</a>
+      <a href="merch.html" aria-current="page">Merch Designs</a>
+      <a href="gallery.html">Gallery</a>
+    </div>
+    <div class="navbar-right">
+      <div class="profile-menu" id="profile-menu"></div>
+    </div>
+  </nav>
+
+  <main class="mx-page" id="main">
+    <header class="mx-head">
+      <div class="mx-head__title">
+        <h1 class="mx-title" id="mx-title">Merch Designs</h1>
+        <span class="mx-conn" id="mx-conn" role="status" aria-live="polite"></span>
+      </div>
+      <nav class="mx-steps" aria-label="Merch steps">
+        <ol id="mx-steps">
+          <li><button class="mx-step" type="button" data-step="content"><span class="mx-step__num" aria-hidden="true">1</span><span>Content</span></button></li>
+          <li><button class="mx-step" type="button" data-step="designs"><span class="mx-step__num" aria-hidden="true">2</span><span>Designs</span></button></li>
+          <li><button class="mx-step" type="button" data-step="setup"><span class="mx-step__num" aria-hidden="true">3</span><span>Setup</span></button></li>
+          <li><button class="mx-step" type="button" data-step="live"><span class="mx-step__num" aria-hidden="true">4</span><span>Push &amp; live</span></button></li>
+        </ol>
+      </nav>
+    </header>
+
+    <div class="mx-banner" id="mx-banner" role="status" aria-live="polite" hidden></div>
+
+    <!-- 1 Content -->
+    <section class="mx-view" id="mx-view-content" data-view="content" aria-labelledby="mx-h-content">
+      <div class="mx-card mx-content">
+        <h2 class="mx-h2" id="mx-h-content">What should the shirt say?</h2>
+        <p class="mx-sub">Paste a line, a quote, a stat or an ES story link. Or start from a trend.</p>
+        <label class="es-field">
+          <span class="es-field__label">Your words or a story link</span>
+          <textarea class="mx-input mx-textarea" id="mx-text" rows="4" placeholder="e.g. Ball don’t lie" aria-describedby="mx-text-hint"></textarea>
+          <span class="es-field__hint" id="mx-text-hint">Exact quotes are printed exactly. Names and quotes get a rights check later.</span>
+        </label>
+        <div class="mx-trends">
+          <div class="mx-row mx-row--between">
+            <span class="mx-label" id="mx-trends-label">Trending now</span>
+            <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-trends-load">Show trends</button>
+          </div>
+          <div class="mx-chips" id="mx-trends" role="group" aria-labelledby="mx-trends-label"></div>
+        </div>
+        <fieldset class="mx-fieldset">
+          <legend class="mx-label">Collection</legend>
+          <div class="mx-collections" id="mx-collections" role="radiogroup" aria-label="Collection"></div>
+        </fieldset>
+        <div class="mx-actions">
+          <span class="mx-meta" id="mx-content-meta"></span>
+          <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-create">Create designs</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 Designs -->
+    <section class="mx-view" id="mx-view-designs" data-view="designs" aria-labelledby="mx-h-designs" hidden>
+      <div class="mx-row mx-row--between">
+        <div>
+          <h2 class="mx-h2" id="mx-h-designs">Pick a design</h2>
+          <p class="mx-sub" id="mx-designs-sub">Click a design to choose it. Quick edits change it on the spot.</p>
+        </div>
+        <button class="es-btn es-btn--ghost" type="button" id="mx-again">Make new designs</button>
+      </div>
+      <div class="mx-grid" id="mx-grid" aria-live="polite"></div>
+      <div class="mx-actions mx-actions--bar">
+        <span class="mx-meta" id="mx-designs-meta"></span>
+        <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-setup">Use this design</button>
+      </div>
+    </section>
+
+    <!-- 3 Setup -->
+    <section class="mx-view" id="mx-view-setup" data-view="setup" aria-labelledby="mx-h-setup" hidden>
+      <div class="mx-split">
+        <aside class="mx-card mx-stage" aria-label="Design preview">
+          <canvas class="mx-stage__canvas" id="mx-stage-canvas" width="480" height="560" role="img" aria-label="Tee preview"></canvas>
+          <div class="mx-mockups" id="mx-mockups" aria-live="polite"></div>
+        </aside>
+        <div class="mx-card mx-setup">
+          <h2 class="mx-h2" id="mx-h-setup">Set up the product</h2>
+          <div class="mx-block">
+            <span class="mx-label" id="mx-blank-label">Blank</span>
+            <div class="mx-blanks" id="mx-blanks" role="radiogroup" aria-labelledby="mx-blank-label"></div>
+          </div>
+          <div class="mx-block">
+            <span class="mx-label" id="mx-colors-label">Tee colour</span>
+            <div class="mx-chips" id="mx-colors" role="radiogroup" aria-labelledby="mx-colors-label"></div>
+          </div>
+          <div class="mx-row mx-row--wrap">
+            <label class="es-field mx-grow">
+              <span class="es-field__label">Print area</span>
+              <select class="mx-input" id="mx-side"></select>
+            </label>
+            <label class="es-field mx-grow">
+              <span class="es-field__label">ES logo</span>
+              <select class="mx-input" id="mx-logo" aria-describedby="mx-logo-hint"></select>
+            </label>
+          </div>
+          <p class="mx-meta" id="mx-logo-hint"></p>
+          <label class="es-field">
+            <span class="es-field__label">Title</span>
+            <input class="mx-input" id="mx-title-input" type="text" maxlength="120" autocomplete="off">
+          </label>
+          <label class="es-field">
+            <span class="es-field__label">Description</span>
+            <textarea class="mx-input mx-textarea" id="mx-desc" rows="3"></textarea>
+          </label>
+          <div class="mx-row mx-row--wrap">
+            <label class="es-field mx-price">
+              <span class="es-field__label">Price (USD)</span>
+              <input class="mx-input" id="mx-price" type="number" min="1" step="0.01" inputmode="decimal" aria-describedby="mx-earn">
+            </label>
+            <p class="mx-earn" id="mx-earn"></p>
+          </div>
+          <label class="es-field" id="mx-fw-collection-field" hidden>
+            <span class="es-field__label">Collection on Fourthwall</span>
+            <select class="mx-input" id="mx-fw-collection"></select>
+            <span class="es-field__hint">Fourthwall has no tags, so collections are how products are grouped.</span>
+          </label>
+          <div class="mx-rights" id="mx-rights">
+            <strong>Rights check</strong>
+            <ul class="mx-rights__list" id="mx-rights-list"></ul>
+            <p class="mx-rights__note">Names, nicknames, exact quotes and team colours are allowed, but a person can object to their name or likeness being sold, and team colours must never look like an official team product. Team logos and league marks are not allowed. Legal should review the first collection.</p>
+            <label class="mx-check"><input type="checkbox" id="mx-ack"><span>I’ve checked this design: no logos or official marks, quotes are exact, and I accept the likeness and trademark risk.</span></label>
+          </div>
+          <div class="mx-actions">
+            <button class="es-btn" type="button" id="mx-preview">Preview mockups</button>
+            <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-live">Continue</button>
+          </div>
+          <p class="mx-meta" id="mx-setup-meta" role="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 Push & live -->
+    <section class="mx-view" id="mx-view-live" data-view="live" aria-labelledby="mx-h-live" hidden>
+      <div class="mx-card mx-push" id="mx-push">
+        <h2 class="mx-h2" id="mx-h-live">Create on Fourthwall</h2>
+        <p class="mx-sub">The product is created hidden. Check the mockups, then publish.</p>
+        <div class="mx-progress" id="mx-progress" hidden><span id="mx-progress-bar"></span></div>
+        <p class="mx-meta" id="mx-push-status" role="status" aria-live="polite"></p>
+        <div class="mx-actions">
+          <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-create-fw">Create on Fourthwall (hidden)</button>
+        </div>
+      </div>
+      <div class="mx-card mx-live" id="mx-live" hidden></div>
+      <div class="mx-card mx-history" id="mx-history" hidden>
+        <div class="mx-row mx-row--between">
+          <h2 class="mx-h2">Past merch</h2>
+          <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-list-refresh">Refresh</button>
+        </div>
+        <div id="mx-list" aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="es-motion.js?v=20261115-ds1"></script>
+  <script src="trends-logic.js?v=20261118-rel1"></script>
+  <script src="frameup-rules.js?v=20261125-pills"></script>
+  <script src="brand-kit.js?v=20261111-tennis1"></script>
+  <script src="video-ads-teams.js?v=20261122-rel"></script>
+  <script src="merch-rules.js?v=20261125-merch"></script>
+  <script src="merch-print.js?v=20261125-merch"></script>
+  <script src="merch.js?v=20261125-merch"></script>
+</body>
+</html>

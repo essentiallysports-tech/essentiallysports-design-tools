@@ -60,6 +60,7 @@
     keyboard: icon('<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>'),
     trending: icon('<path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/>'),
     film: icon('<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/>'),
+    shirt: icon('<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>'),
     sliders: icon('<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/>'),
   };
 
@@ -102,6 +103,13 @@
       ],
     },
     {
+      id: 'merch',
+      label: 'Merch Designs',
+      items: [
+        { id: 'merch', label: 'Merch Designs', short: 'Merch', href: 'merch.html', icon: 'shirt', added: '2026-11-25', desc: 'Turn a line, quote or story into ES fan merch and put it on Fourthwall, hidden until someone publishes it.' },
+      ],
+    },
+    {
       id: 'work',
       label: 'Work',
       items: [
@@ -132,6 +140,7 @@
   const PAGE_IDS = {
     'reels.html': 'reels',
     'video-ads.html': 'video-ads',
+    'merch.html': 'merch',
     'reel-maker.html': 'reel-maker',
     'design-request.html': 'request',
     'requests.html': 'my-requests',
@@ -279,6 +288,7 @@
     [/^trend/, 'Trends'],
     [/^video-ads/, 'Video Ads'],
     [/^reels/, 'Reels Studio'],
+    [/^merch/, 'Merch Designs'],
   ];
   let usageSlot = null;
   let usageLoading = false;

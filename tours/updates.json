@@ -3,6 +3,30 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-25-merch-designs",
+      "date": "2026-11-25",
+      "title": "Merch Designs: ES fan merch on Fourthwall",
+      "commit": "483579e",
+      "items": [
+        {
+          "title": "From a line to a tee",
+          "text": "Paste a line, quote or story link, or pick a trend, choose a collection, and get tee designs in ES stacked pills. Edit the pills, colours and order on the card.",
+          "page": "merch.html",
+          "target": "#mx-text"
+        },
+        {
+          "title": "Set up and check rights",
+          "text": "Pick the tee, colours, where the ES logo goes and the price, see what you earn per sale, and tick the rights check before pushing.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Created hidden on Fourthwall",
+          "text": "Products go to Fourthwall hidden. Check the mockups, then Publish. Admins (and named people) can push; everyone can design.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-21-es-reels-system",
       "date": "2026-11-21",
       "title": "Reels Studio: the ES video team's design system",
