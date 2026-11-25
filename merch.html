@@ -130,24 +130,20 @@
             <div class="mx-blanks" id="mx-blanks" role="radiogroup" aria-labelledby="mx-blank-label"></div>
           </div>
           <div class="mx-block">
-            <span class="mx-label" id="mx-colors-label">Colours</span>
-            <div class="mx-chips" id="mx-colors" role="group" aria-labelledby="mx-colors-label"></div>
+            <span class="mx-label" id="mx-colors-label">Tee colour</span>
+            <div class="mx-chips" id="mx-colors" role="radiogroup" aria-labelledby="mx-colors-label"></div>
           </div>
           <div class="mx-row mx-row--wrap">
             <label class="es-field mx-grow">
-              <span class="es-field__label">Side</span>
-              <select class="mx-input" id="mx-side"><option value="front">Front</option><option value="back">Back</option></select>
+              <span class="es-field__label">Print area</span>
+              <select class="mx-input" id="mx-side"></select>
             </label>
             <label class="es-field mx-grow">
-              <span class="es-field__label">Placement</span>
-              <select class="mx-input" id="mx-placement"></select>
+              <span class="es-field__label">ES logo</span>
+              <select class="mx-input" id="mx-logo" aria-describedby="mx-logo-hint"></select>
             </label>
           </div>
-          <label class="es-field">
-            <span class="es-field__label">ES logo</span>
-            <select class="mx-input" id="mx-logo" aria-describedby="mx-logo-hint"></select>
-            <span class="es-field__hint" id="mx-logo-hint"></span>
-          </label>
+          <p class="mx-meta" id="mx-logo-hint"></p>
           <label class="es-field">
             <span class="es-field__label">Title</span>
             <input class="mx-input" id="mx-title-input" type="text" maxlength="120" autocomplete="off">
@@ -163,7 +159,7 @@
             </label>
             <p class="mx-earn" id="mx-earn"></p>
           </div>
-          <label class="es-field">
+          <label class="es-field" id="mx-fw-collection-field" hidden>
             <span class="es-field__label">Collection on Fourthwall</span>
             <select class="mx-input" id="mx-fw-collection"></select>
             <span class="es-field__hint">Fourthwall has no tags, so collections are how products are grouped.</span>
@@ -195,7 +191,7 @@
         </div>
       </div>
       <div class="mx-card mx-live" id="mx-live" hidden></div>
-      <div class="mx-card mx-history">
+      <div class="mx-card mx-history" id="mx-history" hidden>
         <div class="mx-row mx-row--between">
           <h2 class="mx-h2">Past merch</h2>
           <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-list-refresh">Refresh</button>
@@ -207,6 +203,9 @@
 
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="trends-logic.js?v=20261118-rel1"></script>
+  <script src="frameup-rules.js?v=20261125-pills"></script>
+  <script src="brand-kit.js?v=20261111-tennis1"></script>
+  <script src="video-ads-teams.js?v=20261122-rel"></script>
   <script src="merch-rules.js?v=20261125-merch"></script>
   <script src="merch-print.js?v=20261125-merch"></script>
   <script src="merch.js?v=20261125-merch"></script>

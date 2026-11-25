@@ -145,11 +145,14 @@ async function flow(width, theme) {
   ok(await evaluate("MerchUI.state.concepts[0].garment.color === '#101114'"), `${tag}: garment colour`);
   await audit(`${tag}-designs`);
   await click('#mx-to-setup');
-  await until("!document.getElementById('mx-view-setup').hidden && document.querySelectorAll('#mx-blanks [data-tpl]').length === 2 && document.getElementById('mx-price').value", `${tag} setup`);
+  await until("!document.getElementById('mx-view-setup').hidden && document.querySelectorAll('#mx-blanks [data-tpl]').length === 1 && document.getElementById('mx-price').value", `${tag} setup`);
   ok(calls.includes('templates') && calls.includes('copy'), `${tag}: templates + copy called`);
   ok(await evaluate("/earn about/.test(document.getElementById('mx-earn').textContent)"), `${tag}: earnings line`);
-  ok(await evaluate("[...document.getElementById('mx-logo').options].map(o => o.textContent).join('|') === 'Left sleeve|Right sleeve|Back neck|Neck label|No logo'"), `${tag}: logo areas listed`);
-  ok(await evaluate("document.getElementById('mx-logo').value === 'back-neck'"), `${tag}: logo defaults to back neck`);
+  ok(await evaluate("[...document.getElementById('mx-logo').options].map(o => o.textContent).join('|') === 'Left sleeve|Right sleeve|No logo'"), `${tag}: logo areas listed`);
+  ok(await evaluate("document.getElementById('mx-logo').value === 'sleeve_left'"), `${tag}: logo defaults to the first logo area`);
+  ok(await evaluate("MerchUI.state.colors.join() === 'Black'"), `${tag}: tee colour follows the design (${await evaluate('MerchUI.state.colors.join()')})`);
+  await click('#mx-colors [data-color="Navy"]');
+  ok(await evaluate("MerchUI.state.colors.join() === 'Navy' && document.querySelectorAll('#mx-colors [aria-checked=true]').length === 1"), `${tag}: one tee colour at a time`);
   ok(await evaluate("document.getElementById('mx-to-live').disabled"), `${tag}: Continue waits for the rights tick`);
   await click('#mx-ack');
   ok(!(await evaluate("document.getElementById('mx-to-live').disabled")), `${tag}: tick enables Continue`);
@@ -159,21 +162,20 @@ async function flow(width, theme) {
   ok(calls.filter(c => c === 'upload-url').length === 2 && calls.includes('register') && calls.includes('preview'), `${tag}: print + logo uploaded, preview asked (${calls.join(',')})`);
   await audit(`${tag}-setup`);
   await click('#mx-to-live');
-  await until("!document.getElementById('mx-view-live').hidden && document.querySelector('.mx-list__row')", `${tag} live view`);
+  await until("!document.getElementById('mx-view-live').hidden && /Navy/.test(document.getElementById('mx-push-status').textContent)", `${tag} live view`);
   await audit(`${tag}-push`);
   calls.length = 0;
   await click('#mx-create-fw');
-  await until("!document.getElementById('mx-live').hidden && document.querySelector('#mx-live .es-table')", `${tag} product`);
+  await until("!document.getElementById('mx-live').hidden && document.querySelector('#mx-live img')", `${tag} product`);
   ok(calls.includes('create') && !calls.includes('upload-url'), `${tag}: create reuses the uploaded images (${calls.join(',')})`);
+  ok(await evaluate("Boolean(document.querySelector('#mx-live [data-live=copy-desc]'))"), `${tag}: copy description backup`);
   ok(await evaluate("/Hidden/.test(document.querySelector('#mx-live .es-badge').textContent)"), `${tag}: created hidden`);
   ok(await evaluate("/Fourthwall dashboard/.test(document.getElementById('mx-live').textContent)"), `${tag}: edit-on-Fourthwall note`);
   await audit(`${tag}-live`);
   await click('#mx-live [data-live="publish"]');
   await until("/Live/.test(document.querySelector('#mx-live .es-badge')?.textContent || '')", `${tag} publish`);
-  await click('#mx-live [data-live="archive"]');
-  ok(await evaluate("/can’t be undone/.test(document.getElementById('mx-live').textContent)"), `${tag}: archive asks first`);
-  await click('#mx-live [data-live="archive"]');
-  await until("document.getElementById('mx-live').hidden", `${tag} archive`);
+  await click('#mx-live [data-live="hide"]');
+  await until("/Hidden/.test(document.querySelector('#mx-live .es-badge')?.textContent || '')", `${tag} hide`);
 }
 
 // ─── Page states ──────────────────────────────────────────────────────────
@@ -186,10 +188,10 @@ async function states(width, theme) {
 
   scenario = 'free';
   await load(width, theme, 'free');
-  await until("/Free mode/.test(document.getElementById('mx-banner').textContent)", `${tag} free banner`);
   await evaluate("(() => { const t = document.getElementById('mx-text'); t.value = 'We center fans'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
   await click('#mx-create');
   await until("document.querySelectorAll('.mx-design').length > 0", `${tag} free designs (fallback concepts)`);
+  await until("/Free mode/.test(document.getElementById('mx-banner').textContent)", `${tag} free banner`);
   ok(await evaluate("/without AI/.test(document.getElementById('mx-designs-sub').textContent)"), `${tag}: free-mode note`);
 
   scenario = 'cant-push';
@@ -205,6 +207,19 @@ async function states(width, theme) {
   await until("/Ask an admin to publish this/.test(document.getElementById('mx-push-status').textContent)", `${tag} can't-push message`);
   ok(await evaluate("document.getElementById('mx-create-fw').disabled"), `${tag}: create disabled for non-pushers`);
   await audit(`${tag}-cant-push`);
+
+  scenario = 'cap';
+  await load(width, theme, 'cap');
+  await evaluate("(() => { const t = document.getElementById('mx-text'); t.value = 'Ball don’t lie'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
+  await click('#mx-create');
+  await until("document.querySelectorAll('.mx-design').length > 0", `${tag} cap designs`);
+  await click('#mx-to-setup');
+  await until("document.getElementById('mx-price').value", `${tag} cap setup`);
+  await click('#mx-ack');
+  await click('#mx-to-live');
+  await click('#mx-create-fw');
+  await until("/daily limit/.test(document.getElementById('mx-push-status').textContent)", `${tag} daily cap message`);
+  await audit(`${tag}-cap`);
 
   scenario = 'error';
   await load(width, theme, 'err');

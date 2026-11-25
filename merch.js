@@ -1,7 +1,8 @@
 /* Merch Designs (merch.html): Content → Designs → Setup → Push & live.
    Calls /api/merch (modes status, templates, concepts, copy, upload-url,
-   upload-relay, register, preview, create, publish, hide, archive, product,
-   list) and window.MerchPrint (preview / render / fallbackConcepts). Until
+   register, preview, create, publish, hide, product; upload-relay only as a
+   fallback when the direct upload is blocked; archive and list are not on
+   the server yet, so they are not shown) and window.MerchPrint (preview / render / fallbackConcepts). Until
    merch-print.js lands, merch-stub.js stands in (loaded only when needed).
    Sample data: on localhost, or ?demo=merch off production, replies come from
    merch-demo.js and no network call is made for /api/merch; ?demo=off uses
@@ -57,7 +58,7 @@
       collection: 'auto', trend: null, trends: null,
       concepts: [], selected: null, conceptsFree: false, busy: '',
       templates: null, templateId: '', colors: [], side: 'front', placement: '', copyFor: '',
-      ack: false, mockups: [], image: null, logo: null, logoImage: null, editing: '', product: null, list: null, archiveArm: false,
+      ack: false, mockups: [], image: null, logo: null, logoImage: null, editing: '', product: null,
     };
 
     // ── API ──
@@ -108,7 +109,6 @@
       renderConn();
       const s = state.status;
       if (s && !s.configured) banner('setup', 'Fourthwall isn’t connected yet, so you can design but not create products. Ask an admin to add FOURTHWALL_API_USERNAME / PASSWORD in Vercel.');
-      else if (s?.free) banner('free', 'Free mode: this week’s AI budget is used, so designs are made without AI. They still follow the ES style.');
       renderLiveGate();
     }
 
@@ -120,7 +120,7 @@
       document.querySelectorAll('.mx-view').forEach(v => { v.hidden = v.dataset.view !== step; });
       renderSteps();
       if (step === 'setup') enterSetup();
-      if (step === 'live') { renderLiveGate(); if (!state.list) loadList(); }
+      if (step === 'live') renderLiveGate();
       const h = $(`mx-h-${step}`);
       if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
       window.scrollTo(0, 0);
@@ -206,7 +206,7 @@
       syncContent();
       let concepts = null, free = false;
       try {
-        const data = await api({ mode: 'concepts', content, collection: state.collection });
+        const data = await api(state.collection === 'auto' ? { mode: 'concepts', content } : { mode: 'concepts', content, collection: state.collection });
         if (data.free || !Array.isArray(data.concepts)) free = true; else concepts = data.concepts;
       } catch (error) {
         const why = explain(error);
@@ -214,6 +214,7 @@
         if (why.kind === 'rate' || why.kind === 'cap') banner(why.kind, why.text);
       }
       if (free) {
+        banner('free', 'Free mode: designs are made without AI this time. They still follow the ES style.');
         concepts = await P('fallbackConcepts')({ ...content, collection: state.collection });
         state.conceptsFree = true;
       } else state.conceptsFree = false;
@@ -343,36 +344,22 @@
     $('mx-again').addEventListener('click', () => go('content'));
 
     // ── 3 Setup ──
-    const template = () => (state.templates || []).find(t => t.id === state.templateId) || null;
-    const isLogoArea = a => Boolean(a && (a.logo === true || /sleeve|neck|label/i.test(a.region || '')));
-    const printAreas = () => (template()?.areas || []).filter(a => !isLogoArea(a));
-    const logoAreas = () => (template()?.areas || []).filter(isLogoArea);
-    const areaLabel = a => a.label || String(a.region).replace(/-/g, ' ').replace(/^./, m => m.toUpperCase());
-    const area = () => printAreas().find(a => a.region === state.side) || printAreas()[0] || null;
-    const logoArea = () => logoAreas().find(a => a.region === state.logo) || null;
-    // The tee preview, with the chosen ES logo spot marked.
-    const LOGO_SPOT = { 'sleeve-left': [0.86, 0.31, 'Left sleeve'], 'sleeve-right': [0.14, 0.31, 'Right sleeve'], 'back-neck': [0.5, 0.115, 'Back neck'], 'neck-label': [0.5, 0.135, 'Neck label'] };
+    // templates → [{ templateId, basePrice, printSpec, areas:[{ regionId, pixelsWidth, pixelsHeight, dpi, renderable, suitsLogo, suitsDesign, available }], colors, defaultColor, sizes }]
+    const template = () => (state.templates || []).find(t => t.templateId === state.templateId) || null;
+    const usable = a => a && a.renderable !== false && a.available !== false;
+    const designAreas = () => { const t = template(); const list = (t?.areas || []).filter(a => usable(a) && a.suitsDesign); return list.length ? list : (t?.printSpec ? [{ ...t.printSpec, regionId: t.printSpec.regionId || 'front' }] : []); };
+    const logoAreas = () => (template()?.areas || []).filter(a => usable(a) && a.suitsLogo && a.regionId !== state.side);
+    const areaLabel = a => a.name || a.label || String(a.regionId).replace(/[_-]+/g, ' ').replace(/^./, m => m.toUpperCase());
+    const area = () => designAreas().find(a => a.regionId === state.side) || designAreas()[0] || null;
+    const logoArea = () => logoAreas().find(a => a.regionId === state.logo) || null;
+    const logoSpot = () => { const la = logoArea(); if (!la) return 'none'; const r = la.regionId.toLowerCase(); return /sleeve/.test(r) ? 'sleeve' : /back/.test(r) ? 'back-neck' : /label/.test(r) ? 'label' : 'neck'; };
+    const garmentHex = () => (template()?.colors || []).find(x => x.name === state.colors[0])?.hex || selectedConcept()?.garment?.color;
     async function drawStage() {
       const c = selectedConcept();
       const cv = $('mx-stage-canvas');
-      try { await P('preview')(c, c.garment?.color, cv); } catch { return; }
+      try { await P('preview')(c, garmentHex(), cv, { logoSpot: logoSpot(), size: 560 }); } catch (error) { console.warn('merch preview', error); }
       const la = logoArea();
-      if (!la) return;
-      const key = Object.keys(LOGO_SPOT).find(k => la.region.includes(k.split('-')[0]) && la.region.includes(k.split('-')[1])) || (/sleeve/.test(la.region) ? 'sleeve-left' : 'back-neck');
-      const [fx, fy] = LOGO_SPOT[key];
-      const g = cv.getContext('2d');
-      const w = cv.width, h = cv.height, pw = w * 0.1, ph = pw * 0.16;
-      g.save();
-      g.fillStyle = '#0A7DFA';
-      g.fillRect(w * fx - pw / 2, h * fy - ph / 2, pw, ph);
-      g.setLineDash([4, 3]);
-      g.strokeStyle = '#0A7DFA';
-      g.lineWidth = 2;
-      g.beginPath();
-      g.arc(w * fx, h * fy, pw * 0.75, 0, Math.PI * 2);
-      g.stroke();
-      g.restore();
-      cv.setAttribute('aria-label', `Tee preview, ES logo on the ${areaLabel(la).toLowerCase()}`);
+      cv.setAttribute('aria-label', la ? `Tee preview, ES logo on the ${areaLabel(la).toLowerCase()}` : 'Tee preview, no ES logo');
     }
     async function enterSetup() {
       const c = selectedConcept();
@@ -381,7 +368,7 @@
         $('mx-blanks').innerHTML = '<span class="mx-meta">Loading blanks…</span>';
         try {
           const data = await api({ mode: 'templates', blank: 'tee' });
-          state.templates = (data.templates || []).filter(t => !t.blank || t.blank === 'tee');
+          state.templates = data.templates || [];
         } catch (error) {
           const why = explain(error);
           $('mx-blanks').innerHTML = `<span class="mx-meta mx-meta--bad">${esc(why.text)}</span> <button class="es-btn es-btn--sm" type="button" id="mx-blanks-retry">Try again</button>`;
@@ -390,69 +377,69 @@
           syncSetup();
           return;
         }
-        if (state.templates[0]) pickTemplate(state.templates[0].id, false);
       }
+      if (!template() && state.templates[0]) pickTemplate(state.templates[0].templateId, false);
+      else pickColorFor(c);
       renderSetup();
       if (state.copyFor !== c.id) loadCopy(c);
     }
+    function pickColorFor(c) {
+      const t = template();
+      const match = t?.colors?.find(x => x.hex?.toLowerCase() === String(c?.garment?.color || '').toLowerCase()) || t?.colors?.find(x => x.name === c?.garment?.name) || t?.colors?.find(x => x.name === t.defaultColor) || t?.colors?.[0];
+      state.colors = match ? [match.name] : [];
+    }
     function pickTemplate(id, render = true) {
       state.templateId = id;
-      const t = template();
-      const c = selectedConcept();
-      const match = t?.colors?.find(x => x.hex.toLowerCase() === String(c?.garment?.color || '').toLowerCase()) || t?.colors?.find(x => x.name === c?.garment?.name) || t?.colors?.[0];
-      state.colors = match ? [match.name] : [];
-      const a = area();
-      state.placement = a?.placements?.[0] || '';
-      if (!printAreas().some(x => x.region === state.side)) state.side = printAreas()[0]?.region || 'front';
+      pickColorFor(selectedConcept());
+      state.side = template()?.printSpec?.regionId || designAreas()[0]?.regionId || 'front';
       const logos = logoAreas();
-      if (!logos.some(x => x.region === state.logo)) state.logo = (logos.find(x => /back-?neck/.test(x.region)) || logos[0])?.region || null;
+      if (!logos.some(x => x.regionId === state.logo)) state.logo = logos[0]?.regionId || null;
       state.image = null; state.logoImage = null; state.mockups = [];
       if (render) renderSetup();
     }
+    const base = () => Number(template()?.basePrice) || 0;
     function renderSetup() {
       const t = template();
       $('mx-blanks').innerHTML = (state.templates || []).length
-        ? state.templates.map(x => `<button class="mx-blank" type="button" role="radio" aria-checked="${x.id === state.templateId}" tabindex="${x.id === state.templateId ? 0 : -1}" data-tpl="${esc(x.id)}"><span class="mx-blank__name">${esc(x.name)}</span><span class="mx-blank__price">From ${money(x.priceFrom)}</span></button>`).join('')
+        ? state.templates.map(x => `<button class="mx-blank" type="button" role="radio" aria-checked="${x.templateId === state.templateId}" tabindex="${x.templateId === state.templateId ? 0 : -1}" data-tpl="${esc(x.templateId)}"><span class="mx-blank__name">${esc(x.name || 'T-shirt')}</span><span class="mx-blank__price">Base cost ${money(x.basePrice)}</span></button>`).join('')
         : '<span class="mx-meta">No tee blanks found on Fourthwall.</span>';
-      $('mx-colors').innerHTML = (t?.colors || []).map(x => `<button class="es-chip" type="button" aria-pressed="${state.colors.includes(x.name)}" data-color="${esc(x.name)}"><span class="es-chip__dot" style="--dot:${esc(x.hex)}"></span>${esc(x.name)}</button>`).join('');
-      const sides = printAreas().map(a => a.region);
-      const logos = logoAreas();
-      $('mx-logo').innerHTML = `${logos.map(a => `<option value="${esc(a.region)}">${esc(areaLabel(a))}</option>`).join('')}<option value="">No logo</option>`;
-      $('mx-logo').value = state.logo || '';
-      $('mx-logo-hint').textContent = logos.length ? 'The small ESSENTIALLYSPORTS pill, printed as its own area. Marked on the preview.' : 'This tee has no small print areas, so the logo is off.';
-      drawStage();
-      [...$('mx-side').options].forEach(o => { o.disabled = sides.length > 0 && !sides.includes(o.value); });
+      $('mx-colors').innerHTML = (t?.colors || []).map(x => { const on = state.colors.includes(x.name); return `<button class="es-chip" type="button" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-color="${esc(x.name)}"><span class="es-chip__dot" style="--dot:${esc(x.hex)}"></span>${esc(x.name)}</button>`; }).join('');
+      $('mx-side').innerHTML = designAreas().map(a => `<option value="${esc(a.regionId)}">${esc(areaLabel(a))}</option>`).join('');
       $('mx-side').value = state.side;
-      const a = area();
-      $('mx-placement').innerHTML = (a?.placements || ['center']).map(p => `<option value="${esc(p)}">${esc(String(p).replace(/-/g, ' ').replace(/^./, m => m.toUpperCase()))}</option>`).join('');
-      $('mx-placement').value = state.placement || (a?.placements || ['center'])[0];
+      const logos = logoAreas();
+      $('mx-logo').innerHTML = `${logos.map(a => `<option value="${esc(a.regionId)}">${esc(areaLabel(a))}</option>`).join('')}<option value="">No logo</option>`;
+      $('mx-logo').value = state.logo || '';
+      $('mx-logo-hint').textContent = logos.length ? 'The ES logo is the small ESSENTIALLYSPORTS pill, printed in its own area. The preview shows where.' : 'This tee has no small print areas, so it goes without the ES logo.';
       const cols = state.status?.collections || [];
+      $('mx-fw-collection-field').hidden = !cols.length;
       $('mx-fw-collection').innerHTML = `<option value="">None</option>${cols.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}`;
+      drawStage();
       renderMockups();
       syncEarn();
       syncSetup();
     }
     function syncEarn() {
-      const t = template();
       const price = Number($('mx-price').value);
-      if (!t || !(price > 0)) { $('mx-earn').textContent = ''; return; }
-      const earn = price - (Number(t.priceFrom) || 0);
-      $('mx-earn').innerHTML = earn > 0 ? `You earn about <strong>${money(earn)}</strong> per sale (base cost ${money(t.priceFrom)}).` : `<span class="mx-meta--bad">Below the base cost of ${money(t.priceFrom)}. Raise the price.</span>`;
+      if (!template() || !(price > 0)) { $('mx-earn').textContent = ''; return; }
+      const m = window.MerchRules?.marginFor ? window.MerchRules.marginFor(price, base()) : null;
+      const earn = m && Number.isFinite(m.margin) ? m.margin : price - base();
+      $('mx-earn').innerHTML = earn > 0 ? `You earn about <strong>${money(earn)}</strong> per sale (base cost ${money(base())}).` : `<span class="mx-meta--bad">Below the base cost of ${money(base())}. Raise the price.</span>`;
     }
     async function loadCopy(c) {
       state.copyFor = c.id;
-      $('mx-title-input').value = c.title ? `${c.title} tee` : '';
+      $('mx-title-input').value = c.title ? `${c.title} Tee` : '';
       $('mx-setup-meta').textContent = 'Writing the title and description…';
       try {
-        const data = await api({ mode: 'copy', concept: c, templateId: state.templateId });
-        if (data.title) $('mx-title-input').value = data.title;
-        if (data.description) $('mx-desc').value = data.description;
-        if (data.price) $('mx-price').value = data.price;
+        const data = await api({ mode: 'copy', concept: c, content: contentPayload(), blank: 'tee' });
+        const copy = data.copy || data;
+        if (copy.title) $('mx-title-input').value = copy.title;
+        if (copy.description) $('mx-desc').value = copy.description;
+        if (copy.retail) $('mx-price').value = copy.retail;
         $('mx-setup-meta').textContent = '';
       } catch (error) {
         $('mx-setup-meta').textContent = 'Couldn’t write the copy. Fill in the title, description and price yourself.';
       }
-      if (!$('mx-price').value) $('mx-price').value = 30;
+      if (!$('mx-price').value) $('mx-price').value = Math.ceil(base() * 1.8) || 30;
       syncEarn();
       syncSetup();
     }
@@ -464,7 +451,7 @@
         : '<li class="mx-meta">No names, quotes or team colours found.</li>';
     }
     function setupReady() {
-      return Boolean(template()) && state.colors.length > 0 && $('mx-title-input').value.trim().length > 2 && Number($('mx-price').value) > (Number(template()?.priceFrom) || 0);
+      return Boolean(template()) && state.colors.length > 0 && $('mx-title-input').value.trim().length > 2 && Number($('mx-price').value) > base();
     }
     function syncSetup() {
       const ready = setupReady();
@@ -477,28 +464,40 @@
     $('mx-colors').addEventListener('click', e => {
       const b = e.target.closest('[data-color]');
       if (!b) return;
-      const name = b.dataset.color;
-      state.colors = state.colors.includes(name) ? state.colors.filter(x => x !== name) : [...state.colors, name];
-      b.setAttribute('aria-pressed', String(state.colors.includes(name)));
+      state.colors = [b.dataset.color];
       state.mockups = [];
-      renderMockups();
-      syncSetup();
+      renderSetup();
+      $('mx-colors').querySelector(`[data-color="${CSS.escape(b.dataset.color)}"]`)?.focus();
     });
-    $('mx-side').addEventListener('change', () => { state.side = $('mx-side').value; state.placement = area()?.placements?.[0] || ''; state.image = null; state.mockups = []; renderSetup(); });
+    $('mx-colors').addEventListener('keydown', e => {
+      const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      const list = template()?.colors || [];
+      if (!d || !list.length) return;
+      e.preventDefault();
+      const i = list.findIndex(x => x.name === state.colors[0]);
+      state.colors = [list[(i + d + list.length) % list.length].name];
+      state.mockups = [];
+      renderSetup();
+      $('mx-colors').querySelector('[aria-checked="true"]')?.focus();
+    });
+    $('mx-side').addEventListener('change', () => { state.side = $('mx-side').value; if (state.logo === state.side) state.logo = null; state.image = null; state.mockups = []; renderSetup(); });
     $('mx-logo').addEventListener('change', () => { state.logo = $('mx-logo').value || null; state.logoImage = null; state.mockups = []; renderMockups(); drawStage(); });
-    $('mx-placement').addEventListener('change', () => { state.placement = $('mx-placement').value; state.mockups = []; renderMockups(); });
     ['mx-title-input', 'mx-desc'].forEach(id => $(id).addEventListener('input', syncSetup));
     $('mx-price').addEventListener('input', () => { syncEarn(); syncSetup(); });
     $('mx-ack').addEventListener('change', () => { state.ack = $('mx-ack').checked; syncSetup(); });
     $('mx-to-live').addEventListener('click', () => go('live'));
 
+    const imgUrl = m => (typeof m === 'string' ? m : m?.url || m?.transformedUrl || '');
+    function imagesHtml(list, label) {
+      return `<div class="mx-mockups__grid">${(list || []).slice(0, 4).map((m, i) => `<figure class="mx-mock"><img src="${esc(imgUrl(m))}" alt="${esc(label)} mockup ${i + 1}" loading="lazy"></figure>`).join('')}</div>`;
+    }
     function renderMockups() {
       const box = $('mx-mockups');
       if (!state.mockups.length) { box.innerHTML = '<p class="mx-meta">This is a FrameUp preview. Preview mockups shows Fourthwall’s own images.</p>'; return; }
-      box.innerHTML = `<p class="mx-label">Fourthwall mockups</p><div class="mx-mockups__grid">${state.mockups.slice(0, 4).map(m => `<figure class="mx-mock"><img src="${esc(m.url)}" alt="${esc(m.color)} mockup" loading="lazy"><figcaption>${esc(m.color)}</figcaption></figure>`).join('')}</div>`;
+      box.innerHTML = `<p class="mx-label">Fourthwall mockups · ${esc(state.colors[0] || '')}</p>${imagesHtml(state.mockups, state.colors[0] || 'Tee')}`;
     }
 
-    // ── Print file: render, upload, register (shared by preview and create) ──
+    // ── Print files: render, upload, register (shared by preview and create) ──
     function pushAllowed() {
       const s = state.status;
       if (s && !s.configured) return { ok: false, text: 'Fourthwall isn’t connected yet. Ask an admin to add FOURTHWALL_API_USERNAME / PASSWORD in Vercel.' };
@@ -517,65 +516,60 @@
         xhr.open('PUT', url);
         xhr.setRequestHeader('Content-Type', 'image/png');
         xhr.upload.onprogress = e => { if (e.lengthComputable) onPct(e.loaded / e.total); };
-        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(Object.assign(new Error(`Upload failed (${xhr.status}).`), { status: xhr.status })));
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(Object.assign(new Error(`Upload failed (${xhr.status}). Try again.`), { status: xhr.status })));
         xhr.onerror = () => reject(Object.assign(new Error('network'), { network: true }));
         xhr.send(blob);
       });
     }
     const blobToBase64 = blob => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result).split(',')[1] || ''); r.onerror = reject; r.readAsDataURL(blob); });
-    // Draw → upload-url → PUT (progress) → register, or upload-relay when the
-    // direct PUT is blocked (CORS / network). Returns the Fourthwall imageId.
-    async function uploadCanvas(canvas, what, onStatus, from, span) {
+    // upload-url → PUT (with progress) → register. If the direct PUT is blocked
+    // (CORS / network), try upload-relay; the server may not offer it yet.
+    async function uploadCanvas(canvas, what, region, onStatus, from, span) {
       const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
       if (!blob) throw new Error(`The ${what} couldn’t be drawn. Try again.`);
       onStatus(from, `Uploading the ${what}…`);
-      const up = await api({ mode: 'upload-url', contentType: 'image/png', size: blob.size });
+      const up = await api({ mode: 'upload-url', fileName: `frameup-merch-${what.replace(/\W+/g, '-')}.png`, size: blob.size, contentType: 'image/png' });
+      const reg = { mode: 'register', fileUrl: up.fileUrl, width: canvas.width, height: canvas.height, blank: 'tee', region };
       try {
         await putWithProgress(up.uploadUrl, blob, f => onStatus(from + f * span, `Uploading the ${what}… ${Math.round(f * 100)}%`));
-        const reg = await api({ mode: 'register', fileUrl: up.fileUrl, uploadUrl: up.uploadUrl });
-        if (reg.imageId) return reg.imageId;
       } catch (error) {
         if (!error.network) throw error;
-        onStatus(from + span / 2, 'Direct upload was blocked. Sending through FrameUp instead…');
-        const relay = await api({ mode: 'upload-relay', contentType: 'image/png', data: await blobToBase64(blob) });
-        if (relay.imageId) return relay.imageId;
+        onStatus(from + span / 2, 'Direct upload was blocked. Sending it through FrameUp instead…');
+        try {
+          const relay = await api({ mode: 'upload-relay', fileName: 'frameup-merch.png', contentType: 'image/png', data: await blobToBase64(blob), width: canvas.width, height: canvas.height, blank: 'tee', region });
+          if (relay.imageId) return relay.imageId;
+          if (relay.fileUrl) reg.fileUrl = relay.fileUrl;
+        } catch (relayError) {
+          throw new Error(relayError.status === 501 ? 'The browser couldn’t upload the print file to Fourthwall, and the FrameUp relay isn’t ready yet. Try again, or ask an admin.' : explain(relayError).text);
+        }
       }
-      throw new Error(`Fourthwall didn’t accept the ${what}. Try again.`);
+      const out = await api(reg);
+      if (!out.imageId) throw new Error(`Fourthwall didn’t accept the ${what}. Try again.`);
+      return out.imageId;
     }
     async function ensureImages(onStatus = () => {}) {
       const c = selectedConcept();
-      const a = area() || { region: state.side, pixelsWidth: 3600, pixelsHeight: 4800, dpi: 300 };
-      const spec = { templateId: state.templateId, region: state.side, pixelsWidth: a.pixelsWidth, pixelsHeight: a.pixelsHeight, dpi: a.dpi, garmentColor: c.garment?.color };
+      const a = area() || { regionId: state.side, pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150 };
+      const spec = { ...(template()?.printSpec || {}), templateId: state.templateId, region: a.regionId, regionId: a.regionId, pixelsWidth: a.pixelsWidth, pixelsHeight: a.pixelsHeight, dpi: a.dpi, garmentColor: garmentHex() };
       const key = JSON.stringify([c.stack, c.palette, c.align, spec]);
       if (state.image?.key !== key) {
         onStatus(5, `Drawing the print file (${a.pixelsWidth} × ${a.pixelsHeight} px)…`);
         const canvas = document.createElement('canvas');
-        await P('render')(c, spec, canvas);
-        state.image = { key, imageId: await uploadCanvas(canvas, 'print file', onStatus, 10, 45) };
+        await P('render')(c, spec, canvas, { phone: false });
+        state.image = { key, imageId: await uploadCanvas(canvas, 'print file', a.regionId, onStatus, 10, 45) };
       }
       const la = logoArea();
       if (la) {
-        const lspec = { templateId: state.templateId, region: la.region, pixelsWidth: la.pixelsWidth, pixelsHeight: la.pixelsHeight, dpi: la.dpi, garmentColor: c.garment?.color };
+        const lspec = { templateId: state.templateId, region: la.regionId, regionId: la.regionId, pixelsWidth: la.pixelsWidth, pixelsHeight: la.pixelsHeight, dpi: la.dpi, garmentColor: garmentHex() };
         const lkey = JSON.stringify(lspec);
         if (state.logoImage?.key !== lkey) {
           onStatus(58, 'Drawing the ES logo…');
           const canvas = document.createElement('canvas');
           await P('renderLogo')(lspec, canvas);
-          state.logoImage = { key: lkey, imageId: await uploadCanvas(canvas, 'ES logo', onStatus, 60, 15) };
+          state.logoImage = { key: lkey, imageId: await uploadCanvas(canvas, 'ES logo', la.regionId, onStatus, 60, 15) };
         }
       }
-      return { main: state.image.imageId, logo: la ? state.logoImage.imageId : null, logoRegion: la?.region || null };
-    }
-    function productBody(images) {
-      const c = selectedConcept();
-      const regions = [{ region: state.side, imageId: images.main, placementStrategy: state.placement || 'center' }];
-      if (images.logo) regions.push({ region: images.logoRegion, imageId: images.logo, placementStrategy: 'center' });
-      return {
-        templateId: state.templateId, colors: state.colors, regions, logoRegion: images.logoRegion,
-        title: $('mx-title-input').value.trim(), description: $('mx-desc').value.trim(), price: Number($('mx-price').value),
-        collectionId: $('mx-fw-collection').value || null, concept: c,
-        rightsAck: { acknowledged: state.ack, items: c.rights || [], at: new Date().toISOString() },
-      };
+      return { imageId: state.image.imageId, region: a.regionId, logo: la ? { region: la.regionId, imageId: state.logoImage.imageId } : null };
     }
     $('mx-preview').addEventListener('click', async () => {
       const gate = pushAllowed();
@@ -583,10 +577,12 @@
       state.busy = 'preview';
       syncSetup();
       try {
-        const images = await ensureImages((p, text) => { $('mx-setup-meta').textContent = text; });
+        const img = await ensureImages((p, text) => { $('mx-setup-meta').textContent = text; });
         $('mx-setup-meta').textContent = `Asking Fourthwall for mockups… usually ${ETA.preview}.`;
-        const data = await api({ mode: 'preview', ...productBody(images) });
-        state.mockups = data.mockups || [];
+        const body = { mode: 'preview', blank: 'tee', imageId: img.imageId, region: img.region, color: state.colors[0] };
+        if (img.logo) body.logo = img.logo;
+        const data = await api(body);
+        state.mockups = data.images || [];
         renderMockups();
         $('mx-setup-meta').textContent = state.mockups.length ? '' : 'Fourthwall sent no mockups. You can still continue.';
       } catch (error) {
@@ -601,29 +597,41 @@
       const btn = $('mx-create-fw');
       if (!btn) return;
       const gate = pushAllowed();
-      if (state.product) { $('mx-push').hidden = true; return; }
-      $('mx-push').hidden = false;
+      $('mx-push').hidden = Boolean(state.product);
+      if (state.product) return;
       btn.disabled = !gate.ok || state.busy === 'create' || !state.ack;
+      const left = state.status?.caps?.person?.left;
       if (!gate.ok) $('mx-push-status').textContent = gate.text;
-      else if (state.busy !== 'create') $('mx-push-status').textContent = `${state.colors.length} colour${state.colors.length === 1 ? '' : 's'} · ${money($('mx-price').value)} · ${state.status?.capLeft != null ? `${state.status.capLeft} creates left today` : 'up to 10 creates a day'}`;
+      else if (state.pushError) $('mx-push-status').textContent = state.pushError;
+      else if (state.busy !== 'create') $('mx-push-status').textContent = `${state.colors[0] || 'No colour'} · ${money($('mx-price').value)} · ${logoArea() ? `ES logo on the ${areaLabel(logoArea()).toLowerCase()}` : 'no ES logo'} · ${left != null ? `${left} create${left === 1 ? '' : 's'} left today` : 'up to 10 creates a day'}`;
     }
     $('mx-create-fw').addEventListener('click', async () => {
       const gate = pushAllowed();
       if (!gate.ok) { $('mx-push-status').textContent = gate.text; return; }
       state.busy = 'create';
+      state.pushError = '';
       const btn = $('mx-create-fw');
       btn.disabled = true; btn.setAttribute('aria-busy', 'true');
       try {
-        const images = await ensureImages(progress);
+        const img = await ensureImages(progress);
         progress(80, `Creating the product (hidden)… ${ETA.create}.`);
-        const data = await api({ mode: 'create', ...productBody(images) });
-        state.product = data.product;
+        const c = selectedConcept();
+        const body = {
+          mode: 'create', concept: c, content: contentPayload(), blank: 'tee', imageId: img.imageId, region: img.region,
+          title: $('mx-title-input').value.trim(), description: $('mx-desc').value.trim(), retail: Number($('mx-price').value), color: state.colors[0],
+          ack: { accepted: state.ack, items: (c.rights || []).map(r => ({ kind: r.kind, text: r.text })) },
+        };
+        if (img.logo) body.logo = img.logo;
+        if ($('mx-fw-collection').value) body.collectionId = $('mx-fw-collection').value;
+        const data = await api(body);
+        state.product = { id: data.productId, name: data.title || body.title, description: data.description || body.description, url: data.productUrl || '', state: data.state || 'HIDDEN', price: data.price?.retail ?? body.retail, margin: data.price?.margin, images: data.images || [], color: body.color };
+        if (data.caps && state.status) state.status.caps = data.caps;
+        window.FrameUpTrack?.track?.('export', { tool: 'merch', action: 'fourthwall-create' });
         progress(null, '');
-        state.list = null;
-        loadList();
       } catch (error) {
         const why = explain(error);
         progress(null, why.text);
+        state.pushError = why.text;
         if (why.kind === 'error' || why.kind === 'rate') banner(why.kind, why.text, { retry: () => $('mx-create-fw').click() });
       }
       state.busy = '';
@@ -632,14 +640,14 @@
       renderLive();
     });
 
-    const STATE_LABEL = { HIDDEN: ['Hidden', 'warn'], AVAILABLE: ['Live', 'good'], ARCHIVED: ['Archived', 'ink'] };
+    const STATE_LABEL = { HIDDEN: ['Hidden', 'warn'], PUBLIC: ['Live', 'good'], AVAILABLE: ['Live', 'good'], PRIVATE: ['Private', 'ink'], ARCHIVED: ['Archived', 'ink'] };
     function renderLive() {
       const box = $('mx-live');
       const p = state.product;
       if (!p) { box.hidden = true; box.innerHTML = ''; return; }
       box.hidden = false;
       const [label, tone] = STATE_LABEL[p.state] || [p.state || 'Unknown', 'ink'];
-      const live = p.state === 'AVAILABLE';
+      const live = p.state === 'PUBLIC' || p.state === 'AVAILABLE';
       box.innerHTML = `
         <div class="mx-row mx-row--between">
           <div class="mx-live__head">
@@ -649,62 +657,40 @@
           <div class="mx-row">
             ${p.url ? `<a class="es-btn" href="${esc(p.url)}" target="_blank" rel="noopener">Open on Fourthwall</a>` : ''}
             <button class="es-btn" type="button" data-live="${live ? 'hide' : 'publish'}">${live ? 'Hide' : 'Publish'}</button>
-            <button class="es-btn es-btn--danger" type="button" data-live="archive">${state.archiveArm ? 'Archive for good?' : 'Archive'}</button>
-            ${state.archiveArm ? '<button class="es-btn es-btn--ghost" type="button" data-live="cancel">Cancel</button>' : ''}
           </div>
         </div>
-        ${state.archiveArm ? '<p class="mx-meta mx-meta--bad">Archiving deletes the product from Fourthwall. This can’t be undone.</p>' : ''}
-        ${p.url ? `<p class="mx-meta">Product link: <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url)}</a></p>` : ''}
-        <div class="mx-mockups__grid">${(p.mockups || []).slice(0, 4).map(m => `<figure class="mx-mock"><img src="${esc(m.url)}" alt="${esc(m.color)} mockup" loading="lazy"><figcaption>${esc(m.color)}</figcaption></figure>`).join('')}</div>
+        <p class="mx-meta">${p.url ? `Product link: <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url)}</a> · ` : ''}${p.price != null ? `${money(p.price)}${p.margin != null ? `, you earn about ${money(p.margin)} a sale` : ''}` : ''}</p>
+        ${(p.images || []).length ? imagesHtml(p.images, p.color || p.name) : '<p class="mx-meta">Fourthwall is still making the mockups. Check the product page in a minute.</p>'}
         ${(p.variants || []).length ? `<div class="es-table-wrap mx-variants"><table class="es-table"><caption class="es-sr-only">Variants</caption><thead><tr><th scope="col">SKU</th><th scope="col">Colour</th><th scope="col">Size</th><th scope="col">Price</th><th scope="col">Stock</th></tr></thead><tbody>${p.variants.map(v => `<tr><td>${esc(v.sku)}</td><td>${esc(v.color)}</td><td>${esc(v.size)}</td><td>${money(v.price)}</td><td>${esc(v.stock ?? '')}</td></tr>`).join('')}</tbody></table></div>` : ''}
-        <p class="mx-meta">To change title, price or art after it’s on Fourthwall, edit it in the Fourthwall dashboard.</p>
+        <div class="mx-row mx-row--between">
+          <p class="mx-meta">To change title, price or art after it’s on Fourthwall, edit it in the Fourthwall dashboard.</p>
+          ${p.description ? '<button class="es-btn es-btn--ghost es-btn--sm" type="button" data-live="copy-desc">Copy description</button>' : ''}
+        </div>
         <p class="mx-meta" id="mx-live-status" role="status" aria-live="polite"></p>`;
     }
     $('mx-live').addEventListener('click', async e => {
       const b = e.target.closest('[data-live]');
       if (!b || !state.product) return;
       const act = b.dataset.live;
-      if (act === 'cancel') { state.archiveArm = false; renderLive(); return; }
-      if (act === 'archive' && !state.archiveArm) { state.archiveArm = true; renderLive(); $('mx-live').querySelector('[data-live="archive"]').focus(); return; }
+      if (act === 'copy-desc') {
+        try {
+          await navigator.clipboard.writeText(state.product.description);
+          window.FrameUpTrack?.track?.('copy', { tool: 'merch', action: 'description' });
+          $('mx-live-status').textContent = 'Description copied. Paste it in the Fourthwall dashboard if the shop shows it empty.';
+        } catch { $('mx-live-status').textContent = 'Couldn’t copy. Select the description in Setup and copy it there.'; }
+        return;
+      }
       b.disabled = true;
       try {
         const data = await api({ mode: act, productId: state.product.id });
-        if (act === 'archive') { state.product = null; state.archiveArm = false; $('mx-push-status').textContent = 'Archived.'; }
-        else state.product = data.product || { ...state.product, state: act === 'publish' ? 'AVAILABLE' : 'HIDDEN' };
-        state.list = null;
-        loadList();
+        const fresh = data.product || {};
+        state.product = { ...state.product, state: fresh.state && fresh.state !== 'UNKNOWN' ? fresh.state : (act === 'publish' ? 'PUBLIC' : 'HIDDEN'), url: fresh.url || state.product.url, images: fresh.images?.length ? fresh.images : state.product.images };
       } catch (error) {
-        state.archiveArm = false;
         renderLive();
         $('mx-live-status').textContent = explain(error).text;
         return;
       }
       renderLive();
-      renderLiveGate();
-    });
-
-    async function loadList() {
-      const box = $('mx-list');
-      box.innerHTML = '<p class="mx-meta">Loading…</p>';
-      try {
-        const data = await api({ mode: 'list' });
-        state.list = data.products || [];
-      } catch (error) {
-        box.innerHTML = `<p class="mx-meta">${esc(explain(error).text)}</p>`;
-        return;
-      }
-      box.innerHTML = state.list.length
-        ? `<ul class="mx-list">${state.list.map(p => { const [label, tone] = STATE_LABEL[p.state] || [p.state, 'ink']; return `<li class="mx-list__row"><span class="mx-list__name">${esc(p.name)}</span><span class="es-badge es-badge--${tone}">${esc(label)}</span><span class="mx-meta">${p.price ? money(p.price) : ''}</span>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">View</a>` : ''}<button class="es-btn es-btn--sm es-btn--ghost" type="button" data-open="${esc(p.id)}">Manage</button></li>`; }).join('')}</ul>`
-        : '<p class="mx-meta">No merch on Fourthwall yet.</p>';
-    }
-    $('mx-list-refresh').addEventListener('click', () => loadList());
-    $('mx-list').addEventListener('click', async e => {
-      const b = e.target.closest('[data-open]');
-      if (!b) return;
-      try { const data = await api({ mode: 'product', productId: b.dataset.open }); state.product = data.product || state.list.find(p => p.id === b.dataset.open); } catch { state.product = state.list.find(p => p.id === b.dataset.open); }
-      state.archiveArm = false;
-      renderLive(); renderLiveGate();
-      $('mx-live').scrollIntoView({ block: 'start' });
     });
 
     // ── Start ──

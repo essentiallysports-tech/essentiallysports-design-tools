@@ -4,6 +4,16 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-25 — Suhail (Claude, Agent UI): Merch Designs page (branch feature/merch-ui)
+- Status: committed, not pushed. Merges with feature/merch-designs (MerchPrint / MerchRules) and feature/merch-server (/api/merch).
+- New page `merch.html` / `merch.js` / `merch.css`: Content (words, story link or trend; collection picker) → Designs (concept cards with tee preview, collection tag, team, rights chips, tee colour, quick edits: edit pill text / order / add / remove, big-small, swap pill colours, align) → Setup (tee, one colour, print area, ES logo area from the template's `suitsLogo && renderable` areas or "No logo", title / description / price from `copy`, "you earn about $X", rights tick with the likeness / trademark note and "Legal should review the first collection", Preview mockups) → Push & live (render print + logo PNGs at the area size, upload-url → PUT with progress → register, upload-relay only as a fallback, create hidden, Publish / Hide, mockups, Copy description backup, edit-in-Fourthwall note). States: not set up, can't push (admins only), free mode, daily cap, rate limit, errors with retry, phone needs a desktop.
+- `app-shell.js`: new "Merch Designs" nav group (item `merch`, shirt icon, added 2026-11-25), PAGE_IDS, usage label. Cache key `20261125-merch` bumped on every page that loads app-shell.js.
+- `merch-stub.js`: stand-in renderer loaded only when MerchPrint is missing a function. `merch-demo.js`: sample replies (localhost or ?demo=merch off production; ?demo=off uses the API) in the server's real shapes.
+- Archive and Past merch list are hidden: the server answers 501 for archive / list / upload-relay for now.
+- Release note `2026-11-25-merch-designs`. `scripts/test-usage-tracking.mjs`: TAKES entry for the merch copy-description. No tour step (owner: skip for now).
+- Tests: new `scripts/check-merch-ui.mjs` (90 checks: full flow at 1440 light + dark and 1024 light, plus not set up / free / can't push / daily cap / error states; also passed with the DESIGN branch's real merch-print.js / merch-rules.js copied in). test-tour, test-usage-tracking, test-reliability-wiring, inline-syntax, run-suite merch site-chrome pages OK.
+- Unverified: live Fourthwall (direct PUT to Google Cloud Storage from the browser: CORS), real mockup image shapes.
+
 ## 2026-11-21 — Suhail (Claude): Dashboard Newsletter tab; Newsletter exports record asset and newsletter (branch feature/dashboard-newsletter-exports)
 - Status: committed, not pushed (d2f1442 + cache keys / notes commit).
 - Why (owner): "make me see in dashboard what all newsletter exports people are doing."

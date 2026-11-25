@@ -3,7 +3,7 @@
    window.MerchPrint is missing (or lacks a function it needs), so the whole
    flow works and can be tested before the real renderer lands. It draws
    simple stacked pills, nothing more. Same API as the contract:
-     MerchStub.preview(concept, garmentColor, canvas)   flat tee preview
+     MerchStub.preview(concept, garmentColor, canvas, { logoSpot })  flat tee preview
      MerchStub.render(concept, printSpec, canvas)       transparent print PNG (pills only)
      MerchStub.renderLogo(spec, canvas)                 the ES wordmark pill for a logo area
      MerchStub.checks(concept, printSpec)               [] (no checks)
@@ -86,7 +86,7 @@
     return p;
   }
 
-  async function preview(concept = {}, garmentColor, canvas) {
+  async function preview(concept = {}, garmentColor, canvas, opts = {}) {
     const w = canvas.width || 480, h = canvas.height || 560;
     const g = canvas.getContext('2d');
     g.clearRect(0, 0, w, h);
@@ -102,6 +102,9 @@
     g.quadraticCurveTo(w * 0.5, h * 0.17, w * 0.62, h * 0.09);
     g.stroke();
     drawStack(g, concept, { x: w * 0.33, y: h * 0.25, w: w * 0.34, h: h * 0.3 });
+    const spot = opts.logoSpot === undefined ? 'neck' : opts.logoSpot;
+    if (spot === 'sleeve') wordmark(g, w * 0.86, h * 0.3, w * 0.09);
+    else if (spot && spot !== 'none') wordmark(g, w * 0.5, h * 0.15, w * 0.1);
     return { width: w, height: h };
   }
 
