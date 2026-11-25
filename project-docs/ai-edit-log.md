@@ -4,6 +4,12 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-26 — Suhail (Claude): Merch MVP pushed (release/merch4 → main 555daf5)
+- Status: pushed and live (merch.js?v=20261126-merch4, merch-print VERSION 2026-11-26b). The engine, server (feature/merch4-server) and page (feature/merch4-ui) entries below are all in this release; their "not pushed" lines are superseded.
+- Engine: rows touch without overlap (even padding), cap height measured from the font, box-vs-shirt contrast 1.7 with white/black + team-colour text for a lost second colour, outlined numbers pick a readable team colour, Pro elements (number, rule, block, icons), photoMock on Fourthwall's real blank photos (tee calibrated; others fall back to the flat preview).
+- Full suite twice (before and after merging Reels 2.0 from main): only the 3 accepted failures. Live: merch files 200, api/merch and webhook 401 unsigned.
+- Unverified live: real Pro/Basic AI output and cost, refine via the gateway, the live moments feed contents, auto Fourthwall mockup timing, sleeve-logo spot on the photo mockup (near the chest edge).
+
 ## 2026-11-26 — Suhail (Claude, Agent UI): Merch v4 page: Basic / Pro, moments, design studio, live mockups (branch feature/merch4-ui)
 - Status: committed on feature/merch4-ui (base release/merch4 3a2d751), not pushed. Pairs with feature/merch4-server (API doc: `designMode` for Basic / Pro).
 - Header: Basic / Pro switch (radiogroup, remembered in localStorage `frameup.merch.aiMode`, try/catch); Pro note "Smarter AI (more usage), richer designs with extra elements, chat edits". Studio shows the mode actually used ("Made with Pro / Basic / without AI") and a note when the server fell back (`fellBack` cap / free / ai). Requests send `designMode`; replies read `designMode` (free mode rewrites `mode`).
