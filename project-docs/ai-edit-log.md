@@ -4,6 +4,18 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-25 — Suhail (Claude): Reels Studio 2.0 (branch release/reels2)
+- Status: committed on release/reels2, not pushed (owner: one release, all checks, preview first).
+- Built in four lanes on top of a page context (`window.ReelMakerCtx`), merged here:
+  - A, looks: `reel-es-themes.js`, 8 looks on the ES engine (Paper default, byte-identical to before), `validateLook`, look lint; old styles retired and converted on open; data formats on ES.
+  - B, data: ideas room (`_reel-ideas.js`, mode `ideas`: ES most-read + coverage + trend + ESPN, grounded angles, free drafts), ES coverage in `plan()`, trend radar (`reel-radar.js` function, official X clips by views/hour, Haiku read), trends with an ES angle and NBA/WNBA/tennis/NASCAR labels.
+  - C, inputs: caption files, own voiceover (upload/record, `voice-align`: free transcription first, then alignScript), media tray with IndexedDB v2 persistence, new event types.
+  - D, interface: Start screen with six tiles and recipes (`reel-recipes.js`), storyboard (`reel-storyboard.js`) with colour chips and reorder, one settings rail, 3 versions, Export all zip, accessibility (`reel-a11y.js`).
+- Integration: the look reaches the director; retired styles are written as ES; FEATURE_NAMES labels; tour copy; guidelines; `npm test` runs the reel suite; cache key 20261125-reels2.
+- Cost: ideas ~$0.002 (Sonnet ~$0.04 on request, fact check up to $0.03); radar read ~$0.001; voice sync $0 (Groq) or ~$0.004/min; versions $0-0.0015.
+- Needs a live check: ES MCP / ESPN / X sources, real voice sync, Opus-free director prompt sizes. Thin: NBA/WNBA/NASCAR trend feeds, radar clips only NFL/CFB/MLB.
+- For Vinay: the 7 new looks, green-on-paper contrast in the kit, Fan pulse end-card CTA "YOUR CALL. / TELL US BELOW."
+
 ## 2026-11-21 — Suhail (Claude): Dashboard Newsletter tab; Newsletter exports record asset and newsletter (branch feature/dashboard-newsletter-exports)
 - Status: committed, not pushed (d2f1442 + cache keys / notes commit).
 - Why (owner): "make me see in dashboard what all newsletter exports people are doing."

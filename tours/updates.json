@@ -3,6 +3,43 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-25-reels-studio-2",
+      "date": "2026-11-25",
+      "title": "Reels Studio 2.0: easy ES reels for everyone",
+      "items": [
+        {
+          "title": "Start from anything",
+          "text": "Pick a trend, paste your script, choose a game, a clip or a player, or browse inspiration. Then pick a recipe (Stat drop, Quote reaction, Verdict, Money story and more) and press Make my reel.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Eight ES looks",
+          "text": "Paper, Ink, Blue, Team colour, Photo-led, Data-led, Minimal and Bold, all on the ES video team's system. Old reels open in the closest look.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Every scene on one storyboard",
+          "text": "Change words and colours with chips, drop media straight onto a scene, drag to reorder, and make 3 versions to compare.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Your own voice and media",
+          "text": "Record or upload a voiceover and it syncs to your script. Drop, paste or pick photos and clips anywhere; they stay when you reopen the reel.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Ideas room and trend radar",
+          "text": "Get ES angles built from ES's most-read stories and real data, with every number checked, and see which official clips are taking off.",
+          "page": "reel-maker.html"
+        },
+        {
+          "title": "Export everything",
+          "text": "MP4 in 9:16 and 4:5 plus caption files (SRT, VTT, transcript), one at a time or all in one zip. Full keyboard control and captions always on.",
+          "page": "reel-maker.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-21-es-reels-system",
       "date": "2026-11-21",
       "title": "Reels Studio: the ES video team's design system",
