@@ -5,7 +5,7 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 and what's still uncommitted.
 
 ## 2026-11-26 — Suhail (Claude): Reels Studio 2.0 (branch release/reels2)
-- Status: merging origin/main (Merch v1–v3 etc.), full suite pending, then push to main (owner approved).
+- Status: pushed to main 2026-11-26 as merge commit 852590d (owner approved). Merged origin/main (Merch v1–v3) first: vercel.json keeps reel-radar + merch timeouts (still 2 crons); release note re-dated `2026-11-26-reels-studio-2`, top of updates.json; merch.html tours.js key → 20261125-reels2. Full suite: 145 files, only the 3 accepted failures. Live: reel-maker.html serves the 20261125-reels2 keys, all 55 assets 200, api/reel-maker and api/reel-radar answer 401 to unauthenticated POST.
 - Built in four lanes on top of a page context (`window.ReelMakerCtx`), merged here:
   - A, looks: `reel-es-themes.js`, 8 looks on the ES engine (Paper default, byte-identical to before), `validateLook`, look lint; old styles retired and converted on open; data formats on ES.
   - B, data: ideas room (`_reel-ideas.js`, mode `ideas`: ES most-read + coverage + trend + ESPN, grounded angles, free drafts), ES coverage in `plan()`, trend radar (`reel-radar.js` function, official X clips by views/hour, Haiku read), trends with an ES angle and NBA/WNBA/tennis/NASCAR labels.
