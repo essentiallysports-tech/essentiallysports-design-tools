@@ -149,6 +149,8 @@ const FEATURE_NAMES = [
   ['video-ads-grammar', 'The AI grammar check'],
   ['video-ads-rating', 'Ad rating'],
   ['meta-ads', 'Competitor ads'],
+  ['merch-concepts', 'Merch design ideas'],
+  ['merch-copy', 'Merch shop copy'],
   ['reels-transcription', 'Automatic captions'],
 ];
 // A call is switched off when its feature or its task is listed.

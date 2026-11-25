@@ -1,0 +1,432 @@
+{
+ "_note": "Trimmed from the public GET /open-api/v1.0/product-templates/pro_e4677535402b4eeb81 on 2026-11-25 (4 colours, 5 sizes).",
+ "template": {
+  "productId": "pro_e4677535402b4eeb81",
+  "slug": "gildan-heavyweight-t-shirt-dtg",
+  "name": "Gildan Heavyweight T-Shirt",
+  "description": "<p>Gildan's heavyweight t-shirt offering. The heavier fabric and slightly relaxed cut gives this t-shirt a vibe that wor",
+  "category": "Apparel/T-Shirts",
+  "brand": "Gildan",
+  "productionMethod": "DTG",
+  "minimumOrdersNumber": 0,
+  "priceFrom": {
+   "amount": 9.5,
+   "currency": "USD"
+  },
+  "priceTo": {
+   "amount": 17.5,
+   "currency": "USD"
+  },
+  "colorVariants": [
+   {
+    "color": {
+     "name": "Black",
+     "hex": "#141313"
+    },
+    "photos": [
+     {
+      "url": "https://imgproxy.fourthwall.dev/cqNsbV0WwaTeQEV4XyetlaGCXIVfXjcb34wglbnW8QM/w:720/sm:1/enc/d11gSzDuznGsSqH0/DKJrm2nivygK7d54/z9RaoAF1WUt2ejTB/u71pfXAA49fjS9K9/fcDjWhCPxeapeEqk/mU9T_Hyq9_r1WhxC/H7IJ4SD4ZgBdUXKn/d9vdQqIrWeQ2yScn/wbPY3eifjC5FwDEU/IufB0X_ukzv-s3gO/WKaPbpAJibgGgXGP/9DtiJj23f8Yw3RHB/fkBlp8HmGPOkE5N0/4YkQvA.jpg",
+      "designOverlay": null
+     }
+    ],
+    "sizeVariants": [
+     {
+      "variantId": "prv_WgxCzDtvT7eIWlTUjp2Gig",
+      "size": "S",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_P78Zrf_vTU6NwSbpoM5MPg",
+      "size": "M",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_rmeB1JyJT_6-upcJsnerrw",
+      "size": "L",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_pfoZUvsJStClkASWwFq5KA",
+      "size": "XL",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_QlnWKAjIRMmrQGQudOCjVg",
+      "size": "2XL",
+      "price": {
+       "amount": 11.5,
+       "currency": "USD"
+      },
+      "available": true
+     }
+    ],
+    "status": "AVAILABLE",
+    "available": true
+   },
+   {
+    "color": {
+     "name": "Royal",
+     "hex": "#175ac7"
+    },
+    "photos": [
+     {
+      "url": "https://imgproxy.fourthwall.dev/ULLAE5daBD-0DlkAvRejC3VahGAzwMv_jEoUIj4ZkAg/w:720/sm:1/enc/FOUmt3PlEd2fvvwD/iQ1fdeDBlQUdBgy3/igt5O4QxM0GGvXQE/Ch3_1jXbyEA_1Pe-/SnMe612ALU87OCcf/2MgttbIxIKm-ykDS/YlxA3a8oDVYllBWF/H9iuFrKebShv_ZbP/2BKnw13dIuUySb3w/UrhVxbt777JVCn42/nSWP1fVZaKgRyeGG/OfiewM_ad5e8r3x2/OiqGtNU8jY7SZT6o/_B7Peg.jpg",
+      "designOverlay": null
+     }
+    ],
+    "sizeVariants": [
+     {
+      "variantId": "prv_gFTRQIERQuqogWWIBSzjfA",
+      "size": "S",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_MOIhNnR3RK6EkRbTp86XWg",
+      "size": "M",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_z8gB9eGyQKO_RGh1VRJZnA",
+      "size": "L",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_Fycihz9UT_SizYC3ZBbSZQ",
+      "size": "XL",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_bms19_06QGGSq2dqQ9BWyg",
+      "size": "2XL",
+      "price": {
+       "amount": 11.5,
+       "currency": "USD"
+      },
+      "available": true
+     }
+    ],
+    "status": "AVAILABLE",
+    "available": true
+   },
+   {
+    "color": {
+     "name": "Cardinal",
+     "hex": "#c21b3a"
+    },
+    "photos": [
+     {
+      "url": "https://imgproxy.fourthwall.dev/HRos7TSy0Z3GWtjx7RgdM8hStB30pac2GiL5RacgvJE/w:720/sm:1/enc/oBjne_I83lTIZpaU/7hrP4CdjSA0QhgVT/so-2e88Eu1sxZh2M/NSHvS8m8SFRttKrX/FHhnBrSxVo_75PVG/CEplHYv_Er4w_f_d/2YgUzkTaJCl2aIEr/3rWBmcEE4ydXpHcn/wD_6Gl5AtxDdRRxx/K5SDqN_QxN5ujuu-/dwCKL9DscGdmM60t/6Xc3ii0o43BYivWb/QwY0AAwiYmwb-3Fg/EC_k-w.jpg",
+      "designOverlay": null
+     }
+    ],
+    "sizeVariants": [
+     {
+      "variantId": "prv_MTzr3AzfT3CmywvUkfzZ3w",
+      "size": "S",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_4jjvGK6RT7ix4I_hyPic4Q",
+      "size": "M",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_tSY8srzgSeCQvnknWupRwA",
+      "size": "L",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_a1Vea8qtRuWRmh_ntmf9wg",
+      "size": "XL",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_iGD2t4qSSoiqvbwPWChkEA",
+      "size": "2XL",
+      "price": {
+       "amount": 11.5,
+       "currency": "USD"
+      },
+      "available": true
+     }
+    ],
+    "status": "AVAILABLE",
+    "available": true
+   },
+   {
+    "color": {
+     "name": "White",
+     "hex": "#ffffff"
+    },
+    "photos": [
+     {
+      "url": "https://imgproxy.fourthwall.dev/0YuvMotQmSCJDjUzsSZCjvU5kxMWPhheT61l0ct2CSE/w:720/sm:1/enc/MDrm29mcNUwmDnOX/L4no5pp2TUb9JzrE/ERxpJA2vVBJ_hT9t/h3o3Gftuoq1U47SX/Z6EvFSTDfAg2GcDz/QtlKP7zxoldIassC/OeECmJXkVz8Al5E5/Ae9W8I47iXInoOun/uUkTHrr6ds0xKnCs/-9IBgRdk_MRuFKUC/RZ9_8ru7--9-8C7d/WiiUFFTcVIsDs0Dc/7225UeZqO7oo_fgF/lhfcKw.jpg",
+      "designOverlay": null
+     }
+    ],
+    "sizeVariants": [
+     {
+      "variantId": "prv_7vkp00gXTDSXaYNHM30EEg",
+      "size": "S",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_NnsJXAAWTpKSqq3IeHZ3zA",
+      "size": "M",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_bM5gU59oR0-Dt134a_eKZA",
+      "size": "L",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_7g5iBT6sRq2F4iqRA62Kyw",
+      "size": "XL",
+      "price": {
+       "amount": 9.5,
+       "currency": "USD"
+      },
+      "available": true
+     },
+     {
+      "variantId": "prv_Yu1p_TS3QUKorJ--6vbbxw",
+      "size": "2XL",
+      "price": {
+       "amount": 11.5,
+       "currency": "USD"
+      },
+      "available": true
+     }
+    ],
+    "status": "AVAILABLE",
+    "available": true
+   }
+  ],
+  "customizableAreas": [
+   {
+    "regionId": "back",
+    "name": "Back",
+    "type": "back",
+    "available": false,
+    "productionMethod": "DTG",
+    "supportsBackendRendering": true,
+    "dimensions": {
+     "dpi": 150,
+     "pixelsWidth": 1800,
+     "pixelsHeight": 2400,
+     "inchesWidth": 12,
+     "inchesHeight": 16
+    },
+    "placements": []
+   },
+   {
+    "regionId": "back_large",
+    "name": "Back Large",
+    "type": "back_large",
+    "available": true,
+    "productionMethod": "DTG",
+    "supportsBackendRendering": true,
+    "dimensions": {
+     "dpi": 150,
+     "pixelsWidth": 2250,
+     "pixelsHeight": 2700,
+     "inchesWidth": 15,
+     "inchesHeight": 18
+    },
+    "placements": []
+   },
+   {
+    "regionId": "front",
+    "name": "Front",
+    "type": "front",
+    "available": false,
+    "productionMethod": "DTG",
+    "supportsBackendRendering": true,
+    "dimensions": {
+     "dpi": 150,
+     "pixelsWidth": 1800,
+     "pixelsHeight": 2400,
+     "inchesWidth": 12,
+     "inchesHeight": 16
+    },
+    "placements": [
+     {
+      "id": "fullSize",
+      "name": "Full Size"
+     },
+     {
+      "id": "largeCenter",
+      "name": "Large Center"
+     },
+     {
+      "id": "leftChest",
+      "name": "Left Chest"
+     },
+     {
+      "id": "centerChest",
+      "name": "Center Chest"
+     }
+    ]
+   },
+   {
+    "regionId": "front_large",
+    "name": "Front Large",
+    "type": "front_large",
+    "available": true,
+    "productionMethod": "DTG",
+    "supportsBackendRendering": true,
+    "dimensions": {
+     "dpi": 150,
+     "pixelsWidth": 2250,
+     "pixelsHeight": 2700,
+     "inchesWidth": 15,
+     "inchesHeight": 18
+    },
+    "placements": [
+     {
+      "id": "fullSize",
+      "name": "Full size"
+     },
+     {
+      "id": "largeCenter",
+      "name": "Large center"
+     },
+     {
+      "id": "leftChest",
+      "name": "Left chest"
+     },
+     {
+      "id": "centerChest",
+      "name": "Center chest"
+     }
+    ]
+   },
+   {
+    "regionId": "label_inside",
+    "name": "Inside Label",
+    "type": "label_inside",
+    "available": true,
+    "productionMethod": "DTG",
+    "supportsBackendRendering": false,
+    "dimensions": {
+     "dpi": 150,
+     "pixelsWidth": 450,
+     "pixelsHeight": 450,
+     "inchesWidth": 3,
+     "inchesHeight": 3
+    },
+    "placements": []
+   },
+   {
+    "regionId": "label_outside",
+    "name": "Outside Label",
+    "type": "label_outside",
+    "available": false,
+    "productionMethod": "DTG",
+    "supportsBackendRendering": false,
+    "dimensions": {
+     "dpi": 150,
+     "pixelsWidth": 450,
+     "pixelsHeight": 450,
+     "inchesWidth": 3,
+     "inchesHeight": 3
+    },
+    "placements": []
+   },
+   {
+    "regionId": "sleeve_left",
+    "name": "Left Sleeve",
+    "type": "sleeve_left",
+    "available": true,
+    "productionMethod": "DTG",
+    "supportsBackendRendering": true,
+    "dimensions": {
+     "dpi": 150,
+     "pixelsWidth": 600,
+     "pixelsHeight": 525,
+     "inchesWidth": 4,
+     "inchesHeight": 3.5
+    },
+    "placements": []
+   },
+   {
+    "regionId": "sleeve_right",
+    "name": "Right Sleeve",
+    "type": "sleeve_right",
+    "available": true,
+    "productionMethod": "DTG",
+    "supportsBackendRendering": true,
+    "dimensions": {
+     "dpi": 150,
+     "pixelsWidth": 600,
+     "pixelsHeight": 525,
+     "inchesWidth": 4,
+     "inchesHeight": 3.5
+    },
+    "placements": []
+   }
+  ],
+  "supportsBackendRendering": true
+ }
+}
