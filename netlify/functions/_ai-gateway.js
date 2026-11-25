@@ -151,6 +151,8 @@ const FEATURE_NAMES = [
   ['meta-ads', 'Competitor ads'],
   ['merch-concepts', 'Merch design ideas'],
   ['merch-copy', 'Merch shop copy'],
+  ['merch-refine', 'The merch design chat'],
+  ['merch-moments', 'Merch moments'],
   ['reels-transcription', 'Automatic captions'],
 ];
 // A call is switched off when its feature or its task is listed.
