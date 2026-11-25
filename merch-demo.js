@@ -9,13 +9,22 @@
   const area = (regionId, name, w, h, design, logo, dpi = 150) => ({ regionId, name, pixelsWidth: w, pixelsHeight: h, dpi, renderable: true, available: true, suitsDesign: design, suitsLogo: logo });
   const spec = (id, regionId, w, h, dpi) => ({ templateId: id, region: 'front', regionId, pixelsWidth: w, pixelsHeight: h, dpi, placementStrategy: 'CENTER', garmentColor: '#FFFFFF' });
   const WHITE = [{ name: 'White', hex: '#FFFFFF' }];
+  // Fourthwall's real blank photos for the tee (photo 0 is the front view).
+  const FW = 'https://imgproxy.fourthwall.dev/';
+  const TEE_COLORS = [
+        { name: 'White', hex: '#FFFFFF', photos: [FW + 'JlZRh3G_d1lJumNzXOzkpo2GgDIYeuGxb2UEGgsCSzc/w:720/sm:1/enc/ERAphWI7I36oSWoy/udPg3mNxudmNlzuK/i5PwUYEAHD_8SjLz/jgzD6wg4yoCTY0BR/XSXdVtdzA0I5O_DJ/b75OYDimSstX_kor/o-UWDtIZ1Ut5QHbX/0nld0jyssdSMdrvd/6xUUPKdRiJs8wnxc/XnKweTt5ZQ9AxSYr/SzDpZshOHmpkUBzB/XG-YOW92R78jMqme/9rmCRR2WqVo5VjU1/aDUvgg.jpg'] },
+        { name: 'Black', hex: '#020202', photos: [FW + 'MMkocS1sfnAe7TJiwEvc6svDULAzZSayTmAIqTs94kM/w:720/sm:1/enc/Exv6_LUDaRavTScr/HV1DqT4cczNl4z-h/G12I2AqgrBUz-17I/V7sLI0QIRC7eRtCZ/GlPfetqfo6CF4a6L/wcOEFVFikY4BnvXq/3jt9lAImnWTQYdHz/8xSjI3OJM3n3JZ0N/A6D51P9od3jIpWsc/bz-dTleE3P9UnK96/t6BewbO1C6lqzv7F/ZnbVHrQKIkdVuGHA/9rly4ZjYnUQ9L92o/L4Vq2w.jpg'] },
+        { name: 'French Navy', hex: '#020718', photos: [FW + 'ohX-EfccCc2jqvKFL1Aptt8SLIK7M-PdQ1o6be15Kzo/w:720/sm:1/enc/Y7VUOiCEhepgefWZ/rbToa4TTCtSbocDk/5nwc0RTg1epJhjTC/HI3w15Wcl5G4BGIO/Kn8H0QRYzY9ZmJ9X/2YKWbGFQD3vSheDu/q5IaDjJ6zQqgVAfS/6nYD76ggxV-RlJLE/zTn_WsgCrEU738OY/-REeYUsqS1dzFKof/sW3Ge5AIK0g7XSJe/ofoXuNmoxdt-0us9/WvZ0Oi9Pj5K7yil_/_30CRw.jpg'] },
+        { name: 'Red', hex: '#ED0739', photos: [FW + '6CYnUsgTJMxjbFuKypOJC-fbqwyNqWtcTjYMMN0zq8M/w:720/sm:1/enc/iJDk1mowjSLhINna/uGGBlBOkqF8LS96T/fPPWhgP_OXXRveuE/JTMMlecqDqim8SAy/P2JQuXXU0h8nkrlI/kIcO6yA92NiXPheS/VvHcgQrPcmRB5lsj/rJ0g28m6awyhcwvh/kxAy_-phAD9_nNJ1/kuI9YsNtdH7NOYtE/_SuPNain8fgEFz43/gDVmYOgyUVKp0oqO/hqOLHcmhpr9aog62/g5blxw.jpg'] },
+        { name: 'Heather Grey', hex: '#CFCBC8', photos: [FW + '0-9FmA0gFVYWrWYTkIKE56mg3uQWu24hp3XcP7ejdqo/w:720/sm:1/enc/pGFUFHlOM34bdj9t/eYX7CGQbcqGQnuH7/LHhkLzUAOC8qXYUn/KtVwiVpRvL3PvDLF/fJCXYZ_CVg_SsOvx/EZUovwVLnbm9g-m9/1Op03cEPl6EUrgVK/Nt2pctFTMz_2X8NM/pM3z3VjE75GCvZf6/oLHwx-6oE7rtN-ZE/DqwPPRfrNFbjAi47/xmgg2v24LrbwxrpG/1NgswBbBva4LB6wW/w17aow.jpg'] },
+      ];
   // Server v2 fields: kind, apparel, minDpi, wrap, logo 'area'|'inside', pricing { suggested, margin, base }.
   const v2 = (t, apparel, minDpi, wrap = false) => ({ ...t, apparel, minDpi, wrap, logo: apparel ? 'area' : 'inside', printSpec: { ...t.printSpec, kind: t.kind, minDpi, wrap }, pricing: { suggested: t.suggestedPrice, base: t.basePrice, margin: Math.round((t.suggestedPrice - t.basePrice) * 100) / 100 } });
   // One sample template per blank (merch v2: templates with no `blank` = all blanks).
   const TEMPLATES = [
     { blank: 'tee', kind: 'tee', label: 'T-shirt', templateId: 'tpl-tee-sample', name: 'Classic tee (sample)', basePrice: 13.5, suggestedPrice: 25.99, source: 'sample', defaultColor: 'White',
       printSpec: spec('tpl-tee-sample', 'front_large', 2250, 2700, 150),
-      colors: [{ name: 'White', hex: '#FFFFFF' }, { name: 'Black', hex: '#101114' }, { name: 'Navy', hex: '#0B1F3A' }, { name: 'Red', hex: '#B0102A' }, { name: 'Royal', hex: '#1257B8' }],
+      colors: TEE_COLORS,
       sizes: ['S', 'M', 'L', 'XL', '2XL'],
       areas: [area('front_large', 'Front', 2250, 2700, true, false), area('back_large', 'Back', 2250, 2700, true, false), area('sleeve_left', 'Left sleeve', 600, 525, false, true), area('sleeve_right', 'Right sleeve', 600, 525, false, true)] },
     { blank: 'hoodie', kind: 'hoodie', label: 'Hoodie', templateId: 'tpl-hoodie-sample', name: 'Pullover hoodie (sample)', basePrice: 29.5, suggestedPrice: 47.99, source: 'sample', defaultColor: 'Black',
@@ -37,13 +46,66 @@
     { id: 's1', collection: 'replay', title: 'Sample Lakers bench era', team: { id: 'lal', name: 'Los Angeles Lakers' }, palette: { a: '#552583', b: '#FDB927', ink: '#FFFFFF' }, garment: { color: '#FFFFFF', name: 'White' },
       stack: [{ text: 'Kobe', size: 'big', fill: 'a', ink: 'ink' }, { text: 'Smush', size: 'big', fill: 'b', ink: 'ink' }, { text: 'Luke', size: 'big', fill: 'a', ink: 'ink' }, { text: 'Kwame', size: 'big', fill: 'b', ink: 'ink' }, { text: 'Mihm', size: 'big', fill: 'a', ink: 'ink' }],
       align: 'center', blanks: ['tee'], rights: [{ kind: 'name', text: 'Kobe, Smush, Luke, Kwame, Mihm' }, { kind: 'team', text: 'Lakers colours' }], why: 'A roster only real fans remember.' },
-    { id: 's2', collection: 'quote', title: 'Ball don’t lie', team: null, palette: { a: '#FFFFFF', b: '#033162', ink: '#1257B8' }, garment: { color: '#B0102A', name: 'Red' },
+    { id: 's2', collection: 'quote', title: 'Ball don’t lie', team: null, palette: { a: '#FFFFFF', b: '#033162', ink: '#1257B8' }, garment: { color: '#ED0739', name: 'Red' },
       stack: [{ text: 'Ball don’t lie', size: 'big', fill: 'white', ink: 'ink' }], align: 'center', blanks: ['tee'], rights: [{ kind: 'quote', text: 'Ball don’t lie' }], why: 'Short, exact and instantly known.' },
-    { id: 's3', collection: 'nickname', title: 'Megatron', team: { id: 'det', name: 'Detroit Lions' }, palette: { a: '#B0B7BC', b: '#0076B6', ink: '#0076B6' }, garment: { color: '#0076B6', name: 'Royal' },
+    { id: 's3', collection: 'nickname', title: 'Megatron', team: { id: 'det', name: 'Detroit Lions' }, palette: { a: '#B0B7BC', b: '#0076B6', ink: '#0076B6' }, garment: { color: '#020718', name: 'French Navy' },
       stack: [{ text: 'Megatron', size: 'big', fill: 'a', ink: 'ink' }], align: 'center', blanks: ['tee'], rights: [{ kind: 'nickname', text: 'Megatron' }, { kind: 'team', text: 'Lions colours' }], why: 'Almost famous: one word, one era.' },
     { id: 's4', collection: 'core', title: 'We center fans', team: null, palette: { a: '#0A7DFA', b: '#033162', ink: '#FFFFFF' }, garment: { color: '#FFFFFF', name: 'White' },
       stack: [{ text: 'We center', size: 'big', fill: 'a', ink: 'ink' }, { text: 'fans', size: 'big', fill: 'b', ink: 'ink' }], align: 'left', blanks: ['tee'], rights: [], why: 'An ES line, ours to sell.' },
   ];
+  // Pro adds a plan and richer layouts, two with extras (elements) beside the pills.
+  const PRO_CONCEPTS = [
+    { id: 'p1', collection: 'current', label: 'Big number', title: 'Sample: 50 on the night', team: { id: 'lal', name: 'Los Angeles Lakers' }, palette: { a: '#552583', b: '#FDB927', ink: '#FFFFFF' }, garment: { color: '#FFFFFF', name: 'White' },
+      stack: [{ text: 'Fifty', size: 'big', fill: 'a', ink: 'white' }, { text: 'On the night', size: 'mid', fill: 'b', ink: 'ink' }], align: 'center', blanks: ['tee'], rights: [{ kind: 'team', text: 'Lakers colours' }], why: 'The number fans repeat, big behind the words.', mode: 'pro',
+      elements: [{ type: 'number', text: '50', style: 'outline', color: 'b', position: 'behind' }, { type: 'rule', position: 'below', color: 'a', weight: 'thick' }] },
+    { id: 'p2', collection: 'replay', label: 'Crowned', title: 'Sample: the comeback', team: null, palette: { a: '#0A7DFA', b: '#033162', ink: '#FFFFFF' }, garment: { color: '#020202', name: 'Black' },
+      stack: [{ text: 'The comeback', size: 'big', fill: 'a', ink: 'white' }, { text: 'Nobody saw it coming', size: 'small', fill: 'white', ink: 'a' }], align: 'left', blanks: ['tee'], rights: [], why: 'A crown over the line says it all without a logo.', mode: 'pro',
+      elements: [{ type: 'icon', name: 'crown', position: 'above', color: 'white' }] },
+  ];
+  const PLAN = {
+    basic: { idea: 'Keep the line whole and let the pills do the work.', angle: 'Clean ES stacks in team colours.' },
+    pro: { idea: 'Sell the moment fans are already quoting: the line in full, then the number and the comeback.', angle: 'Lead with the exact words; add one bold extra where it helps the story.' },
+  };
+  const MOMENTS = [
+    { id: 'm1', title: 'Sample: a rookie drops 50 in his first start', sport: 'nba', sportLabel: 'NBA', team: { name: 'Sample City', short: 'Sample City' }, kind: 'stat', score: 91, why: 'A round number fans will quote all season.', line: 'FIFTY ON THE NIGHT', trend: { id: 't1', title: 'Sample: a rookie’s 50-point night', sport: 'nba' } },
+    { id: 'm2', title: 'Sample: “Ball don’t lie” is back after a wild finish', sport: 'nba', sportLabel: 'NBA', team: null, kind: 'quote', score: 86, why: 'An exact line everyone knows, short enough for one pill.', line: 'BALL DON’T LIE', trend: { id: 't4', title: 'Sample: “Ball don’t lie” after a wild finish', sport: 'nba' } },
+    { id: 'm3', title: 'Sample: the comeback nobody saw coming', sport: 'nfl', sportLabel: 'NFL', team: { name: 'Sample Bay', short: 'Sample Bay' }, kind: 'moment', score: 78, why: 'The game fans will still talk about in ten years.', line: 'NOBODY SAW IT COMING', trend: { id: 't2', title: 'Sample: the comeback nobody saw coming', sport: 'nfl' } },
+    { id: 'm4', title: 'Sample: “The Closer” earns his nickname', sport: 'mlb', sportLabel: 'MLB', team: null, kind: 'nickname', score: 72, why: 'Almost famous: a nickname fans are just starting to use.', line: 'THE CLOSER', trend: { id: 't3', title: 'Sample: a walk-off in extra innings', sport: 'mlb' } },
+    { id: 'm5', title: 'Sample: the rivalry renewed in the derby', sport: 'others', sportLabel: 'Soccer', team: null, kind: 'rivalry', score: 64, why: 'Both sets of fans buy when the rivalry is hot.', line: 'DERBY DAY', trend: { id: 't5', title: 'Sample: the derby rivalry renewed', sport: 'soccer' } },
+  ];
+  // Free-mode style intents, done in code (the real server uses the AI first).
+  const INTENTS = [
+    [/short|trim|less/i, c => { const keep = c.stack.filter((r, i) => i === 0 || r.size !== 'small'); return keep.length < c.stack.length ? [{ ...c, stack: keep }, 'Dropped the small lines so the main words carry it.'] : c.stack.length > 1 ? [{ ...c, stack: c.stack.slice(0, -1) }, 'Removed the last pill.'] : [c, 'It’s already one pill.']; }],
+    [/team colou?r/i, c => (c.team?.id === 'lal' ? [{ ...c, palette: { ...c.palette, a: c.palette.b, b: c.palette.a } }, 'Switched to the other Lakers colour first.'] : [{ ...c, palette: { a: '#552583', b: '#FDB927', ink: '#FFFFFF' } }, 'Used Lakers purple and gold (sample team colours).'])],
+    [/nickname/i, c => (c.stack.length >= 10 ? [c, 'That’s already 10 pills, the most a design can have.'] : [{ ...c, stack: [...c.stack, { text: (c.rights || []).find(r => r.kind === 'nickname')?.text || 'Showtime', size: 'small', fill: 'b', ink: 'ink' }], rights: [...(c.rights || []), { kind: 'nickname', text: 'Showtime' }] }, 'Added the nickname as a small line under it.'])],
+    [/bold|big/i, c => [{ ...c, stack: c.stack.map(r => ({ ...r, size: 'big' })), fit: { ...(c.fit || {}), scale: Math.min(1.6, ((c.fit && c.fit.scale) || 1) * 1.2) } }, 'Made every pill big and the print 20% larger.']],
+    [/smaller/i, c => [{ ...c, fit: { ...(c.fit || {}), scale: Math.max(0.6, ((c.fit && c.fit.scale) || 1) * 0.85) } }, 'Made the print 15% smaller.']],
+    [/cent(re|er)/i, c => [{ ...c, align: 'center' }, 'Centred the stack.']],
+    [/left/i, c => [{ ...c, align: 'left' }, 'Lined the pills up on the left.']],
+    [/dark|black tee/i, c => [{ ...c, garment: { color: '#020202', name: 'Black' } }, 'Put it on a black tee. Pills that melt into black switch to white.']],
+    [/white tee|light/i, c => [{ ...c, garment: { color: '#FFFFFF', name: 'White' } }, 'Put it on a white tee.']],
+    [/swap/i, c => [{ ...c, palette: { ...c.palette, a: c.palette.b, b: c.palette.a } }, 'Swapped the two pill colours.']],
+  ];
+  function refine(body, scenario) {
+    const c = body.concept;
+    if (!c || !Array.isArray(c.stack)) return [400, { ok: false, error: 'Pick a design first.' }];
+    const text = String(body.instruction || '').slice(0, 300);
+    const hit = INTENTS.find(([re]) => re.test(text));
+    const simple = hit && !/team colou?r|nickname|bold/.test(String(hit[0]));
+    if (scenario === 'free' && !simple) return [200, { ok: true, free: true, concept: null, designMode: body.designMode === 'pro' ? 'pro' : 'basic', error: 'Free mode can do: shorter, centre or left, swap colours, bigger or smaller, white or dark tee.' }];
+    const pro = body.designMode === 'pro' && scenario !== 'pro-cap';
+    if (!hit) return scenario === 'free' ? [200, { ok: true, free: true, concept: null, designMode: body.designMode === 'pro' ? 'pro' : 'basic', error: 'Free mode can do: shorter, centre or left, swap colours, bigger or smaller, white or dark tee.' }] : [200, { ok: true, concept: { ...c, title: c.title }, note: `Sample data: “${text.slice(0, 60)}” would go to the ${pro ? 'Pro' : 'Basic'} AI. Nothing changed.`, designMode: pro ? 'pro' : 'basic', mode: pro ? 'pro' : 'basic', ai: true, cost: { usd: 0, cached: false } }];
+    const [next, note] = hit[1]({ ...c, stack: c.stack.map(r => ({ ...r })) });
+    if (!pro) delete next.elements;
+    return [200, { ok: true, concept: { ...next, mode: pro ? (next.mode || 'pro') : 'basic' }, note, designMode: pro ? 'pro' : 'basic', mode: pro ? 'pro' : 'basic', ai: !/short|cent|left|swap|smaller|dark|white/i.test(text), ...(body.designMode === 'pro' && !pro ? { fellBack: 'ai' } : {}), cost: { usd: 0, cached: false } }];
+  }
+  function concepts(body, scenario) {
+    if (scenario === 'free') return [200, { ok: true, concepts: null, free: true }];
+    if (body.designMode === 'pro' && scenario === 'pro-cap') return [200, { ok: true, free: true, concepts: null, plan: null, designMode: 'basic', fellBack: 'cap', note: 'Pro is paused: you’ve reached this week’s AI limit, so these are Basic designs.' }];
+    const pro = body.designMode === 'pro';
+    const list = pro ? [...CONCEPTS, ...PRO_CONCEPTS].map(c => ({ ...c, mode: 'pro' })) : CONCEPTS.map(c => ({ ...c, mode: 'basic' }));
+    return [200, { ok: true, concepts: list, plan: PLAN[pro ? 'pro' : 'basic'], designMode: pro ? 'pro' : 'basic', mode: pro ? 'pro' : 'basic', ai: true, model: pro ? 'sample-best' : 'sample-main', cost: { usd: 0, cached: false } }];
+  }
   const TRENDS = [
     { id: 't1', title: 'Sample: a rookie’s 50-point night', category: 'nba', rank: 90 },
     { id: 't2', title: 'Sample: the comeback nobody saw coming', category: 'nfl', rank: 80 },
@@ -73,7 +135,9 @@
     switch (m) {
       case 'status': return [200, { ok: true, configured: scenario !== 'not-set-up', shop: scenario === 'not-set-up' ? null : { name: 'Sample shop', publicDomain: 'sample-shop.example', status: 'ACTIVE' }, canPush: scenario !== 'cant-push', canArchive: scenario !== 'cant-push', history: scenario === 'no-db' ? 'memory' : 'db', caps: { person: { used: 0, limit: 10, left: 10 }, team: { used: 0, limit: 30, left: 30 } }, rightsPolicy: 'acknowledge', blanks: ['tee', 'hoodie', 'poster', 'sticker', 'mug'], notice: '' }];
       case 'templates': return [200, { ok: true, templates: body.blank ? TEMPLATES.filter(t => t.blank === body.blank) : TEMPLATES }];
-      case 'concepts': return scenario === 'free' ? [200, { ok: true, concepts: null, free: true }] : [200, { ok: true, concepts: CONCEPTS }];
+      case 'concepts': return concepts(body, scenario);
+      case 'refine': return refine(body, scenario);
+      case 'moments': return scenario === 'no-moments' ? [200, { ok: true, moments: [], error: 'Trends are unavailable right now.', at: new Date().toISOString(), cached: false }] : [200, { ok: true, moments: MOMENTS.filter(m => !body.sport || m.sport === body.sport).map(m => ({ ...m, trend: { ...m.trend } })), at: new Date().toISOString(), cached: true, ai: false, cost: { usd: 0, cached: true } }];
       case 'copy': {
         const t = TEMPLATES.find(x => x.blank === body.blank) || TEMPLATES[0];
         const name = { tee: 'Tee', hoodie: 'Hoodie', poster: 'Poster', sticker: 'Sticker', mug: 'Mug' }[t.blank];
@@ -136,5 +200,5 @@
   // Sample stand-in for Supabase Storage (merch-art/<user>/<file>.png): records the path only.
   const stored = [];
   async function storageUpload(path, blob) { stored.push({ path, size: blob?.size || 0 }); return { path }; }
-  root.MerchDemo = { TEMPLATES, CONCEPTS, TRENDS, COLLECTIONS, LIST, stored, storageUpload, reply };
+  root.MerchDemo = { TEMPLATES, CONCEPTS, PRO_CONCEPTS, MOMENTS, PLAN, TRENDS, COLLECTIONS, LIST, stored, storageUpload, reply };
 }(typeof self !== 'undefined' ? self : this));
