@@ -58,11 +58,14 @@
   // q: Fourthwall template searches, first that qualifies wins (cached on the
   // server). MERCH_TEMPLATES="tee=<id>,mug=<id>" pins exact ids instead.
   const BLANKS = {
-    tee: { label: 'T-shirt', q: ['t-shirt', 'tee'], apparel: true, minDpi: 150, margin: 12 },
-    hoodie: { label: 'Hoodie', q: ['hoodie'], apparel: true, minDpi: 150, margin: 18 },
-    poster: { label: 'Poster', q: ['poster'], apparel: false, minDpi: 300, margin: 10 },
-    sticker: { label: 'Sticker', q: ['sticker'], apparel: false, minDpi: 300, margin: 4 },
-    mug: { label: 'Mug', q: ['mug'], apparel: false, minDpi: 300, margin: 8 },
+    // retail: the suggested shop price for the curated blank (owner: tee $29.99 on the
+    // $15.85 Stanley/Stella base, a $14.14 margin). margin: the least a suggestion adds
+    // when a pricier blank is in use. Suggested = the higher of the two, ending .99.
+    tee: { label: 'T-shirt', q: ['t-shirt', 'tee'], apparel: true, minDpi: 150, margin: 12, retail: 29.99 },
+    hoodie: { label: 'Hoodie', q: ['hoodie'], apparel: true, minDpi: 150, margin: 18, retail: 49.99 },
+    poster: { label: 'Poster', q: ['poster'], apparel: false, minDpi: 300, margin: 10, retail: 17.99 },
+    sticker: { label: 'Sticker', q: ['sticker'], apparel: false, minDpi: 300, margin: 4, retail: 5.99 },
+    mug: { label: 'Mug', q: ['mug'], apparel: false, minDpi: 300, margin: 10, retail: 17.99 },
   };
   const BLANK_IDS = Object.keys(BLANKS);
   function pinnedTemplates(env = {}) {
@@ -256,7 +259,9 @@
   function suggestedPrice(kind, base) {
     const b = Number(base) || 0;
     const m = BLANKS[kind]?.margin || 10;
-    return Math.ceil(b + m) - 0.01 > b + MIN_MARGIN ? round2(Math.ceil(b + m) - 0.01) : round2(b + m);
+    const byMargin = Math.ceil(b + m) - 0.01 > b + MIN_MARGIN ? round2(Math.ceil(b + m) - 0.01) : round2(b + m);
+    const target = Number(BLANKS[kind]?.retail) || 0;
+    return target - b >= MIN_MARGIN ? Math.max(round2(target), byMargin) : byMargin;
   }
 
   // ─── Fourthwall shapes ────────────────────────────────────────────────
