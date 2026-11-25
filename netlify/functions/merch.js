@@ -14,10 +14,19 @@
 //   templates   { blank? } -> { templates: [{ blank, kind, label, templateId, printSpec: { ..., kind, minDpi,
 //               wrap }, areas: [{ regionId, pixelsWidth, pixelsHeight, dpi, renderable, suitsLogo,
 //               suitsDesign }], colors, sizes, basePrice, apparel, minDpi, wrap, logo: 'area'|'inside',
-//               pricing: { suggested, margin, base } }] } (no blank = all five; public Fourthwall
+//               pricing: { suggested, margin, base } }] } (colors[].photos: up to 4 blank photos per colour,
+//               merch4; no blank = all five; public Fourthwall
 //               reads, cached 24 h). upload-url + register run once per image.
-//   concepts    { content, collection?, count?, team? } -> { concepts: Concept[] } (AI, main tier)
+//   concepts    { content, trend?, collection?, count?, team?, designMode: 'basic'|'pro' }
+//               -> { concepts: Concept[], plan: { idea, angle } | null, designMode, fellBack?, note? }
+//               Basic: main tier (Haiku), 4 concepts, pills only. Pro: best tier (Sonnet), 6 concepts,
+//               trend context, plan, optional elements; falls back to Basic on cap / free / AI error.
 //               free mode: { free: true, concepts: null } (the browser uses MerchPrint.fallbackConcepts)
+//   refine      { concept, instruction, content?, trend?, designMode, history? } -> { concept, note, designMode }
+//               (simple instructions run in code at $0; free mode: code intents only)
+//   moments     { sport? } -> { moments: [{ id, title, sport, team, kind, score, why, line, trend }], at, cached }
+//               (the Trends feed scored for merch: one main-tier call per batch, 30-min cache, heuristic in free mode)
+//   (merch4) `content` is a string or the page's { text, url, trend }; `trend` may also be top-level.
 //   copy        { concept, content?, blank? } -> { copy: { title, description, retail, base, margin } }
 //   upload-url  { fileName, size, contentType:'image/png' } -> { uploadUrl, fileUrl, expiresAt }   [push]
 //               (the browser PUTs the PNG straight to uploadUrl)
@@ -54,11 +63,14 @@ const crypto = require('node:crypto');
 const { verifyEsUser, bearerToken, authConfig } = require('./_supabase-auth.js');
 const {
   aiText, gatewayConfigured, isBudgetError, userOverHourlyLimit, aiSpendGate, featureDisabled,
-  freeModeGate, inFreeMode, withAiMode, logUsage,
+  freeModeGate, inFreeMode, freeModeReason, withAiMode, logUsage,
 } = require('./_ai-gateway.js');
 const fourthwall = require('./_fourthwall.js');
 const { BLANKS } = require('./_merch-templates.js');
 const store = require('./_merch-store.js');
+const { normalizeTrend, trendResearch } = require('./_trend-context.js');
+// The ES merch design guidelines the AI follows (shared with the page).
+const G = require('../../merch-guidelines.js');
 
 let FrameUpRules = null;
 try { FrameUpRules = require('../../frameup-rules.js'); } catch { FrameUpRules = null; }
@@ -68,12 +80,14 @@ try { FrameUpRules = require('../../frameup-rules.js'); } catch { FrameUpRules =
 let MerchRules = null;
 try { MerchRules = require('../../merch-rules.js'); } catch { MerchRules = null; }
 
-const FEATURES = Object.freeze({ concepts: 'merch-concepts', copy: 'merch-copy' });
+const FEATURES = Object.freeze({ concepts: 'merch-concepts', copy: 'merch-copy', refine: 'merch-refine', moments: 'merch-moments' });
 const AI_TIER = 'main'; // Haiku: the cheapest model that writes reliable JSON in ES voice
+const PRO_TIER = 'best'; // Sonnet: Pro concepts and Pro refine (~$0.02 a concepts run, owner-approved)
+const DESIGN_MODES = ['basic', 'pro'];
 const COLLECTIONS = ['replay', 'nickname', 'quote', 'core', 'current'];
 const COLOR_KEYS = ['a', 'b', 'ink', 'white'];
 const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
-const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, uploadBytes: 25 * 1024 * 1024 });
+const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 24, uploadBytes: 25 * 1024 * 1024 });
 const CAPS = Object.freeze({ person: 10, team: 30 });
 const TEMPLATE_TTL_MS = 24 * 60 * 60 * 1000;
 const SHOP_TTL_MS = 10 * 60 * 1000;
@@ -291,6 +305,10 @@ function blankInfo(kind, base) {
     pricing: { suggested, margin: price.ok ? price.margin : null, base: base == null ? null : round2(base) },
   };
 }
+// The blank's own photos for one colour (Fourthwall colorVariants[].photos[].url),
+// for FrameUp's photo mockup when there is no live Fourthwall mockup.
+const httpsPhoto = u => /^https:\/\/[^\s"'<>]{8,1500}$/.test(String(u || ''));
+const photosOf = variant => [...new Set((Array.isArray(variant?.photos) ? variant.photos : []).map(p => String(p?.url || '')).filter(httpsPhoto))].slice(0, 4);
 function normalizeTemplate(kind, t, source) {
   const blank = BLANKS[kind];
   const area = pickArea(t, blank.regionPrefer);
@@ -312,7 +330,7 @@ function normalizeTemplate(kind, t, source) {
       garmentColor: '#ffffff', kind, minDpi: blank.minDpi, wrap: blank.wrap,
     },
     areas: listAreas(t, area.regionId),
-    colors: variants.map(c => ({ name: clip(c.color.name, 60), hex: String(c.color.hex).toLowerCase() })),
+    colors: variants.map(c => ({ name: clip(c.color.name, 60), hex: String(c.color.hex).toLowerCase(), photos: photosOf(c) })),
     defaultColor: blank.defaultColor, sizes,
   };
 }
@@ -327,7 +345,7 @@ function snapshotTemplate(kind) {
       garmentColor: '#ffffff', kind, minDpi: b.minDpi, wrap: b.wrap,
     },
     areas: s.areas.map(a => ({ ...a, placements: [] })),
-    colors: s.colors.slice(), defaultColor: b.defaultColor, sizes: s.sizes.slice(),
+    colors: s.colors.map(c => ({ name: c.name, hex: c.hex, photos: (Array.isArray(c.photos) ? c.photos : []).filter(httpsPhoto).slice(0, 4) })), defaultColor: b.defaultColor, sizes: s.sizes.slice(),
   };
 }
 const TEMPLATES = new Map(); // kind -> { at, data }
@@ -360,8 +378,75 @@ async function templateFor(kind, env = process.env) {
   return data;
 }
 
+// ─── Content, trend and the source corpus ──────────────────────────────────
+// `content` is a string or the page's { text, url, trend } (v3 pages send the
+// object). The source corpus for the number / quote checks is the person's
+// text plus the trend's real headlines (never its AI-written angle ideas).
+function contentOf(body = {}) {
+  const c = body.content;
+  if (typeof c === 'string') return clip(c, LIMITS.content);
+  if (c && typeof c === 'object') return clip(c.text, LIMITS.content);
+  return '';
+}
+function trendOf(body = {}) {
+  const raw = body.trend || (body.content && typeof body.content === 'object' ? body.content.trend : null);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  return normalizeTrend({ ...raw, category: raw.category || raw.sport || '' }, '');
+}
+function sourceFor(content, trend) {
+  const corpus = trend ? trendResearch(trend).corpus : '';
+  return [content, corpus].filter(Boolean).join('\n');
+}
+function designModeOf(body = {}) {
+  const v = String(body.designMode || body.tier || '').toLowerCase();
+  return v === 'pro' || body.pro === true ? 'pro' : 'basic';
+}
+
 // ─── Concept validation (strict) ────────────────────────────────────────────
-function shapeConcept(raw, { content = '', policy = 'acknowledge' } = {}) {
+const numberInSource = (n, source) => new RegExp(`(^|[^0-9])${n}([^0-9]|$)`).test(String(source || ''));
+// Pro elements: known types, positions, colours and icons only; at most 3, one
+// of each type. A number must be 1-2 digits that are in the source; an
+// invented one rejects the whole design (like an invented number in a row).
+function shapeElements(list, source) {
+  const out = []; let dropped = 0; let invented = '';
+  for (const e of (Array.isArray(list) ? list : []).slice(0, 8)) {
+    const type = String(e?.type || '');
+    const R = G.ELEMENT_RULES[type];
+    const color = String(e?.color || '');
+    const position = String(e?.position || '');
+    if (!R || !G.ELEMENT_COLORS.includes(color) || !R.positions.includes(position) || out.some(x => x.type === type) || out.length >= LIMITS.elements) { dropped += 1; continue; }
+    if (type === 'number') {
+      const text = String(e.text ?? '').trim();
+      const style = e.style == null ? 'solid' : String(e.style);
+      if (!/^\d{1,2}$/.test(text) || !R.style.includes(style)) { dropped += 1; continue; }
+      if (!numberInSource(text, source)) { invented = text; break; }
+      out.push({ type, text, style, color, position });
+    } else if (type === 'rule') {
+      const weight = e.weight == null ? 'thin' : String(e.weight);
+      if (!R.weight.includes(weight)) { dropped += 1; continue; }
+      out.push({ type, position, color, weight });
+    } else if (type === 'block') {
+      out.push({ type, position, color });
+    } else if (type === 'icon') {
+      const name = String(e.name || '');
+      if (!G.ICONS.includes(name)) { dropped += 1; continue; }
+      out.push({ type, name, position, color });
+    }
+  }
+  return { elements: out, dropped, invented };
+}
+function shapeFit(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const n = Number(raw.scale);
+  const scale = n > 0 ? Math.min(G.LIMITS.fitScaleMax, Math.max(G.LIMITS.fitScaleMin, Math.round(n * 100) / 100)) : 1;
+  const t = raw.topIn;
+  const topIn = t === null || t === undefined || t === '' || !Number.isFinite(Number(t)) ? null : Math.min(G.LIMITS.fitTopMaxIn, Math.max(G.LIMITS.fitTopMinIn, Math.round(Number(t) * 10) / 10));
+  return { scale, topIn };
+}
+// opts.mode: the design mode the reply is for ('basic' strips every element);
+// without it the concept's own `mode` decides (copy / create keep what they get).
+// opts.repair: fix pill colours that melt into the garment (off for copy / create).
+function shapeConcept(raw, { content = '', policy = 'acknowledge', mode, repair = true } = {}) {
   if (!raw || typeof raw !== 'object') return { error: 'not an object' };
   const collection = String(raw.collection || '').toLowerCase();
   if (!COLLECTIONS.includes(collection)) return { error: 'collection' };
@@ -392,28 +477,38 @@ function shapeConcept(raw, { content = '', policy = 'acknowledge' } = {}) {
   if (!blanks.length) blanks.push('tee');
   const rights = (Array.isArray(raw.rights) ? raw.rights : []).filter(r => RIGHTS_KINDS.includes(r?.kind) && clip(r.text, 300)).map(r => ({ kind: r.kind, text: clip(r.text, 300) })).slice(0, 8);
   if (team && !rights.some(r => r.kind === 'team')) rights.push({ kind: 'team', text: team.name });
-  const concept = { id: `mc-${crypto.randomUUID().slice(0, 8)}`, collection, title, team, palette, garment, stack, align, blanks, rights, why: clip(raw.why, LIMITS.why) };
+  const designMode = DESIGN_MODES.includes(mode) ? mode : (raw.mode === 'pro' ? 'pro' : 'basic');
+  let concept = { id: `mc-${crypto.randomUUID().slice(0, 8)}`, collection, title, team, palette, garment, stack, align, blanks, rights, why: clip(raw.why, LIMITS.why), mode: designMode };
+  const label = clip(raw.label, LIMITS.label);
+  if (label) concept.label = label;
+  const fit = shapeFit(raw.fit);
+  if (fit) concept.fit = fit;
+  let droppedElements = 0;
+  if (designMode === 'pro' && Array.isArray(raw.elements)) {
+    const el = shapeElements(raw.elements, content);
+    if (el.invented) return { error: `blocked: number (element ${el.invented})` };
+    if (el.elements.length) concept.elements = el.elements;
+    droppedElements = el.dropped;
+  }
+  // The colour rule: every pill stands off the garment, every word off its pill.
+  // (copy / create keep the colours as drawn: the print file is already made.)
+  if (repair) concept = G.repairContrast(concept).concept;
   const scan = rules().scanConcept(concept, { source: content, policy });
   if (scan.blocked?.length) return { error: `blocked: ${scan.blocked.map(b => b.kind).join(', ')}` };
   // Add what the scan found (names, nicknames, quotes, teams) to the rights list.
   (scan.warnings || []).forEach(w => { if (RIGHTS_KINDS.includes(w.kind) && !concept.rights.some(r => r.kind === w.kind && r.text === w.text)) concept.rights.push({ kind: w.kind, text: w.text }); });
-  return { concept };
+  return { concept, droppedElements };
+}
+// Plain words for a shape error (refine replies show it).
+function shapeErrorText(error = '') {
+  if (/number/.test(error)) return "That change would put a number on the design that isn't in your story. Numbers on merch must come from the story.";
+  if (/quote/.test(error)) return 'That change would use a quote that isn\'t word for word in your story. Quotes on merch must be exact.';
+  if (/league-mark|official|banned/.test(error)) return 'That change would add a league mark, "official" or words ES merch never uses. Try saying it another way.';
+  return "The AI's change didn't fit the ES design rules. Try saying it another way.";
 }
 
-// ─── AI: concepts and copy ──────────────────────────────────────────────────
+// ─── AI: concepts, refine, moments and copy ────────────────────────────────
 const VOICE = (FrameUpRules?.VOICE || []).join('\n');
-const CONCEPTS_SYSTEM = `You design fan-first sports merch for EssentiallySports (ES). Answer with JSON only.
-Design system: a compact mid-chest stack of condensed uppercase pills, rows alternating two team colours (a, b) with ink text; white or team-colour tees. No logos, no photos, no league or team marks, no "official" wording.
-Collections: "replay" (a moment or era fans relive), "nickname" (an "almost famous" nickname fans use), "quote" (in their own words: an exact quote from the source, then a small row "— Name"), "core" (ES itself, e.g. ESSENTIALLY / SPORTS), "current" (this week's story).
-Rules:
-- Quotes must be copied word for word from the source. Never paraphrase a quote.
-- Never invent numbers, scores, dates or facts. Every number must appear in the source.
-- 2 to 8 rows, each 3 to 24 characters. Short rows print bigger.
-- The person's own words matter most: the FIRST concept must use their main line in full, word for word, split across rows at natural breaks. Never cut a line short or drop the end of a sentence.
-- Make the concepts look different from each other: vary one-word-per-pill stacks, a big line with small lines under it, a wide banner, left and centre alignment, white and team-colour tees.
-- List every real person, nickname, quote and team you used in "rights".
-${VOICE}
-Shape: {"concepts":[{"collection":"replay|nickname|quote|core|current","title":"short name","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white","ink":"a|b|ink|white"}],"align":"left|center","rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line on why fans would wear it"}]}`;
 
 function parseJson(raw) {
   const s = String(raw || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
@@ -426,57 +521,350 @@ const AI_CACHE = new Map();
 function cacheGet(key) { const hit = AI_CACHE.get(key); if (!hit || Date.now() - hit.at > AI_CACHE_TTL_MS) { AI_CACHE.delete(key); return null; } return hit.data; }
 function cacheSet(key, data) { AI_CACHE.set(key, { at: Date.now(), data }); if (AI_CACHE.size > 100) AI_CACHE.delete(AI_CACHE.keys().next().value); }
 const hash = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 24);
+const usd = n => Number((Number(n) || 0).toFixed(6));
 
-// Shared AI gate. Returns { free: reason } or { reply } when the AI can't run.
+// Shared AI gate (switch-off, weekly budget -> free mode, hourly limit).
+// Returns { free: reason, budget } or { reply } when the AI can't run.
 async function aiGate(feature, track) {
-  if (featureDisabled(feature)) return { free: 'feature-off' };
+  if (featureDisabled(feature)) return { free: 'feature-off', budget: 'feature-off' };
   const gate = process.env.AI_GATEWAY_API_KEY && !inFreeMode() ? await aiSpendGate(track.token, { feature }) : null;
-  if (inFreeMode() || freeModeGate(gate)) return { free: 'free' };
+  if (inFreeMode() || freeModeGate(gate)) return { free: 'free', budget: gate?.free || freeModeReason() || 'free' };
   if (gate) return { reply: json(gate.status, { ok: false, reason: gate.reason, error: gate.error }) };
-  if (!gatewayConfigured()) return { free: 'off' };
-  if (await userOverHourlyLimit(track.token)) return { reply: json(429, { ok: false, reason: 'limit', error: "You've used a lot of AI this hour. Take a short break and try again soon." }) };
+  if (!gatewayConfigured()) return { free: 'off', budget: 'off' };
+  if (await userOverHourlyLimit(track.token)) return { reply: json(429, { ok: false, reason: 'limit', error: "You've used a lot of AI this hour. Take a short break and try again soon." }), hourly: true };
   return null;
 }
+// Why Pro fell back: the person's weekly cap, or free mode / AI off for everyone.
+const fellBackFor = gate => (gate?.budget === 'user-limit' ? 'cap' : 'free');
+const PRO_NOTES = {
+  cap: "You've used this week's AI budget, so Pro is paused. These designs are Basic, made without AI.",
+  free: 'Pro needs AI, which is paused right now. These designs are Basic, made without AI.',
+  ai: "Pro couldn't finish this time, so these are Basic designs. Try Pro again in a moment.",
+};
 
-async function conceptsMode(body, track) {
-  const content = clip(body.content, LIMITS.content);
-  if (content.length < 20) return json(400, { ok: false, reason: 'input', error: 'Paste the story, quote or moment first (a sentence or more).' });
-  const collection = COLLECTIONS.includes(body.collection) ? body.collection : '';
-  const count = Math.max(1, Math.min(LIMITS.concepts, Math.round(Number(body.count) || 4)));
-  const team = body.team && typeof body.team === 'object' ? { name: clip(body.team.name, 80), a: HEX.test(body.team.a) ? body.team.a : '', b: HEX.test(body.team.b) ? body.team.b : '' } : null;
-  const policy = rightsPolicy();
-  const free = reason => json(200, { ok: true, free: true, reason, concepts: null, cost: { usd: 0, cached: false } });
-  const key = `c|${hash(`${content}|${collection}|${count}|${JSON.stringify(team)}|${policy}`)}`;
-  const hit = cacheGet(key);
-  if (hit) return json(200, { ...hit, concepts: hit.concepts.map(c => ({ ...c, id: `mc-${crypto.randomUUID().slice(0, 8)}` })), cost: { usd: 0, cached: true } });
-  const gate = await aiGate(FEATURES.concepts, track);
-  if (gate?.free) return free(gate.free);
-  if (gate?.reply) return gate.reply;
+// The trends feed (the Trends page's data, same cache). Tests swap it.
+let trendsSource = force => require('./trend-design.js').getTrends(force);
+const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms).unref?.())]);
+// Pro: the chip sends { id, title, sport }; the feed has the related headlines.
+async function fullTrend(trend) {
+  if (!trend || trend.related.length || !trend.id) return trend;
+  try {
+    const feed = await withTimeout(Promise.resolve(trendsSource(false)), 3000);
+    const item = (feed?.items || []).find(i => String(i?.id) === trend.id);
+    return item ? (normalizeTrend(item, '') || trend) : trend;
+  } catch { return trend; }
+}
+
+function shapePlan(raw, concepts) {
+  const idea = clip(raw?.idea, LIMITS.plan);
+  const angle = clip(raw?.angle, LIMITS.plan);
+  const bad = t => OFFICIAL_RE.test(t) || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(t));
+  if (idea && angle && !bad(`${idea} ${angle}`)) return { idea, angle };
+  const first = concepts[0];
+  return first ? { idea: first.title, angle: first.why || '' } : null;
+}
+
+// One concepts run in one design mode. Returns { concepts, plan, dropped, model, cost }
+// or { error: 'free' | 'ai' | 'garbled' | 'invalid', cost, dropped }.
+async function runConcepts(designMode, { content, source, collection, count, team, research, policy, track }) {
+  const pro = designMode === 'pro';
+  const n = pro ? LIMITS.concepts : count;
   const ask = [
     `Source (the only facts, numbers and quotes you may use):\n"""${content}"""`,
+    research ? research.section : '',
+    pro && research?.ideas ? research.ideas : '',
     collection ? `Collection: ${collection}.` : 'Mix the collections that fit the source.',
     team?.name ? `Team: ${team.name}${team.a ? `, colours ${team.a} and ${team.b || '#ffffff'}` : ''}.` : '',
-    `Return ${count} concepts.`,
+    pro ? `Return the plan and ${n} concepts, each a different layout. At most half of them may use elements.` : `Return ${n} concepts.`,
   ].filter(Boolean).join('\n');
   let result;
   try {
-    result = await aiText({ tier: AI_TIER, system: CONCEPTS_SYSTEM, messages: [{ role: 'user', content: ask }], json: true, maxTokens: 2500, timeoutMs: 45000, cacheSystem: true, track: { ...track, feature: FEATURES.concepts } });
+    result = await aiText({
+      tier: pro ? PRO_TIER : AI_TIER, system: pro ? G.PRO_SYSTEM : G.BASIC_SYSTEM, messages: [{ role: 'user', content: ask }], json: true,
+      maxTokens: pro ? 3400 : 2500, timeoutMs: pro ? 60000 : 45000, cacheSystem: true, track: { ...track, feature: FEATURES.concepts, task: pro ? 'merch-concepts-pro' : 'merch-concepts-basic' },
+    });
   } catch (error) {
-    if (inFreeMode()) return free('free');
-    if (isBudgetError(error)) return free('budget');
-    console.error('merch concepts failed:', error.message);
-    return json(502, { ok: false, reason: 'ai', error: "The AI couldn't come up with designs right now. Try again, or start from the ready-made designs." });
+    if (inFreeMode() || isBudgetError(error)) return { error: 'free', cost: 0 };
+    console.error(`merch concepts (${designMode}) failed:`, error.message);
+    return { error: 'ai', cost: 0 };
   }
+  const cost = Number(result.cost || 0);
   const parsed = parseJson(result.text);
   const list = Array.isArray(parsed?.concepts) ? parsed.concepts.slice(0, LIMITS.concepts) : null;
-  if (!list) return json(502, { ok: false, reason: 'ai', error: "The AI's answer came back garbled. Try again in a moment." });
-  const shaped = list.map(c => shapeConcept(c, { content, policy }));
+  if (!list) return { error: 'garbled', cost };
+  const shaped = list.map(c => shapeConcept(c, { content: source, policy, mode: designMode }));
   const concepts = shaped.filter(s => s.concept).map(s => s.concept);
-  const cost = { usd: Number((result.cost || 0).toFixed(6)), cached: false };
-  if (!concepts.length) return json(200, { ok: true, free: true, reason: 'ai-invalid', concepts: null, dropped: shaped.length, cost });
-  const data = { ok: true, ai: true, concepts, dropped: shaped.length - concepts.length, model: result.model };
+  if (!concepts.length) return { error: 'invalid', cost, dropped: shaped.length };
+  return { concepts, plan: pro ? shapePlan(parsed.plan, concepts) : null, dropped: shaped.length - concepts.length, model: result.model, cost };
+}
+
+async function conceptsMode(body, track) {
+  let content = contentOf(body);
+  const trend = trendOf(body);
+  if (content.length < 20 && !(trend && content.length + trend.title.length >= 20)) return json(400, { ok: false, reason: 'input', error: 'Paste the story, quote or moment first (a sentence or more).' });
+  if (content.length < 3 && trend) content = trend.title;
+  const want = designModeOf(body);
+  const collection = COLLECTIONS.includes(body.collection) ? body.collection : '';
+  const count = Math.max(1, Math.min(LIMITS.concepts, Math.round(Number(body.count) || LIMITS.basicConcepts)));
+  const team = body.team && typeof body.team === 'object' ? { name: clip(body.team.name, 80), a: HEX.test(body.team.a) ? body.team.a : '', b: HEX.test(body.team.b) ? body.team.b : '' } : null;
+  const policy = rightsPolicy();
+  const freeReply = (reason, fellBack = '', cost = 0, extra = {}) => json(200, {
+    ok: true, free: true, reason, concepts: null, plan: null, designMode: 'basic', mode: 'basic',
+    ...(fellBack ? { fellBack, note: PRO_NOTES[fellBack] } : {}), ...extra, cost: { usd: usd(cost), cached: false },
+  });
+  const key = `c|${hash(`${content}|${trend ? `${trend.id}|${trend.title}|${trend.related.length}` : ''}|${collection}|${count}|${JSON.stringify(team)}|${policy}|${want}|${G.VERSION}`)}`;
+  const hit = cacheGet(key);
+  if (hit) return json(200, { ...hit, concepts: hit.concepts.map(c => ({ ...c, id: `mc-${crypto.randomUUID().slice(0, 8)}` })), cost: { usd: 0, cached: true } });
+  const gate = await aiGate(FEATURES.concepts, track);
+  if (gate?.free) return freeReply(gate.free, want === 'pro' ? fellBackFor(gate) : '');
+  if (gate?.reply) return gate.reply;
+  const full = want === 'pro' ? await fullTrend(trend) : trend;
+  const source = sourceFor(content, full);
+  const research = full ? trendResearch(full) : null;
+  const args = { content, source, collection, count, team, research, policy, track };
+  let run = await runConcepts(want, args);
+  let used = want; let fellBack = ''; let spent = run.cost || 0;
+  if (run.error && want === 'pro') {
+    if (run.error === 'free') return freeReply('budget', 'free', spent);
+    // Pro failed (error, garbled or nothing valid): one Basic run instead.
+    fellBack = 'ai'; used = 'basic';
+    run = await runConcepts('basic', args);
+    spent += run.cost || 0;
+  }
+  if (run.error === 'free') return freeReply('budget', fellBack, spent);
+  if (run.error === 'ai') return json(502, { ok: false, reason: 'ai', error: "The AI couldn't come up with designs right now. Try again, or start from the ready-made designs." });
+  if (run.error === 'garbled') return json(502, { ok: false, reason: 'ai', error: "The AI's answer came back garbled. Try again in a moment." });
+  if (run.error === 'invalid') return freeReply('ai-invalid', fellBack, spent, { dropped: run.dropped });
+  const data = { ok: true, ai: true, concepts: run.concepts, plan: run.plan, dropped: run.dropped, model: run.model, designMode: used, mode: used, ...(fellBack ? { fellBack, note: PRO_NOTES[fellBack] } : {}) };
   cacheSet(key, data);
-  return json(200, { ...data, cost });
+  return json(200, { ...data, cost: { usd: usd(spent), cached: false } });
+}
+
+// ─── Refine: change one design by typing ────────────────────────────────────
+// Simple instructions run in code ($0, also in free mode); anything else goes
+// to the AI (Basic: main tier, Pro: best tier).
+const INTENT_WORDS = [
+  ['swap', /^(swap|switch|flip|reverse|invert)( the)?( two)?( team)? colou?rs?$|^colou?rs? (swapped|flipped)$/],
+  ['center', /^(centre|center)( it| the (text|design|stack|words))?( align(ed)?)?$|^align (it )?(centre|center)$|^(centred|centered)$/],
+  ['left', /^(left|left align(ed)?|align (it )?left|left aligned)$/],
+  ['shorter', /^(shorter|make it shorter|shorten( it)?|fewer (rows|lines)|less text)$/],
+  ['bigger', /^(bigger|larger|make it (bigger|larger)|scale (it )?up)$/],
+  ['smaller', /^(smaller|make it smaller|scale (it )?down)$/],
+  ['white', /^((on |use |make it |put it on )?(a )?white (tee|shirt|t ?shirt))$/],
+  ['black', /^((on |use |make it |put it on )?(a )?black (tee|shirt|t ?shirt))$/],
+];
+function codeIntent(instruction) {
+  const s = String(instruction || '').toLowerCase().replace(/[^a-z ]+/g, ' ').replace(/\s+/g, ' ').trim()
+    .replace(/^(please |can you |could you )+/, '').replace(/( please| thanks| thank you)+$/, '').trim();
+  return (INTENT_WORDS.find(([, re]) => re.test(s)) || [])[0] || '';
+}
+const TEE = { white: { color: '#ffffff', name: 'White' }, black: { color: '#020202', name: 'Black' } };
+// Returns { concept, note } or null when the intent changes nothing.
+function applyIntent(intent, concept) {
+  const c = { ...concept, stack: concept.stack.map(r => ({ ...r })), palette: { ...concept.palette }, garment: { ...concept.garment } };
+  const scale = (concept.fit?.scale) || 1;
+  let note = '';
+  if (intent === 'swap') { c.palette = { ...c.palette, a: concept.palette.b, b: concept.palette.a }; note = 'Swapped the two team colours.'; }
+  else if (intent === 'center') { if (c.align === 'center') return null; c.align = 'center'; note = 'Centred the stack.'; }
+  else if (intent === 'left') { if (c.align === 'left') return null; c.align = 'left'; note = 'Aligned the stack left.'; }
+  else if (intent === 'shorter') {
+    const keep = c.stack.filter(r => r.size !== 'small');
+    if (!keep.length || keep.length === c.stack.length) return null;
+    c.stack = keep; note = 'Dropped the small rows.';
+  } else if (intent === 'bigger' || intent === 'smaller') {
+    const next = Math.round(Math.min(G.LIMITS.fitScaleMax, Math.max(G.LIMITS.fitScaleMin, scale * (intent === 'bigger' ? 1.15 : 0.87))) * 100) / 100;
+    if (next === scale) return null;
+    c.fit = { scale: next, topIn: concept.fit?.topIn ?? null }; note = intent === 'bigger' ? 'Made the print bigger.' : 'Made the print smaller.';
+  } else if (intent === 'white' || intent === 'black') {
+    if (c.garment.color === TEE[intent].color) return null;
+    c.garment = { ...TEE[intent] }; note = `Put it on a ${intent} tee.`;
+  } else return null;
+  const fixed = G.repairContrast(c);
+  return { concept: fixed.concept, note: fixed.fixed ? `${note} Adjusted pill colours so they stand off the shirt.` : note };
+}
+const FREE_REFINE = "Without AI, FrameUp can make simple changes: swap colours, centre, left, shorter, bigger, smaller, white tee or black tee. Try one of those, or edit the design yourself.";
+const conceptId = id => (/^[\w-]{3,60}$/.test(String(id || '')) ? String(id) : '');
+
+async function runRefine(designMode, { base, instruction, history, content, research, source, policy, track }) {
+  const pro = designMode === 'pro';
+  const { id, rights, ...design } = base;
+  const ask = [
+    `Source (the only facts, numbers and quotes you may use):\n"""${content}"""`,
+    research ? research.section : '',
+    `The design now (JSON): ${JSON.stringify(pro ? design : { ...design, elements: undefined })}`,
+    history.length ? `Earlier requests in this chat (already applied): ${history.map(h => `"${h}"`).join('; ')}` : '',
+    `Change: """${instruction}"""`,
+  ].filter(Boolean).join('\n');
+  let result;
+  try {
+    result = await aiText({ tier: pro ? PRO_TIER : AI_TIER, system: G.refineSystem(designMode), messages: [{ role: 'user', content: ask }], json: true, maxTokens: 1400, timeoutMs: 40000, cacheSystem: true, track: { ...track, feature: FEATURES.refine, task: pro ? 'merch-refine-pro' : 'merch-refine-basic' } });
+  } catch (error) {
+    if (inFreeMode() || isBudgetError(error)) return { error: 'free', cost: 0 };
+    console.error(`merch refine (${designMode}) failed:`, error.message);
+    return { error: 'ai', cost: 0 };
+  }
+  const cost = Number(result.cost || 0);
+  const p = parseJson(result.text);
+  if (!p?.concept || typeof p.concept !== 'object') return { error: 'garbled', cost };
+  // Fields the AI left out keep their old values.
+  const merged = { ...base, ...p.concept, rights: Array.isArray(p.concept.rights) ? p.concept.rights : base.rights };
+  const shaped = shapeConcept(merged, { content: source, policy, mode: designMode });
+  if (!shaped.concept) return { error: 'invalid', detail: shaped.error, cost };
+  let note = clip(p.note, 160);
+  if (!note || OFFICIAL_RE.test(note) || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(note))) note = 'Updated the design.';
+  return { concept: { ...shaped.concept, id: base.id }, note, model: result.model, cost };
+}
+
+async function refineMode(body, track) {
+  const content = contentOf(body);
+  const trend = trendOf(body);
+  const source = sourceFor(content, trend);
+  const want = designModeOf(body);
+  const policy = rightsPolicy();
+  const instruction = clip(body.instruction, LIMITS.instruction + 1);
+  if (instruction.length < 2) return json(400, { ok: false, reason: 'input', error: 'Type what to change, for example "use Lakers colours" or "shorter".' });
+  if (instruction.length > LIMITS.instruction) return json(400, { ok: false, reason: 'input', error: `Keep the change under ${LIMITS.instruction} characters.` });
+  const shaped = shapeConcept(body.concept, { content: source, policy, mode: want });
+  if (!shaped.concept) return json(400, { ok: false, reason: 'concept', error: "This design can't be changed as it is (it may use a number or quote that isn't in your story). Pick or make another design." });
+  const base = { ...shaped.concept, id: conceptId(body.concept?.id) || shaped.concept.id };
+  const history = (Array.isArray(body.history) ? body.history : []).slice(-LIMITS.history).map(h => clip(h, LIMITS.instruction)).filter(Boolean);
+  const reply = (concept, note, extra = {}, cost = 0, cached = false) => json(200, { ok: true, concept, note, designMode: concept.mode, mode: concept.mode, ...extra, cost: { usd: usd(cost), cached } });
+  const intent = codeIntent(instruction);
+  const done = intent ? applyIntent(intent, base) : null;
+  if (done) return reply(done.concept, done.note, { ai: false, intent });
+  const freeReply = (fellBack = '', error = FREE_REFINE) => json(200, { ok: true, free: true, concept: null, error: intent && !done ? 'That is already how the design looks. Try another change.' : error, designMode: want, mode: want, ...(fellBack ? { fellBack } : {}), cost: { usd: 0, cached: false } });
+  const gate = await aiGate(FEATURES.refine, track);
+  if (gate?.free) return freeReply(want === 'pro' ? fellBackFor(gate) : '');
+  if (gate?.reply) return gate.reply;
+  const key = `r|${hash(`${JSON.stringify({ ...base, id: '' })}|${instruction}|${history.join('|')}|${source}|${want}|${policy}|${G.VERSION}`)}`;
+  const hit = cacheGet(key);
+  if (hit) return reply({ ...hit.concept, id: base.id }, hit.note, { ai: true, ...(hit.fellBack ? { fellBack: hit.fellBack } : {}) }, 0, true);
+  const research = trend ? trendResearch(trend) : null;
+  const args = { base, instruction, history, content, research, source, policy, track };
+  let run = await runRefine(want, args);
+  let spent = run.cost || 0; let fellBack = '';
+  if (run.error && run.error !== 'free' && run.error !== 'invalid' && want === 'pro') {
+    fellBack = 'ai';
+    run = await runRefine('basic', { ...args, base: { ...base, mode: 'basic', elements: undefined } });
+    spent += run.cost || 0;
+  }
+  if (run.error === 'free') return freeReply(want === 'pro' ? 'free' : '');
+  if (run.error === 'invalid') return json(422, { ok: false, reason: 'invalid', error: shapeErrorText(run.detail), cost: { usd: usd(spent), cached: false } });
+  if (run.error) return json(502, { ok: false, reason: 'ai', error: "The AI couldn't change the design right now. Try again, or edit it yourself.", cost: { usd: usd(spent), cached: false } });
+  cacheSet(key, { concept: run.concept, note: run.note, fellBack });
+  return reply(run.concept, run.note, { ai: true, model: run.model, ...(fellBack ? { fellBack } : {}) }, spent);
+}
+
+// ─── Moments: merch-worthy trends ───────────────────────────────────────────
+// The Trends page feed, scored for merch. One main-tier call scores the
+// headlines not seen in the last 30 minutes (shared by everyone on the
+// instance); free mode, AI off, the hourly limit or an AI error use the
+// heuristic scorer. Never an error because of the AI.
+const MOMENT_KINDS = ['quote', 'nickname', 'moment', 'era', 'stat', 'rivalry'];
+const SPORT_LABEL = { nfl: 'NFL', cfb: 'College Football', mlb: 'MLB', golf: 'Golf', tennis: 'Tennis', others: 'Others' };
+const MOMENT_TTL_MS = 30 * 60 * 1000;
+const MOMENT_SCORES = new Map(); // trend id -> { at, data: { kind, score, why, line, ai } }
+const MOMENT_WHY = {
+  quote: 'A line fans can quote back, word for word.',
+  nickname: 'A name only real fans use: almost-famous merch.',
+  moment: 'A moment fans will want to relive on a shirt.',
+  era: 'An era fans still talk about: replay merch.',
+  stat: 'A number fans will recognise at a glance.',
+  rivalry: 'Rivalry week: fans pick a side.',
+};
+const LOW_MERCH = /\b(odds|betting|picks?|prediction|fantasy|waiver|injury report|injur(y|ies|ed)|questionable|ruled out|mock draft|power rankings?|rankings?|contract|salary|tickets?|how to watch|tv channel|live stream|start time|schedule|stats? leaders)\b/i;
+const momentWords = s => fold(s).replace(/["'.%$]/g, ' ').split(' ').filter(Boolean);
+const quoteIn = title => {
+  const m = String(title).match(/[“"]([^”"]{3,60})[”"]/);
+  return m ? m[1].trim() : '';
+};
+// A shirt line from the headline's own words.
+function headlineLine(title) {
+  const q = quoteIn(title);
+  if (q && q.split(/\s+/).length <= 6) return q.toUpperCase();
+  const lead = String(title).split(/\s[:|–—-]\s|:\s/)[0];
+  const names = lead.match(/\b[A-Z][a-zA-Z'’.]+(?:\s+[A-Z][a-zA-Z'’.]+){0,2}\b/g) || [];
+  const pick = names.sort((a, b) => b.split(' ').length - a.split(' ').length)[0] || lead.split(/\s+/).slice(0, 4).join(' ');
+  return clip(pick, 40).toUpperCase();
+}
+function heuristicMoment(item, maxRank = 1) {
+  const title = String(item.title || '');
+  let kind = 'moment';
+  if (quoteIn(title)) kind = 'quote';
+  else if (/\b(nickname|dubbed|known as|calls? (him|her|them))\b/i.test(title)) kind = 'nickname';
+  else if (/\b(vs\.?|versus|rivalry|rivals?|feud|beat|beats|stun|stuns|sweep)\b/i.test(title)) kind = 'rivalry';
+  else if (/\b(era|dynasty|legacy|retire[sd]?|retirement|throwback|anniversary|years ago)\b/i.test(title)) kind = 'era';
+  else if (/\b\d+\s*(points|pts|yards|touchdowns|tds|home runs|hrs|strikeouts|goals|wins|straight|record)\b/i.test(title)) kind = 'stat';
+  const bonus = { quote: 22, nickname: 22, rivalry: 14, era: 12, moment: 10, stat: 6 }[kind];
+  const rank = Math.max(0, Number(item.rank) || 0) / (maxRank || 1);
+  let score = 30 + Math.round(rank * 25) + bonus + (item.signal === 'hot' ? 12 : item.signal === 'rising' ? 6 : 0) + Math.min(8, (Number(item.coverage) || 0) * 2) + (item.team ? 4 : 0);
+  if (LOW_MERCH.test(title)) score -= 35;
+  return { kind, score: Math.max(0, Math.min(100, score)), why: MOMENT_WHY[kind], line: headlineLine(title), ai: false };
+}
+// The AI's line must use only the headline's words (and its numbers).
+function lineFromHeadline(line, title) {
+  const text = clip(String(line || '').replace(/[“”"]/g, ''), 40);
+  if (!text) return '';
+  const have = new Set(momentWords(title));
+  const words = momentWords(text);
+  if (!words.length || words.length > 6 || !words.every(w => have.has(w))) return '';
+  if (OFFICIAL_RE.test(text) || LEAGUE_MARKS.some(m => new RegExp(`(^|[^A-Za-z])${m}($|[^A-Za-z])`, 'i').test(text)) || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(text))) return '';
+  return text.toUpperCase();
+}
+async function scoreMoments(items, track) {
+  const lines = items.map(i => `${i.id} | ${SPORT_LABEL[i.category] || i.category || 'Sports'} | ${clip(i.title, 200)}`).join('\n');
+  const result = await aiText({ tier: AI_TIER, system: G.MOMENTS_SYSTEM, messages: [{ role: 'user', content: `Headlines:\n${lines}` }], json: true, maxTokens: 1800, timeoutMs: 25000, cacheSystem: true, track: { ...track, feature: FEATURES.moments } });
+  const parsed = parseJson(result.text);
+  const out = new Map();
+  (Array.isArray(parsed?.items) ? parsed.items : []).forEach(e => {
+    const item = items.find(i => i.id === String(e?.id || ''));
+    if (!item || !MOMENT_KINDS.includes(e.kind) || !Number.isFinite(Number(e.score))) return;
+    let why = clip(e.why, 120);
+    if (!why || OFFICIAL_RE.test(why) || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(why))) why = MOMENT_WHY[e.kind];
+    out.set(item.id, { kind: e.kind, score: Math.max(0, Math.min(100, Math.round(Number(e.score)))), why, line: lineFromHeadline(e.line, item.title) || headlineLine(item.title), ai: true });
+  });
+  return { scores: out, cost: Number(result.cost || 0) };
+}
+async function momentsMode(body, track) {
+  const sport = String(body.sport || '').toLowerCase();
+  const only = SPORT_LABEL[sport] ? sport : '';
+  let feed;
+  try { feed = await withTimeout(Promise.resolve(trendsSource(false)), 9000); } catch (error) {
+    console.error('merch moments: trends feed failed:', error?.message);
+    return json(200, { ok: true, moments: [], at: new Date().toISOString(), cached: false, ai: false, error: 'Trends are unavailable right now. Paste your own words instead.', cost: { usd: 0, cached: false } });
+  }
+  const pool = (Array.isArray(feed?.items) ? feed.items : [])
+    .filter(i => i && i.id && clip(i.title, 300).length >= 3 && (!i.storyline || i.storyline.lead !== false) && (!only || i.category === only))
+    .sort((a, b) => (Number(b.rank) || 0) - (Number(a.rank) || 0))
+    .slice(0, LIMITS.momentsScored);
+  const now = Date.now();
+  const fresh = id => { const hit = MOMENT_SCORES.get(id); return hit && now - hit.at < MOMENT_TTL_MS ? hit.data : null; };
+  const misses = pool.filter(i => !fresh(i.id));
+  let cost = 0; let ai = pool.some(i => fresh(i.id)?.ai);
+  if (misses.length) {
+    const gate = await aiGate(FEATURES.moments, track);
+    if (!gate) {
+      try {
+        const r = await scoreMoments(misses, track);
+        cost = r.cost;
+        r.scores.forEach((data, id) => { MOMENT_SCORES.set(id, { at: now, data }); ai = true; });
+        if (MOMENT_SCORES.size > 400) [...MOMENT_SCORES.keys()].slice(0, MOMENT_SCORES.size - 400).forEach(k => MOMENT_SCORES.delete(k));
+      } catch (error) {
+        if (!inFreeMode() && !isBudgetError(error)) console.error('merch moments scoring failed:', error.message);
+      }
+    }
+  }
+  const maxRank = Math.max(1, ...pool.map(i => Number(i.rank) || 0));
+  const moments = pool.map(item => {
+    const s = fresh(item.id) || heuristicMoment(item, maxRank);
+    const trend = normalizeTrend(item, '');
+    return {
+      id: String(item.id), title: clip(item.title, 300), sport: item.category || '', sportLabel: SPORT_LABEL[item.category] || '',
+      team: item.team?.name ? { name: clip(item.team.name, 60), short: clip(item.team.short, 20) } : null,
+      kind: s.kind, score: s.score, why: s.why, line: s.line, ai: Boolean(s.ai), trend,
+    };
+  }).sort((a, b) => b.score - a.score).slice(0, LIMITS.moments);
+  return json(200, { ok: true, moments, at: feed?.updatedAt || new Date(now).toISOString(), cached: misses.length === 0, ai, cost: { usd: usd(cost), cached: cost === 0 } });
 }
 
 function suggestedRetail(kind, base) {
@@ -493,7 +881,8 @@ function codeCopy(concept, template) {
 }
 async function copyMode(body, track) {
   const kind = BLANKS[body.blank] ? body.blank : 'tee';
-  const shaped = shapeConcept(body.concept, { content: clip(body.content, LIMITS.content), policy: rightsPolicy() });
+  const source = sourceFor(contentOf(body), trendOf(body));
+  const shaped = shapeConcept(body.concept, { content: source, policy: rightsPolicy(), repair: false });
   if (!shaped.concept) return json(400, { ok: false, reason: 'concept', error: "This design can't be used as it is. Pick or make another design." });
   const concept = shaped.concept;
   const template = await templateFor(kind);
@@ -503,7 +892,6 @@ async function copyMode(body, track) {
   const gate = await aiGate(FEATURES.copy, track);
   if (gate?.free) return reply(codeCopy(concept, template), { free: true, ai: false, cost: { usd: 0, cached: false } });
   if (gate?.reply) return gate.reply;
-  const source = clip(body.content, LIMITS.content);
   const key = `p|${hash(`${kind}|${JSON.stringify(concept.stack)}|${concept.title}|${source}`)}`;
   const hit = cacheGet(key);
   if (hit) return reply(hit, { ai: true, cost: { usd: 0, cached: true } });
@@ -640,9 +1028,9 @@ async function previewMode(body) {
 
 async function createMode(body, track) {
   const kind = BLANKS[body.blank] ? body.blank : 'tee';
-  const content = clip(body.content, LIMITS.content);
+  const content = sourceFor(contentOf(body), trendOf(body));
   const policy = rightsPolicy();
-  const shaped = shapeConcept(body.concept, { content, policy });
+  const shaped = shapeConcept(body.concept, { content, policy, repair: false });
   if (!shaped.concept) return json(400, { ok: false, reason: 'concept', error: "This design can't go to the shop as it is (it may use a league mark, an invented number or a quote that isn't in the source). Edit it and try again." });
   const concept = shaped.concept;
   const title = clip(body.title, 70);
@@ -921,6 +1309,8 @@ exports.handler = withAiMode(async function handler(event) {
       return json(200, { ok: true, templates });
     }
     if (mode === 'concepts') return await conceptsMode(body, track);
+    if (mode === 'refine') return await refineMode(body, track);
+    if (mode === 'moments') return await momentsMode(body, track);
     if (mode === 'list') return await listMode(body);
     if (mode === 'sales') return await salesMode(body);
     if (mode === 'copy') return await copyMode(body, track);
@@ -951,6 +1341,8 @@ exports._test = {
   FEATURES, CAPS, LIMITS, COLLECTIONS, BLANKS, NOT_SET_UP, NO_PUSH, InlineRules, rules, usingDesignRules: () => Boolean(MerchRules),
   shapeConcept, pickArea, listAreas, regionsFor, qualifies, normalizeTemplate, snapshotTemplate, templateFor, suggestedRetail, codeCopy, caps, capsFor, countCreate, pushers, HISTORY,
   uploadHostOk, refreshPatch,
+  contentOf, trendOf, sourceFor, designModeOf, shapeElements, shapeFit, codeIntent, applyIntent, heuristicMoment, lineFromHeadline, headlineLine, MOMENT_SCORES, G,
   setClientFactory(fn) { clientFactory = fn; },
-  reset() { DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); SHOP.at = 0; SHOP.data = null; COLLECTIONS_CACHE.at = 0; COLLECTIONS_CACHE.data = null; },
+  setTrendsSource(fn) { trendsSource = fn; },
+  reset() { DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); MOMENT_SCORES.clear(); SHOP.at = 0; SHOP.data = null; COLLECTIONS_CACHE.at = 0; COLLECTIONS_CACHE.data = null; },
 };
