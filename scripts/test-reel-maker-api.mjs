@@ -11,6 +11,9 @@ const require = createRequire(import.meta.url);
 delete process.env.ELEVENLABS_API_KEY;
 delete process.env.ELEVENLABS_VOICE_ID;
 delete process.env.REELS_TTS;
+delete process.env.GROQ_API_KEY;
+delete process.env.OPENAI_API_KEY;
+delete process.env.REELS_TRANSCRIBE;
 process.env.AI_GATEWAY_API_KEY = 'gw-test';
 const gateway = require('../netlify/functions/_ai-gateway.js');
 const adapter = require('../api/reel-maker.js');
@@ -236,6 +239,115 @@ await test('voice-sample, scene and AI clip modes: gated, capped, sanitised', as
   assert.doesNotMatch(prompts[0], /Mahomes|Chiefs/);
   assert.equal((await call({ mode: 'ai-clip-start', scene: 'stadium', sport: 'nfl' })).body.reason, 'off', 'off unless REELS_AI_CLIPS=gateway');
   globalThis.fetch = base;
+});
+
+// ── Reels 2.0: your own voiceover (voice-align) and the new event types ──
+function takeWav(seconds, rate = 16000) {
+  const data = Buffer.alloc(Math.round(seconds * rate) * 2);
+  const head = Buffer.alloc(44);
+  head.write('RIFF', 0); head.writeUInt32LE(36 + data.length, 4); head.write('WAVE', 8);
+  head.write('fmt ', 12); head.writeUInt32LE(16, 16); head.writeUInt16LE(1, 20); head.writeUInt16LE(1, 22);
+  head.writeUInt32LE(rate, 24); head.writeUInt32LE(rate * 2, 28); head.writeUInt16LE(2, 32); head.writeUInt16LE(16, 34);
+  head.write('data', 36); head.writeUInt32LE(data.length, 40);
+  return Buffer.concat([head, data]).toString('base64');
+}
+const TAKE_BEATS = [{ id: 'b1', vo: 'Josh Allen threw for *5,477* yards.' }, { id: 'b2', vo: 'Buffalo clinched the AFC East.' }];
+const heardWords = 'Josh Allen threw for 5477 yards Buffalo clinched the AFC East'.split(' ').map((word, i) => ({ word, start: 0.2 + i * 0.4 + (i >= 6 ? 0.6 : 0), end: 0.5 + i * 0.4 + (i >= 6 ? 0.6 : 0) }));
+let transcribeCalls = 0;
+const realTranscribe = gateway.aiTranscribe;
+gateway.aiTranscribe = async ({ model }) => { transcribeCalls += 1; return { text: heardWords.map(w => w.word).join(' '), words: heardWords, segments: [], model, cost: 0.0004 }; };
+
+await test('voice-align: one take -> per-beat windows with the script\'s own words; cost reported', async () => {
+  const res = await call({ mode: 'voice-align', audio: takeWav(6), beats: TAKE_BEATS });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(res.body.durationMs, 6000);
+  assert.deepEqual(res.body.beats.map(b => b.id), ['b1', 'b2']);
+  assert.deepEqual(res.body.beats[0].words.map(w => w.w), ['Josh', 'Allen', 'threw', 'for', '5,477', 'yards.']);
+  assert.equal(res.body.beats[0].startMs, 200);
+  assert.equal(res.body.beats[1].startMs, 3200);
+  assert.ok(res.body.beats[1].endMs <= 6000 && res.body.beats[0].endMs <= res.body.beats[1].startMs);
+  assert.equal(res.body.match, 1);
+  assert.equal(res.body.provider, 'gateway');
+  assert.equal(res.body.cost, 0.0004);
+  assert.equal(res.body.words, undefined, 'the raw heard words are only sent when there is no script');
+  assert.equal(transcribeCalls, 1);
+});
+
+await test('voice-align: no beats -> the transcript and its words (a reel is built from the take)', async () => {
+  const res = await call({ mode: 'voice-align', audio: takeWav(7) });
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.beats, []);
+  assert.match(res.body.transcript, /^Josh Allen threw/);
+  assert.equal(res.body.words.length, heardWords.length);
+  assert.deepEqual(res.body.words[0], { w: 'Josh', s: 200, e: 500 });
+});
+
+await test('voice-align: size guard: over 90 s -> 413 too-long; not a WAV -> 400; nothing sent -> 400; no transcription call', async () => {
+  transcribeCalls = 0;
+  const long = await call({ mode: 'voice-align', audio: takeWav(95), beats: TAKE_BEATS });
+  assert.equal(long.status, 413);
+  assert.equal(long.body.reason, 'too-long');
+  assert.match(long.body.error, /90 seconds/);
+  assert.equal((await call({ mode: 'voice-align', audio: Buffer.from('ID3 this is an mp3, not the wav the page sends, padded out a bit').toString('base64'), beats: TAKE_BEATS })).status, 400);
+  assert.equal((await call({ mode: 'voice-align', beats: TAKE_BEATS })).status, 400);
+  assert.equal(transcribeCalls, 0);
+});
+
+await test('voice-align: only this mode may send a large body; the hard cap still applies; sign-in is still required', async () => {
+  const full = JSON.stringify({ mode: 'voice-align', audio: takeWav(90), beats: TAKE_BEATS });
+  assert.ok(full.length > 3.5 * 1024 * 1024 && full.length < _test.MAX_VOICE_BODY);
+  const ok = await handler({ httpMethod: 'POST', headers: { authorization: 'Bearer good' }, body: full });
+  assert.equal(ok.statusCode, 200);
+  assert.equal((await handler({ httpMethod: 'POST', headers: { authorization: 'Bearer bad' }, body: full })).statusCode, 401);
+  // The same size under another mode, or with the mode only inside a string, is refused.
+  assert.equal((await handler({ httpMethod: 'POST', headers: { authorization: 'Bearer good' }, body: JSON.stringify({ mode: 'plan', brief: 'x'.repeat(300 * 1024) }) })).statusCode, 413);
+  assert.equal((await handler({ httpMethod: 'POST', headers: { authorization: 'Bearer good' }, body: JSON.stringify({ brief: '"mode":"voice-align"', pad: 'x'.repeat(300 * 1024), mode: 'plan' }) })).statusCode, 413);
+  const huge = await handler({ httpMethod: 'POST', headers: { authorization: 'Bearer good' }, body: JSON.stringify({ mode: 'voice-align', audio: 'A'.repeat(4.4 * 1024 * 1024) }) });
+  assert.equal(huge.statusCode, 413);
+});
+
+await test('voice-align: inside the AI gates: free mode -> skipped (the page uses its own fallback), no transcription', async () => {
+  transcribeCalls = 0;
+  spend = 30;
+  const res = await call({ mode: 'voice-align', audio: takeWav(8), beats: TAKE_BEATS });
+  spend = 0;
+  assert.equal(res.status, 200);
+  assert.equal(res.body.skipped, true);
+  assert.equal(res.body.mode, 'free');
+  assert.equal(transcribeCalls, 0);
+});
+
+await test('voice-align: speech recognition off -> 503 reason off; a failed call -> 502, never the provider error text', async () => {
+  const key = process.env.AI_GATEWAY_API_KEY;
+  delete process.env.AI_GATEWAY_API_KEY;
+  let res = await call({ mode: 'voice-align', audio: takeWav(9), beats: TAKE_BEATS });
+  process.env.AI_GATEWAY_API_KEY = key;
+  assert.equal(res.status, 503);
+  assert.equal(res.body.reason, 'off');
+  gateway.aiTranscribe = async () => { throw new Error('upstream exploded: secret detail'); };
+  const warn = console.warn;
+  console.warn = () => {};
+  res = await call({ mode: 'voice-align', audio: takeWav(10), beats: TAKE_BEATS });
+  console.warn = warn;
+  assert.equal(res.status, 502);
+  assert.ok(!/secret|upstream/.test(res.body.error));
+});
+gateway.aiTranscribe = realTranscribe;
+
+await test('events: the Reels 2.0 types are accepted (start, idea_pick, recipe, look, variant, media_add, voice_upload, captions_export, radar_open, radar_handoff)', async () => {
+  const added = ['start', 'idea_pick', 'recipe', 'look', 'variant', 'media_add', 'voice_upload', 'captions_export', 'radar_open', 'radar_handoff'];
+  added.forEach(type => assert.ok(_test.EVENT_TYPES.includes(type), type));
+  ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals', 'data', 'frames', 'carousel_export'].forEach(type => assert.ok(_test.EVENT_TYPES.includes(type), `${type} is still there`));
+  assert.equal(new Set(_test.EVENT_TYPES).size, _test.EVENT_TYPES.length);
+  projectsTable = true;
+  for (const [type, payload] of [['media_add', { count: 3, images: 2, videos: 1, via: 'drop', assigned: 3 }], ['voice_upload', { via: 'record', seconds: 31, timing: 'ai', beats: 5 }], ['captions_export', { kind: 'srt', cues: 24 }]]) {
+    const res = await call({ mode: 'event', type, projectId: '2b1f3e5c-1d2e-4f3a-9b8c-7d6e5f4a3b2c', payload });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.cloud, true);
+  }
+  projectsTable = false;
+  assert.equal((await call({ mode: 'event', type: 'voice_align' })).status, 400);
 });
 
 globalThis.fetch = realFetch;

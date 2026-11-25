@@ -164,8 +164,8 @@
   function heardFromChunks(chunks) {
     return (Array.isArray(chunks) ? chunks : []).map(chunk => {
       const t = Array.isArray(chunk && chunk.timestamp) ? chunk.timestamp : [];
-      const s = Number(t[0]);
-      const e = Number(t[1]);
+      const s = t[0] == null ? NaN : Number(t[0]);
+      const e = t[1] == null ? NaN : Number(t[1]);
       return { w: String((chunk && chunk.text) || '').trim(), s: Math.round(s * 1000), e: Math.round((Number.isFinite(e) ? e : s + 0.3) * 1000) };
     }).filter(word => word.w && Number.isFinite(word.s) && Number.isFinite(word.e));
   }
