@@ -171,13 +171,15 @@ await test('director: long-form styles allow up to 24 beats; the prompt names on
   assert.doesNotMatch(D.directorRequest({ read, format: 'explainer', style: require('../reel-styles.js').get('explainer') }), /tiles:/);
 });
 
-await test('runReelDirector: long-form styles get a bigger token budget; Haiku first as before', async () => {
+await test('runReelDirector: a retired style is written in ES (Reels 2.0), same token budget; Haiku first as before', async () => {
   const seen = [];
   gateway.aiText = async opts => { seen.push(opts); return { text: '{"beats":[]}', model: 'anthropic/claude-haiku-5.5', cost: 0.002 }; };
   await D.runReelDirector({ brief: CORPUS, style: 'explainer', tier: 'economy' });
   await D.runReelDirector({ brief: CORPUS, style: 'classic', tier: 'economy' });
   assert.deepEqual(seen.map(s => s.tier), ['main', 'main']);
-  assert.ok(seen[0].maxTokens > seen[1].maxTokens);
+  // explainer and classic are retired: both requests are ES requests now.
+  assert.equal(seen[0].maxTokens, seen[1].maxTokens);
+  seen.forEach(s => assert.match(s.messages[0].content, /STYLE: ES Reels/));
 });
 
 globalThis.fetch = realFetch;

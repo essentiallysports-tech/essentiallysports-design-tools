@@ -64,10 +64,12 @@ function stubCtx() {
 }
 const env = () => ({ measure, images: { 'img:1': { naturalWidth: 1600, naturalHeight: 1067 }, 'logo:es': { width: 123, height: 105 }, 'logo:team': { width: 200, height: 200 } }, videos: { 'clip:1': { readyState: 4, videoWidth: 1280, videoHeight: 720 } }, cutouts: { 'clip:1': { width: 600, height: 900 } } });
 
-test('style data: five styles (ES Reels first, the default), ES fonts only, no purple, every beat kind has a layout', () => {
-  assert.deepEqual(S.STYLE_IDS, ['es', 'classic', 'explainer', 'series', 'countdown']);
+test('style data: ES Reels is the only style offered (Reels 2.0); the four retired styles keep valid data for one release; ES fonts only, no purple, every beat kind has a layout', () => {
+  assert.deepEqual(S.STYLE_IDS, ['es'], 'the picker offers ES only: the look is the choice');
+  assert.deepEqual(S.LEGACY_STYLE_IDS, ['classic', 'explainer', 'series', 'countdown']);
   assert.equal(S.DEFAULT_STYLE, 'es');
-  S.STYLE_IDS.forEach(id => assert.deepEqual(S.validateStyle(S.STYLES[id]), [], id));
+  assert.ok(S.LEGACY_STYLE_IDS.every(id => S.isLegacy(id) && S.currentStyle(id) === 'es') && !S.isLegacy('es') && S.currentStyle('nope') === 'es');
+  [...S.STYLE_IDS, ...S.LEGACY_STYLE_IDS].forEach(id => assert.deepEqual(S.validateStyle(S.STYLES[id]), [], id));
   assert.ok(S.isPurple('#7B2FBE') && !S.isPurple('#1F6FEB') && !S.isPurple('#D93A2F'), 'the purple check works');
   assert.deepEqual(S.COMPONENT_KINDS, F.COMPONENT_KINDS, 'formats and styles agree on the data beats');
   assert.ok(S.STYLES.explainer.seconds.max >= 120 && S.STYLES.series.seconds.max >= 120, 'long-form styles allow 90-120 s');
@@ -144,11 +146,11 @@ test('clips: one shot per clip, played from the trim point, looping a short clip
   assert.ok(R.clipTime(shot, 7000) < 8, 'loops inside the clip');
 });
 
-test('suggestStyle: ES Reels for every news reel (the house style); data formats keep their owner defaults', () => {
+test('suggestStyle: ES Reels for every reel, the data formats included (Reels 2.0)', () => {
   ['Best QBs', 'Moneyball for the Steelers: cap space and the draft', 'Mahomes averages 6.5 yards per throw, 234th of 714 seasons', 'Chiefs sign a receiver'].forEach(text => assert.equal(S.suggestStyle({ text }).id, 'es', text));
   assert.equal(S.suggestStyle({ format: 'top5', text: 'Best QBs' }).id, 'es');
-  assert.equal(S.suggestStyle({ format: 'gameswing' }).id, 'series');
-  // The old heuristics stay available for a hand-picked look.
+  ['gameswing', 'replay', 'archive'].forEach(f => assert.equal(S.suggestStyle({ format: f }).id, 'es', f));
+  // The old heuristics stay in the file for one release (nothing offers them).
   assert.equal(S.legacySuggestStyle({ format: 'top5', text: 'Best QBs' }).id, 'countdown');
   assert.equal(S.legacySuggestStyle({ text: 'Moneyball for the Steelers: cap space and the draft' }).id, 'series');
   assert.equal(S.legacySuggestStyle({ text: 'Mahomes averages 6.5 yards per throw, 234th of 714 seasons' }).id, 'explainer');
@@ -197,5 +199,27 @@ test('data-format elements: layouts registered, boxes stacked without overlap, t
   }
   for (const id of S.STYLE_IDS) for (const el of S.ELEMENT_IDS) Object.entries(S.elementTokens(id, el)).forEach(([k, v]) => { if (!/font/i.test(k)) assert.ok(!S.isPurple(v), `${id}/${el}.${k}`); });
 });
+
+// ─── Reels 2.0: looks on the data formats ────────────────────────────────
+test('withLook / elementTokens(style, element, look): the ES style wears the look; Paper and the retired styles are untouched', () => {
+  const E = require('../reel-es.js');
+  assert.equal(S.withLook('es', 'paper'), S.STYLES.es);
+  assert.equal(S.withLook('es', ''), S.STYLES.es);
+  assert.equal(S.withLook('series', 'ink'), S.STYLES.series);
+  E.LOOK_IDS.forEach(look => {
+    const st = S.withLook('es', look, '#0B162A');
+    assert.deepEqual(S.validateStyle(st), [], look);
+    assert.equal(st.engine, 'es');
+    assert.deepEqual(st.layouts, S.STYLES.es.layouts, 'layouts are the style\'s, not the look\'s');
+    for (const el of S.ELEMENT_IDS) Object.entries(S.elementTokens('es', el, look)).forEach(([k, v]) => { if (!/font/i.test(k)) assert.ok(!S.isPurple(v), `${look} ${el}.${k}`); });
+  });
+  assert.equal(S.withLook('es', 'ink').theme, 'dark');
+  assert.equal(S.withLook('es', 'data').theme, 'dark', 'Data-led puts figures on ink boards');
+  assert.equal(S.withLook('es', 'minimal').palette.paper, '#F1EFEA');
+  assert.equal(S.elementTokens('es', 'clock', 'ink').fill, '#F1EFEA', 'the chip takes the look\'s pill colour');
+  assert.deepEqual(S.elementTokens('es', 'clock', 'paper'), S.elementTokens('es', 'clock'));
+  assert.deepEqual(S.elementTokens(S.STYLES.es, 'clock'), S.elementTokens('es', 'clock'), 'a style object works as well as an id');
+});
+
 
 console.log(process.exitCode ? '\nReel styles tests failed.' : `\nAll ${passed} reel styles tests passed.`);

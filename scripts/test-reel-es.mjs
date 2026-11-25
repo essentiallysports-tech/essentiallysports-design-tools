@@ -340,7 +340,9 @@ const ids = res => res.issues.filter(i => i.severity !== 'info').map(i => `${i.s
 await test('lint: clean sample reels pass every rule; the checklist reads "Safe frame ✓"', () => {
   [STAT, SCALE].forEach(p => assert.deepEqual(ids(lintOf(p)), []));
   const rows = E.checklist(lintOf(STAT).issues);
-  assert.equal(rows.length, 8);
+  // Reels 2.0: the checklist gained the look row (on brand and readable).
+  assert.equal(rows.length, 9);
+  assert.equal(rows[8].id, 'look');
   assert.ok(rows.every(r => r.ok));
   assert.equal(rows[0].label, 'Safe frame');
 });

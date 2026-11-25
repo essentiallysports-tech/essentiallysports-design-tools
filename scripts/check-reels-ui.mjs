@@ -327,6 +327,8 @@ for (const w of WIDTHS) {
   if (w === WIDTHS[0]) {
     // One real MP4 export (WebCodecs, or real-time recording as the page falls back).
     await step('Export MP4', async () => {
+      // Reels 2.0 (lane A): every reel is an ES reel now, and an ES reel needs a source line on its end card to export.
+      await evaluate(`(() => { const c = window.ReelMakerCtx; if (c && c.state.plan && !c.state.plan.sourceLine) { c.state.plan.sourceLine = 'Source: ESPN'; c.rebuild(); } return true; })()`);
       await must('#rm-export');
       await waitFor(`!document.querySelector('#rm-files').hidden || /fail|cancel/i.test(document.querySelector('#rm-export-status').textContent)`, 90000, 'exported file row');
       const st = await evaluate(`document.querySelector('#rm-export-status').textContent`);
@@ -376,7 +378,7 @@ for (const w of WIDTHS) {
     const st = await evaluate(`document.querySelector('#rm-statusline-text').textContent`);
     if (!/Safe frame ✓/.test(st)) throw new Error(`status line: ${st}`);
   });
-  await step('ES checklist', async () => { await must('#rm-statusline'); await waitFor(`!document.querySelector('#rm-checklist').hidden && document.querySelectorAll('#rm-checklist li').length === 8`, 2000, 'checklist rows'); });
+  await step('ES checklist', async () => { await must('#rm-statusline'); await waitFor(`!document.querySelector('#rm-checklist').hidden && document.querySelectorAll('#rm-checklist li').length === 9`, 2000, 'checklist rows'); });
   await audit('script-checklist', w);
   await click('#rm-statusline');
   await step('block editor', async () => {
