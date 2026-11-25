@@ -1,0 +1,669 @@
+'use strict';
+// Merch Designs: turn an ES story into fan-first merch and push it to the ES
+// Fourthwall shop. Everyone signed in can design; pushing to Fourthwall is for
+// admins and the emails in MERCH_PUSHERS. Products are always created HIDDEN;
+// a person checks the mockups, then publishes.
+//
+// First release (owner, 2026-11-25): tee only, history kept in memory and
+// returned in replies (no tables yet). Archive, list, upload-relay and the
+// history migration come later.
+//
+// One endpoint, POST { mode, ... } (signed-in ES users only):
+//   status      -> { configured, shop: { name, publicDomain, status } | null, canPush,
+//                    caps: { person: {used, limit, left}, team: {...} }, rightsPolicy, blanks }
+//   templates   { blank? } -> { templates: [{ templateId, printSpec, areas: [{ regionId, pixelsWidth,
+//               pixelsHeight, dpi, renderable, suitsLogo, suitsDesign }], colors, sizes, basePrice }] }
+//               (public Fourthwall reads, cached 24 h). upload-url + register run once per image.
+//   concepts    { content, collection?, count?, team? } -> { concepts: Concept[] } (AI, main tier)
+//               free mode: { free: true, concepts: null } (the browser uses MerchPrint.fallbackConcepts)
+//   copy        { concept, content?, blank? } -> { copy: { title, description, retail, base, margin } }
+//   upload-url  { fileName, size, contentType:'image/png' } -> { uploadUrl, fileUrl, expiresAt }   [push]
+//               (the browser PUTs the PNG straight to uploadUrl)
+//   register    { fileUrl, width, height, blank?, region? } -> { imageId, preview, thumbnail }             [push]
+//   preview     { blank, imageId, region?, logo?: { region, imageId }, color? } -> { customizationId, images } [push]
+//   create      { concept, content, blank, imageId, region?, logo?, title, description, retail, color?, ack } [push]
+//               region = the design's print area (default: the front area); logo = the ES logo
+//               in its own small area the person picks (templates -> areas[].suitsLogo).
+//               -> { productId, state: 'HIDDEN', images, price: { retail, base, margin }, ack, productUrl }
+//   publish / hide { productId } -> { product }                                                  [push]
+//   product     { productId } -> { product } (with its shop URL)
+//
+// Env (server only): FOURTHWALL_API_USERNAME, FOURTHWALL_API_PASSWORD (Basic auth),
+// MERCH_PUSHERS (comma-separated emails), MERCH_RIGHTS_POLICY ('acknowledge' default
+// | 'strict'), MERCH_TEMPLATES ("tee=<template id>", optional pin).
+
+const crypto = require('node:crypto');
+const { verifyEsUser, bearerToken, authConfig } = require('./_supabase-auth.js');
+const {
+  aiText, gatewayConfigured, isBudgetError, userOverHourlyLimit, aiSpendGate, featureDisabled,
+  freeModeGate, inFreeMode, withAiMode, logUsage,
+} = require('./_ai-gateway.js');
+const fourthwall = require('./_fourthwall.js');
+const { BLANKS } = require('./_merch-templates.js');
+
+let FrameUpRules = null;
+try { FrameUpRules = require('../../frameup-rules.js'); } catch { FrameUpRules = null; }
+
+// The DESIGN branch's merch-rules.js (rights, policy, pricing). Until it is
+// merged, a minimal inline version with the same function names stands in.
+let MerchRules = null;
+try { MerchRules = require('../../merch-rules.js'); } catch { MerchRules = null; }
+
+const FEATURES = Object.freeze({ concepts: 'merch-concepts', copy: 'merch-copy' });
+const AI_TIER = 'main'; // Haiku: the cheapest model that writes reliable JSON in ES voice
+const COLLECTIONS = ['replay', 'nickname', 'quote', 'core', 'current'];
+const COLOR_KEYS = ['a', 'b', 'ink', 'white'];
+const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
+const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 6, rowText: 40, title: 80, desc: 600, why: 240, concepts: 6, uploadBytes: 25 * 1024 * 1024 });
+const CAPS = Object.freeze({ person: 10, team: 30 });
+const TEMPLATE_TTL_MS = 24 * 60 * 60 * 1000;
+const SHOP_TTL_MS = 10 * 60 * 1000;
+const AI_CACHE_TTL_MS = 30 * 60 * 1000;
+const NOT_SET_UP = "Merch isn't connected to the ES Fourthwall shop yet. Ask an admin to add FOURTHWALL_API_USERNAME and FOURTHWALL_API_PASSWORD in Vercel. You can still design.";
+const NO_PUSH = 'Only admins and approved people can send designs to the shop. Ask an admin to add you to MERCH_PUSHERS. You can still design and download.';
+
+function json(statusCode, body) {
+  return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
+}
+const clip = (v, n = 200) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+const HEX = /^#[0-9a-f]{6}$/i;
+const round2 = n => Math.round(Number(n) * 100) / 100;
+const fold = s => String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/[‘’‛`]/g, "'").replace(/[“”]/g, '"').replace(/[^a-z0-9'%.$ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+// ─── Inline rights / pricing fallback (used until merch-rules.js is merged) ──
+const LEAGUE_MARKS = ['NFL', 'NBA', 'MLB', 'NHL', 'WNBA', 'NCAA', 'MLS', 'PGA', 'LPGA', 'UFC', 'NASCAR', 'FIFA', 'Super Bowl', 'World Series', 'Stanley Cup', 'March Madness', 'Final Four'];
+const OFFICIAL_RE = /\b(official(ly)?|licensed|authentic|authorized|endorsed)\b|[®™©]/i;
+const NUMBER_RE = /\d[\d,.]*/g;
+const InlineRules = {
+  RIGHTS_POLICY: 'acknowledge',
+  ACK_STATEMENT: 'I checked these items. ES may print them on merch, the quotes are exact and attributed, and the numbers come from the source.',
+  policyFrom(env = {}) { return String(env.MERCH_RIGHTS_POLICY || '').trim().toLowerCase() === 'strict' ? 'strict' : 'acknowledge'; },
+  quoteInSource(quote, source) {
+    const q = fold(quote).replace(/["']/g, '');
+    return q.length >= 3 && fold(source).replace(/["']/g, '').includes(q);
+  },
+  scanConcept(concept = {}, { source = '', policy = 'acknowledge' } = {}) {
+    const stack = Array.isArray(concept.stack) ? concept.stack : [];
+    const dash = /^\s*[—–-]+\s*/;
+    const lines = stack.map(r => clip(r?.text, 120)).filter(Boolean);
+    const words = lines.join(' / ');
+    const blocked = []; const warnings = [];
+    const flag = (kind, text, reason, always = false) => {
+      const list = always || policy === 'strict' ? blocked : warnings;
+      if (!list.some(i => i.kind === kind && i.text === text)) list.push({ kind, text, reason });
+    };
+    LEAGUE_MARKS.forEach(m => { if (new RegExp(`(^|[^A-Za-z])${m}($|[^A-Za-z])`, 'i').test(words)) flag('league-mark', m, `"${m}" is a league or event trademark. ES merch can't print it.`, true); });
+    if (OFFICIAL_RE.test(words)) flag('official', words.match(OFFICIAL_RE)[0], 'Words like "official" or "licensed" suggest a licence ES doesn’t have.', true);
+    ((FrameUpRules && FrameUpRules.BANNED) || []).forEach(b => { if (b.re.test(words)) flag('banned', b.why, `Not ES style: ${b.why}.`, true); });
+    if (concept.collection !== 'core') {
+      const src = fold(source);
+      const invented = [...new Set(words.match(NUMBER_RE) || [])].filter(n => !src.includes(fold(n)));
+      if (invented.length) flag('number', invented.join(', '), `${invented.join(', ')} isn't in your source. Numbers on merch must come from the story.`, true);
+    }
+    if (concept.collection === 'quote') {
+      const quote = stack.filter(r => r && !dash.test(String(r.text || ''))).map(r => r.text).join(' ');
+      const by = stack.find(r => r && dash.test(String(r.text || '')));
+      if (!InlineRules.quoteInSource(quote, source)) flag('quote-source', clip(quote, 300), 'A quote must be word for word from the source you pasted.', true);
+      else if (!by) flag('quote-source', clip(quote, 300), 'Say who said it: quotes on ES merch are always attributed.', true);
+    }
+    (Array.isArray(concept.rights) ? concept.rights : []).forEach(r => {
+      if (RIGHTS_KINDS.includes(r?.kind) && clip(r.text, 300)) flag(r.kind, clip(r.text, 300), r.kind === 'team' ? 'A team name is a trademark. Team colours are fine; the name means the team could object.' : 'A real person (name, nickname or words). Printing it can need their permission.');
+    });
+    return { policy, blocked, warnings, ok: blocked.length === 0 };
+  },
+  ackCovers(ack, scan) {
+    if (!scan || scan.blocked?.length) return false;
+    if (!scan.warnings?.length) return true;
+    if (!ack || ack.accepted !== true) return false;
+    const have = new Set((ack.items || []).map(i => `${i.kind}|${i.text}`));
+    return scan.warnings.every(w => have.has(`${w.kind}|${w.text}`));
+  },
+  marginFor(retail, base) {
+    const r = round2(retail); const b = round2(base);
+    if (!(r > 0) || !(b >= 0)) return { ok: false, error: 'Type a price in dollars.' };
+    if (r > 250) return { ok: false, error: 'Keep the price under $250.' };
+    const margin = round2(r - b);
+    if (margin < 1) return { ok: false, error: `The price must be at least $${(b + 1).toFixed(2)}: the blank costs $${b.toFixed(2)}.` };
+    return { ok: true, retail: r, base: b, margin };
+  },
+};
+const rules = () => ({
+  policyFrom: MerchRules?.policyFrom || InlineRules.policyFrom,
+  scanConcept: MerchRules?.scanConcept || InlineRules.scanConcept,
+  ackCovers: MerchRules?.ackCovers || InlineRules.ackCovers,
+  marginFor: MerchRules?.marginFor || InlineRules.marginFor,
+  quoteInSource: MerchRules?.quoteInSource || InlineRules.quoteInSource,
+  ACK_STATEMENT: MerchRules?.ACK_STATEMENT || InlineRules.ACK_STATEMENT,
+});
+const rightsPolicy = (env = process.env) => rules().policyFrom(env);
+
+// ─── Who can push ───────────────────────────────────────────────────────────
+function pushers(env = process.env) {
+  return String(env.MERCH_PUSHERS || '').split(',').map(s => s.trim().toLowerCase()).filter(s => s.includes('@'));
+}
+// The database decides who is an admin (the RLS helper). Any failure = not an admin.
+async function isAdmin(token) {
+  if (!token) return false;
+  try {
+    const config = authConfig();
+    const response = await fetch(`${config.url}/rest/v1/rpc/is_es_designer_admin`, {
+      method: 'POST',
+      headers: { apikey: config.publishableKey, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: '{}', signal: AbortSignal.timeout(2500),
+    });
+    if (!response.ok) return false;
+    return (await response.json()) === true;
+  } catch { return false; }
+}
+async function canPush(track, env = process.env) {
+  if (pushers(env).includes(String(track.email || '').toLowerCase())) return true;
+  return isAdmin(track.token);
+}
+
+// ─── Daily caps (code-side; this server's memory until the history table lands) ──
+const DAILY = { day: '', team: 0, people: new Map() };
+const HISTORY = []; // created products this instance knows about (newest first, max 100)
+function today(now = new Date()) { return now.toISOString().slice(0, 10); }
+function rollDay(now = new Date()) {
+  const d = today(now);
+  if (DAILY.day !== d) { DAILY.day = d; DAILY.team = 0; DAILY.people = new Map(); }
+}
+function caps(email, now = new Date()) {
+  rollDay(now);
+  const used = DAILY.people.get(String(email).toLowerCase()) || 0;
+  return {
+    person: { used, limit: CAPS.person, left: Math.max(0, CAPS.person - used) },
+    team: { used: DAILY.team, limit: CAPS.team, left: Math.max(0, CAPS.team - DAILY.team) },
+    resetsAt: `${DAILY.day}T23:59:59Z`,
+  };
+}
+function countCreate(email, now = new Date()) {
+  rollDay(now);
+  const key = String(email).toLowerCase();
+  DAILY.people.set(key, (DAILY.people.get(key) || 0) + 1);
+  DAILY.team += 1;
+}
+
+// ─── Fourthwall client, shop and templates (cached) ─────────────────────────
+let clientFactory = () => fourthwall.createClient();
+const client = () => clientFactory();
+const SHOP = { at: 0, data: null };
+async function shopInfo() {
+  if (SHOP.data && Date.now() - SHOP.at < SHOP_TTL_MS) return SHOP.data;
+  const s = await client().shop();
+  SHOP.data = { name: clip(s?.name, 120), publicDomain: clip(s?.publicDomain, 200), status: clip(s?.status, 40) };
+  SHOP.at = Date.now();
+  return SHOP.data;
+}
+
+function pinned(env = process.env) {
+  const out = {};
+  String(env.MERCH_TEMPLATES || '').split(',').forEach(part => {
+    const [k, v] = part.split('=').map(s => String(s || '').trim());
+    if (BLANKS[k] && /^[\w-]{3,80}$/.test(v)) out[k] = v;
+  });
+  return out;
+}
+// The printable area FrameUp draws on: available, backend-rendered, not embroidery.
+function pickArea(template, prefer = []) {
+  const areas = (Array.isArray(template?.customizableAreas) ? template.customizableAreas : []).filter(a => a && a.available
+    && a.supportsBackendRendering !== false && !/EMBROIDERY/i.test(String(a.productionMethod || ''))
+    && a.regionId && a.dimensions?.pixelsWidth > 0 && a.dimensions?.pixelsHeight > 0 && !/label|sleeve|wrist/i.test(a.regionId));
+  for (const id of prefer) { const hit = areas.find(a => a.regionId === id); if (hit) return hit; }
+  return areas.find(a => /front|default/i.test(a.regionId)) || null;
+}
+// Every non-embroidery print area the template offers (deduped by regionId,
+// available first). Small areas (sleeves, neck labels, back neck) suit the ES
+// logo; the person picks one. Only `renderable` areas can go on a product.
+const LOGO_AREA_RE = /sleeve|neck|label|nape|pocket|chest_small|left_chest/i;
+function listAreas(template) {
+  const out = new Map();
+  (Array.isArray(template?.customizableAreas) ? template.customizableAreas : []).forEach(a => {
+    if (!a?.regionId || /EMBROIDERY/i.test(String(a.productionMethod || '')) || !(a.dimensions?.pixelsWidth > 0)) return;
+    const prev = out.get(a.regionId);
+    if (prev && (prev.available || !a.available)) return;
+    const d = a.dimensions;
+    const small = d.pixelsWidth * d.pixelsHeight <= 1200 * 1200 || LOGO_AREA_RE.test(a.regionId);
+    out.set(a.regionId, {
+      regionId: a.regionId, name: clip(a.name, 60), type: clip(a.type, 40), available: Boolean(a.available),
+      renderable: a.supportsBackendRendering !== false, productionMethod: clip(a.productionMethod, 30),
+      pixelsWidth: d.pixelsWidth, pixelsHeight: d.pixelsHeight, dpi: d.dpi, inchesWidth: d.inchesWidth, inchesHeight: d.inchesHeight,
+      placements: (a.placements || []).map(p => ({ id: clip(p.id, 60), name: clip(p.name, 60) })).slice(0, 12),
+      suitsLogo: small && a.available && a.supportsBackendRendering !== false,
+      suitsDesign: !small && a.available && a.supportsBackendRendering !== false,
+    });
+  });
+  return [...out.values()];
+}
+function qualifies(template, blank) {
+  if (!template || template.supportsBackendRendering !== true) return false;
+  if (Number(template.minimumOrdersNumber) > 0) return false;
+  if (/EMBROIDERY/i.test(String(template.productionMethod || ''))) return false;
+  return Boolean(pickArea(template, blank.regionPrefer));
+}
+function normalizeTemplate(kind, t, source) {
+  const blank = BLANKS[kind];
+  const area = pickArea(t, blank.regionPrefer);
+  const variants = (Array.isArray(t.colorVariants) ? t.colorVariants : []).filter(c => c && c.available !== false && c.color?.name && HEX.test(String(c.color.hex || '')));
+  const sizes = [...new Set(variants.flatMap(c => (c.sizeVariants || []).filter(s => s.available !== false).map(s => s.size)))];
+  const prices = variants.flatMap(c => (c.sizeVariants || []).map(s => Number(s?.price?.amount))).filter(Number.isFinite);
+  const base = Number(t.priceFrom?.amount) || (prices.length ? Math.min(...prices) : null);
+  return {
+    blank: kind, label: blank.label, source,
+    templateId: t.productId, name: clip(t.name, 120), brand: clip(t.brand, 60), productionMethod: clip(t.productionMethod, 30),
+    basePrice: base == null ? null : round2(base), currency: t.priceFrom?.currency || 'USD',
+    printSpec: {
+      templateId: t.productId, region: 'front', regionId: area.regionId,
+      pixelsWidth: area.dimensions.pixelsWidth, pixelsHeight: area.dimensions.pixelsHeight, dpi: area.dimensions.dpi,
+      inchesWidth: area.dimensions.inchesWidth, inchesHeight: area.dimensions.inchesHeight,
+      placementStrategy: blank.placementStrategy, garmentColor: '#ffffff',
+    },
+    areas: listAreas(t),
+    colors: variants.map(c => ({ name: clip(c.color.name, 60), hex: String(c.color.hex).toLowerCase() })),
+    defaultColor: blank.defaultColor, sizes,
+  };
+}
+function snapshotTemplate(kind) {
+  const b = BLANKS[kind]; const s = b.snapshot;
+  return {
+    blank: kind, label: b.label, source: 'snapshot', templateId: s.templateId, name: s.name, brand: s.brand, productionMethod: s.productionMethod,
+    basePrice: s.basePrice, currency: s.currency,
+    printSpec: { templateId: s.templateId, region: 'front', regionId: s.regionId, pixelsWidth: s.pixelsWidth, pixelsHeight: s.pixelsHeight, dpi: s.dpi, inchesWidth: s.inchesWidth, inchesHeight: s.inchesHeight, placementStrategy: b.placementStrategy, garmentColor: '#ffffff' },
+    areas: s.areas.map(a => ({ ...a, placements: [] })),
+    colors: s.colors.slice(), defaultColor: b.defaultColor, sizes: s.sizes.slice(),
+  };
+}
+const TEMPLATES = new Map(); // kind -> { at, data }
+async function templateFor(kind, env = process.env) {
+  const hit = TEMPLATES.get(kind);
+  if (hit && Date.now() - hit.at < TEMPLATE_TTL_MS && hit.data.source !== 'snapshot') return hit.data;
+  const blank = BLANKS[kind];
+  const ids = [pinned(env)[kind], ...blank.ids].filter(Boolean);
+  const fw = client();
+  let reached = false;
+  for (const id of ids) {
+    try {
+      const t = await fw.template(id);
+      reached = true;
+      if (qualifies(t, blank)) { const data = normalizeTemplate(kind, t, id === pinned(env)[kind] ? 'pinned' : 'curated'); TEMPLATES.set(kind, { at: Date.now(), data }); return data; }
+    } catch (error) { if (error.reason !== 'not-found' && error.status !== 409) continue; reached = true; }
+  }
+  // Fallback search: the first blank in the right category that qualifies.
+  try {
+    const list = await fw.searchTemplates(blank.search);
+    reached = true;
+    const candidates = (list?.results || []).filter(r => r.supportsBackendRendering && String(r.category || '').startsWith(blank.category) && !/EMBROIDERY/i.test(r.productionMethod)).slice(0, 4);
+    for (const c of candidates) {
+      const t = await fw.template(c.productId).catch(() => null);
+      if (qualifies(t, blank)) { const data = normalizeTemplate(kind, t, 'search'); TEMPLATES.set(kind, { at: Date.now(), data }); return data; }
+    }
+  } catch { /* fall through to the snapshot */ }
+  const data = { ...snapshotTemplate(kind), ...(reached ? { note: 'The usual blank is not offered right now; sizes are from the last check.' } : { note: "Couldn't reach Fourthwall; sizes are from the last check." }) };
+  TEMPLATES.set(kind, { at: Date.now(), data });
+  return data;
+}
+
+// ─── Concept validation (strict) ────────────────────────────────────────────
+function shapeConcept(raw, { content = '', policy = 'acknowledge' } = {}) {
+  if (!raw || typeof raw !== 'object') return { error: 'not an object' };
+  const collection = String(raw.collection || '').toLowerCase();
+  if (!COLLECTIONS.includes(collection)) return { error: 'collection' };
+  const title = clip(raw.title, LIMITS.title);
+  if (!title) return { error: 'title' };
+  let team = null;
+  if (raw.team && typeof raw.team === 'object') {
+    const name = clip(raw.team.name, 80);
+    if (!name) return { error: 'team' };
+    team = { id: clip(raw.team.id || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), 60), name };
+  } else if (raw.team != null) return { error: 'team' };
+  const p = raw.palette || {};
+  if (![p.a, p.b, p.ink].every(c => HEX.test(String(c || '')))) return { error: 'palette' };
+  const palette = { a: p.a.toLowerCase(), b: p.b.toLowerCase(), ink: p.ink.toLowerCase() };
+  const g = raw.garment || {};
+  if (!HEX.test(String(g.color || ''))) return { error: 'garment' };
+  const garment = { color: g.color.toLowerCase(), name: clip(g.name, 40) || 'White' };
+  if (!Array.isArray(raw.stack) || !raw.stack.length || raw.stack.length > LIMITS.rows) return { error: 'stack' };
+  const stack = [];
+  for (const r of raw.stack) {
+    const text = clip(r?.text, LIMITS.rowText);
+    if (!text || !['big', 'small'].includes(r.size) || !COLOR_KEYS.includes(r.fill) || !COLOR_KEYS.includes(r.ink) || r.fill === r.ink) return { error: 'row' };
+    stack.push({ text, size: r.size, fill: r.fill, ink: r.ink });
+  }
+  const align = raw.align === 'center' ? 'center' : (raw.align === 'left' || raw.align == null ? 'left' : null);
+  if (!align) return { error: 'align' };
+  const blanks = ['tee']; // first release: tee only
+  const rights = (Array.isArray(raw.rights) ? raw.rights : []).filter(r => RIGHTS_KINDS.includes(r?.kind) && clip(r.text, 300)).map(r => ({ kind: r.kind, text: clip(r.text, 300) })).slice(0, 8);
+  if (team && !rights.some(r => r.kind === 'team')) rights.push({ kind: 'team', text: team.name });
+  const concept = { id: `mc-${crypto.randomUUID().slice(0, 8)}`, collection, title, team, palette, garment, stack, align, blanks, rights, why: clip(raw.why, LIMITS.why) };
+  const scan = rules().scanConcept(concept, { source: content, policy });
+  if (scan.blocked?.length) return { error: `blocked: ${scan.blocked.map(b => b.kind).join(', ')}` };
+  // Add what the scan found (names, nicknames, quotes, teams) to the rights list.
+  (scan.warnings || []).forEach(w => { if (RIGHTS_KINDS.includes(w.kind) && !concept.rights.some(r => r.kind === w.kind && r.text === w.text)) concept.rights.push({ kind: w.kind, text: w.text }); });
+  return { concept };
+}
+
+// ─── AI: concepts and copy ──────────────────────────────────────────────────
+const VOICE = (FrameUpRules?.VOICE || []).join('\n');
+const CONCEPTS_SYSTEM = `You design fan-first sports merch for EssentiallySports (ES). Answer with JSON only.
+Design system: a compact mid-chest stack of condensed uppercase pills, rows alternating two team colours (a, b) with ink text; white or team-colour tees. No logos, no photos, no league or team marks, no "official" wording.
+Collections: "replay" (a moment or era fans relive), "nickname" (an "almost famous" nickname fans use), "quote" (in their own words: an exact quote from the source, then a small row "— Name"), "core" (ES itself, e.g. ESSENTIALLY / SPORTS), "current" (this week's story).
+Rules:
+- Quotes must be copied word for word from the source. Never paraphrase a quote.
+- Never invent numbers, scores, dates or facts. Every number must appear in the source.
+- 2 to 5 rows, each 3 to 22 characters. Short rows print bigger.
+- List every real person, nickname, quote and team you used in "rights".
+${VOICE}
+Shape: {"concepts":[{"collection":"replay|nickname|quote|core|current","title":"short name","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|small","fill":"a|b|ink|white","ink":"a|b|ink|white"}],"align":"left|center","rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line on why fans would wear it"}]}`;
+
+function parseJson(raw) {
+  const s = String(raw || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  try { return JSON.parse(s); } catch { /* fall through */ }
+  const start = s.indexOf('{'); const end = s.lastIndexOf('}');
+  if (start >= 0 && end > start) { try { return JSON.parse(s.slice(start, end + 1)); } catch { return null; } }
+  return null;
+}
+const AI_CACHE = new Map();
+function cacheGet(key) { const hit = AI_CACHE.get(key); if (!hit || Date.now() - hit.at > AI_CACHE_TTL_MS) { AI_CACHE.delete(key); return null; } return hit.data; }
+function cacheSet(key, data) { AI_CACHE.set(key, { at: Date.now(), data }); if (AI_CACHE.size > 100) AI_CACHE.delete(AI_CACHE.keys().next().value); }
+const hash = s => crypto.createHash('sha256').update(s).digest('hex').slice(0, 24);
+
+// Shared AI gate. Returns { free: reason } or { reply } when the AI can't run.
+async function aiGate(feature, track) {
+  if (featureDisabled(feature)) return { free: 'feature-off' };
+  const gate = process.env.AI_GATEWAY_API_KEY && !inFreeMode() ? await aiSpendGate(track.token, { feature }) : null;
+  if (inFreeMode() || freeModeGate(gate)) return { free: 'free' };
+  if (gate) return { reply: json(gate.status, { ok: false, reason: gate.reason, error: gate.error }) };
+  if (!gatewayConfigured()) return { free: 'off' };
+  if (await userOverHourlyLimit(track.token)) return { reply: json(429, { ok: false, reason: 'limit', error: "You've used a lot of AI this hour. Take a short break and try again soon." }) };
+  return null;
+}
+
+async function conceptsMode(body, track) {
+  const content = clip(body.content, LIMITS.content);
+  if (content.length < 20) return json(400, { ok: false, reason: 'input', error: 'Paste the story, quote or moment first (a sentence or more).' });
+  const collection = COLLECTIONS.includes(body.collection) ? body.collection : '';
+  const count = Math.max(1, Math.min(LIMITS.concepts, Math.round(Number(body.count) || 4)));
+  const team = body.team && typeof body.team === 'object' ? { name: clip(body.team.name, 80), a: HEX.test(body.team.a) ? body.team.a : '', b: HEX.test(body.team.b) ? body.team.b : '' } : null;
+  const policy = rightsPolicy();
+  const free = reason => json(200, { ok: true, free: true, reason, concepts: null, cost: { usd: 0, cached: false } });
+  const key = `c|${hash(`${content}|${collection}|${count}|${JSON.stringify(team)}|${policy}`)}`;
+  const hit = cacheGet(key);
+  if (hit) return json(200, { ...hit, concepts: hit.concepts.map(c => ({ ...c, id: `mc-${crypto.randomUUID().slice(0, 8)}` })), cost: { usd: 0, cached: true } });
+  const gate = await aiGate(FEATURES.concepts, track);
+  if (gate?.free) return free(gate.free);
+  if (gate?.reply) return gate.reply;
+  const ask = [
+    `Source (the only facts, numbers and quotes you may use):\n"""${content}"""`,
+    collection ? `Collection: ${collection}.` : 'Mix the collections that fit the source.',
+    team?.name ? `Team: ${team.name}${team.a ? `, colours ${team.a} and ${team.b || '#ffffff'}` : ''}.` : '',
+    `Return ${count} concepts.`,
+  ].filter(Boolean).join('\n');
+  let result;
+  try {
+    result = await aiText({ tier: AI_TIER, system: CONCEPTS_SYSTEM, messages: [{ role: 'user', content: ask }], json: true, maxTokens: 2500, timeoutMs: 45000, cacheSystem: true, track: { ...track, feature: FEATURES.concepts } });
+  } catch (error) {
+    if (inFreeMode()) return free('free');
+    if (isBudgetError(error)) return free('budget');
+    console.error('merch concepts failed:', error.message);
+    return json(502, { ok: false, reason: 'ai', error: "The AI couldn't come up with designs right now. Try again, or start from the ready-made designs." });
+  }
+  const parsed = parseJson(result.text);
+  const list = Array.isArray(parsed?.concepts) ? parsed.concepts.slice(0, LIMITS.concepts) : null;
+  if (!list) return json(502, { ok: false, reason: 'ai', error: "The AI's answer came back garbled. Try again in a moment." });
+  const shaped = list.map(c => shapeConcept(c, { content, policy }));
+  const concepts = shaped.filter(s => s.concept).map(s => s.concept);
+  const cost = { usd: Number((result.cost || 0).toFixed(6)), cached: false };
+  if (!concepts.length) return json(200, { ok: true, free: true, reason: 'ai-invalid', concepts: null, dropped: shaped.length, cost });
+  const data = { ok: true, ai: true, concepts, dropped: shaped.length - concepts.length, model: result.model };
+  cacheSet(key, data);
+  return json(200, { ...data, cost });
+}
+
+function suggestedRetail(kind, base) {
+  if (MerchRules?.suggestedPrice) { const v = Number(MerchRules.suggestedPrice(kind, base)); if (v > 0) return round2(v); }
+  const b = Number(base) || 0;
+  return round2(Math.ceil(b + (BLANKS[kind]?.margin || 12)) - 0.01);
+}
+function codeCopy(concept, template) {
+  const words = (concept.stack || []).map(r => r.text).join(' ');
+  const title = clip(`${concept.title || words} ${template.label}`, 70);
+  const description = clip(`${concept.why ? `${concept.why} ` : ''}Printed on a ${template.name || template.label}. Designed by EssentiallySports.`, 400);
+  return { title, description };
+}
+async function copyMode(body, track) {
+  const kind = BLANKS[body.blank] ? body.blank : 'tee';
+  const shaped = shapeConcept(body.concept, { content: clip(body.content, LIMITS.content), policy: rightsPolicy() });
+  if (!shaped.concept) return json(400, { ok: false, reason: 'concept', error: "This design can't be used as it is. Pick or make another design." });
+  const concept = shaped.concept;
+  const template = await templateFor(kind);
+  const retail = suggestedRetail(kind, template.basePrice);
+  const price = rules().marginFor(retail, template.basePrice);
+  const reply = (copy, extra = {}) => json(200, { ok: true, copy: { ...copy, retail, base: template.basePrice, margin: price.ok ? price.margin : null, currency: template.currency }, ...extra });
+  const gate = await aiGate(FEATURES.copy, track);
+  if (gate?.free) return reply(codeCopy(concept, template), { free: true, ai: false, cost: { usd: 0, cached: false } });
+  if (gate?.reply) return gate.reply;
+  const source = clip(body.content, LIMITS.content);
+  const key = `p|${hash(`${kind}|${JSON.stringify(concept.stack)}|${concept.title}|${source}`)}`;
+  const hit = cacheGet(key);
+  if (hit) return reply(hit, { ai: true, cost: { usd: 0, cached: true } });
+  let result;
+  try {
+    result = await aiText({
+      tier: AI_TIER, json: true, maxTokens: 500, timeoutMs: 25000, track: { ...track, feature: FEATURES.copy },
+      system: `You write shop copy for EssentiallySports fan merch. JSON only: {"title":"...","description":"..."}. Title: at most 60 characters, names the design and the product. Description: 2 or 3 short sentences for fans. Never invent numbers, facts or quotes; never call it official or licensed.\n${VOICE}`,
+      messages: [{ role: 'user', content: `Product: ${template.label} (${template.name}).\nDesign rows: ${concept.stack.map(r => r.text).join(' / ')}\nDesign idea: ${concept.title}. ${concept.why}\nSource: """${source}"""` }],
+    });
+  } catch (error) {
+    if (inFreeMode() || isBudgetError(error)) return reply(codeCopy(concept, template), { free: true, ai: false, cost: { usd: 0, cached: false } });
+    console.error('merch copy failed:', error.message);
+    return reply(codeCopy(concept, template), { ai: false, reason: 'ai', cost: { usd: 0, cached: false } });
+  }
+  const cost = { usd: Number((result.cost || 0).toFixed(6)), cached: false };
+  const p = parseJson(result.text) || {};
+  const copy = { title: clip(p.title, 70), description: clip(p.description, 500) };
+  const allText = `${copy.title} ${copy.description}`;
+  const bad = !copy.title || !copy.description || OFFICIAL_RE.test(allText)
+    || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(allText))
+    || (allText.match(NUMBER_RE) || []).some(n => !fold(`${source} ${concept.stack.map(r => r.text).join(' ')}`).includes(fold(n)));
+  if (bad) return reply(codeCopy(concept, template), { ai: false, reason: 'ai-invalid', cost });
+  cacheSet(key, copy);
+  return reply(copy, { ai: true, cost });
+}
+
+// ─── Fourthwall modes ───────────────────────────────────────────────────────
+const fwReply = (error, fallback) => {
+  if (error instanceof fourthwall.FourthwallError) return json(error.status, { ok: false, reason: error.reason, error: error.message, ...(error.code ? { code: error.code } : {}), ...(error.retryAfterS ? { retryAfterS: error.retryAfterS } : {}) });
+  console.error('merch fourthwall failed:', error?.message);
+  return json(502, { ok: false, reason: 'unavailable', error: fallback || 'Fourthwall is unavailable right now. Try again in a moment.' });
+};
+const PRODUCT_ID = /^[\w-]{3,80}$/;
+const IMAGE_ID = /^[\w-]{3,120}$/;
+
+async function uploadUrlMode(body) {
+  const size = Math.round(Number(body.size));
+  if (body.contentType && body.contentType !== 'image/png') return json(400, { ok: false, reason: 'input', error: 'Print files must be PNG.' });
+  if (!(size > 0) || size > LIMITS.uploadBytes) return json(400, { ok: false, reason: 'input', error: 'The print file must be a PNG under 25 MB.' });
+  const fileName = `${clip(body.fileName, 80).replace(/[^\w.-]+/g, '-').replace(/\.png$/i, '') || 'frameup-merch'}.png`;
+  const r = await client().uploadUrl({ fileName, contentType: 'image/png', size });
+  return json(200, { ok: true, uploadUrl: r.uploadUrl, fileUrl: r.fileUrl, expiresAt: r.expiresAt || null, method: 'PUT', contentType: 'image/png' });
+}
+
+async function registerMode(body) {
+  const fileUrl = String(body.fileUrl || '');
+  if (!/^https:\/\/[^\s]{8,2000}$/.test(fileUrl)) return json(400, { ok: false, reason: 'input', error: 'Upload the print file first.' });
+  const width = Math.round(Number(body.width)); const height = Math.round(Number(body.height));
+  if (!(width > 0 && width <= 12000 && height > 0 && height <= 12000)) return json(400, { ok: false, reason: 'input', error: 'The print file size is missing.' });
+  if (BLANKS[body.blank]) {
+    const t = await templateFor(body.blank);
+    const area = body.region ? t.areas.find(a => a.regionId === body.region) : { pixelsWidth: t.printSpec.pixelsWidth, pixelsHeight: t.printSpec.pixelsHeight, name: 'front' };
+    if (!area) return json(400, { ok: false, reason: 'region', error: `This ${t.label.toLowerCase()} has no print area called "${clip(body.region, 40)}".` });
+    if (width !== area.pixelsWidth || height !== area.pixelsHeight) {
+      return json(400, { ok: false, reason: 'print-size', error: `The print file must be ${area.pixelsWidth} x ${area.pixelsHeight} px for the ${String(area.name).toLowerCase()} area. Export it again.` });
+    }
+  }
+  const img = await client().registerImage({ fileUrl, width, height });
+  return json(200, { ok: true, imageId: img.id, uri: img.uri, preview: img.preview, thumbnail: img.thumbnail, width: img.width, height: img.height });
+}
+
+function colorFor(template, name) {
+  const want = clip(name, 60).toLowerCase();
+  const hit = template.colors.find(c => c.name.toLowerCase() === want);
+  return hit ? hit.name : (template.colors.find(c => c.name === template.defaultColor)?.name || template.colors[0]?.name);
+}
+// The design region (front by default, or a chosen area) plus an optional
+// logo region with its own image. Both must be renderable areas of the template.
+function regionsFor(template, body) {
+  const designRegion = clip(body.region || template.printSpec.regionId, 60);
+  const usable = id => template.areas.find(a => a.regionId === id && a.available && a.renderable);
+  if (!IMAGE_ID.test(String(body.imageId || ''))) return { error: 'Upload the print file first.' };
+  if (!usable(designRegion)) return { error: `The ${template.label.toLowerCase()} can't print the design on "${designRegion}". Pick another area.` };
+  const regions = [{ region: designRegion, imageId: body.imageId, placementStrategy: designRegion === template.printSpec.regionId ? template.printSpec.placementStrategy : 'FULL_REGION' }];
+  if (body.logo) {
+    const logoRegion = clip(body.logo.region, 60);
+    if (!IMAGE_ID.test(String(body.logo.imageId || ''))) return { error: 'Upload the logo file first.' };
+    const area = usable(logoRegion);
+    if (!area) return { error: `The ${template.label.toLowerCase()} can't print the logo on "${logoRegion || 'that area'}". Pick another area.` };
+    if (logoRegion === designRegion) return { error: 'Put the logo in a different area from the design.' };
+    regions.push({ region: logoRegion, imageId: body.logo.imageId, placementStrategy: 'FULL_REGION' });
+  }
+  return { regions };
+}
+const pipelineImages = list => (Array.isArray(list) ? list : []).map(i => ({ url: i.url, width: i.width, height: i.height, color: i.color, style: i.style, region: i.region || null })).filter(i => i.url).slice(0, 24);
+
+async function previewMode(body) {
+  const kind = BLANKS[body.blank] ? body.blank : 'tee';
+  const t = await templateFor(kind);
+  const reg = regionsFor(t, body);
+  if (reg.error) return json(400, { ok: false, reason: 'input', error: reg.error });
+  const color = colorFor(t, body.color);
+  const r = await client().customize({ productTemplateId: t.templateId, regions: reg.regions, colors: color ? [color] : undefined });
+  return json(200, { ok: true, customizationId: r.customizationId, images: pipelineImages(r.images), color, templateId: t.templateId, regions: reg.regions.map(x => x.region) });
+}
+
+async function createMode(body, track) {
+  const kind = BLANKS[body.blank] ? body.blank : 'tee';
+  const content = clip(body.content, LIMITS.content);
+  const policy = rightsPolicy();
+  const shaped = shapeConcept(body.concept, { content, policy });
+  if (!shaped.concept) return json(400, { ok: false, reason: 'concept', error: "This design can't go to the shop as it is (it may use a league mark, an invented number or a quote that isn't in the source). Edit it and try again." });
+  const concept = shaped.concept;
+  const title = clip(body.title, 70);
+  if (!title) return json(400, { ok: false, reason: 'input', error: 'Give the product a title.' });
+  const description = clip(body.description, LIMITS.desc);
+  // Rights: under 'acknowledge' every warning (names, nicknames, quotes, teams) needs a tick.
+  const R = rules();
+  const scan = R.scanConcept(concept, { source: content, policy });
+  if (scan.blocked?.length) return json(400, { ok: false, reason: 'rights-blocked', error: scan.blocked[0].reason, blocked: scan.blocked });
+  if (!R.ackCovers(body.ack, scan)) return json(400, { ok: false, reason: 'rights-ack', error: 'Tick the rights check first: this design uses real names, quotes or teams.', items: scan.warnings });
+  const template = await templateFor(kind);
+  const reg = regionsFor(template, body);
+  if (reg.error) return json(400, { ok: false, reason: 'input', error: reg.error });
+  const price = R.marginFor(body.retail, template.basePrice);
+  if (!price.ok) return json(400, { ok: false, reason: 'price', error: price.error });
+  const c = caps(track.email);
+  if (c.person.left <= 0) return json(429, { ok: false, reason: 'daily-cap', error: `You've sent ${CAPS.person} products to the shop today, the daily limit. More tomorrow.`, caps: c });
+  if (c.team.left <= 0) return json(429, { ok: false, reason: 'daily-cap', error: `The team has sent ${CAPS.team} products to the shop today, the daily limit. More tomorrow.`, caps: c });
+  const color = colorFor(template, body.color || concept.garment.name);
+  const started = Date.now();
+  const r = await client().createProduct({
+    productTemplateId: template.templateId,
+    name: title,
+    description,
+    regions: reg.regions,
+    colors: color ? [color] : undefined,
+    profitMargin: price.margin,
+  });
+  countCreate(track.email);
+  const ack = { policy, accepted: Boolean(body.ack?.accepted) || !scan.warnings?.length, by: track.email, at: new Date().toISOString(), statement: R.ACK_STATEMENT, items: (scan.warnings || []).map(w => ({ kind: w.kind, text: w.text })) };
+  let productUrl = '';
+  let slug = '';
+  try {
+    const [p, shop] = await Promise.all([client().product(r.productId), shopInfo()]);
+    slug = p?.slug || '';
+    productUrl = fourthwall.productUrl(shop.publicDomain, slug);
+  } catch { /* the product link fills in on the next read */ }
+  const record = { productId: r.productId, conceptId: concept.id, title, blank: kind, templateId: template.templateId, color, regions: reg.regions.map(x => x.region), state: 'HIDDEN', price: { retail: price.retail, base: price.base, margin: price.margin }, ack, by: track.email, at: ack.at, productUrl };
+  HISTORY.unshift(record); HISTORY.length = Math.min(HISTORY.length, 100);
+  await logUsage({ ...track, feature: 'merch-create', task: 'fourthwall-create' }, { model: 'fourthwall/open-api', ok: true, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started });
+  // `description` is an optional field of CreateDesignProductRequestV1 in both
+  // Fourthwall specs (2026-11), so it is sent; it is echoed back so the UI can
+  // offer "Copy description" if the live shop shows it empty.
+  return json(200, { ok: true, productId: r.productId, state: 'HIDDEN', title, description, images: pipelineImages(r.images), price: record.price, ack, productUrl, slug, caps: caps(track.email), history: 'memory' });
+}
+
+async function stateMode(body, state) {
+  const id = String(body.productId || '');
+  if (!PRODUCT_ID.test(id)) return json(400, { ok: false, reason: 'input', error: 'Which product? The product id is missing.' });
+  const p = await client().setState(id, state);
+  let domain = '';
+  try { domain = (await shopInfo()).publicDomain; } catch { /* link only */ }
+  const product = fourthwall.normalizeProduct(p || { id }, domain);
+  const rec = HISTORY.find(h => h.productId === id); if (rec) rec.state = state;
+  return json(200, { ok: true, product, state });
+}
+
+async function productMode(body) {
+  const id = String(body.productId || '');
+  if (!PRODUCT_ID.test(id)) return json(400, { ok: false, reason: 'input', error: 'Which product? The product id is missing.' });
+  const [p, shop] = await Promise.all([client().product(id), shopInfo().catch(() => ({ publicDomain: '' }))]);
+  return json(200, { ok: true, product: fourthwall.normalizeProduct(p, shop.publicDomain) });
+}
+
+async function statusMode(track) {
+  const configured = fourthwall.configured();
+  let shop = null; let shopError = '';
+  if (configured) { try { shop = await shopInfo(); } catch (error) { shopError = error.message || 'Fourthwall is unavailable right now.'; } }
+  const push = await canPush(track);
+  return json(200, {
+    ok: true, configured, shop, shopError, canPush: push, caps: caps(track.email), rightsPolicy: rightsPolicy(),
+    blanks: Object.keys(BLANKS), history: 'memory', notice: configured ? (push ? '' : NO_PUSH) : NOT_SET_UP,
+  });
+}
+
+// ─── Handler ────────────────────────────────────────────────────────────────
+const PUSH_MODES = new Set(['upload-url', 'register', 'preview', 'create', 'publish', 'hide']);
+const FW_MODES = new Set([...PUSH_MODES, 'product']);
+exports.handler = withAiMode(async function handler(event) {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
+  if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed.' });
+  const auth = await verifyEsUser(event);
+  if (!auth.ok) return json(auth.statusCode, { ok: false, error: auth.error });
+  if (String(event.body || '').length > LIMITS.body) return json(413, { ok: false, error: 'That request is too large.' });
+  let body = {};
+  try { body = JSON.parse(event.body || '{}') || {}; } catch { return json(400, { ok: false, error: 'Invalid request.' }); }
+  const track = { email: auth.user.email, token: bearerToken(event.headers), runId: `mr-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 6)}` };
+  const mode = String(body.mode || '');
+  try {
+    if (mode === 'status') return await statusMode(track);
+    if (mode === 'templates') {
+      const kinds = BLANKS[body.blank] ? [body.blank] : Object.keys(BLANKS);
+      const templates = await Promise.all(kinds.map(k => templateFor(k)));
+      return json(200, { ok: true, templates });
+    }
+    if (mode === 'concepts') return await conceptsMode(body, track);
+    if (mode === 'copy') return await copyMode(body, track);
+    if (FW_MODES.has(mode)) {
+      if (!fourthwall.configured()) return json(503, { ok: false, reason: 'not-set-up', error: NOT_SET_UP });
+      if (PUSH_MODES.has(mode) && !(await canPush(track))) return json(403, { ok: false, reason: 'no-push', error: NO_PUSH });
+      if (mode === 'upload-url') return await uploadUrlMode(body);
+      if (mode === 'register') return await registerMode(body);
+      if (mode === 'preview') return await previewMode(body);
+      if (mode === 'create') return await createMode(body, track);
+      if (mode === 'publish') return await stateMode(body, 'PUBLIC');
+      if (mode === 'hide') return await stateMode(body, 'HIDDEN');
+      if (mode === 'product') return await productMode(body);
+    }
+    if (['archive', 'list', 'upload-relay'].includes(mode)) return json(501, { ok: false, reason: 'not-yet', error: "This isn't switched on yet. Use the Fourthwall dashboard for now." });
+    return json(400, { ok: false, error: 'Unknown request.' });
+  } catch (error) {
+    return fwReply(error, 'Merch is unavailable right now. Try again in a moment.');
+  }
+});
+
+exports._test = {
+  FEATURES, CAPS, LIMITS, COLLECTIONS, BLANKS, NOT_SET_UP, NO_PUSH, InlineRules, rules, usingDesignRules: () => Boolean(MerchRules),
+  shapeConcept, pickArea, listAreas, regionsFor, qualifies, normalizeTemplate, snapshotTemplate, templateFor, suggestedRetail, codeCopy, caps, countCreate, pushers, HISTORY,
+  setClientFactory(fn) { clientFactory = fn; },
+  reset() { DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); SHOP.at = 0; SHOP.data = null; },
+};

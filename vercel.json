@@ -184,6 +184,9 @@
     },
     "api/meta-ads.js": {
       "maxDuration": 120
+    },
+    "api/merch.js": {
+      "maxDuration": 120
     }
   },
   "crons": [
