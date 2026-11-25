@@ -189,8 +189,10 @@ await test('plan: style picked or suggested (code, free; ES Reels is the house s
   assert.equal(auto.body.style, 'es');
   assert.equal(auto.body.suggestedStyle.id, 'es');
   assert.equal(auto.body.plan.style, 'es');
-  const picked = await call({ mode: 'plan', brief: 'Moneyball for the Steelers: cap space is the problem and the draft is the fix.', style: 'explainer' });
-  assert.equal(picked.body.style, 'explainer');
+  // Reels 2.0: the old styles are retired, so a request for one is written as ES; the look rides along.
+  const picked = await call({ mode: 'plan', brief: 'Moneyball for the Steelers: cap space is the problem and the draft is the fix.', style: 'explainer', look: 'data' });
+  assert.equal(picked.body.style, 'es');
+  assert.equal(picked.body.plan.look, 'data');
 });
 
 await test('diag=voice: admins only (fails closed), one tiny synthesis, no audio or key in the answer', async () => {

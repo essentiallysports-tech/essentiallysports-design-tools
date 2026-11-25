@@ -1020,7 +1020,7 @@
     // 1. Script.
     // ── Reels 2.0: D (interface) ── the recipe: its steer and block order for the script writer.
     const recipe = RC ? RC.planRequest(state.recipe, { format: state.format }) : { format: state.format, steer: '' };
-    const body = { mode: 'plan', brief, trend, format: recipe.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style, ...(recipe.steer ? { steer: recipe.steer } : {}) };
+    const body = { mode: 'plan', brief, trend, format: recipe.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style, look: lookId(), ...(recipe.steer ? { steer: recipe.steer } : {}) };
     logStart();
     try {
       const data = await api(body);
@@ -3920,7 +3920,7 @@
     if (stage === 'script') {
       run.brief = dataBrief();
       run.title = dataTitle();
-      const body = { mode: 'plan', brief: run.brief, format: fmt, sport: src.sport || '', tier: state.tier, style: state.style, steer: state.angle.slice(0, 300), source: src, title: run.title.slice(0, 90), ...planData(fmt) };
+      const body = { mode: 'plan', brief: run.brief, format: fmt, sport: src.sport || '', tier: state.tier, style: state.style, look: lookId(), steer: state.angle.slice(0, 300), source: src, title: run.title.slice(0, 90), ...planData(fmt) };
       try {
         const data = await api(body);
         state.spent.director += Number(data.costs?.director) || 0;

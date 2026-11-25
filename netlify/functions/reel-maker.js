@@ -180,10 +180,12 @@ function sourcesOf(trend, brief, facts) {
 // Haiku pass rewrites the words (numbers only from the facts). Over a cap or
 // with AI off, the code plan ships as it is (free).
 async function dataPlan(input, body, track, gates) {
-  const style = STYLES.STYLES[body.style] ? body.style : F.FORMATS[input.format].defaultStyle;
+  // Reels 2.0: retired styles are written as ES; the person's look rides along.
+  const style = STYLES.currentStyle(STYLES.STYLES[body.style] ? body.style : F.FORMATS[input.format].defaultStyle);
+  const look = clean(body.look, 20);
   const blocked = gates.free ? 'free' : gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : '')); // ai-free-mode: 'free' = code plan
   const tier = body.tier === 'economy' ? 'economy' : 'standard';
-  const out = await director.runDataDirector(input, { style, tier: body.aiCopy === false ? 'off' : tier, steer: clean(body.steer, 300), voice: body.voice === true, blocked, track });
+  const out = await director.runDataDirector(input, { style, look, tier: body.aiCopy === false ? 'off' : tier, steer: clean(body.steer, 300), voice: body.voice === true, blocked, track });
   if (!out.plan) return { ok: false, status: 422, reason: 'no-data', error: 'There is not enough data for this reel; use the brief.' };
   const MAXP = require('../../reel-data.js').MAX_KEY_PLAYS;
   const dropped = input.playIds && input.playIds.length > MAXP ? [`Kept the ${MAXP} strongest of your ${input.playIds.length} ticked plays.`] : [];
@@ -215,7 +217,8 @@ async function plan(body, track, gates) {
   const steer = clean(body.steer, 300);
   // Style: the editor's pick, or 'auto' = the code suggestion (free).
   const suggested = STYLES.suggestStyle({ format, text: [trend?.title, ...(trend?.related || []).map(r => r.title), brief].filter(Boolean).join(' ') });
-  const style = STYLES.STYLES[body.style] ? body.style : suggested.id;
+  const style = STYLES.currentStyle(STYLES.STYLES[body.style] ? body.style : suggested.id);
+  const look = clean(body.look, 20);
   const key = planKey([trend?.id || trend?.title || '', brief, format, tier, steer, sport, Boolean(body.factCheck), style]);
   const hit = PLAN_CACHE.get(key);
   if (hit && Date.now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: 0, costs: { director: 0, factCheck: 0 } };
@@ -249,9 +252,10 @@ async function plan(body, track, gates) {
     const draft = F.fallbackPlan({ brief: read.text, title: trend ? trend.title : '', format: read.format, sport: read.sport });
     draft.team = read.team;
     draft.style = style;
+    if (look) draft.look = look;
     result = { plan: draft, read, source: 'draft', cost: 0, model: '', issues: [] };
   } else {
-    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, track, facts: extraFacts });
+    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, look, track, facts: extraFacts });
   }
   const corpus = result.read.corpus;
   const value = {

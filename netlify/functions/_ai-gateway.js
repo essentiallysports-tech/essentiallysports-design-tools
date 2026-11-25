@@ -150,6 +150,9 @@ const FEATURE_NAMES = [
   ['video-ads-rating', 'Ad rating'],
   ['meta-ads', 'Competitor ads'],
   ['reels-transcription', 'Automatic captions'],
+  ['reels-ideas', 'The Reels ideas room'],
+  ['reels-radar', 'The Reels trend radar'],
+  ['reels-voice-align', 'Voiceover sync'],
 ];
 // A call is switched off when its feature or its task is listed.
 function trackDisabled(track) {
