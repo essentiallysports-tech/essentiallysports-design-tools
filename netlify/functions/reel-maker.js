@@ -98,6 +98,7 @@ const clean = (value, max = 400) => String(value == null ? '' : value).replace(/
 // picked out here by league words, so those lists are thin (general sports
 // headlines and trending searches only).
 const TREND_SPORTS = [...REEL_SPORTS, 'tennis', 'nba', 'wnba', 'nascar'];
+const TRENDS_PER_SPORT = 12;
 const OTHER_LEAGUES = [
   ['wnba', /\bwnba\b|caitlin clark|a'ja wilson|angel reese/i],
   ['nba', /\bnba\b|\b(?:lakers|celtics|warriors|knicks|bucks|nuggets|mavericks|cavaliers|timberwolves)\b|lebron|steph(?:en)? curry|giannis|luka doncic|wembanyama/i],
@@ -116,13 +117,15 @@ async function trends() {
   ]);
   const since = Date.now() - TREND_HOURS * 3600e3;
   const seen = new Set();
+  const perSport = {};
   const items = [...(data.items || []), ...((day && day.items) || [])]
     .filter(item => item && !seen.has(item.id) && seen.add(item.id))
     .map(item => ({ item, sport: trendSport(item) }))
     .filter(({ sport }) => TREND_SPORTS.includes(sport))
     .filter(({ item }) => !item.publishedAt || new Date(item.publishedAt).getTime() >= since)
     .sort((a, b) => (b.item.rank || 0) - (a.item.rank || 0))
-    .slice(0, 60)
+    // At most 12 a sport, so a busy league never crowds a quiet one off the list.
+    .filter(({ sport }) => { perSport[sport] = (perSport[sport] || 0) + 1; return perSport[sport] <= TRENDS_PER_SPORT; })
     .map(({ item, sport }) => {
       const ai = cachedEnrichment(item.id);
       return {
