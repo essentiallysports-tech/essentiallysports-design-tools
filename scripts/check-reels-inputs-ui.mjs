@@ -253,7 +253,7 @@ try {
     const r = await evaluate(`(async () => {
       const s = qa.ctx().state; const target = s.plan.beats[0].id;
       const dt = new DataTransfer(); dt.items.add(await qa.png('dropped.png', '#FFC52F'));
-      const chip = document.querySelector('#rm-strip [data-pick="' + target + '"]');
+      const chip = document.querySelector('#rm-beats [data-ri-beat="' + target + '"]');
       chip.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: dt }));
       const shown = !document.querySelector('.ri-drop').hidden;
       chip.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt }));

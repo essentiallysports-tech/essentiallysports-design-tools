@@ -173,7 +173,7 @@
           <span class="rm-media__thumb${img ? '' : ' is-empty'}" aria-hidden="true">${img ? (img.tagName === 'CANVAS' ? '<span data-sb-poster></span>' : `<img src="${esc(img.src)}" alt="">`) : ICON.image}</span>
           <div class="rm-media__meta"><p class="rm-media__src">${esc(SOURCE[src] || src)}${asset && asset.rights && asset.rights.credit ? ` · ${esc(asset.rights.credit)}` : ''}</p>
             <p class="rm-hint">${note ? esc(note) : 'Drop a photo or clip here.'}</p></div>
-          <div class="rm-media__actions" role="group" aria-label="Picture for scene ${i + 1}">
+          <div class="rm-media__toolbar" role="group" aria-label="Picture for scene ${i + 1}">
             ${btn('photo', 'Use an ES photo', ICON.image)}${btn('swap-clip', clip ? 'Swap the clip' : 'Use a clip', ICON.film)}${btn('upload', 'Upload a photo or clip', ICON.upload)}${state.plan.team ? btn('tile', 'Use the team graphic', ICON.shield) : ''}${canAi ? btn('ai-clip', 'Use an AI clip', ICON.sparkles) : (state.config.ai ? btn('scene', 'Use an AI scene', ICON.sparkles) : '')}
           </div></div>`;
       }
@@ -208,16 +208,16 @@
             <button class="rm-card__face" type="button" data-sb-face draggable="${end ? 'false' : 'true'}" aria-pressed="${on}" aria-label="Scene ${i + 1} of ${n}, ${esc(name)}${time ? `, ${time}` : ''}. ${end ? 'Always last.' : 'Alt and an arrow key moves it.'}">
               <canvas class="rm-card__thumb" width="${tw}" height="${th}" data-sb-thumb aria-hidden="true"></canvas>
               <span class="rm-card__n" aria-hidden="true">${i + 1}</span>
+              <span class="rm-card__cap" aria-hidden="true">${esc(name)}</span>
             </button>
             <div class="rm-card__side">
-              <p class="rm-card__name"><span>${esc(name)}</span>${voiced ? '<span class="rm-beat__vo" title="Voiceover ready">VO</span>' : ''}</p>
-              <p class="rm-beat__time rm-card__time">${time}</p>
+              <p class="rm-card__meta"><span class="rm-beat__time">${time}</span>${voiced ? '<span class="rm-beat__vo" title="Voiceover ready">VO</span>' : ''}</p>
               ${side}
-              <div class="rm-card__tools" role="group" aria-label="Scene ${i + 1}">
-                ${end ? '' : `<button class="rm-icon-btn rm-icon-btn--sm" type="button" data-sb-move="-1" aria-label="Move scene ${i + 1} left" title="Move left"${canMove(n, i, i - 1, endI) ? '' : ' disabled'}>${ICON.left}</button>
+              ${end ? '' : `<div class="rm-card__tools" role="group" aria-label="Scene ${i + 1}">
+                <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-sb-move="-1" aria-label="Move scene ${i + 1} left" title="Move left"${canMove(n, i, i - 1, endI) ? '' : ' disabled'}>${ICON.left}</button>
                 <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-sb-move="1" aria-label="Move scene ${i + 1} right" title="Move right"${canMove(n, i, i + 1, endI) ? '' : ' disabled'}>${ICON.chevronRight}</button>
-                <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-remove aria-label="Delete scene ${i + 1}" title="Delete"${n <= 2 ? ' disabled' : ''}>${ICON.trash}</button>`}
-              </div>
+                <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-remove aria-label="Delete scene ${i + 1}" title="Delete"${n <= 2 ? ' disabled' : ''}>${ICON.trash}</button>
+              </div>`}
             </div>
           </div>
           <div class="rm-card__body">${body}<p class="rm-beat__flag" aria-live="polite"></p></div>
@@ -293,7 +293,7 @@
         });
         const card = cardOf(id);
         if (!card) return;
-        card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        (card.querySelector('[data-sb-face]') || card).scrollIntoView({ block: 'nearest', inline: 'nearest' });
         if (focus) (card.querySelector('.rm-card__body input, .rm-card__body textarea') || card.querySelector('[data-sb-face]'))?.focus({ preventScroll: true });
       }
 

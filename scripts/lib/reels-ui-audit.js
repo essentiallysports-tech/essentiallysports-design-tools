@@ -120,7 +120,7 @@
     const col = s.display.includes('grid') ? true : s.flexDirection.startsWith('column');
     const gap = parseFloat(col ? s.rowGap : s.columnGap) || 0;
     if (gap < 1) return;
-    const kids = [...p.children].filter(k => { const sk = css(k); return sk.display !== 'none' && !/(absolute|fixed)/.test(sk.position) && !k.matches('script, style, template, input[type=file], dialog:not([open])'); });
+    const kids = [...p.children].filter(k => { const sk = css(k); return sk.display !== 'none' && sk.display !== 'contents' && !/(absolute|fixed)/.test(sk.position) && !k.matches('script, style, template, input[type=file], dialog:not([open])'); });
     if (kids.length < 2) return;
     kids.forEach(k => {
       const r = k.getBoundingClientRect();

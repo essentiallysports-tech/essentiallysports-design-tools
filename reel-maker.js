@@ -82,7 +82,9 @@
   const KIND_NAME = { hook: 'Hook', context: 'Context', point: 'Point', stat: 'Stat', rank: 'Rank', quote: 'Quote', payoff: 'Why it matters', cta: 'End card', bars: 'Bars', versus: 'Versus', dotrank: 'Dot ranking', chips: 'Squares', steps: 'Steps', tiles: 'Team tiles', roles: 'Position cards', mystery: 'Mystery card', play: 'Play', wpline: 'Win probability', moment: 'Moment', panel3: '3 frames' };
   // Where a beat's picture came from (the fill chain), in plain words.
   const SOURCE_NAME = { 'x-clip': 'Official X clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', paper: 'ES paper (no photo)', none: 'Nothing yet (plain black)' };
-  const SPORT_LABEL = { nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', golf: 'Golf' };
+  // ── Reels 2.0: D (interface) ── trends cover NBA, WNBA, tennis and NASCAR too (lane B).
+  const SPORT_LABEL = { nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', golf: 'Golf', nba: 'NBA', wnba: 'WNBA', tennis: 'Tennis', nascar: 'NASCAR' };
+  const TREND_SPORTS = Object.keys(SPORT_LABEL);
   const LOCAL_KEY = 'frameup.reels.projects.v1';
   const HANDOFF_KEY = 'frameup.reelMoment.v1';
   const MEDIABUNNY = 'https://cdn.jsdelivr.net/npm/mediabunny@1.62.1/+esm';
@@ -513,7 +515,9 @@
     return `<span class="rm-league" style="--tile:${esc(logo.bg)};--size:${size}px" title="${esc(logo.label)}"><img src="${esc(logo.src)}" alt="" loading="lazy"></span>`;
   }
   function renderLeagues() {
-    const list = [['all', 'All'], ['nfl', 'NFL'], ['cfb', 'CFB'], ['mlb', 'MLB'], ['golf', 'Golf']];
+    // The four core leagues always show; the newer ones show when they have a story.
+    const extra = ['nba', 'wnba', 'tennis', 'nascar'].filter(id => state.trends.some(t => t.sport === id) || state.league === id).map(id => [id, SPORT_LABEL[id]]);
+    const list = [['all', 'All'], ['nfl', 'NFL'], ['cfb', 'CFB'], ['mlb', 'MLB'], ['golf', 'Golf'], ...extra];
     els.leagues.innerHTML = list.map(([id, label]) => `<button class="es-chip" type="button" role="radio" aria-checked="${state.league === id}" tabindex="${state.league === id ? 0 : -1}" data-league="${id}">${id === 'all' ? '' : leagueTile(id, 16)}${label}</button>`).join('');
   }
   els.leagues.addEventListener('click', event => {
@@ -615,12 +619,13 @@
       const data = await api({ mode: 'trends' });
       state.trends = data.items || [];
       state.trendsState = 'ready';
+      renderLeagues();
     } catch (error) {
       // Static previews have no API: the public trends endpoint is tried too.
       try {
         const response = await fetch('/api/trend-design');
         const data = await response.json();
-        state.trends = (data.items || []).filter(i => ['nfl', 'cfb', 'mlb', 'golf'].includes(i.category)).map(i => ({ id: i.id, sport: i.category, title: i.title, url: i.url, publishedAt: i.publishedAt, team: i.team?.name || '', format: F.routeFormat(i.title).format, related: (i.related || []).slice(0, 4) }));
+        state.trends = (data.items || []).filter(i => TREND_SPORTS.includes(i.category)).map(i => ({ id: i.id, sport: i.category, title: i.title, url: i.url, publishedAt: i.publishedAt, team: i.team?.name || '', format: F.routeFormat(i.title).format, related: (i.related || []).slice(0, 4) }));
         state.trendsState = 'ready';
       } catch {
         state.trendsState = 'error';
@@ -1070,6 +1075,7 @@
     state.status = 'draft';
     state.t = 0;
     state.versions = null; state.version = 0; state.scene = -1; // ── Reels 2.0: D (interface) ──
+    if (RC && RC.get(plan.recipe) && state.recipe !== plan.recipe) { state.recipe = plan.recipe; renderRecipes(); }
     loadTeamLogo();
     rebuild();
     renderEdit();
@@ -1760,6 +1766,13 @@
   });
 
   // ─── Step 2: Edit ────────────────────────────────────────────────────────
+  // The fan-pulse poll idea that comes with a plan from the ideas room (a caption idea, not part of the video).
+  function pollHtml(poll) {
+    const q = poll && String(poll.question || (typeof poll === 'string' ? poll : '')).trim();
+    if (!q) return '';
+    const options = Array.isArray(poll.options) ? poll.options.map(o => String(o).trim()).filter(Boolean).slice(0, 4) : [];
+    return `<p class="rm-poll"><span class="rm-poll__tag">Poll idea</span><span>${esc(q)}${options.length ? ` <span class="rm-meta">${options.map(esc).join(' · ')}</span>` : ''}</span></p>`;
+  }
   function renderEdit() {
     const plan = state.plan;
     const fmt = F.FORMATS[plan.format];
@@ -1767,9 +1780,11 @@
     els.notice.innerHTML = state.notice ? `${ICON.info}<p>${esc(state.notice)}</p>` : '';
     const teamChip = plan.team ? `<span class="rm-teamchip">${plan.team.logo ? `<span class="es-team-logo" style="--logo:20px"><img src="${esc(plan.team.logo)}" alt="" onerror="this.parentNode.classList.add('es-team-logo--dot')"></span>` : ''}${esc(plan.team.name)}</span>` : '';
     const share = clipShare();
-    els.summary.innerHTML = `<p class="rm-summary__eyebrow">${esc(S.get(styleId()).label)} · ${esc(fmt.label)}${plan.sport ? ` · ${esc(SPORT_LABEL[plan.sport] || plan.sport)}` : ''}${state.planSource === 'director-sonnet' ? ' · <span class="ais-badge" title="Sonnet improved a weak first draft">Sonnet</span>' : ''}</p>
+    const recipeName = RC && RC.get(plan.recipe) ? RC.get(plan.recipe).label : fmt.label;
+    els.summary.innerHTML = `<p class="rm-summary__eyebrow">${esc(S.get(styleId()).label)} · ${esc(recipeName)}${plan.sport ? ` · ${esc(SPORT_LABEL[plan.sport] || plan.sport)}` : ''}${state.planSource === 'director-sonnet' ? ' · <span class="ais-badge" title="Sonnet improved a weak first draft">Sonnet</span>' : ''}</p>
       <p class="rm-summary__title">${esc(plan.title || 'Untitled reel')}</p>
       ${plan.angle ? `<p class="rm-summary__angle">${esc(plan.angle)}</p>` : ''}${teamChip}
+      ${pollHtml(plan.poll)}
       ${plan.hooks?.length && !state.versions ? `<div class="rm-hooks"><span>Other hooks</span>${plan.hooks.map((h, i) => `<button class="es-chip" type="button" data-hook="${i}">${esc(h)}</button>`).join('')}</div>` : ''}`;
     void share;
     renderBeats();
@@ -4410,7 +4425,7 @@
         state.source = 'brief'; state.words = 'brief'; state.start = 'words';
         els.brief.value = q.get('brief').slice(0, 2400);
       } else if (m && m.title) {
-        state.trend = { id: String(m.id || 'trend-link'), title: String(m.title).slice(0, 300), sport: ['nfl', 'cfb', 'mlb', 'golf'].includes(m.sport) ? m.sport : '', team: m.team || '', url: m.url || '', why: m.why || '', related: Array.isArray(m.related) ? m.related.slice(0, 4) : [] };
+        state.trend = { id: String(m.id || 'trend-link'), title: String(m.title).slice(0, 300), sport: TREND_SPORTS.includes(m.sport) ? m.sport : '', team: m.team || '', url: m.url || '', why: m.why || '', related: Array.isArray(m.related) ? m.related.slice(0, 4) : [] };
         if (!state.trends.some(t => t.id === state.trend.id)) state.trends.unshift({ ...state.trend, format: F.routeFormat(state.trend.title).format });
       }
       sessionStorage.removeItem(HANDOFF_KEY);
@@ -4484,6 +4499,8 @@
     if (name === 'ideas' || name === 'radar') { queueMicrotask(() => document.getElementById('rb-entry')?.remove()); syncStart(); if (startOf() === 'inspo') mountInspo(); }
     if (name === 'storyboard' && state.plan) renderBeats();
   });
+  // Room for the rail in a column of its own? (The work area's own width: the app sidebar takes a share of the window.)
+  if (window.ResizeObserver) new ResizeObserver(entries => { els.work.classList.toggle('is-wide', entries[0].contentRect.width >= 1340); }).observe(els.work);
   try { if (localStorage.getItem('frameup.reels.calm.v1') === '1' || (localStorage.getItem('frameup.reels.calm.v1') == null && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)) setCalm(true); } catch { /* default: full motion */ }
   window.ReelMakerCtx = pageCtx;
   document.dispatchEvent(new CustomEvent('reelmaker:ready', { detail: { ctx: pageCtx } }));
