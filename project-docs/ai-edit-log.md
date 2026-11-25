@@ -4,6 +4,14 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-25 — Suhail (Claude): Merch Designs server, tee core path (branch feature/merch-server)
+- Status: committed, not pushed (4a2a022 + this log).
+- Files: `netlify/functions/_fourthwall.js` (Fourthwall Beta adapter: Basic auth from env never logged, timeouts, 429 jittered retries, 5/min queue for creates + customizations, plain-English errors), `netlify/functions/_merch-templates.js` (curated tee: Gildan Heavyweight DTG `pro_e4677535402b4eeb81`, alternate AS Colour `pro_EJBSRKhJSd2unv4ZnGKwdQ`, search + snapshot fallback), `netlify/functions/merch.js` + `api/merch.js` (modes status, templates, concepts, copy, upload-url, register, preview, create (always hidden), publish, hide, product; archive / list / upload-relay answer 501 for now), `vercel.json` (maxDuration 120), `_ai-gateway.js` FEATURE_NAMES (`merch-concepts`, `merch-copy`).
+- Push modes need an admin or an email in `MERCH_PUSHERS`; create needs the rights acknowledgement (policy `MERCH_RIGHTS_POLICY`, default acknowledge). Daily caps 10/person, 30/team are kept in server memory until the history table lands (per instance: not a hard team cap yet).
+- The ES logo goes in its own print area (templates return every non-embroidery area; `suitsLogo` marks the sleeves). preview / create take `region` + optional `logo: { region, imageId }`.
+- Tests: `scripts/test-merch.mjs` (fully mocked; passes with the inline rights fallback and with the DESIGN branch's merch-rules.js), `run-suite.sh merch ai-free ai-guard ai-weekly`, inline-syntax.
+- Unverified (needs the live shop): a real create, the description showing on the product, CORS on the signed upload URL (browser PUT), mockup rendering of the sleeve logo, the 5/min limit across instances.
+
 ## 2026-11-21 — Suhail (Claude): Dashboard Newsletter tab; Newsletter exports record asset and newsletter (branch feature/dashboard-newsletter-exports)
 - Status: committed, not pushed (d2f1442 + cache keys / notes commit).
 - Why (owner): "make me see in dashboard what all newsletter exports people are doing."
