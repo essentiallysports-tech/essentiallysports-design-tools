@@ -4,16 +4,18 @@
 // admins and the emails in MERCH_PUSHERS. Products are always created HIDDEN;
 // a person checks the mockups, then publishes.
 //
-// First release (owner, 2026-11-25): tee only, history kept in memory and
-// returned in replies (no tables yet). Archive, list, upload-relay and the
-// history migration come later.
+// v2 (2026-11-26): five blanks (tee, hoodie, poster, sticker, mug), history in
+// Supabase (_merch-store.js; memory until the migration runs), archive, list,
+// collections, sales (webhook + daily sync), upload relay and product refresh.
 //
 // One endpoint, POST { mode, ... } (signed-in ES users only):
 //   status      -> { configured, shop: { name, publicDomain, status } | null, canPush,
 //                    caps: { person: {used, limit, left}, team: {...} }, rightsPolicy, blanks }
-//   templates   { blank? } -> { templates: [{ templateId, printSpec, areas: [{ regionId, pixelsWidth,
-//               pixelsHeight, dpi, renderable, suitsLogo, suitsDesign }], colors, sizes, basePrice }] }
-//               (public Fourthwall reads, cached 24 h). upload-url + register run once per image.
+//   templates   { blank? } -> { templates: [{ blank, kind, label, templateId, printSpec: { ..., kind, minDpi,
+//               wrap }, areas: [{ regionId, pixelsWidth, pixelsHeight, dpi, renderable, suitsLogo,
+//               suitsDesign }], colors, sizes, basePrice, apparel, minDpi, wrap, logo: 'area'|'inside',
+//               pricing: { suggested, margin, base } }] } (no blank = all five; public Fourthwall
+//               reads, cached 24 h). upload-url + register run once per image.
 //   concepts    { content, collection?, count?, team? } -> { concepts: Concept[] } (AI, main tier)
 //               free mode: { free: true, concepts: null } (the browser uses MerchPrint.fallbackConcepts)
 //   copy        { concept, content?, blank? } -> { copy: { title, description, retail, base, margin } }
@@ -26,11 +28,27 @@
 //               in its own small area the person picks (templates -> areas[].suitsLogo).
 //               -> { productId, state: 'HIDDEN', images, price: { retail, base, margin }, ack, productUrl }
 //   publish / hide { productId } -> { product }                                                  [push]
-//   product     { productId } -> { product } (with its shop URL)
+//   product     { productId, refresh? } -> { product } (with its shop URL; refresh also updates the
+//               stored mockups, variants, prices and state)
+//   archive     { productId, confirm: true, confirmName? } -> { product: { productId, state: 'archived' } }
+//               PERMANENT (DELETE /products/{id}); admins only; only products FrameUp made.   [admin]
+//   list        { page? } -> { products: [{ productId, title, url, state ('hidden'|'public'|'private'|
+//               'archived'), thumb, blank, color, createdAt, createdBy, units30, revenue30 }],
+//               source: 'db'|'fourthwall', page, more }
+//   collections -> { collections: [{ id, name, slug, count }] }
+//   collection-create { name } -> { collection: { id, name, slug, count } }                     [push]
+//   collection-set { productId, collectionIds: [] } -> { ok, collections: [{ id, name, count, has }],
+//               changed: [ids] } (read-modify-write per collection: PUT replaces the whole list) [push]
+//   sales       { productId? } -> { products: [{ productId, units7, revenue7, units30, revenue30,
+//               unitsAll, revenueAll }], updatedAt, source: 'db'|'none' }
+//   upload-relay { path: '<user id>/<file>.png', uploadUrl, size } -> { ok: true, size }          [push]
+//               (the browser uploads to Supabase Storage merch-art first, when the direct PUT
+//               to Fourthwall's storage fails on CORS; the server streams it on and deletes it)
 //
 // Env (server only): FOURTHWALL_API_USERNAME, FOURTHWALL_API_PASSWORD (Basic auth),
 // MERCH_PUSHERS (comma-separated emails), MERCH_RIGHTS_POLICY ('acknowledge' default
-// | 'strict'), MERCH_TEMPLATES ("tee=<template id>", optional pin).
+// | 'strict'), MERCH_TEMPLATES ("tee=<template id>", optional pin), SUPABASE_SERVICE_ROLE_KEY
+// (history, sales, upload relay; optional).
 
 const crypto = require('node:crypto');
 const { verifyEsUser, bearerToken, authConfig } = require('./_supabase-auth.js');
@@ -40,6 +58,7 @@ const {
 } = require('./_ai-gateway.js');
 const fourthwall = require('./_fourthwall.js');
 const { BLANKS } = require('./_merch-templates.js');
+const store = require('./_merch-store.js');
 
 let FrameUpRules = null;
 try { FrameUpRules = require('../../frameup-rules.js'); } catch { FrameUpRules = null; }
@@ -178,6 +197,24 @@ function caps(email, now = new Date()) {
     resetsAt: `${DAILY.day}T23:59:59Z`,
   };
 }
+// Caps that survive cold starts: the higher of this instance's count and the
+// history table's (when it exists).
+async function capsFor(email, now = new Date()) {
+  const c = caps(email, now);
+  if (!store.available()) return c;
+  const since = `${today(now)}T00:00:00Z`;
+  const [mine, team] = await Promise.all([
+    store.soft(() => store.createdSince(since, email), null, 'merch caps'),
+    store.soft(() => store.createdSince(since), null, 'merch caps'),
+  ]);
+  const person = Math.max(c.person.used, Number(mine) || 0);
+  const all = Math.max(c.team.used, Number(team) || 0);
+  return {
+    person: { used: person, limit: CAPS.person, left: Math.max(0, CAPS.person - person) },
+    team: { used: all, limit: CAPS.team, left: Math.max(0, CAPS.team - all) },
+    resetsAt: c.resetsAt,
+  };
+}
 function countCreate(email, now = new Date()) {
   rollDay(now);
   const key = String(email).toLowerCase();
@@ -217,14 +254,15 @@ function pickArea(template, prefer = []) {
 // available first). Small areas (sleeves, neck labels, back neck) suit the ES
 // logo; the person picks one. Only `renderable` areas can go on a product.
 const LOGO_AREA_RE = /sleeve|neck|label|nape|pocket|chest_small|left_chest/i;
-function listAreas(template) {
+function listAreas(template, mainRegionId = '') {
   const out = new Map();
   (Array.isArray(template?.customizableAreas) ? template.customizableAreas : []).forEach(a => {
     if (!a?.regionId || /EMBROIDERY/i.test(String(a.productionMethod || '')) || !(a.dimensions?.pixelsWidth > 0)) return;
     const prev = out.get(a.regionId);
     if (prev && (prev.available || !a.available)) return;
     const d = a.dimensions;
-    const small = d.pixelsWidth * d.pixelsHeight <= 1200 * 1200 || LOGO_AREA_RE.test(a.regionId);
+    // The main print area is always the design area (a sticker's 900 x 900 is small but is the design).
+    const small = a.regionId !== mainRegionId && (d.pixelsWidth * d.pixelsHeight <= 1200 * 1200 || LOGO_AREA_RE.test(a.regionId));
     out.set(a.regionId, {
       regionId: a.regionId, name: clip(a.name, 60), type: clip(a.type, 40), available: Boolean(a.available),
       renderable: a.supportsBackendRendering !== false, productionMethod: clip(a.productionMethod, 30),
@@ -242,26 +280,38 @@ function qualifies(template, blank) {
   if (/EMBROIDERY/i.test(String(template.productionMethod || ''))) return false;
   return Boolean(pickArea(template, blank.regionPrefer));
 }
+// What every template reply carries per blank: print kind and checks for the
+// print engine, the ES logo rule and the suggested price.
+function blankInfo(kind, base) {
+  const b = BLANKS[kind];
+  const suggested = suggestedRetail(kind, base);
+  const price = base == null ? { ok: false } : rules().marginFor(suggested, base);
+  return {
+    blank: kind, kind, label: b.label, apparel: b.apparel, minDpi: b.minDpi, wrap: b.wrap, logo: b.logo,
+    pricing: { suggested, margin: price.ok ? price.margin : null, base: base == null ? null : round2(base) },
+  };
+}
 function normalizeTemplate(kind, t, source) {
   const blank = BLANKS[kind];
   const area = pickArea(t, blank.regionPrefer);
   const variants = (Array.isArray(t.colorVariants) ? t.colorVariants : []).filter(c => c && c.available !== false && c.color?.name && HEX.test(String(c.color.hex || '')));
   const sizes = [...new Set(variants.flatMap(c => (c.sizeVariants || []).filter(s => s.available !== false).map(s => s.size)))];
-  const prices = variants.flatMap(c => (c.sizeVariants || []).map(s => Number(s?.price?.amount))).filter(Number.isFinite);
+  const prices = variants.flatMap(c => (c.sizeVariants || []).map(s => Number(s?.price?.amount))).filter(n => Number.isFinite(n) && n > 0);
   const base = Number(t.priceFrom?.amount) || (prices.length ? Math.min(...prices) : null);
+  // Verified on a real shop (owner's ~/fourthwall-merch, 2026-11-25): PLACEMENT_ID + largeCenter on the tee's front_large.
+  const placementId = (blank.placementPrefer || []).find(id => (area.placements || []).some(p => p && p.id === id));
   return {
-    blank: kind, label: blank.label, source,
+    ...blankInfo(kind, base), source,
     templateId: t.productId, name: clip(t.name, 120), brand: clip(t.brand, 60), productionMethod: clip(t.productionMethod, 30),
     basePrice: base == null ? null : round2(base), currency: t.priceFrom?.currency || 'USD',
     printSpec: {
       templateId: t.productId, region: 'front', regionId: area.regionId,
       pixelsWidth: area.dimensions.pixelsWidth, pixelsHeight: area.dimensions.pixelsHeight, dpi: area.dimensions.dpi,
       inchesWidth: area.dimensions.inchesWidth, inchesHeight: area.dimensions.inchesHeight,
-      // Verified on a real shop (owner's ~/fourthwall-merch, 2026-11-25): PLACEMENT_ID + largeCenter on front_large.
-      ...((area.placements || []).some(p => p && p.id === 'largeCenter') ? { placementStrategy: 'PLACEMENT_ID', placementId: 'largeCenter' } : { placementStrategy: blank.placementStrategy }),
-      garmentColor: '#ffffff',
+      ...(placementId ? { placementStrategy: 'PLACEMENT_ID', placementId } : { placementStrategy: blank.placementStrategy }),
+      garmentColor: '#ffffff', kind, minDpi: blank.minDpi, wrap: blank.wrap,
     },
-    areas: listAreas(t),
+    areas: listAreas(t, area.regionId),
     colors: variants.map(c => ({ name: clip(c.color.name, 60), hex: String(c.color.hex).toLowerCase() })),
     defaultColor: blank.defaultColor, sizes,
   };
@@ -269,9 +319,13 @@ function normalizeTemplate(kind, t, source) {
 function snapshotTemplate(kind) {
   const b = BLANKS[kind]; const s = b.snapshot;
   return {
-    blank: kind, label: b.label, source: 'snapshot', templateId: s.templateId, name: s.name, brand: s.brand, productionMethod: s.productionMethod,
+    ...blankInfo(kind, s.basePrice), source: 'snapshot', templateId: s.templateId, name: s.name, brand: s.brand, productionMethod: s.productionMethod,
     basePrice: s.basePrice, currency: s.currency,
-    printSpec: { templateId: s.templateId, region: 'front', regionId: s.regionId, pixelsWidth: s.pixelsWidth, pixelsHeight: s.pixelsHeight, dpi: s.dpi, inchesWidth: s.inchesWidth, inchesHeight: s.inchesHeight, placementStrategy: b.placementStrategy, garmentColor: '#ffffff' },
+    printSpec: {
+      templateId: s.templateId, region: 'front', regionId: s.regionId, pixelsWidth: s.pixelsWidth, pixelsHeight: s.pixelsHeight, dpi: s.dpi, inchesWidth: s.inchesWidth, inchesHeight: s.inchesHeight,
+      ...(s.placementId ? { placementStrategy: 'PLACEMENT_ID', placementId: s.placementId } : { placementStrategy: b.placementStrategy }),
+      garmentColor: '#ffffff', kind, minDpi: b.minDpi, wrap: b.wrap,
+    },
     areas: s.areas.map(a => ({ ...a, placements: [] })),
     colors: s.colors.slice(), defaultColor: b.defaultColor, sizes: s.sizes.slice(),
   };
@@ -334,7 +388,8 @@ function shapeConcept(raw, { content = '', policy = 'acknowledge' } = {}) {
   }
   const align = raw.align === 'center' ? 'center' : (raw.align === 'left' || raw.align == null ? 'left' : null);
   if (!align) return { error: 'align' };
-  const blanks = ['tee']; // first release: tee only
+  const blanks = [...new Set((Array.isArray(raw.blanks) ? raw.blanks : []).filter(b => BLANKS[b]))];
+  if (!blanks.length) blanks.push('tee');
   const rights = (Array.isArray(raw.rights) ? raw.rights : []).filter(r => RIGHTS_KINDS.includes(r?.kind) && clip(r.text, 300)).map(r => ({ kind: r.kind, text: clip(r.text, 300) })).slice(0, 8);
   if (team && !rights.some(r => r.kind === 'team')) rights.push({ kind: 'team', text: team.name });
   const concept = { id: `mc-${crypto.randomUUID().slice(0, 8)}`, collection, title, team, palette, garment, stack, align, blanks, rights, why: clip(raw.why, LIMITS.why) };
@@ -425,7 +480,8 @@ async function conceptsMode(body, track) {
 function suggestedRetail(kind, base) {
   if (MerchRules?.suggestedPrice) { const v = Number(MerchRules.suggestedPrice(kind, base)); if (v > 0) return round2(v); }
   const b = Number(base) || 0;
-  return round2(Math.ceil(b + (BLANKS[kind]?.margin || 12)) - 0.01);
+  const margin = { tee: 14, hoodie: 18, poster: 10, sticker: 4, mug: 10 }[kind] || 12;
+  return round2(Math.ceil(b + margin) - 0.01);
 }
 function codeCopy(concept, template) {
   const words = (concept.stack || []).map(r => r.text).join(' ');
@@ -481,6 +537,42 @@ const fwReply = (error, fallback) => {
 };
 const PRODUCT_ID = /^[\w-]{3,80}$/;
 const IMAGE_ID = /^[\w-]{3,120}$/;
+const COLLECTION_ID = /^[\w-]{3,80}$/;
+
+// ─── History (Supabase when the migration has run; memory otherwise) ───────
+const historyMode = () => (store.available() ? 'db' : 'memory');
+async function recordCreate(record, concept, images, body) {
+  if (!store.available()) return 'memory';
+  const ok = await store.soft(async () => {
+    const designId = await store.recordDesign({ concept, blank: record.blank, title: record.title, by: record.by, ack: record.ack, printPath: body.printPath });
+    await store.upsertProduct({
+      productId: record.productId, designId, title: record.title, blank: record.blank, templateId: record.templateId, color: record.color || '',
+      regions: record.regions, state: 'HIDDEN', price: record.price, productUrl: record.productUrl || '', slug: record.slug || '', thumb: record.thumb || '',
+      images: images.slice(0, 12), ack: record.ack, createdBy: record.by,
+    });
+    await store.recordEvent({ type: 'CREATED', productId: record.productId, actor: record.by, payload: { blank: record.blank, title: record.title, price: record.price } });
+    return true;
+  }, false, 'merch history create');
+  return ok ? 'db' : 'memory';
+}
+async function recordAction(type, productId, track, payload = {}, patch = null) {
+  if (!store.available()) return false;
+  return store.soft(async () => {
+    if (patch) await store.updateProduct(productId, patch);
+    await store.recordEvent({ type, productId, actor: track?.email || null, payload });
+    return true;
+  }, false, `merch history ${type.toLowerCase()}`);
+}
+// Is this a product FrameUp made? DB first, then this instance's memory.
+async function ourProduct(productId) {
+  if (store.available()) {
+    const row = await store.soft(() => store.getProduct(productId), undefined, 'merch history read');
+    if (row) return { row, known: true };
+    if (row === null) return { row: null, known: HISTORY.some(h => h.productId === productId) };
+  }
+  const mem = HISTORY.find(h => h.productId === productId);
+  return { row: mem ? { product_id: mem.productId, title: mem.title, blank: mem.blank } : null, known: Boolean(mem) };
+}
 
 async function uploadUrlMode(body) {
   const size = Math.round(Number(body.size));
@@ -564,7 +656,7 @@ async function createMode(body, track) {
   if (reg.error) return json(400, { ok: false, reason: 'input', error: reg.error });
   const price = R.marginFor(body.retail, template.basePrice);
   if (!price.ok) return json(400, { ok: false, reason: 'price', error: price.error });
-  const c = caps(track.email);
+  const c = await capsFor(track.email);
   if (c.person.left <= 0) return json(429, { ok: false, reason: 'daily-cap', error: `You've sent ${CAPS.person} products to the shop today, the daily limit. More tomorrow.`, caps: c });
   if (c.team.left <= 0) return json(429, { ok: false, reason: 'daily-cap', error: `The team has sent ${CAPS.team} products to the shop today, the daily limit. More tomorrow.`, caps: c });
   const color = colorFor(template, body.color || concept.garment.name);
@@ -586,16 +678,18 @@ async function createMode(body, track) {
     slug = p?.slug || '';
     productUrl = fourthwall.productUrl(shop.publicDomain, slug);
   } catch { /* the product link fills in on the next read */ }
-  const record = { productId: r.productId, conceptId: concept.id, title, blank: kind, templateId: template.templateId, color, regions: reg.regions.map(x => x.region), state: 'HIDDEN', price: { retail: price.retail, base: price.base, margin: price.margin }, ack, by: track.email, at: ack.at, productUrl };
+  const images = pipelineImages(r.images);
+  const record = { productId: r.productId, conceptId: concept.id, title, blank: kind, templateId: template.templateId, color, regions: reg.regions.map(x => x.region), state: 'HIDDEN', price: { retail: price.retail, base: price.base, margin: price.margin }, ack, by: track.email, at: ack.at, productUrl, slug, thumb: images[0]?.url || '' };
   HISTORY.unshift(record); HISTORY.length = Math.min(HISTORY.length, 100);
+  const history = await recordCreate(record, concept, images, body);
   await logUsage({ ...track, feature: 'merch-create', task: 'fourthwall-create' }, { model: 'fourthwall/open-api', ok: true, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started });
   // `description` is an optional field of CreateDesignProductRequestV1 in both
   // Fourthwall specs (2026-11), so it is sent; it is echoed back so the UI can
   // offer "Copy description" if the live shop shows it empty.
-  return json(200, { ok: true, productId: r.productId, state: 'HIDDEN', title, description, images: pipelineImages(r.images), price: record.price, ack, productUrl, slug, caps: caps(track.email), history: 'memory' });
+  return json(200, { ok: true, productId: r.productId, state: 'HIDDEN', title, description, images, price: record.price, ack, productUrl, slug, caps: await capsFor(track.email), history });
 }
 
-async function stateMode(body, state) {
+async function stateMode(body, state, track) {
   const id = String(body.productId || '');
   if (!PRODUCT_ID.test(id)) return json(400, { ok: false, reason: 'input', error: 'Which product? The product id is missing.' });
   const p = await client().setState(id, state);
@@ -603,14 +697,36 @@ async function stateMode(body, state) {
   try { domain = (await shopInfo()).publicDomain; } catch { /* link only */ }
   const product = fourthwall.normalizeProduct(p || { id }, domain);
   const rec = HISTORY.find(h => h.productId === id); if (rec) rec.state = state;
+  await recordAction(state === 'PUBLIC' ? 'PUBLISHED' : 'HIDDEN', id, track, { state }, {
+    state, ...(state === 'PUBLIC' ? { publishedAt: new Date().toISOString() } : {}),
+    ...(product.url ? { productUrl: product.url } : {}), ...(product.thumbnail ? { thumb: product.thumbnail } : {}),
+  });
   return json(200, { ok: true, product, state });
 }
 
-async function productMode(body) {
+async function productMode(body, track) {
   const id = String(body.productId || '');
   if (!PRODUCT_ID.test(id)) return json(400, { ok: false, reason: 'input', error: 'Which product? The product id is missing.' });
   const [p, shop] = await Promise.all([client().product(id), shopInfo().catch(() => ({ publicDomain: '' }))]);
-  return json(200, { ok: true, product: fourthwall.normalizeProduct(p, shop.publicDomain) });
+  const product = fourthwall.normalizeProduct(p, shop.publicDomain);
+  if (body.refresh !== true) return json(200, { ok: true, product });
+  // Refresh: store the latest mockups, variants, prices and state.
+  let row = null;
+  if (store.available()) {
+    row = await store.soft(() => store.updateProduct(id, refreshPatch(product)), null, 'merch refresh');
+    if (row) await recordAction('REFRESHED', id, track, { state: product.state });
+  }
+  const rec = HISTORY.find(h => h.productId === id); if (rec) { rec.state = product.state; rec.thumb = product.thumbnail || rec.thumb; }
+  return json(200, { ok: true, product: { ...product, productId: id, ...(row ? { blank: row.blank, color: row.color, createdBy: row.created_by, createdAt: row.created_at, collectionIds: row.collection_ids || [] } : {}) }, refreshed: true, history: row ? 'db' : historyMode() === 'db' ? 'not-ours' : 'memory' });
+}
+function refreshPatch(product) {
+  return {
+    state: product.state, title: product.name || undefined, slug: product.slug || undefined, productUrl: product.url || undefined,
+    thumb: product.thumbnail || undefined, images: product.images, variants: product.variants,
+    ...(product.price != null ? { price: { retail: product.price, base: product.cost, margin: product.cost != null ? round2(product.price - product.cost) : null } } : {}),
+    ...(product.state === 'ARCHIVED' ? { archivedAt: new Date().toISOString() } : {}),
+    refreshedAt: new Date().toISOString(),
+  };
 }
 
 async function statusMode(track) {
@@ -619,14 +735,180 @@ async function statusMode(track) {
   if (configured) { try { shop = await shopInfo(); } catch (error) { shopError = error.message || 'Fourthwall is unavailable right now.'; } }
   const push = await canPush(track);
   return json(200, {
-    ok: true, configured, shop, shopError, canPush: push, caps: caps(track.email), rightsPolicy: rightsPolicy(),
-    blanks: Object.keys(BLANKS), history: 'memory', notice: configured ? (push ? '' : NO_PUSH) : NOT_SET_UP,
+    ok: true, configured, shop, shopError, canPush: push, caps: await capsFor(track.email), rightsPolicy: rightsPolicy(),
+    blanks: Object.keys(BLANKS), history: historyMode(), canArchive: await isAdmin(track.token), notice: configured ? (push ? '' : NO_PUSH) : NOT_SET_UP,
   });
 }
 
+
+// ─── Archive (permanent), list, collections, sales, upload relay ───────────
+async function archiveMode(body, track) {
+  const id = String(body.productId || '');
+  if (!PRODUCT_ID.test(id)) return json(400, { ok: false, reason: 'input', error: 'Which product? The product id is missing.' });
+  if (body.confirm !== true) return json(400, { ok: false, reason: 'confirm', error: 'Archiving deletes the product from the shop for good. Confirm to go ahead.' });
+  const mine = await ourProduct(id);
+  if (!mine.known) return json(409, { ok: false, reason: 'not-ours', error: "FrameUp only archives products it made. Archive this one in the Fourthwall dashboard." });
+  const name = clip(body.confirmName, 120);
+  const title = clip(mine.row?.title, 120);
+  if (body.confirmName != null && title && name.toLowerCase() !== title.toLowerCase()) {
+    return json(400, { ok: false, reason: 'confirm', error: 'The name you typed does not match the product. Type it exactly to archive.' });
+  }
+  try { await client().archive(id); } catch (error) {
+    // Already gone from the shop: record it as archived.
+    if (!(error instanceof fourthwall.FourthwallError && error.reason === 'not-found')) throw error;
+  }
+  const at = new Date().toISOString();
+  const rec = HISTORY.find(h => h.productId === id); if (rec) rec.state = 'ARCHIVED';
+  await recordAction('ARCHIVED', id, track, { title }, { state: 'ARCHIVED', archivedAt: at });
+  return json(200, { ok: true, product: { productId: id, id, title, state: 'archived', archivedAt: at } });
+}
+
+const lower = v => String(v || '').toLowerCase();
+async function salesMap(productIds) {
+  if (!store.available() || !productIds.length) return new Map();
+  const orders = await store.soft(() => store.ordersFor(productIds), [], 'merch sales');
+  return new Map(store.aggregateSales(orders || [], { productIds }).map(r => [r.productId, r]));
+}
+const LIST_SIZE = 50;
+async function listMode(body) {
+  const page = Math.max(0, Math.min(100, Math.round(Number(body.page) || 0)));
+  const rows = store.available() ? await store.soft(() => store.listProducts({ page, size: LIST_SIZE, includeArchived: body.archived === true }), null, 'merch list') : null;
+  if (Array.isArray(rows)) {
+    const sales = await salesMap(rows.map(r => r.product_id));
+    const products = rows.map(r => ({
+      productId: r.product_id, title: r.title, url: r.product_url || '', state: lower(r.state), thumb: r.thumb || '', blank: r.blank, color: r.color || '',
+      createdAt: r.created_at, createdBy: r.created_by || '', units30: sales.get(r.product_id)?.units30 || 0, revenue30: sales.get(r.product_id)?.revenue30 || 0,
+      price: r.price?.retail ?? null, collectionIds: r.collection_ids || [],
+    }));
+    return json(200, { ok: true, products, source: 'db', page, more: rows.length === LIST_SIZE });
+  }
+  // No history table yet: Fourthwall's product list, only the products this server made.
+  if (!fourthwall.configured()) return json(200, { ok: true, products: [], source: 'none', page, more: false, note: NOT_SET_UP });
+  const known = new Map(HISTORY.map(h => [h.productId, h]));
+  const [list, shop] = await Promise.all([client().listProducts({ page, size: 100 }), shopInfo().catch(() => ({ publicDomain: '' }))]);
+  const products = (list?.results || []).filter(p => known.has(String(p.id))).map(p => {
+    const n = fourthwall.normalizeProduct(p, shop.publicDomain);
+    const h = known.get(n.id);
+    return { productId: n.id, title: n.name || h.title, url: n.url || h.productUrl || '', state: lower(n.state), thumb: n.thumbnail || h.thumb || '', blank: h.blank, color: h.color || '', createdAt: n.createdAt || h.at, createdBy: h.by || '', units30: 0, revenue30: 0, price: n.price };
+  });
+  return json(200, { ok: true, products, source: 'fourthwall', page, more: (list?.totalPages || 1) > page + 1, note: 'Showing products made since the server last restarted. Run the merch migration to keep the full history.' });
+}
+
+const COLLECTIONS_TTL_MS = 2 * 60 * 1000;
+const COLLECTIONS_CACHE = { at: 0, data: null };
+async function readCollections({ fresh = false } = {}) {
+  if (!fresh && COLLECTIONS_CACHE.data && Date.now() - COLLECTIONS_CACHE.at < COLLECTIONS_TTL_MS) return COLLECTIONS_CACHE.data;
+  const fw = client();
+  const list = await fw.collections({ size: 100 });
+  const slim = (list?.results || []).filter(c => c?.id).slice(0, 40);
+  // The slim list has no product ids: read each collection (in parallel) for its count.
+  const full = await Promise.all(slim.map(c => fw.collection(c.id).catch(() => null)));
+  const data = slim.map((c, i) => ({ id: String(c.id), name: clip(c.name, 120), slug: clip(c.slug, 120), offerIds: Array.isArray(full[i]?.offerIds) ? full[i].offerIds.map(String) : null }));
+  COLLECTIONS_CACHE.at = Date.now(); COLLECTIONS_CACHE.data = data;
+  return data;
+}
+const publicCollection = (c, productId) => ({ id: c.id, name: c.name, slug: c.slug, count: Array.isArray(c.offerIds) ? c.offerIds.length : null, ...(productId ? { has: Array.isArray(c.offerIds) && c.offerIds.includes(productId) } : {}) });
+async function collectionsMode(body) {
+  const data = await readCollections({ fresh: body.fresh === true });
+  const pid = PRODUCT_ID.test(String(body.productId || '')) ? String(body.productId) : '';
+  return json(200, { ok: true, collections: data.map(c => publicCollection(c, pid)) });
+}
+async function collectionCreateMode(body, track) {
+  const name = clip(body.name, 80);
+  if (name.length < 2) return json(400, { ok: false, reason: 'input', error: 'Give the collection a name.' });
+  const existing = await readCollections().catch(() => []);
+  const dupe = existing.find(c => c.name.toLowerCase() === name.toLowerCase());
+  if (dupe) return json(200, { ok: true, collection: publicCollection(dupe), existed: true });
+  const c = await client().createCollection({ name, description: clip(body.description, 300) });
+  COLLECTIONS_CACHE.at = 0;
+  await recordAction('COLLECTION_CREATED', null, track, { id: c?.id, name });
+  return json(200, { ok: true, collection: { id: String(c?.id || ''), name: clip(c?.name || name, 120), slug: clip(c?.slug, 120), count: Array.isArray(c?.offerIds) ? c.offerIds.length : 0 } });
+}
+// PUT /collections/{id}/products replaces the whole list, so each collection
+// that changes is read fresh first and only this product is added or removed.
+async function collectionSetMode(body, track) {
+  const id = String(body.productId || '');
+  if (!PRODUCT_ID.test(id)) return json(400, { ok: false, reason: 'input', error: 'Which product? The product id is missing.' });
+  if (!Array.isArray(body.collectionIds) || body.collectionIds.length > 40 || !body.collectionIds.every(c => COLLECTION_ID.test(String(c)))) {
+    return json(400, { ok: false, reason: 'input', error: 'Pick the collections from the list.' });
+  }
+  const want = new Set(body.collectionIds.map(String));
+  const fw = client();
+  const all = await readCollections({ fresh: true });
+  const unknown = [...want].filter(c => !all.some(x => x.id === c));
+  if (unknown.length) return json(400, { ok: false, reason: 'input', error: "One of those collections isn't in the shop any more. Reload the list." });
+  const changed = [];
+  for (const c of all) {
+    const has = Array.isArray(c.offerIds) && c.offerIds.includes(id);
+    if (has === want.has(c.id) && Array.isArray(c.offerIds)) continue;
+    const fresh = await fw.collection(c.id); // read right before the write
+    const ids = (Array.isArray(fresh?.offerIds) ? fresh.offerIds : []).map(String);
+    const now = ids.includes(id);
+    if (now === want.has(c.id)) { c.offerIds = ids; continue; }
+    const next = want.has(c.id) ? [...ids, id] : ids.filter(x => x !== id);
+    const saved = await fw.setCollectionProducts(c.id, next);
+    c.offerIds = Array.isArray(saved?.offerIds) ? saved.offerIds.map(String) : next;
+    changed.push(c.id);
+  }
+  COLLECTIONS_CACHE.at = Date.now(); COLLECTIONS_CACHE.data = all;
+  if (changed.length) await recordAction('COLLECTIONS_SET', id, track, { collectionIds: [...want], changed }, { collectionIds: [...want] });
+  return json(200, { ok: true, collections: all.map(c => publicCollection(c, id)), changed });
+}
+
+async function salesMode(body) {
+  if (!store.available()) return json(200, { ok: true, products: [], updatedAt: null, source: 'none', note: 'Sales appear once the merch migration has run and SUPABASE_SERVICE_ROLE_KEY is set.' });
+  const one = String(body.productId || '');
+  if (one && !PRODUCT_ID.test(one)) return json(400, { ok: false, reason: 'input', error: 'Which product? The product id is missing.' });
+  let ids = one ? [one] : null;
+  if (!ids) {
+    const rows = await store.soft(() => store.listProducts({ size: 100, includeArchived: true }), [], 'merch sales list');
+    ids = (rows || []).map(r => r.product_id);
+  }
+  const [orders, sync] = await Promise.all([
+    ids.length ? store.soft(() => store.ordersFor(ids), [], 'merch sales') : [],
+    store.soft(() => store.lastEvent('SYNC'), null, 'merch sales sync'),
+  ]);
+  const latest = (orders || []).reduce((m, o) => (o.updated_at && o.updated_at > m ? o.updated_at : m), '');
+  const updatedAt = [sync?.created_at || '', latest].sort().pop() || null;
+  return json(200, { ok: true, products: store.aggregateSales(orders || [], { productIds: ids }), updatedAt, source: 'db' });
+}
+
+// Upload relay: the browser could not PUT straight to Fourthwall's storage
+// (CORS), so it uploaded the PNG to Supabase Storage merch-art/<user id>/...
+// The server reads it, PUTs it to the signed upload URL with the size header,
+// then deletes the copy. Only Google Cloud Storage upload URLs are accepted.
+const RELAY_PATH = /^[0-9a-f-]{36}\/[\w.-]{1,120}\.png$/i;
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+function uploadHostOk(raw) {
+  let u;
+  try { u = new URL(String(raw || '')); } catch { return false; }
+  return u.protocol === 'https:' && !u.username && !u.password && !u.port
+    && (u.hostname === 'storage.googleapis.com' || /^[a-z0-9.-]+\.storage\.googleapis\.com$/.test(u.hostname));
+}
+async function uploadRelayMode(body, track) {
+  const path = String(body.path || '');
+  const size = Math.round(Number(body.size));
+  if (!RELAY_PATH.test(path) || path.includes('..')) return json(400, { ok: false, reason: 'input', error: 'Upload the print file first.' });
+  if (!track.userId || !path.startsWith(`${track.userId}/`)) return json(403, { ok: false, reason: 'input', error: 'That file belongs to someone else.' });
+  if (!uploadHostOk(body.uploadUrl)) return json(400, { ok: false, reason: 'input', error: 'Get a new upload link and try again.' });
+  if (!(size > 0) || size > LIMITS.uploadBytes) return json(400, { ok: false, reason: 'input', error: 'The print file must be a PNG under 25 MB.' });
+  if (!store.available()) return json(503, { ok: false, reason: 'not-set-up', error: "The upload backup isn't set up yet. Ask an admin to run the merch migration." });
+  let file;
+  try { file = await store.downloadArt(path, { maxBytes: LIMITS.uploadBytes }); } catch (error) {
+    if (error?.status === 404) return json(404, { ok: false, reason: 'missing', error: "The uploaded file wasn't found. Upload it again." });
+    if (error?.status === 413) return json(400, { ok: false, reason: 'input', error: 'The print file must be a PNG under 25 MB.' });
+    return json(502, { ok: false, reason: 'storage', error: "Couldn't read the uploaded file. Try again in a moment." });
+  }
+  if (file.bytes.length !== size) return json(400, { ok: false, reason: 'size', error: "The uploaded file's size doesn't match. Upload it again." });
+  if (!file.bytes.subarray(0, 8).equals(PNG_MAGIC)) return json(400, { ok: false, reason: 'input', error: 'Print files must be PNG.' });
+  await client().putUpload(String(body.uploadUrl), file.bytes, 'image/png');
+  await store.soft(() => store.removeArt(path), false, 'merch relay cleanup');
+  return json(200, { ok: true, size: file.bytes.length });
+}
+
 // ─── Handler ────────────────────────────────────────────────────────────────
-const PUSH_MODES = new Set(['upload-url', 'register', 'preview', 'create', 'publish', 'hide']);
-const FW_MODES = new Set([...PUSH_MODES, 'product']);
+const PUSH_MODES = new Set(['upload-url', 'register', 'preview', 'create', 'publish', 'hide', 'upload-relay', 'collection-create', 'collection-set']);
+const FW_MODES = new Set([...PUSH_MODES, 'product', 'archive', 'collections']);
 exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'POST, OPTIONS' }, body: '' };
   if (event.httpMethod !== 'POST') return json(405, { ok: false, error: 'Method not allowed.' });
@@ -635,7 +917,7 @@ exports.handler = withAiMode(async function handler(event) {
   if (String(event.body || '').length > LIMITS.body) return json(413, { ok: false, error: 'That request is too large.' });
   let body = {};
   try { body = JSON.parse(event.body || '{}') || {}; } catch { return json(400, { ok: false, error: 'Invalid request.' }); }
-  const track = { email: auth.user.email, token: bearerToken(event.headers), runId: `mr-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 6)}` };
+  const track = { email: auth.user.email, userId: String(auth.user.id || ''), token: bearerToken(event.headers), runId: `mr-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 6)}` };
   const mode = String(body.mode || '');
   try {
     if (mode === 'status') return await statusMode(track);
@@ -645,19 +927,26 @@ exports.handler = withAiMode(async function handler(event) {
       return json(200, { ok: true, templates });
     }
     if (mode === 'concepts') return await conceptsMode(body, track);
+    if (mode === 'list') return await listMode(body);
+    if (mode === 'sales') return await salesMode(body);
     if (mode === 'copy') return await copyMode(body, track);
     if (FW_MODES.has(mode)) {
       if (!fourthwall.configured()) return json(503, { ok: false, reason: 'not-set-up', error: NOT_SET_UP });
       if (PUSH_MODES.has(mode) && !(await canPush(track))) return json(403, { ok: false, reason: 'no-push', error: NO_PUSH });
+      if (mode === 'archive' && !(await isAdmin(track.token))) return json(403, { ok: false, reason: 'admin-only', error: 'Only admins can archive products. Ask an admin, or hide the product instead.' });
       if (mode === 'upload-url') return await uploadUrlMode(body);
       if (mode === 'register') return await registerMode(body);
       if (mode === 'preview') return await previewMode(body);
       if (mode === 'create') return await createMode(body, track);
-      if (mode === 'publish') return await stateMode(body, 'PUBLIC');
-      if (mode === 'hide') return await stateMode(body, 'HIDDEN');
-      if (mode === 'product') return await productMode(body);
+      if (mode === 'publish') return await stateMode(body, 'PUBLIC', track);
+      if (mode === 'hide') return await stateMode(body, 'HIDDEN', track);
+      if (mode === 'product') return await productMode(body, track);
+      if (mode === 'archive') return await archiveMode(body, track);
+      if (mode === 'upload-relay') return await uploadRelayMode(body, track);
+      if (mode === 'collections') return await collectionsMode(body);
+      if (mode === 'collection-create') return await collectionCreateMode(body, track);
+      if (mode === 'collection-set') return await collectionSetMode(body, track);
     }
-    if (['archive', 'list', 'upload-relay'].includes(mode)) return json(501, { ok: false, reason: 'not-yet', error: "This isn't switched on yet. Use the Fourthwall dashboard for now." });
     return json(400, { ok: false, error: 'Unknown request.' });
   } catch (error) {
     return fwReply(error, 'Merch is unavailable right now. Try again in a moment.');
@@ -666,7 +955,8 @@ exports.handler = withAiMode(async function handler(event) {
 
 exports._test = {
   FEATURES, CAPS, LIMITS, COLLECTIONS, BLANKS, NOT_SET_UP, NO_PUSH, InlineRules, rules, usingDesignRules: () => Boolean(MerchRules),
-  shapeConcept, pickArea, listAreas, regionsFor, qualifies, normalizeTemplate, snapshotTemplate, templateFor, suggestedRetail, codeCopy, caps, countCreate, pushers, HISTORY,
+  shapeConcept, pickArea, listAreas, regionsFor, qualifies, normalizeTemplate, snapshotTemplate, templateFor, suggestedRetail, codeCopy, caps, capsFor, countCreate, pushers, HISTORY,
+  uploadHostOk, refreshPatch,
   setClientFactory(fn) { clientFactory = fn; },
-  reset() { DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); SHOP.at = 0; SHOP.data = null; },
+  reset() { DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); SHOP.at = 0; SHOP.data = null; COLLECTIONS_CACHE.at = 0; COLLECTIONS_CACHE.data = null; },
 };
