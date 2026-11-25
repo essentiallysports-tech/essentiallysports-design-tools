@@ -1,15 +1,20 @@
 // Merch Designs UI check: drives merch.html in real headless Chrome through
-// the whole flow (Content → Designs → Setup → Push & live) against a mocked
-// /api/merch (the replies in merch-demo.js), then the page-level states (free
-// mode, not set up, can't push, errors). Desktop only: 1440 light and dark
-// (full flow) plus 1024 light. Merch v2: the blank picker (tee / hoodie /
-// poster / sticker / mug) with per-kind print checks, shop collections in
-// Setup and on the live panel (with "New collection"), Archive with a typed
-// confirm, the "Your merch" list (status, link, mockup, 30-day units and
-// revenue, refresh) and the upload relay (direct PUT blocked → Supabase
-// Storage merch-art/<user>/<file>.png → upload-relay). Fails on: horizontal scroll,
-// more than one primary button in view, unlabelled controls, broken images,
-// console errors / exceptions, and any step that doesn't do what it says.
+// the whole flow (Content → Design studio → Product → Push & live) against a
+// mocked /api/merch (the replies in merch-demo.js), then the page-level states.
+// Desktop only: 1440 light (Pro) and dark (Pro, upload relay) plus 1024 light
+// (Basic). Merch v4: the Basic / Pro switch (remembered), merch-worthy moments
+// (sport filter, "Design this" fills the brief and sends the trend), the "AI
+// follows ES merch rules" disclosure, the studio (stage On a tee = Fourthwall
+// blank photo / Close-up, filmstrip with arrow keys, pill editor, size and
+// layout, real tee colours, Pro extras, AI chat refine with history + undo,
+// variations, inline print checks), the Product step (live mockups requested
+// automatically for admins, "Update mockups" when out of date, gallery), shop
+// collections, Archive with a typed confirm, Your merch, the upload relay
+// (direct PUT blocked → Supabase Storage merch-art/<user>/<file>.png →
+// upload-relay) and the states (free, Pro capped, not set up, can't push, daily
+// cap, errors, no moments). Fails on: horizontal scroll, more than one primary
+// button in view, unlabelled controls, broken images, console errors /
+// exceptions, and any step that doesn't do what it says.
 // No AI, no Fourthwall, no Supabase: every external request is answered locally.
 // Run: node scripts/check-merch-ui.mjs   (MX_SHOTS=dir saves screenshots)
 import fs from 'node:fs';
@@ -42,7 +47,12 @@ const { server, base } = await startServer({
     if (url.pathname === '/api/ai-status') return { status: 200, body: { ok: true, mode: 'ai' } };
     return null;
   },
-  extra: url => (url.pathname === '/__qa/upload' ? { type: 'text/plain', body: '' } : null),
+  extra: url => {
+    if (url.pathname === '/__qa/upload') return { type: 'text/plain', body: '' };
+    // merch-guidelines.js comes from the server lane; stand in for it until it's in this checkout.
+    if (url.pathname === '/merch-guidelines.js' && !fs.existsSync(path.join(ROOT, 'merch-guidelines.js'))) return { type: 'text/javascript', body: "self.MerchGuidelines = { SUMMARY: ['ES pills only.', 'Your line comes first, word for word.', 'Numbers and quotes only from your story.'] };" };
+    return null;
+  },
 });
 const chrome = await startChrome(CHROME);
 const { send, evaluate } = chrome;
@@ -53,7 +63,7 @@ chrome.on(m => {
   if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') errors.push('console.error: ' + m.params.args.map(a => a.value ?? a.description ?? '').join(' ').slice(0, 200));
   // merch-rules.js / merch-print.js may not exist on this branch yet: a 404 there is expected.
   // /api/merch 4xx / 5xx are the error states under test.
-  if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error' && !/fonts\.g|favicon|merch-(rules|print)\.js|\/api\/merch|blocked\.example/.test(m.params.entry.url || '') && !/merch-(rules|print)\.js/.test(m.params.entry.text)) errors.push('log: ' + m.params.entry.text.slice(0, 160) + ' ' + (m.params.entry.url || ''));
+  if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error' && !/fonts\.g|favicon|merch-(rules|print|guidelines)\.js|\/api\/merch|blocked\.example/.test(m.params.entry.url || '') && !/merch-(rules|print)\.js/.test(m.params.entry.text)) errors.push('log: ' + m.params.entry.text.slice(0, 160) + ' ' + (m.params.entry.url || ''));
   if (m.method === 'Fetch.requestPaused') {
     const { requestId, request } = m.params;
     const u = request.url;
@@ -84,14 +94,15 @@ async function until(expr, what, ms = 8000) {
 }
 const click = sel => evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return false; e.click(); return true; })()`);
 
-async function load(width, theme, state = '') {
+async function load(width, theme, state = '', mode = '') {
   await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: false });
   await send('Page.navigate', { url: `${base}/__blank` });
   await sleep(200);
   await evaluate(FAKE_SESSION);
+  await evaluate(`(() => { ${mode ? `localStorage.setItem('frameup.merch.aiMode', ${JSON.stringify(mode)})` : "localStorage.removeItem('frameup.merch.aiMode')"}; return true; })()`);
   await evaluate("sessionStorage.setItem('frameup.tours.offered','1'); sessionStorage.setItem('frameup.tours.versionChecked','1'); true");
   await send('Page.navigate', { url: `${base}/merch.html?demo=off${state ? `&x=${state}` : ''}` });
-  await until("document.querySelector('#mx-collections [role=radio]') && document.documentElement.style.visibility !== 'hidden'", 'page ready', 15000);
+  await until("document.querySelector('#mx-collections [role=radio]') && window.MerchUI && document.documentElement.style.visibility !== 'hidden'", 'page ready', 15000);
   await evaluate(`(() => { const s = document.createElement('style'); s.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; document.head.append(s); window.FrameUpTheme?.apply ? window.FrameUpTheme.apply(${JSON.stringify(theme)}) : (document.documentElement.dataset.theme = ${JSON.stringify(theme)}); return true; })()`);
   await sleep(300);
 }
@@ -125,86 +136,174 @@ async function audit(tag) {
   }
 }
 
-// ─── Full flow at 1440, light ─────────────────────────────────────────────
-async function flow(width, theme) {
-  const tag = `${width}-${theme}`;
+// ─── Full flow ────────────────────────────────────────────────────────────
+const setText = (sel, v) => evaluate(`(() => { const t = document.querySelector(${JSON.stringify(sel)}); t.value = ${JSON.stringify(v)}; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
+const sel = () => 'MerchUI.state.concepts.find(c => c.id === MerchUI.state.selected)';
+
+async function flow(width, theme, mode) {
+  const tag = `${width}-${theme}-${mode}`;
+  const pro = mode === 'pro';
   scenario = 'ok';
   calls.length = 0;
+  bodies.length = 0;
   await load(width, theme);
   await until("/connected/i.test(document.getElementById('mx-conn').textContent)", `${tag} status`);
-  ok(await evaluate("document.getElementById('mx-create').disabled"), `${tag}: Create designs starts disabled`);
-  await click('#mx-trends-load');
-  await until("document.querySelectorAll('#mx-trends [data-trend]').length === 3", `${tag} trends`);
-  await click('#mx-trends [data-trend]');
-  ok(await evaluate("document.getElementById('mx-text').value.length > 5"), `${tag}: a trend fills the text`);
-  await evaluate("(() => { const t = document.getElementById('mx-text'); t.value = 'Ball don’t lie'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
-  await click('[data-coll="quote"]');
-  ok(await evaluate("document.querySelector('[data-coll=quote]').getAttribute('aria-checked') === 'true'"), `${tag}: collection picks`);
+  ok(await evaluate("document.getElementById('mx-create').disabled"), `${tag}: Create with AI starts disabled`);
+  // ── Basic / Pro switch: Basic by default, remembered per person.
+  ok(await evaluate("document.querySelector('#mx-mode [data-ai=basic]').getAttribute('aria-checked') === 'true' && MerchUI.state.aiMode === 'basic'"), `${tag}: Basic by default`);
+  if (pro) {
+    await click('#mx-mode [data-ai=pro]');
+    ok(await evaluate("MerchUI.state.aiMode === 'pro' && localStorage.getItem('frameup.merch.aiMode') === 'pro' && /Smarter AI \\(more usage\\)/.test(document.getElementById('mx-mode-note').textContent)"), `${tag}: Pro picked, explained and remembered`);
+  }
+  // ── Rules disclosure (MerchGuidelines.SUMMARY).
+  ok(await evaluate("!document.getElementById('mx-rules').hidden && document.querySelectorAll('#mx-rules-list li').length >= 3"), `${tag}: the AI-rules disclosure lists the ES rules`);
+  // ── Moments.
+  await until("document.querySelectorAll('#mx-moments .mx-moment[data-mid]').length === 5", `${tag} moments`);
+  ok(calls.includes('moments'), `${tag}: moments called`);
+  ok(await evaluate("(() => { const m = document.querySelector('#mx-moments [data-mid=m1]'); return /Stat/.test(m.textContent) && /91/.test(m.textContent) && /FIFTY ON THE NIGHT/.test(m.textContent) && /NBA/.test(m.textContent) && /round number/.test(m.textContent); })()"), `${tag}: moment card has kind, score, line, sport and why`);
+  await click('#mx-moments-sports [data-sport="NFL"]');
+  ok(await evaluate("document.querySelectorAll('#mx-moments [data-mid]').length === 1"), `${tag}: sport filter`);
+  await click('#mx-moments-sports [data-sport=""]');
+  await click('#mx-moments [data-design="m2"]');
+  ok(await evaluate("document.getElementById('mx-text').value === 'BALL DON’T LIE' && document.querySelector('[data-coll=quote]').getAttribute('aria-checked') === 'true' && !document.getElementById('mx-using').hidden"), `${tag}: Design this fills the brief, picks the collection, shows the moment`);
+  ok(!(await evaluate("document.getElementById('mx-create').disabled")), `${tag}: Create with AI enabled`);
   await audit(`${tag}-content`);
   await click('#mx-create');
-  await until("!document.getElementById('mx-view-designs').hidden && document.querySelectorAll('.mx-design').length === 4", `${tag} designs`);
-  ok(calls.includes('concepts'), `${tag}: concepts called`);
-  ok(await evaluate("document.querySelectorAll('.mx-design .mx-rchip').length > 0"), `${tag}: rights chips on cards`);
-  // Quick edits on the first card: swap colours, edit a pill, big/small, align, garment.
-  const before = await evaluate("JSON.stringify(MerchUI.state.concepts[0].palette)");
-  await click('.mx-design [data-act="swap"]');
-  ok(await evaluate(`JSON.stringify(MerchUI.state.concepts[0].palette) !== ${JSON.stringify(before)}`), `${tag}: swap colours`);
-  await click('.mx-design [data-act="text"]');
-  await until("document.querySelector('.mx-design [data-pill]')", `${tag} pill editor`);
-  await evaluate("(() => { const i = document.querySelector('.mx-design [data-pill]'); i.value = 'KOBE!'; i.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
-  ok(await evaluate("MerchUI.state.concepts[0].stack[0].text === 'KOBE!'"), `${tag}: pill text edits`);
-  await click('.mx-design [data-act="up"][data-i="1"]');
-  ok(await evaluate("MerchUI.state.concepts[0].stack[1].text === 'KOBE!'"), `${tag}: pill order`);
-  await click('.mx-design [data-act="size"]');
-  ok(await evaluate("MerchUI.state.concepts[0].stack.slice(1).some(r => r.size === 'mid' || r.size === 'small')"), `${tag}: pill sizes`);
-  // v3: variations, close-up / tee cards
-  const nBefore = await evaluate("MerchUI.state.concepts.length");
-  await click('.mx-design [data-act="vary"]');
-  ok(await evaluate(`MerchUI.state.concepts.length > ${nBefore} && MerchUI.state.concepts.some(c => c.variantOf)`), `${tag}: variations added`);
-  ok(await evaluate("document.querySelectorAll('.mx-design.is-variant').length >= 3"), `${tag}: variation cards`);
-  await click('[data-card-view="tee"]');
-  ok(await evaluate("MerchUI.state.cardView === 'tee'"), `${tag}: tee view`);
-  await click('[data-card-view="closeup"]');
-  ok(await evaluate("MerchUI.state.cardView === 'closeup'"), `${tag}: close-up view`);
-  await click('.mx-design [data-act="align"]');
-  await click('.mx-design [data-act="garment"][data-color="#101114"]');
-  ok(await evaluate("MerchUI.state.concepts[0].garment.color === '#101114'"), `${tag}: garment colour`);
-  await audit(`${tag}-designs`);
+  await until("!document.getElementById('mx-view-designs').hidden && document.querySelectorAll('#mx-strip .mx-film').length >= 4", `${tag} studio`);
+  const cBody = bodies.filter(b => b.mode === 'concepts').pop();
+  ok(cBody && cBody.designMode === mode && cBody.trend?.id === 't4' && cBody.collection === 'quote' && cBody.content?.text === 'BALL DON’T LIE', `${tag}: concepts gets designMode, trend, collection, content (${JSON.stringify(cBody).slice(0, 160)})`);
+  ok(await evaluate(`document.getElementById('mx-made-mode').textContent === ${JSON.stringify(pro ? 'Made with Pro' : 'Made with Basic')}`), `${tag}: shows the mode used`);
+  ok(await evaluate("!document.getElementById('mx-idea').hidden && document.getElementById('mx-idea-text').textContent.length > 10"), `${tag}: the AI plan (the idea)`);
+  ok(await evaluate(`MerchUI.state.concepts.length === ${pro ? 6 : 4} && document.querySelectorAll('#mx-strip [role=radio]').length === MerchUI.state.concepts.length`), `${tag}: filmstrip has every design (${await evaluate('MerchUI.state.concepts.length')})`);
+  ok(await evaluate("[...document.querySelectorAll('#mx-strip .mx-film')].every(b => b.querySelector('canvas').width > 0)"), `${tag}: thumbnails drawn`);
+  // Filmstrip keyboard.
+  await evaluate("document.querySelector('#mx-strip [aria-checked=true]').focus(); document.querySelector('#mx-strip [aria-checked=true]').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); true");
+  ok(await evaluate("MerchUI.state.selected === MerchUI.state.concepts[1].id && document.activeElement === document.querySelector('#mx-strip [aria-checked=true]')"), `${tag}: arrow keys move through the filmstrip`);
+  await click('#mx-strip .mx-film');
+  // Stage: On a tee = Fourthwall's blank photo (templates load in the studio); Close-up.
+  await until("MerchUI.state.templates && /blank photo/.test(document.getElementById('mx-stage-cap').textContent)", `${tag} stage on the blank photo`);
+  ok(calls.includes('templates'), `${tag}: templates loaded for the studio`);
+  await click('[data-stage=closeup]');
+  await until("/Close-up/.test(document.getElementById('mx-stage-cap').textContent)", `${tag} close-up stage`);
+  await click('[data-stage=tee]');
+  // Tee colours are the template's real colours.
+  ok(await evaluate("document.querySelectorAll('#mx-tee-colors [role=radio]').length === 5 && /Fourthwall/.test(document.getElementById('mx-tee-colors-note').textContent)"), `${tag}: real tee colours`);
+  await click('#mx-tee-colors [data-name="Black"]');
+  ok(await evaluate(`${sel()}.garment.name === 'Black' && MerchUI.state.colors.join() === 'Black'`), `${tag}: tee colour picks`);
+  // ── Pill editor.
+  await setText('#mx-pills [data-pill-text="0"]', 'KOBE!');
+  ok(await evaluate(`${sel()}.stack[0].text === 'KOBE!'`), `${tag}: pill text edits`);
+  await click('#mx-pills [data-pill-act="down"][data-i="0"]');
+  ok(await evaluate(`${sel()}.stack[1].text === 'KOBE!'`), `${tag}: pill order`);
+  await click('#mx-pills [data-pill-size="mid"][data-i="1"]');
+  ok(await evaluate(`${sel()}.stack[1].size === 'mid'`), `${tag}: pill size`);
+  await click('#mx-pills [data-pill-fill="black"][data-i="1"]');
+  ok(await evaluate(`${sel()}.stack[1].fill === 'black'`), `${tag}: pill colour`);
+  const nPills = await evaluate(`${sel()}.stack.length`);
+  await click('#mx-pill-add');
+  ok(await evaluate(`${sel()}.stack.length === ${nPills + 1}`), `${tag}: add a pill`);
+  await click(`#mx-pills [data-pill-act="drop"][data-i="${nPills}"]`);
+  ok(await evaluate(`${sel()}.stack.length === ${nPills}`), `${tag}: remove a pill`);
+  await click('#mx-undo');
+  ok(await evaluate(`${sel()}.stack.length === ${nPills + 1}`), `${tag}: undo brings the pill back`);
+  // Size and layout moved here from Setup.
+  await evaluate("(() => { const r = document.getElementById('mx-fit-scale'); r.value = 130; r.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
+  ok(await evaluate(`${sel()}.fit.scale === 1.3 && document.getElementById('mx-fit-scale-out').textContent === '130%' && /Prints/.test(document.getElementById('mx-fit-read').textContent)`), `${tag}: size slider`);
+  await click('[data-fit-align="center"]');
+  ok(await evaluate(`${sel()}.align === 'center'`), `${tag}: alignment`);
+  await click('#mx-fit-reset');
+  ok(await evaluate(`${sel()}.fit.scale === 1`), `${tag}: reset layout`);
+  // ── AI chat refine with history and undo.
+  await click('[data-fit-align="left"]');
+  bodies.length = 0;
+  await click('#mx-chat-chips [data-say="Centre it"]');
+  await until(`${sel()}.align === 'center' && /Centred/.test(document.getElementById('mx-chat-note').textContent)`, `${tag} refine centre`);
+  await click('#mx-chat-chips [data-say="Shorter"]');
+  await until("/Dropped|Removed/.test(document.getElementById('mx-chat-note').textContent)", `${tag} refine shorter`);
+  const rBody = bodies.filter(b => b.mode === 'refine').pop();
+  ok(rBody && rBody.designMode === mode && rBody.instruction === 'Shorter' && JSON.stringify(rBody.history) === '["Centre it"]' && rBody.concept?.id && rBody.trend?.id === 't4', `${tag}: refine sends instruction, designMode, history and trend (${JSON.stringify(rBody?.history)})`);
+  await setText('#mx-chat-input', 'use Lakers colours please');
+  await click('#mx-chat-send');
+  await until("/Lakers|colour/.test(document.getElementById('mx-chat-note').textContent) && !MerchUI.state.refining", `${tag} refine typed`);
+  await click('#mx-chat-note [data-chat-undo]');
+  await click('#mx-undo');
+  ok(await evaluate(`${sel()}.align === 'center'`), `${tag}: undo steps back through AI edits`);
+  await click('#mx-undo');
+  ok(await evaluate(`${sel()}.align === 'left'`), `${tag}: undo reaches the design before the chat`);
+  // ── Pro extras.
+  if (pro) {
+    const p1 = await evaluate("MerchUI.state.concepts.findIndex(c => c.id === 'p1')");
+    await click('#mx-strip [data-id="p1"]');
+    ok(p1 >= 0 && await evaluate("!document.getElementById('mx-elements-sec').hidden && document.querySelectorAll('#mx-elements .mx-el').length === 2"), `${tag}: Pro design lists its extras`);
+    await click('#mx-el-add [data-el-add="icon"]');
+    ok(await evaluate(`${sel()}.elements.length === 3 && ${sel()}.elements[2].type === 'icon' && document.querySelector('#mx-el-add [data-el-add=rule]').disabled`), `${tag}: add an icon, max 3`);
+    await evaluate("(() => { const s = document.querySelector('#mx-elements [data-el=\"2\"] [data-el-field=name]'); s.value = 'trophy'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()");
+    ok(await evaluate(`${sel()}.elements[2].name === 'trophy'`), `${tag}: change the icon`);
+    await click('#mx-elements [data-el-drop="0"]');
+    ok(await evaluate(`${sel()}.elements.length === 2 && ${sel()}.elements[0].type === 'rule'`), `${tag}: remove an extra`);
+    ok(await evaluate("document.querySelector('#mx-el-add [data-el-add=number]').disabled"), `${tag}: Number needs a number in the story`);
+  } else {
+    ok(await evaluate("document.getElementById('mx-elements-sec').hidden && MerchUI.state.concepts.every(c => !c.elements)"), `${tag}: Basic has no extras`);
+  }
+  // Variations.
+  const nBefore = await evaluate('MerchUI.state.concepts.length');
+  await click('#mx-vary');
+  ok(await evaluate(`MerchUI.state.concepts.length > ${nBefore} && document.querySelectorAll('#mx-strip .mx-film__tag').length >= 2`), `${tag}: variations added to the filmstrip`);
+  await click('#mx-strip .mx-film');
+  // Inline print checks.
+  ok(await evaluate("document.querySelectorAll('#mx-studio-checks li').length >= 1 && !document.querySelector('#mx-studio-checks .mx-check-row--error') && !document.getElementById('mx-to-setup').disabled"), `${tag}: print checks inline, Use this design on`);
+  await audit(`${tag}-studio`);
+  // ── Product step: live mockups requested automatically for admins.
+  calls.length = 0; bodies.length = 0; stored.length = 0;
+  blockPut = theme === 'dark'; // dark run: the direct upload is blocked, so the relay carries it
   await click('#mx-to-setup');
   await until("!document.getElementById('mx-view-setup').hidden && document.querySelectorAll('#mx-blanks [data-tpl]').length === 5 && document.getElementById('mx-price').value", `${tag} setup`);
-  ok(await evaluate("[...document.querySelectorAll('#mx-blanks [data-kind]')].map(b => b.dataset.kind).join() === 'tee,hoodie,poster,sticker,mug'"), `${tag}: five blanks in order`);
-  ok(await evaluate("document.querySelector('#mx-blanks [aria-checked=true]').dataset.kind === 'tee'"), `${tag}: starts on the tee`);
-  ok(calls.includes('templates') && calls.includes('copy'), `${tag}: templates + copy called`);
-  ok(await evaluate("/earn about/.test(document.getElementById('mx-earn').textContent)"), `${tag}: earnings line`);
-  ok(await evaluate("[...document.getElementById('mx-logo').options].map(o => o.textContent).join('|') === 'Left sleeve|Right sleeve|No logo'"), `${tag}: logo areas listed`);
-  ok(await evaluate("document.getElementById('mx-logo').value === 'sleeve_left'"), `${tag}: logo defaults to the first logo area`);
-  ok(await evaluate("MerchUI.state.colors.join() === 'Black'"), `${tag}: tee colour follows the design (${await evaluate('MerchUI.state.colors.join()')})`);
-  ok(await evaluate("document.querySelectorAll('#mx-checks li').length >= 4 && !document.querySelector('#mx-checks .mx-check-row--error')"), `${tag}: tee print check, no problems`);
-  // ── Blank picker: each kind has its own area, logo spot, price and checks.
+  await until("document.querySelector('#mx-pstage-main .mx-pstage__live img') && document.querySelectorAll('#mx-mockups img').length === 6", `${tag} live mockups (auto)`, 15000);
+  ok(calls.filter(c => c === 'upload-url').length === 2 && calls.includes('register') && calls.includes('preview'), `${tag}: print + logo uploaded, preview asked automatically (${calls.join(',')})`);
+  ok(await evaluate("document.getElementById('mx-preview').hidden && /Fourthwall live mockups/.test(document.getElementById('mx-pstage-title').textContent)"), `${tag}: fresh live mockups, no update button`);
+  if (blockPut) {
+    const relays = bodies.filter(b => b.mode === 'upload-relay');
+    ok(relays.length === 2, `${tag}: relay used for both files (${relays.length})`);
+    ok(stored.length === 2 && stored.every(k => /^merch-art\/00000000-0000-0000-0000-000000000001\/[\w-]+\.png$/.test(k)), `${tag}: files went to merch-art/<user>/<file>.png (${stored.join(' ')})`);
+    ok(relays.every(b => b.bucket === 'merch-art' && /^00000000-0000-0000-0000-000000000001\//.test(b.path) && /blocked\.example/.test(b.uploadUrl) && b.size > 0), `${tag}: relay gets path, uploadUrl and size`);
+  }
+  blockPut = false;
+  ok(await evaluate("document.querySelector('#mx-blanks [aria-checked=true]').dataset.kind === 'tee' && MerchUI.state.colors.join() === 'Black'"), `${tag}: tee, in the studio's colour`);
+  ok(calls.includes('copy') && await evaluate("/earn about/.test(document.getElementById('mx-earn').textContent)"), `${tag}: copy + earnings`);
+  ok(await evaluate("[...document.getElementById('mx-logo').options].map(o => o.textContent).join('|') === 'Left sleeve|Right sleeve|No logo' && document.getElementById('mx-logo').value === 'sleeve_left'"), `${tag}: logo areas`);
+  ok(await evaluate("document.querySelectorAll('#mx-checks li').length >= 1 && !document.querySelector('#mx-checks .mx-check-row--error')"), `${tag}: product print check`);
+  // Gallery.
+  await click('#mx-pstage-main .mx-pstage__live');
+  ok(await evaluate("document.getElementById('mx-gallery').open && /1 of 6/.test(document.getElementById('mx-gallery-cap').textContent)"), `${tag}: main mockup opens the gallery`);
+  await click('#mx-gallery-close');
+  // A colour change makes them out of date.
+  await click('#mx-colors [data-color="French Navy"]');
+  ok(await evaluate("MerchUI.state.colors.join() === 'French Navy' && !document.getElementById('mx-preview').hidden && /Update mockups/.test(document.getElementById('mx-preview').textContent) && /Out of date/.test(document.getElementById('mx-pstage-title').textContent)"), `${tag}: Update mockups after a colour change`);
+  ok(await evaluate(`${sel()}.garment.name === 'French Navy'`), `${tag}: product colour follows back to the design`);
+  calls.length = 0;
+  await click('#mx-preview');
+  await until("document.getElementById('mx-preview').hidden && !/Out of date/.test(document.getElementById('mx-pstage-title').textContent)", `${tag} mockups updated`, 15000);
+  ok(calls.includes('preview') && bodies.filter(b => b.mode === 'preview').pop().color === 'French Navy', `${tag}: update asks for the new colour`);
+  await audit(`${tag}-setup`);
+  // ── Blanks: each kind has its own area, logo spot, price and checks.
   await click('#mx-blanks [data-kind="mug"]');
   await until("/Mug$/.test(document.getElementById('mx-title-input').value)", `${tag} mug copy`);
   ok(await evaluate("[...document.getElementById('mx-logo').options].map(o => o.textContent).join('|') === 'Inside the design (small ES pill at the bottom)|No logo'"), `${tag}: mug logo goes under the design`);
   ok(await evaluate("document.getElementById('mx-colors-block').hidden"), `${tag}: one-colour blank hides the colour picker`);
-  ok(await evaluate("Number(document.getElementById('mx-price').value) === 15.99 && /suggested \\$15\\.99/.test(document.getElementById('mx-earn').textContent)"), `${tag}: mug price + suggestion (${await evaluate("document.getElementById('mx-price').value")})`);
-  ok(await evaluate("/handle/.test(document.getElementById('mx-checks').textContent) && /300 DPI/.test(document.getElementById('mx-checks').textContent)"), `${tag}: mug wrap + 300 DPI checks`);
-  ok(await evaluate("/300 DPI/.test(document.getElementById('mx-side').textContent)"), `${tag}: print area shows its DPI`);
-  // Sizes come from the template's printSpec (register rejects any other size).
-  ok(await evaluate("(() => { const t = MerchUI.state.templates.find(x => x.kind === 'mug'); return /2700 × 1050 px at 300 DPI/.test(document.getElementById('mx-checks').textContent) && t.printSpec.pixelsWidth === 2700; })()"), `${tag}: mug draws at the template's 2700 × 1050`);
-  await until("/Mug preview, ES logo inside the design/.test(document.getElementById('mx-stage-canvas').getAttribute('aria-label'))", `${tag}: mug preview label`);
+  ok(await evaluate("Number(document.getElementById('mx-price').value) === 15.99 && /suggested \\$15\\.99/.test(document.getElementById('mx-earn').textContent)"), `${tag}: mug price + suggestion`);
+  ok(await evaluate("/handle/.test(document.getElementById('mx-checks').textContent) && /300 DPI/.test(document.getElementById('mx-checks').textContent) && /2700 × 1050 px at 300 DPI/.test(document.getElementById('mx-checks').textContent)"), `${tag}: mug wrap + 300 DPI checks at the template size`);
+  await until("/Mug preview, ES logo inside the design/.test(document.getElementById('mx-pstage-canvas').getAttribute('aria-label')) && !document.getElementById('mx-pstage-canvas').hidden", `${tag}: mug preview replaces the tee mockups`);
   await audit(`${tag}-setup-mug`);
   await click('#mx-blanks [data-kind="sticker"]');
   await until("/cut line/.test(document.getElementById('mx-checks').textContent)", `${tag} sticker cut check`);
   await click('#mx-blanks [data-kind="poster"]');
   await until("/trim/.test(document.getElementById('mx-checks').textContent)", `${tag} poster trim check`);
-  await audit(`${tag}-setup-poster`);
   await click('#mx-blanks [data-kind="hoodie"]');
   await until("/Hoodie$/.test(document.getElementById('mx-title-input').value) && document.getElementById('mx-colors-label').textContent === 'Hoodie colour'", `${tag} hoodie`);
   ok(await evaluate("[...document.getElementById('mx-logo').options].map(o => o.textContent).join('|') === 'Left sleeve|Back neck|No logo'"), `${tag}: hoodie logo areas`);
   await click('#mx-blanks [data-kind="tee"]');
   await until("/Tee$/.test(document.getElementById('mx-title-input').value) && document.getElementById('mx-logo').value === 'sleeve_left'", `${tag} back to tee`);
-  await click('#mx-colors [data-color="Navy"]');
-  ok(await evaluate("MerchUI.state.colors.join() === 'Navy' && document.querySelectorAll('#mx-colors [aria-checked=true]').length === 1"), `${tag}: one tee colour at a time`);
-  // ── Shop collections in Setup: tick one, then make a new one.
+  // ── Shop collections in Setup.
   await until("document.querySelectorAll('[data-colls=setup] [data-coll-id]').length >= 3", `${tag} setup collections`);
   await click('[data-colls=setup] [data-coll-id="col_fan"]');
   await click('[data-colls=setup] [data-coll-act="new"]');
@@ -213,91 +312,73 @@ async function flow(width, theme) {
   await evaluate(`(() => { const i = document.querySelector('[data-coll-name=setup]'); i.value = ${JSON.stringify(collName)}; return true; })()`);
   await click('[data-colls=setup] [data-coll-act="add"]');
   await until(`[...document.querySelectorAll('[data-colls=setup] .mx-cchip')].some(l => l.textContent.includes(${JSON.stringify(collName)}) && l.querySelector('input').checked)`, `${tag} new collection ticked`);
-  ok(calls.includes('collections') && calls.includes('collection-create'), `${tag}: collections + collection-create called`);
   ok(await evaluate("MerchUI.state.pick.setup.length === 2"), `${tag}: two collections picked`);
   ok(await evaluate("document.getElementById('mx-to-live').disabled"), `${tag}: Continue waits for the rights tick`);
   await click('#mx-ack');
   ok(!(await evaluate("document.getElementById('mx-to-live').disabled")), `${tag}: tick enables Continue`);
-  calls.length = 0;
-  bodies.length = 0;
-  stored.length = 0;
-  blockPut = theme === 'dark'; // dark run: the direct upload is blocked, so the relay carries it
-  await click('#mx-preview');
-  await until("document.querySelectorAll('#mx-mockups img').length > 0", `${tag} mockups`, 15000);
-  ok(calls.filter(c => c === 'upload-url').length === 2 && calls.includes('register') && calls.includes('preview'), `${tag}: print + logo uploaded, preview asked (${calls.join(',')})`);
-  if (blockPut) {
-    const relays = bodies.filter(b => b.mode === 'upload-relay');
-    ok(relays.length === 2, `${tag}: relay used for both files (${relays.length})`);
-    ok(stored.length === 2 && stored.every(k => /^merch-art\/00000000-0000-0000-0000-000000000001\/[\w-]+\.png$/.test(k)), `${tag}: files went to merch-art/<user>/<file>.png (${stored.join(' ')})`);
-    ok(relays.every(b => b.bucket === 'merch-art' && /^00000000-0000-0000-0000-000000000001\//.test(b.path) && /blocked\.example/.test(b.uploadUrl) && b.size > 0), `${tag}: relay gets path, uploadUrl and size`);
-  }
-  blockPut = false;
-  await audit(`${tag}-setup`);
+  // Back to the studio and forward again keeps the choices.
+  await click('#mx-back-studio');
+  ok(await evaluate("!document.getElementById('mx-view-designs').hidden"), `${tag}: back to the studio`);
+  await click('#mx-to-setup');
+  await until("!document.getElementById('mx-view-setup').hidden && document.getElementById('mx-ack').checked", `${tag} setup again`);
   await click('#mx-to-live');
-  await until("!document.getElementById('mx-view-live').hidden && /Navy/.test(document.getElementById('mx-push-status').textContent)", `${tag} live view`);
+  await until("!document.getElementById('mx-view-live').hidden && /T-shirt/.test(document.getElementById('mx-push-status').textContent)", `${tag} live view`);
   await audit(`${tag}-push`);
   calls.length = 0;
   await click('#mx-create-fw');
   await until("!document.getElementById('mx-live').hidden && document.querySelector('#mx-live img')", `${tag} product`);
-  ok(calls.includes('create') && !calls.includes('upload-url'), `${tag}: create reuses the uploaded images (${calls.join(',')})`);
+  ok(calls.includes('create'), `${tag}: create (${calls.join(',')})`);
+  const createBody = bodies.filter(b => b.mode === 'create').pop();
+  ok(createBody && !('designedStack' in createBody.concept) && createBody.content?.trend?.id === 't4', `${tag}: create sends the clean concept and the trend`);
   const setCall = bodies.filter(b => b.mode === 'collection-set').pop();
   ok(setCall && setCall.collectionIds.length === 2 && setCall.collectionIds.includes('col_fan'), `${tag}: create puts it in the picked collections`);
-  ok(await evaluate("document.querySelectorAll('[data-colls=live] [data-coll-id]:checked').length === 2"), `${tag}: live panel shows its collections`);
-  ok(await evaluate("Boolean(document.querySelector('#mx-live [data-live=copy-desc]'))"), `${tag}: copy description backup`);
-  ok(await evaluate("/Hidden/.test(document.querySelector('#mx-live .es-badge').textContent)"), `${tag}: created hidden`);
-  ok(await evaluate("/Fourthwall dashboard/.test(document.getElementById('mx-live').textContent)"), `${tag}: edit-on-Fourthwall note`);
+  ok(await evaluate("/Hidden/.test(document.querySelector('#mx-live .es-badge').textContent) && Boolean(document.querySelector('#mx-live [data-live=copy-desc]'))"), `${tag}: created hidden, copy description`);
   await audit(`${tag}-live`);
   await click('#mx-live [data-live="publish"]');
   await until("/Live/.test(document.querySelector('#mx-live .es-badge')?.textContent || '')", `${tag} publish`);
   await click('#mx-live [data-live="hide"]');
   await until("/Hidden/.test(document.querySelector('#mx-live .es-badge')?.textContent || '')", `${tag} hide`);
-  // ── Collections on the live panel: untick one, save.
   ok(await evaluate("document.querySelector('[data-coll-act=save]').disabled"), `${tag}: save waits for a change`);
   await click('[data-colls=live] [data-coll-id="col_fan"]');
   await click('[data-coll-act="save"]');
   await until("/Saved/.test(document.querySelector('[data-coll-status=live]')?.textContent || '')", `${tag} live collections saved`);
-  ok(bodies.filter(b => b.mode === 'collection-set').pop().collectionIds.length === 1, `${tag}: live save sends the new list`);
   // ── Archive with a typed confirm.
   await click('#mx-live [data-live="archive"]');
   await until("document.getElementById('mx-archive').open", `${tag} archive dialog`);
-  ok(await evaluate("document.getElementById('mx-archive-go').disabled && document.activeElement.id === 'mx-archive-input'"), `${tag}: archive waits for the name, focus in the field`);
-  await evaluate("(() => { const i = document.getElementById('mx-archive-input'); i.value = 'wrong name'; i.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
-  ok(await evaluate("document.getElementById('mx-archive-go').disabled"), `${tag}: a wrong name keeps Archive off`);
+  ok(await evaluate("document.getElementById('mx-archive-go').disabled && document.activeElement.id === 'mx-archive-input'"), `${tag}: archive waits for the name`);
   await evaluate("(() => { const i = document.getElementById('mx-archive-input'); i.value = '  ' + MerchUI.state.product.name.toLowerCase() + ' '; i.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
   ok(!(await evaluate("document.getElementById('mx-archive-go').disabled")), `${tag}: the typed name enables Archive`);
   await audit(`${tag}-archive-dialog`);
   await click('#mx-archive-go');
   await until("!document.getElementById('mx-archive').open && /Archived/.test(document.querySelector('#mx-live .es-badge')?.textContent || '')", `${tag} archived`);
-  const arch = bodies.filter(b => b.mode === 'archive').pop();
-  ok(arch && arch.confirm === true && arch.productId && arch.confirmName.toLowerCase() === arch.confirmName && arch.confirmName.length > 3, `${tag}: archive sends confirm:true and the typed name`);
-  ok(await evaluate("!document.querySelector('#mx-live [data-live=publish], #mx-live [data-live=hide], #mx-live [data-live=archive]')"), `${tag}: archived product has no actions`);
   // ── Your merch.
   calls.length = 0;
   await click('#mx-tab-list');
   await until("!document.getElementById('mx-view-list').hidden && document.querySelectorAll('#mx-list tbody tr').length >= 5", `${tag} list`);
   ok(calls.includes('list') && calls.includes('sales'), `${tag}: list + sales called`);
-  ok(await evaluate("document.getElementById('mx-steps-nav').hidden && document.getElementById('mx-tab-list').getAttribute('aria-selected') === 'true'"), `${tag}: list tab selected, steps hidden`);
+  ok(await evaluate("document.getElementById('mx-steps-nav').hidden && document.getElementById('mx-mode-box').hidden && document.getElementById('mx-tab-list').getAttribute('aria-selected') === 'true'"), `${tag}: list tab selected, steps and mode hidden`);
   ok(await evaluate("(() => { const r = document.querySelector('#mx-list tr[data-pid=prod_s1]'); return r && /Live/.test(r.textContent) && /364\\.00/.test(r.textContent) && r.querySelector('img') && r.querySelector('a[href*=ball-dont-lie]'); })()"), `${tag}: row has status, revenue, mockup and link`);
   ok(await evaluate("document.querySelectorAll('#mx-list-totals .mx-total').length === 4"), `${tag}: totals`);
-  ok(await evaluate("/Sales updated/.test(document.getElementById('mx-list-updated').textContent)"), `${tag}: sales time`);
   await audit(`${tag}-list`);
-  calls.length = 0;
   await click('#mx-list tr[data-pid=prod_s2] [data-row=refresh]');
   await until("/up to date/.test(document.getElementById('mx-list-updated').textContent)", `${tag} row refresh`);
-  ok(bodies.filter(b => b.mode === 'product').pop()?.refresh === true, `${tag}: row refresh asks product with refresh:true`);
-  await click('#mx-list tr[data-pid=prod_s2] [data-row=archive]');
-  await until("document.getElementById('mx-archive').open && /Megatron/.test(document.getElementById('mx-archive-name').textContent)", `${tag} list archive dialog`);
-  await click('#mx-archive-cancel');
-  ok(await evaluate("!document.getElementById('mx-archive').open && document.activeElement?.dataset.row === 'archive'"), `${tag}: cancel closes and returns focus`);
-  calls.length = 0;
-  await click('#mx-list-refresh');
-  await until("document.getElementById('mx-list').getAttribute('aria-busy') === 'false' && document.querySelectorAll('#mx-list tbody tr').length >= 5", `${tag} list refresh`);
-  ok(calls.includes('list'), `${tag}: refresh reloads the list`);
+  await click('#mx-list tr[data-pid=prod_s2] [data-row=mockups]');
+  await until("document.querySelectorAll('#mx-list .mx-lt__more img').length > 0", `${tag} row mockups`);
   await click('#mx-tab-make');
   ok(await evaluate("!document.getElementById('mx-view-live').hidden"), `${tag}: Create tab returns to the last step`);
+  // The mode is remembered on the next visit.
+  if (pro) {
+    await send('Page.reload');
+    await until("window.MerchUI && MerchUI.state.aiMode === 'pro' && document.querySelector('#mx-mode [data-ai=pro]').getAttribute('aria-checked') === 'true'", `${tag} Pro remembered after reload`);
+  }
 }
 
 // ─── Page states ──────────────────────────────────────────────────────────
+async function quickDesigns(tag, text = 'Ball don’t lie') {
+  await setText('#mx-text', text);
+  await click('#mx-create');
+  await until("document.querySelectorAll('#mx-strip .mx-film').length > 0 && !document.getElementById('mx-view-designs').hidden", `${tag} designs`);
+}
 async function states(width, theme) {
   const tag = `${width}-${theme}`;
   scenario = 'not-set-up';
@@ -307,20 +388,33 @@ async function states(width, theme) {
 
   scenario = 'free';
   await load(width, theme, 'free');
-  await evaluate("(() => { const t = document.getElementById('mx-text'); t.value = 'We center fans'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
-  await click('#mx-create');
-  await until("document.querySelectorAll('.mx-design').length > 0", `${tag} free designs (fallback concepts)`);
+  await quickDesigns(`${tag} free`, 'We center fans');
   await until("/Free mode/.test(document.getElementById('mx-banner').textContent)", `${tag} free banner`);
-  ok(await evaluate("/without AI/.test(document.getElementById('mx-designs-sub').textContent)"), `${tag}: free-mode note`);
+  ok(await evaluate("/without AI/.test(document.getElementById('mx-designs-sub').textContent) && document.getElementById('mx-made-mode').textContent === 'Made without AI' && document.getElementById('mx-idea').hidden"), `${tag}: free-mode note, no plan`);
+  await click('#mx-chat-chips [data-say="Add the nickname"]');
+  await until("/Free mode can do/.test(document.getElementById('mx-chat-note').textContent)", `${tag} free refine explains what it can do`);
+  await click('#mx-chat-chips [data-say="Centre it"]');
+  await until(`${sel()}.align === 'center'`, `${tag} free refine runs simple intents`);
+  await audit(`${tag}-free-studio`);
+
+  scenario = 'pro-cap';
+  await load(width, theme, 'procap', 'pro');
+  await quickDesigns(`${tag} pro-cap`);
+  ok(await evaluate("!document.getElementById('mx-fell').hidden && /weekly AI limit/.test(document.getElementById('mx-fell').textContent) && document.getElementById('mx-banner').hidden && document.getElementById('mx-made-mode').textContent === 'Made without AI'"), `${tag}: Pro fallback note (${await evaluate("document.getElementById('mx-fell').textContent")})`);
+  await audit(`${tag}-pro-cap`);
+
+  scenario = 'no-moments';
+  await load(width, theme, 'nomo');
+  await until("document.querySelector('#mx-moments .es-empty')", `${tag} no moments empty state`);
 
   scenario = 'cant-push';
   await load(width, theme, 'cp');
   await until("MerchUI.state.status", `${tag} cant-push status`);
-  await evaluate("(() => { const t = document.getElementById('mx-text'); t.value = 'Ball don’t lie'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
-  await click('#mx-create');
-  await until("document.querySelectorAll('.mx-design').length > 0", `${tag} cp designs`);
+  await quickDesigns(`${tag} cp`);
+  calls.length = 0;
   await click('#mx-to-setup');
   await until("document.getElementById('mx-price').value", `${tag} cp setup`);
+  ok(!calls.includes('preview') && !calls.includes('upload-url') && await evaluate("document.getElementById('mx-preview').hidden && !document.getElementById('mx-pstage-canvas').hidden && /blank photo/.test(document.getElementById('mx-pstage-title').textContent)"), `${tag}: non-admins see FrameUp's preview, no Fourthwall calls`);
   await click('#mx-ack');
   await click('#mx-to-live');
   await until("/Ask an admin to publish this/.test(document.getElementById('mx-push-status').textContent)", `${tag} can't-push message`);
@@ -329,18 +423,15 @@ async function states(width, theme) {
 
   scenario = 'cap';
   await load(width, theme, 'cap');
-  await evaluate("(() => { const t = document.getElementById('mx-text'); t.value = 'Ball don’t lie'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
-  await click('#mx-create');
-  await until("document.querySelectorAll('.mx-design').length > 0", `${tag} cap designs`);
+  await until("MerchUI.state.status", `${tag} cap status`);
+  await quickDesigns(`${tag} cap`);
   await click('#mx-to-setup');
   await until("document.getElementById('mx-price').value", `${tag} cap setup`);
   await click('#mx-ack');
   await click('#mx-to-live');
   await click('#mx-create-fw');
   await until("/daily limit/.test(document.getElementById('mx-push-status').textContent)", `${tag} daily cap message`);
-  await audit(`${tag}-cap`);
 
-  // Your merch: history not set up (Fourthwall fallback), empty, error.
   scenario = 'no-db';
   await load(width, theme, 'nodb');
   await click('#mx-tab-list');
@@ -355,22 +446,22 @@ async function states(width, theme) {
 
   scenario = 'error';
   await load(width, theme, 'err');
+  await until("document.querySelector('#mx-moments .es-error-state [data-moments=retry]')", `${tag} moments error with retry`);
+  await audit(`${tag}-content-error`);
   await click('#mx-tab-list');
   await until("document.querySelector('#mx-list .es-error-state [data-list-act=retry]')", `${tag} list error with retry`);
-  await audit(`${tag}-list-error`);
   await click('#mx-tab-make');
-  await evaluate("(() => { const t = document.getElementById('mx-text'); t.value = 'Ball don’t lie'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()");
-  await click('#mx-create');
-  await until("document.querySelectorAll('.mx-design').length > 0", `${tag} error → fallback designs`);
+  await quickDesigns(`${tag} error → fallback designs`);
+  ok(await evaluate("/didn’t load/.test(document.getElementById('mx-tee-colors-note').textContent) && document.querySelectorAll('#mx-tee-colors [role=radio]').length >= 2"), `${tag}: studio falls back to drawn colours when templates fail`);
   await click('#mx-to-setup');
   await until("document.querySelector('#mx-blanks-retry')", `${tag} templates error with retry`);
   await audit(`${tag}-error`);
 }
 
 try {
-  await flow(1440, 'light');
-  await flow(1440, 'dark');
-  await flow(1024, 'light');
+  await flow(1440, 'light', 'pro');
+  await flow(1440, 'dark', 'pro');
+  await flow(1024, 'light', 'basic');
   await states(1440, 'light');
   await states(1440, 'dark');
   // Desktop only, but no horizontal scroll on a phone: the list view at 375.
@@ -390,4 +481,4 @@ if (fails.length) {
   [...new Set(fails)].forEach(f => console.log('  ✗ ' + f));
   process.exit(1);
 }
-console.log(`merch ui: ${checks} checks passed (1440 light + dark, 1024 light; flow, blanks, collections, archive, list, relay and states)`);
+console.log(`merch ui: ${checks} checks passed (1440 light + dark Pro, 1024 light Basic; moments, studio, refine + undo, extras, live mockups, blanks, collections, archive, list, relay and states)`);

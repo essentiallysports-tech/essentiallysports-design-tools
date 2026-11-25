@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Merch Designs | FrameUp</title>
-  <meta name="description" content="Turn a line, quote or story into ES fan merch and create it on Fourthwall, hidden until someone publishes it.">
+  <meta name="description" content="Turn a line, quote, story or trending moment into ES fan merch with AI, and create it on Fourthwall, hidden until someone publishes it.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="frameup-errors.js?v=20261121-rel2"></script>
@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="merch.css?v=20261126-merch3">
+  <link rel="stylesheet" href="merch.css?v=20261126-merch4">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -56,148 +56,283 @@
 
   <main class="mx-page" id="main">
     <header class="mx-head">
-      <div class="mx-head__title">
-        <h1 class="mx-title" id="mx-title">Merch Designs</h1>
-        <span class="mx-conn" id="mx-conn" role="status" aria-live="polite"></span>
+      <div class="mx-head__top">
+        <div class="mx-head__title">
+          <h1 class="mx-title" id="mx-title">Merch Designs</h1>
+          <span class="mx-conn" id="mx-conn" role="status" aria-live="polite"></span>
+        </div>
+        <div class="mx-mode" id="mx-mode-box">
+          <div class="es-segmented es-segmented--sm mx-mode__switch" id="mx-mode" role="radiogroup" aria-label="AI mode" aria-describedby="mx-mode-note">
+            <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-ai="basic">Basic</button>
+            <button class="es-segmented__item" type="button" role="radio" aria-checked="false" tabindex="-1" data-ai="pro">Pro</button>
+          </div>
+          <p class="mx-mode__note" id="mx-mode-note"></p>
+        </div>
       </div>
-      <div class="es-tabs mx-tabs" role="tablist" aria-label="Merch">
-        <button class="es-tab" type="button" role="tab" id="mx-tab-make" aria-selected="true" aria-controls="main" data-tab="make">Create merch</button>
-        <button class="es-tab" type="button" role="tab" id="mx-tab-list" aria-selected="false" aria-controls="mx-view-list" tabindex="-1" data-tab="list">Your merch</button>
+      <div class="mx-head__nav">
+        <div class="es-tabs mx-tabs" role="tablist" aria-label="Merch">
+          <button class="es-tab" type="button" role="tab" id="mx-tab-make" aria-selected="true" aria-controls="main" data-tab="make">Create merch</button>
+          <button class="es-tab" type="button" role="tab" id="mx-tab-list" aria-selected="false" aria-controls="mx-view-list" tabindex="-1" data-tab="list">Your merch</button>
+        </div>
+        <nav class="mx-steps" id="mx-steps-nav" aria-label="Merch steps">
+          <ol id="mx-steps">
+            <li><button class="mx-step" type="button" data-step="content"><span class="mx-step__num" aria-hidden="true">1</span><span>Content</span></button></li>
+            <li><button class="mx-step" type="button" data-step="designs"><span class="mx-step__num" aria-hidden="true">2</span><span>Design</span></button></li>
+            <li><button class="mx-step" type="button" data-step="setup"><span class="mx-step__num" aria-hidden="true">3</span><span>Product</span></button></li>
+            <li><button class="mx-step" type="button" data-step="live"><span class="mx-step__num" aria-hidden="true">4</span><span>Push &amp; live</span></button></li>
+          </ol>
+        </nav>
       </div>
-      <nav class="mx-steps" id="mx-steps-nav" aria-label="Merch steps">
-        <ol id="mx-steps">
-          <li><button class="mx-step" type="button" data-step="content"><span class="mx-step__num" aria-hidden="true">1</span><span>Content</span></button></li>
-          <li><button class="mx-step" type="button" data-step="designs"><span class="mx-step__num" aria-hidden="true">2</span><span>Designs</span></button></li>
-          <li><button class="mx-step" type="button" data-step="setup"><span class="mx-step__num" aria-hidden="true">3</span><span>Setup</span></button></li>
-          <li><button class="mx-step" type="button" data-step="live"><span class="mx-step__num" aria-hidden="true">4</span><span>Push &amp; live</span></button></li>
-        </ol>
-      </nav>
     </header>
 
     <div class="mx-banner" id="mx-banner" role="status" aria-live="polite" hidden></div>
 
     <!-- 1 Content -->
     <section class="mx-view" id="mx-view-content" data-view="content" aria-labelledby="mx-h-content">
-      <div class="mx-card mx-content">
-        <h2 class="mx-h2" id="mx-h-content">What should the shirt say?</h2>
-        <p class="mx-sub">Paste a line, a quote, a stat or an ES story link. Or start from a trend.</p>
-        <label class="es-field">
-          <span class="es-field__label">Your words or a story link</span>
-          <textarea class="mx-input mx-textarea" id="mx-text" rows="4" placeholder="e.g. Ball don’t lie" aria-describedby="mx-text-hint"></textarea>
-          <span class="es-field__hint" id="mx-text-hint">Exact quotes are printed exactly. Names and quotes get a rights check later.</span>
-        </label>
-        <div class="mx-trends">
-          <div class="mx-row mx-row--between">
-            <span class="mx-label" id="mx-trends-label">Trending now</span>
-            <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-trends-load">Show trends</button>
+      <div class="mx-content-grid">
+        <div class="mx-card mx-brief">
+          <div>
+            <h2 class="mx-h2" id="mx-h-content">What should the merch say?</h2>
+            <p class="mx-sub">A line, an exact quote or a stat, plus an ES story link if you have one. Or start from a moment on the right.</p>
           </div>
-          <div class="mx-chips" id="mx-trends" role="group" aria-labelledby="mx-trends-label"></div>
+          <label class="es-field">
+            <span class="es-field__label">Your line, quote or stat</span>
+            <textarea class="mx-input mx-textarea" id="mx-text" rows="4" placeholder="e.g. Ball don’t lie" aria-describedby="mx-text-hint"></textarea>
+            <span class="es-field__hint" id="mx-text-hint">Exact quotes are printed exactly. Names and quotes get a rights check before the shop.</span>
+          </label>
+          <label class="es-field">
+            <span class="es-field__label">ES story link <span class="mx-opt">optional</span></span>
+            <input class="mx-input" id="mx-url" type="url" inputmode="url" autocomplete="off" placeholder="https://www.essentiallysports.com/…">
+          </label>
+          <div class="mx-using" id="mx-using" hidden>
+            <span class="mx-using__text">Using the moment <strong id="mx-using-title"></strong></span>
+            <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-using-clear">Don’t use it</button>
+          </div>
+          <fieldset class="mx-fieldset">
+            <legend class="mx-label">Collection</legend>
+            <div class="mx-chips" id="mx-collections" role="radiogroup" aria-label="Collection" aria-describedby="mx-coll-blurb"></div>
+            <p class="mx-meta" id="mx-coll-blurb"></p>
+          </fieldset>
+          <details class="mx-rules" id="mx-rules" hidden>
+            <summary>The AI follows ES merch rules</summary>
+            <ul class="mx-rules__list" id="mx-rules-list"></ul>
+          </details>
+          <div class="mx-actions mx-actions--create">
+            <span class="mx-meta" id="mx-content-meta"></span>
+            <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-create">Create with AI</button>
+          </div>
         </div>
-        <fieldset class="mx-fieldset">
-          <legend class="mx-label">Collection</legend>
-          <div class="mx-collections" id="mx-collections" role="radiogroup" aria-label="Collection"></div>
-        </fieldset>
-        <div class="mx-actions">
-          <span class="mx-meta" id="mx-content-meta"></span>
-          <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-create">Create designs</button>
-        </div>
+        <aside class="mx-card mx-moments" aria-labelledby="mx-h-moments">
+          <div class="mx-row mx-row--between mx-row--top">
+            <div>
+              <h2 class="mx-h3" id="mx-h-moments">Merch-worthy moments</h2>
+              <p class="mx-meta" id="mx-moments-meta">Today’s trends, scored for merch.</p>
+            </div>
+            <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-moments-refresh">Refresh</button>
+          </div>
+          <div class="mx-chips mx-chips--tight" id="mx-moments-sports" role="group" aria-label="Filter moments by sport" hidden></div>
+          <div class="mx-moments__list" id="mx-moments" aria-live="polite" aria-busy="false"></div>
+        </aside>
       </div>
     </section>
 
-    <!-- 2 Designs -->
+    <!-- 2 Design studio -->
     <section class="mx-view" id="mx-view-designs" data-view="designs" aria-labelledby="mx-h-designs" hidden>
-      <div class="mx-row mx-row--between">
+      <div class="mx-row mx-row--between mx-row--top">
         <div>
-          <h2 class="mx-h2" id="mx-h-designs">Pick a design</h2>
-          <p class="mx-sub" id="mx-designs-sub">Click a design to choose it. Quick edits change it on the spot.</p>
+          <h2 class="mx-h2" id="mx-h-designs">Design studio</h2>
+          <p class="mx-sub" id="mx-designs-sub">Pick a design, then edit it by hand or tell the AI what to change.</p>
         </div>
         <div class="mx-row">
-          <div class="mx-seg" role="group" aria-label="Card view">
-            <button class="mx-seg__b" type="button" data-card-view="closeup" aria-pressed="true">Close-up</button>
-            <button class="mx-seg__b" type="button" data-card-view="tee" aria-pressed="false">On the tee</button>
-          </div>
-          <button class="es-btn es-btn--ghost" type="button" id="mx-again">Make new designs</button>
+          <span class="es-badge" id="mx-made-mode" hidden></span>
+          <button class="es-btn es-btn--ghost" type="button" id="mx-again">New designs</button>
         </div>
       </div>
-      <div class="mx-grid" id="mx-grid" aria-live="polite"></div>
+      <p class="mx-note" id="mx-fell" role="status" hidden></p>
+      <div class="mx-studio">
+        <div class="mx-studio__main">
+          <div class="mx-card mx-stage">
+            <div class="mx-stage__bar">
+              <div class="es-segmented es-segmented--sm" role="group" aria-label="Stage view">
+                <button class="es-segmented__item" type="button" data-stage="tee" aria-pressed="true">On a tee</button>
+                <button class="es-segmented__item" type="button" data-stage="closeup" aria-pressed="false">Close-up</button>
+              </div>
+              <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-undo" disabled>Undo</button>
+            </div>
+            <div class="mx-stage__view">
+              <canvas class="mx-stage__canvas" id="mx-stage-canvas" width="720" height="840" role="img" aria-label="Design preview"></canvas>
+            </div>
+            <p class="mx-meta mx-stage__cap" id="mx-stage-cap"></p>
+          </div>
+          <div class="mx-card mx-checkcard" id="mx-studio-checks-card">
+            <span class="mx-label" id="mx-studio-checks-label">Print check</span>
+            <ul class="mx-checks" id="mx-studio-checks" aria-labelledby="mx-studio-checks-label" aria-live="polite"></ul>
+          </div>
+        </div>
+        <div class="mx-studio__side">
+          <section class="mx-card mx-idea" id="mx-idea" aria-labelledby="mx-idea-h" hidden>
+            <h3 class="mx-eyebrow" id="mx-idea-h">The idea</h3>
+            <p class="mx-idea__text" id="mx-idea-text"></p>
+            <p class="mx-meta" id="mx-idea-angle"></p>
+          </section>
+          <section class="mx-card mx-filmcard" aria-labelledby="mx-strip-label">
+            <div class="mx-row mx-row--between">
+              <h3 class="mx-label" id="mx-strip-label">Designs</h3>
+              <span class="mx-meta" id="mx-strip-count"></span>
+            </div>
+            <div class="mx-strip" id="mx-strip" role="radiogroup" aria-labelledby="mx-strip-label"></div>
+          </section>
+          <section class="mx-card mx-editor" id="mx-editor" aria-labelledby="mx-ed-title">
+            <div class="mx-ed-head">
+              <div class="mx-design__tags" id="mx-ed-tags"></div>
+              <h3 class="mx-ed-title" id="mx-ed-title"></h3>
+              <p class="mx-meta" id="mx-ed-why"></p>
+              <div class="mx-design__rights" id="mx-ed-rights" aria-label="Rights to check"></div>
+            </div>
+
+            <div class="mx-chat" id="mx-chat">
+              <label class="mx-label" for="mx-chat-input">Tell the AI what to change</label>
+              <div class="mx-chat__row">
+                <input class="mx-input" id="mx-chat-input" type="text" maxlength="300" autocomplete="off" placeholder="e.g. use Lakers colours, add the nickname under it" aria-describedby="mx-chat-note">
+                <button class="es-btn" type="button" id="mx-chat-send">Change it</button>
+              </div>
+              <div class="mx-chips mx-chips--tight" id="mx-chat-chips" role="group" aria-label="Suggestions"></div>
+              <p class="mx-chat__note" id="mx-chat-note" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="mx-ed-sec">
+              <div class="mx-row mx-row--between">
+                <h4 class="mx-label" id="mx-pills-label">Pills</h4>
+                <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-vary" title="The same words in other ES pill layouts">Variations</button>
+              </div>
+              <div class="mx-pills" id="mx-pills" role="group" aria-labelledby="mx-pills-label"></div>
+              <button class="es-btn es-btn--sm mx-pill-add" type="button" id="mx-pill-add">Add a pill</button>
+            </div>
+
+            <fieldset class="mx-ed-sec mx-fit" id="mx-fit">
+              <legend class="mx-label">Size and layout</legend>
+              <div class="mx-fit__opts">
+                <label class="es-field mx-grow"><span class="es-field__label">Words per pill</span>
+                  <select class="mx-input mx-input--sm" id="mx-fit-split">
+                    <option value="">As designed</option>
+                    <option value="word">One word</option>
+                    <option value="pair">Two words</option>
+                    <option value="auto">Balanced</option>
+                    <option value="line">Long lines</option>
+                  </select>
+                </label>
+                <div class="mx-fit__align">
+                  <span class="es-field__label" id="mx-align-label">Alignment</span>
+                  <div class="es-segmented es-segmented--sm" role="group" aria-labelledby="mx-align-label">
+                    <button class="es-segmented__item" type="button" data-fit-align="left" aria-pressed="true">Left</button>
+                    <button class="es-segmented__item" type="button" data-fit-align="center" aria-pressed="false">Centre</button>
+                  </div>
+                </div>
+              </div>
+              <label class="mx-fit__row" for="mx-fit-scale"><span>Size</span><input type="range" id="mx-fit-scale" min="60" max="160" step="5" value="100" aria-describedby="mx-fit-read"><output id="mx-fit-scale-out" for="mx-fit-scale">100%</output></label>
+              <label class="mx-fit__row" id="mx-fit-top-row" for="mx-fit-top"><span>From the top</span><input type="range" id="mx-fit-top" min="0.5" max="8" step="0.25" value="1.75" aria-describedby="mx-fit-read"><output id="mx-fit-top-out" for="mx-fit-top">1.75 in</output></label>
+              <div class="mx-row mx-row--between">
+                <p class="mx-meta" id="mx-fit-read" aria-live="polite"></p>
+                <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-fit-reset">Reset layout</button>
+              </div>
+            </fieldset>
+
+            <div class="mx-ed-sec">
+              <h4 class="mx-label" id="mx-tee-colors-label">Tee colour</h4>
+              <div class="mx-swatches" id="mx-tee-colors" role="radiogroup" aria-labelledby="mx-tee-colors-label"></div>
+              <p class="mx-meta" id="mx-tee-colors-note"></p>
+            </div>
+
+            <div class="mx-ed-sec" id="mx-elements-sec" hidden>
+              <div class="mx-row mx-row--between">
+                <h4 class="mx-label" id="mx-elements-label">Extras <span class="es-badge es-badge--brand">Pro</span></h4>
+                <span class="mx-meta" id="mx-elements-count"></span>
+              </div>
+              <p class="mx-meta">Simple shapes beside the pills, printed in solid ink. Up to 3.</p>
+              <div class="mx-elements" id="mx-elements" role="group" aria-labelledby="mx-elements-label"></div>
+              <div class="mx-row mx-row--wrap mx-el-add" id="mx-el-add" role="group" aria-label="Add an extra">
+                <button class="es-btn es-btn--sm" type="button" data-el-add="number">Number</button>
+                <button class="es-btn es-btn--sm" type="button" data-el-add="rule">Rule</button>
+                <button class="es-btn es-btn--sm" type="button" data-el-add="block">Block</button>
+                <button class="es-btn es-btn--sm" type="button" data-el-add="icon">Icon</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
       <div class="mx-actions mx-actions--bar">
         <span class="mx-meta" id="mx-designs-meta"></span>
         <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-setup">Use this design</button>
       </div>
     </section>
 
-    <!-- 3 Setup -->
+    <!-- 3 Product -->
     <section class="mx-view" id="mx-view-setup" data-view="setup" aria-labelledby="mx-h-setup" hidden>
       <div class="mx-split">
-        <aside class="mx-card mx-stage" aria-label="Design preview">
-          <canvas class="mx-stage__canvas" id="mx-stage-canvas" width="480" height="560" role="img" aria-label="Tee preview"></canvas>
-          <fieldset class="mx-fit" id="mx-fit">
-            <legend class="mx-label">Size and layout</legend>
-            <label class="mx-fit__row" for="mx-fit-scale"><span>Size</span><input type="range" id="mx-fit-scale" min="60" max="160" step="5" value="100" aria-describedby="mx-fit-read"><output id="mx-fit-scale-out" for="mx-fit-scale">100%</output></label>
-            <label class="mx-fit__row" id="mx-fit-top-row" for="mx-fit-top"><span>From the top</span><input type="range" id="mx-fit-top" min="0.5" max="8" step="0.25" value="1.75" aria-describedby="mx-fit-read"><output id="mx-fit-top-out" for="mx-fit-top">1.75 in</output></label>
-            <div class="mx-row mx-row--wrap mx-fit__opts">
-              <label class="es-field mx-grow"><span class="es-field__label">Words per pill</span>
-                <select class="mx-input mx-input--sm" id="mx-fit-split">
-                  <option value="">As designed</option>
-                  <option value="word">One word</option>
-                  <option value="pair">Two words</option>
-                  <option value="auto">Balanced</option>
-                  <option value="line">Long lines</option>
-                </select>
-              </label>
-              <div class="mx-seg" role="group" aria-label="Alignment">
-                <button class="mx-seg__b" type="button" data-fit-align="left" aria-pressed="true">Left</button>
-                <button class="mx-seg__b" type="button" data-fit-align="center" aria-pressed="false">Centre</button>
-              </div>
-              <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-fit-reset">Reset</button>
+        <aside class="mx-card mx-pstage" aria-label="Mockups">
+          <div class="mx-row mx-row--between mx-row--top">
+            <div>
+              <h3 class="mx-label" id="mx-pstage-title">Mockup</h3>
+              <p class="mx-meta" id="mx-pstage-kind"></p>
             </div>
-            <p class="mx-meta" id="mx-fit-read" aria-live="polite"></p>
-          </fieldset>
+            <button class="es-btn es-btn--sm" type="button" id="mx-preview">Get live mockups</button>
+          </div>
+          <div class="mx-pstage__main" id="mx-pstage-main">
+            <canvas class="mx-pstage__canvas" id="mx-pstage-canvas" width="720" height="840" role="img" aria-label="Product preview"></canvas>
+          </div>
+          <p class="mx-meta" id="mx-mockup-status" role="status" aria-live="polite"></p>
           <div class="mx-mockups" id="mx-mockups" aria-live="polite"></div>
         </aside>
         <div class="mx-card mx-setup">
           <h2 class="mx-h2" id="mx-h-setup">Set up the product</h2>
-          <div class="mx-block">
-            <span class="mx-label" id="mx-blank-label">Product</span>
-            <div class="mx-blanks" id="mx-blanks" role="radiogroup" aria-labelledby="mx-blank-label" aria-describedby="mx-blank-detail"></div>
-            <p class="mx-meta" id="mx-blank-detail"></p>
+          <div class="mx-psec">
+            <h3 class="mx-eyebrow">Product</h3>
+            <div class="mx-block">
+              <span class="mx-label es-sr-only" id="mx-blank-label">Product</span>
+              <div class="mx-blanks" id="mx-blanks" role="radiogroup" aria-labelledby="mx-blank-label" aria-describedby="mx-blank-detail"></div>
+              <p class="mx-meta" id="mx-blank-detail"></p>
+            </div>
+            <div class="mx-block" id="mx-colors-block">
+              <span class="mx-label" id="mx-colors-label">Tee colour</span>
+              <div class="mx-chips" id="mx-colors" role="radiogroup" aria-labelledby="mx-colors-label"></div>
+            </div>
+            <div class="mx-row mx-row--wrap">
+              <label class="es-field mx-grow">
+                <span class="es-field__label">Print area</span>
+                <select class="mx-input" id="mx-side"></select>
+              </label>
+              <label class="es-field mx-grow">
+                <span class="es-field__label">ES logo</span>
+                <select class="mx-input" id="mx-logo" aria-describedby="mx-logo-hint"></select>
+              </label>
+            </div>
+            <p class="mx-meta" id="mx-logo-hint"></p>
           </div>
-          <div class="mx-block" id="mx-colors-block">
-            <span class="mx-label" id="mx-colors-label">Tee colour</span>
-            <div class="mx-chips" id="mx-colors" role="radiogroup" aria-labelledby="mx-colors-label"></div>
-          </div>
-          <div class="mx-row mx-row--wrap">
-            <label class="es-field mx-grow">
-              <span class="es-field__label">Print area</span>
-              <select class="mx-input" id="mx-side"></select>
+          <div class="mx-psec">
+            <h3 class="mx-eyebrow">Listing</h3>
+            <label class="es-field">
+              <span class="es-field__label">Title</span>
+              <input class="mx-input" id="mx-title-input" type="text" maxlength="120" autocomplete="off">
             </label>
-            <label class="es-field mx-grow">
-              <span class="es-field__label">ES logo</span>
-              <select class="mx-input" id="mx-logo" aria-describedby="mx-logo-hint"></select>
+            <label class="es-field">
+              <span class="es-field__label">Description</span>
+              <textarea class="mx-input mx-textarea" id="mx-desc" rows="3"></textarea>
             </label>
+            <div class="mx-row mx-row--wrap">
+              <label class="es-field mx-price">
+                <span class="es-field__label">Price (USD)</span>
+                <input class="mx-input" id="mx-price" type="number" min="1" step="0.01" inputmode="decimal" aria-describedby="mx-earn">
+              </label>
+              <p class="mx-earn" id="mx-earn"></p>
+            </div>
+            <p class="mx-meta" id="mx-setup-meta" role="status" aria-live="polite"></p>
           </div>
-          <p class="mx-meta" id="mx-logo-hint"></p>
-          <label class="es-field">
-            <span class="es-field__label">Title</span>
-            <input class="mx-input" id="mx-title-input" type="text" maxlength="120" autocomplete="off">
-          </label>
-          <label class="es-field">
-            <span class="es-field__label">Description</span>
-            <textarea class="mx-input mx-textarea" id="mx-desc" rows="3"></textarea>
-          </label>
-          <div class="mx-row mx-row--wrap">
-            <label class="es-field mx-price">
-              <span class="es-field__label">Price (USD)</span>
-              <input class="mx-input" id="mx-price" type="number" min="1" step="0.01" inputmode="decimal" aria-describedby="mx-earn">
-            </label>
-            <p class="mx-earn" id="mx-earn"></p>
-          </div>
-          <div class="mx-block" id="mx-checks-block">
-            <span class="mx-label" id="mx-checks-label">Print check</span>
+          <div class="mx-psec" id="mx-checks-block">
+            <h3 class="mx-eyebrow" id="mx-checks-label">Print check</h3>
             <ul class="mx-checks" id="mx-checks" aria-labelledby="mx-checks-label" aria-live="polite"></ul>
           </div>
-          <fieldset class="mx-fieldset mx-shopcolls" id="mx-shopcolls-setup">
-            <legend class="mx-label">Shop collections</legend>
+          <fieldset class="mx-fieldset mx-psec mx-shopcolls" id="mx-shopcolls-setup">
+            <legend class="mx-eyebrow">Shop collections</legend>
             <p class="mx-meta">Fourthwall has no tags, so collections are how products are grouped in the shop. Pick any.</p>
             <div class="mx-shopcolls__body" data-colls="setup"></div>
           </fieldset>
@@ -208,10 +343,9 @@
             <label class="mx-check"><input type="checkbox" id="mx-ack"><span>I’ve checked this design: no logos or official marks, quotes are exact, and I accept the likeness and trademark risk.</span></label>
           </div>
           <div class="mx-actions">
-            <button class="es-btn" type="button" id="mx-preview">Preview mockups</button>
+            <button class="es-btn es-btn--ghost" type="button" id="mx-back-studio">Back to the studio</button>
             <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-live">Continue</button>
           </div>
-          <p class="mx-meta" id="mx-setup-meta" role="status" aria-live="polite"></p>
         </div>
       </div>
     </section>
@@ -283,7 +417,8 @@
   <script src="brand-kit.js?v=20261111-tennis1"></script>
   <script src="video-ads-teams.js?v=20261122-rel"></script>
   <script src="merch-rules.js?v=20261125-merch"></script>
-  <script src="merch-print.js?v=20261126-merch3"></script>
-  <script src="merch.js?v=20261126-merch3"></script>
+  <script src="merch-guidelines.js?v=20261126-merch4"></script>
+  <script src="merch-print.js?v=20261126-merch4"></script>
+  <script src="merch.js?v=20261126-merch4"></script>
 </body>
 </html>
