@@ -165,5 +165,26 @@ await test('factCheck: two searches, $0.03 cap, tracked as reels-factcheck', asy
   assert.deepEqual(await D.factCheck({ topic: 'x' }), { text: '', urls: [], cost: 0 });
 });
 
+// ─── Reels 2.0: looks ────────────────────────────────────────────────────
+await test('looks: ES_SPEC names every layout preset; the look rides the request and comes back on the plan; a retired style is written in ES', async () => {
+  const ES = require('../reel-es.js');
+  Object.values(ES.LOOK_LAYOUTS).forEach(l => assert.ok(D.ES_SPEC.includes(`- ${l.director}`), `${l.id} line`));
+  assert.match(D.ES_SPEC, /Data-led: at least two of number \/ dots \/ compare/);
+  const seen = [];
+  gateway.gatewayConfigured = () => true;
+  gateway.aiText = async opts => { seen.push(opts); return { text: JSON.stringify(GOOD), model: 'anthropic/claude-haiku-5.5', cost: 0.002 }; };
+  const out = await D.runReelDirector({ brief: BRIEF, format: 'stat', tier: 'economy', style: 'explainer', look: 'data' });
+  assert.equal(out.plan.style, 'es', 'explainer is retired: the plan is an ES plan');
+  assert.equal(out.plan.look, 'data');
+  assert.match(seen[0].messages[0].content, /STYLE: ES Reels/);
+  assert.match(seen[0].messages[0].content, /LOOK: Data-led\. Follow the Data-led line above\./);
+  // (a beat the model left without a block gets one from its fields when the reel is built: ReelES.blockOf)
+  assert.ok(out.plan.beats.every(b => ES.BLOCK_TYPES.includes(ES.blockOf(b).type)), 'every beat lands on an ES block');
+  const plain = await D.runReelDirector({ brief: BRIEF, format: 'stat', tier: 'economy', look: 'not-a-look' });
+  assert.equal(plain.plan.style, 'es');
+  assert.equal('look' in plain.plan, false, 'an unknown look is dropped (the page draws Paper)');
+  assert.doesNotMatch(seen[seen.length - 1].messages[0].content, /^LOOK: /m);
+});
+
 Object.assign(gateway, real);
 console.log(process.exitCode ? '\nReel director tests failed.' : `\nAll ${passed} reel director tests passed.`);

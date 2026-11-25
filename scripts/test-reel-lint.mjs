@@ -285,4 +285,25 @@ test('news reels: no data rules run on a v1 timeline', () => {
   assert.ok(!res.issues.some(i => /^(data-|archive-|asset-host|replay-|scorebug|paid-league)/.test(i.id)));
 });
 
+// ─── Reels 2.0: looks ────────────────────────────────────────────────────
+test('look checks: a clean reel passes in every look; unreadable words, an unknown look and a retired style are flagged', () => {
+  const E = require('../reel-es.js');
+  const esPlan = { format: 'stat', title: 'Allen', sourceLine: 'Source: ES', beats: [
+    { id: 'b1', kind: 'hook', block: { type: 'hook', pills: [{ text: 'ALLEN BROKE' }, { text: 'THE RECORD.', color: 'blue' }] }, vo: 'Josh Allen broke the record.' },
+    { id: 'b2', kind: 'stat', block: { type: 'number', kicker: 'PASSING YARDS', value: 5477, label: 'IN 2025', color: 'blue', display: '5,477' }, vo: 'He threw for 5,477 yards in 2025.' },
+    { id: 'b3', kind: 'cta', block: { type: 'endcard' } },
+  ] };
+  const run = (p, look) => { const tl = R.buildTimeline(p, { style: 'es', look, corpus: CORPUS }); return L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure, extraSources: CORPUS }); };
+  E.LOOK_IDS.forEach(look => assert.deepEqual(run(esPlan, look).issues.filter(i => i.id === 'look' && i.severity !== 'info'), [], look));
+  const white = JSON.parse(JSON.stringify(esPlan)); white.beats[1].block.color = 'white';
+  assert.ok(run(white, 'paper').issues.some(i => i.id === 'look' && i.severity === 'critical' && /white on paper \(1\.\d:1; it needs/.test(i.message)));
+  assert.ok(!run(white, 'ink').issues.some(i => i.id === 'look' && i.severity !== 'info'), 'the same number reads on Ink');
+  const tl = R.buildTimeline(esPlan, { style: 'es', corpus: CORPUS }); tl.look = 'neon';
+  assert.ok(L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure }).issues.some(i => i.id === 'look' && i.severity === 'warning' && /not an ES look/.test(i.message)));
+  const { res } = lintOf(GOOD, {}, { style: 'series' });
+  assert.ok(res.issues.some(i => i.id === 'look' && i.severity === 'warning' && /retired/.test(i.message)));
+  assert.ok(E.CHECKLIST.some(r => r.id === 'look'));
+});
+
+
 console.log(process.exitCode ? '\nReel lint tests failed.' : `\nAll ${passed} reel lint tests passed.`);

@@ -200,4 +200,26 @@ test('data-format elements: layouts registered, boxes stacked without overlap, t
   for (const id of S.STYLE_IDS) for (const el of S.ELEMENT_IDS) Object.entries(S.elementTokens(id, el)).forEach(([k, v]) => { if (!/font/i.test(k)) assert.ok(!S.isPurple(v), `${id}/${el}.${k}`); });
 });
 
+// ─── Reels 2.0: looks on the data formats ────────────────────────────────
+test('withLook / elementTokens(style, element, look): the ES style wears the look; Paper and the retired styles are untouched', () => {
+  const E = require('../reel-es.js');
+  assert.equal(S.withLook('es', 'paper'), S.STYLES.es);
+  assert.equal(S.withLook('es', ''), S.STYLES.es);
+  assert.equal(S.withLook('series', 'ink'), S.STYLES.series);
+  E.LOOK_IDS.forEach(look => {
+    const st = S.withLook('es', look, '#0B162A');
+    assert.deepEqual(S.validateStyle(st), [], look);
+    assert.equal(st.engine, 'es');
+    assert.deepEqual(st.layouts, S.STYLES.es.layouts, 'layouts are the style\'s, not the look\'s');
+    for (const el of S.ELEMENT_IDS) Object.entries(S.elementTokens('es', el, look)).forEach(([k, v]) => { if (!/font/i.test(k)) assert.ok(!S.isPurple(v), `${look} ${el}.${k}`); });
+  });
+  assert.equal(S.withLook('es', 'ink').theme, 'dark');
+  assert.equal(S.withLook('es', 'data').theme, 'dark', 'Data-led puts figures on ink boards');
+  assert.equal(S.withLook('es', 'minimal').palette.paper, '#F1EFEA');
+  assert.equal(S.elementTokens('es', 'clock', 'ink').fill, '#F1EFEA', 'the chip takes the look\'s pill colour');
+  assert.deepEqual(S.elementTokens('es', 'clock', 'paper'), S.elementTokens('es', 'clock'));
+  assert.deepEqual(S.elementTokens(S.STYLES.es, 'clock'), S.elementTokens('es', 'clock'), 'a style object works as well as an id');
+});
+
+
 console.log(process.exitCode ? '\nReel styles tests failed.' : `\nAll ${passed} reel styles tests passed.`);
