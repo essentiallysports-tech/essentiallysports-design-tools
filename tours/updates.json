@@ -27,6 +27,30 @@
       ]
     },
     {
+      "id": "2026-11-25-merch-v2",
+      "date": "2026-11-25",
+      "title": "Merch Designs: hoodies, posters, stickers, mugs and Your merch",
+      "commit": "e06857f",
+      "items": [
+        {
+          "title": "More products",
+          "text": "Put a design on a tee, hoodie, poster, sticker or mug. Each one has its own print area, ES logo spot, suggested price and print check.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Shop collections",
+          "text": "Add a product to Fourthwall collections when you set it up, or later from its panel. Make a new collection on the spot.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Your merch",
+          "text": "See every product FrameUp made, with its status, link, mockup, and units and revenue for the last 30 days. Archive needs the product name typed in.",
+          "page": "merch.html",
+          "target": "#mx-tab-list"
+        }
+      ]
+    },
+    {
       "id": "2026-11-21-es-reels-system",
       "date": "2026-11-21",
       "title": "Reels Studio: the ES video team's design system",

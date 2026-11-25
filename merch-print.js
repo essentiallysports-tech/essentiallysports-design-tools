@@ -12,7 +12,14 @@
 //               garment: { color, name }, stack: [{ text, size: 'big'|'small', fill, ink }],
 //               align: 'left'|'center', blanks, rights: [{ kind, text }], why }
 //   PrintSpec { templateId, region: 'front'|'back', pixelsWidth, pixelsHeight, dpi, garmentColor }
-//             (optional: kind 'tee'|'hoodie'|'poster'|'sticker'|'mug', default from concept.blanks[0])
+//             (optional: kind 'tee'|'hoodie'|'poster'|'sticker'|'mug', default from concept.blanks[0];
+//              logo: 'inline' puts the ES wordmark under the design, for hard goods with one print area)
+//
+// Per kind (merch v2): tees and hoodies print a compact mid-chest stack at the
+// area's DPI (150 minimum). Posters, stickers and mugs need 300 DPI and keep a
+// safe edge (poster trim 0.25 in, sticker cut line 0.125 in). A mug's area is
+// the whole wrap: the design sits on the face (the middle of the wrap), clear
+// of the handle seam at both ends.
 //
 // The design is drawn at the print area's own pixel size and DPI from ES pills
 // only (owner rule: FrameUp's Cover pill, Acumin Post 900, uppercase, a solid
@@ -49,13 +56,18 @@
   const MIN_CAP_IN = { apparel: 0.12, other: 0.08 }; // smallest printable cap height
   const MIN_CONTRAST = 1.45; // ink vs garment: below this the art melts into the shirt
   const CAP = 0.7; // cap height / font size (Acumin Post)
+  // Safe edges for hard goods, in inches: poster trim, sticker cut line, mug handle seam.
+  const SAFE_IN = { poster: 0.25, sticker: 0.125, mug: 0.5 };
+  const MUG_FACE = 0.5; // share of the wrap seen from one side
   // Print areas used when the page has no template yet (previews, tests).
   const DEFAULT_AREAS = {
     tee: { pixelsWidth: 1800, pixelsHeight: 2400, dpi: 150 },
-    hoodie: { pixelsWidth: 1800, pixelsHeight: 1650, dpi: 150 },
-    poster: { pixelsWidth: 5400, pixelsHeight: 7200, dpi: 300 },
-    sticker: { pixelsWidth: 1200, pixelsHeight: 1200, dpi: 300 },
-    mug: { pixelsWidth: 2550, pixelsHeight: 1050, dpi: 300 },
+    // Live Fourthwall sizes (merch v2 server, 2026-11-25). Only used when no printSpec is given:
+    // register rejects files that aren't the area's exact size, so the page always passes printSpec.
+    hoodie: { pixelsWidth: 1650, pixelsHeight: 1650, dpi: 150 },
+    poster: { pixelsWidth: 1500, pixelsHeight: 2100, dpi: 300 },
+    sticker: { pixelsWidth: 900, pixelsHeight: 900, dpi: 300 },
+    mug: { pixelsWidth: 2700, pixelsHeight: 1050, dpi: 300 },
   };
 
   const contrast = (a, b) => FrameUpRules.contrastRatio(a, b);
@@ -235,15 +247,47 @@
     if (blank.apparel) {
       const top = Math.round(Math.min(1.75 * a.dpi, H * 0.12));
       box = { x: Math.round(W * (1 - widthRatio) / 2), y: top, w: Math.round(W * widthRatio), h: Math.round(Math.min(H - top - margin, H * 0.6)), valign: 'top' };
+    } else if (kind === 'mug') {
+      // The face of the mug: the middle of the wrap, clear of the handle seam.
+      const faceW = Math.round(W * MUG_FACE);
+      const padX = Math.round(faceW * 0.08);
+      const padY = Math.max(Math.round(SAFE_IN.mug * a.dpi * 0.5), Math.round(H * 0.1));
+      box = { x: Math.round((W - faceW) / 2) + padX, y: padY, w: faceW - 2 * padX, h: H - 2 * padY, valign: 'center' };
     } else {
-      const pad = Math.round(Math.min(W, H) * 0.1);
+      const pad = Math.max(Math.round(Math.min(W, H) * 0.1), Math.ceil((SAFE_IN[kind] || 0) * a.dpi * 1.5));
       box = { x: pad, y: pad, w: W - 2 * pad, h: H - 2 * pad, valign: 'center' };
     }
     if (single && longest > 3) box.h = Math.min(box.h, Math.round(box.w * 0.34));
+    // Hard goods have one print area, so the ES wordmark goes under the design.
+    const inlineLogo = !blank.apparel && (spec.logo === 'inline' || spec.logo === 'inside');
+    let logoW = 0;
+    let logoH = 0;
+    let gap = 0;
+    if (inlineLogo) {
+      logoW = Math.round(Math.min(box.w * 0.6, 3 * a.dpi));
+      logoH = Math.max(1, Math.round(logoW * WORDMARK.h / WORDMARK.w));
+      gap = Math.round(logoH * 0.9);
+      const fullH = box.h;
+      box.h = Math.max(1, box.h - logoH - gap);
+      box.fullH = fullH;
+    }
     const result = stackRows(rows, box, m, scale, align);
     items.push(...result.items);
-    const design = result.bounds;
-    return { w: W, h: H, dpi: a.dpi, inW: a.inW, inH: a.inH, region: a.region, kind, apparel: blank.apparel, garment, palette: pal, items, design, size: result.size, bigRows: bigRows.length };
+    const design = { ...result.bounds };
+    if (inlineLogo) {
+      // Centre the design + wordmark block in the full box.
+      const blockH = design.h + gap + logoH;
+      const shift = Math.round(box.y + (box.fullH - blockH) / 2) - design.y;
+      items.forEach(i => { i.y += shift; });
+      design.y += shift;
+      const logo = { type: 'logo', variant: contrast(garment, ES_BLUE) < 1.6 ? 'white' : 'blue', x: Math.round(box.x + (box.w - logoW) / 2), y: design.y + design.h + gap, w: logoW, h: logoH };
+      items.push(logo);
+      const x0 = Math.min(design.x, logo.x);
+      design.w = Math.max(design.x + design.w, logo.x + logo.w) - x0;
+      design.x = x0;
+      design.h = logo.y + logo.h - design.y;
+    }
+    return { w: W, h: H, dpi: a.dpi, inW: a.inW, inH: a.inH, region: a.region, kind, apparel: blank.apparel, garment, palette: pal, items, design, size: result.size, bigRows: bigRows.length, inlineLogo };
   }
 
   // ─── Print checks ──────────────────────────────────────────────────────
@@ -273,6 +317,20 @@
     if (scene.apparel) {
       const inches = scene.design.w / scene.dpi;
       add('placement', inches <= 9.5, 'warn', inches <= 9.5 ? `Design is ${inches.toFixed(1)} in wide: compact, mid-chest.` : `Design is ${inches.toFixed(1)} in wide, wider than a chest print. Use shorter words.`);
+    } else {
+      // Safe edge: poster trim, sticker cut line, mug handle seam.
+      const safe = Math.round((SAFE_IN[scene.kind] || 0) * scene.dpi);
+      const d = scene.design;
+      const edge = Math.min(d.x, d.y, scene.w - d.x - d.w, scene.h - d.y - d.h);
+      const what = { poster: ['trim', 'the trim'], sticker: ['cut', 'the cut line'], mug: ['wrap', 'the handle seam'] }[scene.kind] || ['edge', 'the edge'];
+      if (scene.kind === 'mug') {
+        const face = scene.w * MUG_FACE;
+        const onFace = d.x >= (scene.w - face) / 2 - 1 && d.x + d.w <= (scene.w + face) / 2 + 1;
+        const seamOk = Math.min(d.x, scene.w - d.x - d.w) >= safe && Math.min(d.y, scene.h - d.y - d.h) >= Math.round(0.125 * scene.dpi);
+        add('wrap', seamOk && onFace, seamOk ? 'warn' : 'error', !seamOk ? `The design runs into the handle seam. Keep it ${SAFE_IN.mug} in from both ends of the wrap.` : onFace ? `Design sits on the face of the mug (${(d.w / scene.dpi).toFixed(1)} in wide), clear of the handle.` : 'The design wraps past the face of the mug, so part of it is hidden from the front. Use shorter words.');
+      } else {
+        add(what[0], edge >= safe, 'error', edge >= safe ? `Everything is at least ${SAFE_IN[scene.kind] || 0} in inside ${what[1]}.` : `Part of the design is within ${SAFE_IN[scene.kind]} in of ${what[1]} and may be cut off. Use shorter words.`);
+      }
     }
     return out;
   }
@@ -418,9 +476,9 @@
   const MOCK = {
     tee: { path: TEE, collar: 'M318 112 Q500 250 682 112 Q500 214 318 112 Z', area: { x: 338, y: 214, w: 324 } },
     hoodie: { path: HOOD, collar: 'M330 120 Q500 230 670 120 Q500 60 330 120 Z', area: { x: 338, y: 240, w: 324 } },
-    poster: { rect: { x: 230, y: 90, w: 540, h: 720 }, area: { x: 230, y: 90, w: 540 } },
-    sticker: { rect: { x: 260, y: 260, w: 480, h: 480, r: 60 }, area: { x: 260, y: 260, w: 480 } },
-    mug: { rect: { x: 170, y: 300, w: 560, h: 400, r: 24 }, handle: true, area: { x: 175, y: 330, w: 550 } },
+    poster: { rect: { x: 230, y: 90, w: 540, h: 720 }, area: { x: 230, y: 90, w: 540, h: 720 } },
+    sticker: { rect: { x: 260, y: 260, w: 480, h: 480, r: 60 }, area: { x: 260, y: 260, w: 480, h: 480 } },
+    mug: { rect: { x: 170, y: 300, w: 560, h: 400, r: 24 }, handle: true, area: { x: 190, y: 320, w: 520, h: 360 }, face: MUG_FACE },
   };
   function shade(c, k) {
     const h = hex(c) || WHITE;
@@ -458,16 +516,23 @@
     g.restore();
     // The design, drawn at preview size into the blank's print area.
     const spec = { ...(DEFAULT_AREAS[kind]), ...(opts.spec || {}), garmentColor: garment, kind };
+    if (!MerchRules.BLANKS[kind].apparel && opts.logoSpot === 'inline') spec.logo = 'inline';
     const scene = layout(concept, spec);
-    const areaW = shape.area.w * u;
-    const k = areaW / scene.w;
+    // Apparel: the area's width across the chest, from the top. Hard goods:
+    // fitted inside the blank (a mug shows its face, the middle of the wrap).
+    const src = shape.face ? { x: scene.w * (1 - shape.face) / 2, w: scene.w * shape.face } : { x: 0, w: scene.w };
+    const k = shape.area.h ? Math.min(shape.area.w * u / src.w, shape.area.h * u / scene.h) : shape.area.w * u / scene.w;
     const off = document.createElement('canvas');
     off.width = Math.max(1, Math.round(scene.w * k));
     off.height = Math.max(1, Math.round(scene.h * k));
     const og = off.getContext('2d');
     og.scale(k, k);
     await drawScene(scene, og);
-    g.drawImage(off, Math.round(shape.area.x * u), Math.round(shape.area.y * u));
+    if (shape.area.h) {
+      const dw = Math.round(src.w * k);
+      const dh = off.height;
+      g.drawImage(off, Math.round(src.x * k), 0, dw, dh, Math.round(shape.area.x * u + (shape.area.w * u - dw) / 2), Math.round(shape.area.y * u + (shape.area.h * u - dh) / 2), dw, dh);
+    } else g.drawImage(off, Math.round(shape.area.x * u), Math.round(shape.area.y * u));
     // A small hint of where the separate ES wordmark print goes.
     const spot = LOGO_SPOTS[opts.logoSpot === undefined ? 'neck' : opts.logoSpot];
     if (spot && shape.path) {
@@ -569,7 +634,7 @@
   }
 
   return {
-    VERSION: '2026-11-25', WORDMARK, PHONE_MAX_PIXELS, SMALL, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS,
+    VERSION: '2026-11-25b', WORDMARK, PHONE_MAX_PIXELS, SMALL, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
     render, renderLogo, checks, preview, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,

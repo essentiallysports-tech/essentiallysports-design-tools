@@ -164,6 +164,67 @@ test('fallback concepts: no team, no names -> ES core lines still come back', ()
   assert.equal(P.fallbackConcepts({ text: 'Big win tonight', team: 'Detroit Pistons' })[0].team.name, 'Detroit Pistons');
 });
 
+// ─── Merch v2: per-kind print (hard goods at 300 DPI, mug wrap, sticker, poster) ─
+const KINDS = {
+  // Live Fourthwall sizes (merch v2 server).
+  poster: { kind: 'poster', pixelsWidth: 1500, pixelsHeight: 2100, dpi: 300 },
+  sticker: { kind: 'sticker', pixelsWidth: 900, pixelsHeight: 900, dpi: 300 },
+  mug: { kind: 'mug', pixelsWidth: 2700, pixelsHeight: 1050, dpi: 300 },
+  hoodie: { kind: 'hoodie', pixelsWidth: 1650, pixelsHeight: 1650, dpi: 150, garmentColor: '#FFFFFF' },
+};
+test('every blank lays out inside its area with no blocking checks', () => {
+  for (const [k, spec] of Object.entries(KINDS)) {
+    const s = P.layout(roster(), spec);
+    assert.equal(s.kind, k);
+    assert.deepEqual(P.blocking(P.checksFor(s)), [], `${k}: ${P.blocking(P.checksFor(s)).map(c => c.text).join(' / ')}`);
+  }
+});
+test('hard goods need 300 DPI', () => {
+  for (const k of ['poster', 'sticker', 'mug']) {
+    const c = ids(P.checks(roster(), { ...KINDS[k], dpi: 150 }));
+    assert.equal(c.dpi.level, 'error', k);
+    assert.match(c.dpi.text, /300 DPI/);
+  }
+  assert.ok(ids(P.checks(roster(), KINDS.hoodie)).dpi.ok, 'hoodies print at 150');
+});
+test('the print file is the printSpec size exactly, for every blank', () => {
+  for (const spec of Object.values(KINDS)) {
+    const s = P.layout(roster(), spec);
+    assert.deepEqual([s.w, s.h, s.dpi], [spec.pixelsWidth, spec.pixelsHeight, spec.dpi]);
+    assert.deepEqual([P.areaOf({}, spec.kind).w, P.areaOf({}, spec.kind).h], [spec.pixelsWidth, spec.pixelsHeight], `${spec.kind} default = live size`);
+  }
+  assert.ok(P.layout(roster(), { ...KINDS.poster, logo: 'inside' }).items.some(i => i.type === 'logo'), "server's logo:'inside' works too");
+});
+test('mug: the design sits on the face, clear of the handle seam', () => {
+  const s = P.layout(roster(), KINDS.mug);
+  assert.ok(s.design.x >= s.w * 0.25 - 1 && s.design.x + s.design.w <= s.w * 0.75 + 1, 'inside the middle half of the wrap');
+  assert.ok(ids(P.checksFor(s)).wrap.ok);
+  const seam = { ...s, design: { ...s.design, x: 20 } };
+  assert.equal(ids(P.checksFor(seam)).wrap.level, 'error');
+  const wide = { ...s, design: { x: 200, y: s.design.y, w: s.w - 400, h: s.design.h } };
+  assert.equal(ids(P.checksFor(wide)).wrap.level, 'warn', 'wider than the face is a warning');
+});
+test('sticker cut line and poster trim are errors when crossed', () => {
+  const st = P.layout(roster(), KINDS.sticker);
+  assert.ok(ids(P.checksFor(st)).cut.ok);
+  assert.equal(ids(P.checksFor({ ...st, design: { ...st.design, x: 10 } })).cut.level, 'error');
+  const po = P.layout(roster(), KINDS.poster);
+  assert.ok(ids(P.checksFor(po)).trim.ok);
+  assert.equal(ids(P.checksFor({ ...po, design: { ...po.design, y: 30 } })).trim.level, 'error');
+});
+test('hard goods: the ES wordmark can sit under the design in the same print', () => {
+  for (const k of ['poster', 'sticker', 'mug']) {
+    const s = P.layout(roster(), { ...KINDS[k], logo: 'inline' });
+    const logo = s.items.find(i => i.type === 'logo');
+    assert.ok(logo, `${k} has the wordmark`);
+    const pills = s.items.filter(i => i.type === 'pill');
+    assert.ok(logo.y >= Math.max(...pills.map(p => p.y + p.h)), `${k}: wordmark below the pills`);
+    assert.ok(Math.abs(logo.w / logo.h - 258 / 31) < 0.15, 'keeps proportions');
+    assert.deepEqual(P.blocking(P.checksFor(s)), [], `${k} with logo: ${P.blocking(P.checksFor(s)).map(c => c.text).join(' / ')}`);
+  }
+  assert.equal(P.layout(roster(), { ...TEE, logo: 'inline' }).items.some(i => i.type === 'logo'), false, 'apparel keeps the logo as its own print');
+});
+
 fails.forEach(f => console.log(`FAIL ${f}`));
 console.log(`merch print: ${passed} passed, ${fails.length} failed`);
 process.exit(fails.length ? 1 : 0);
