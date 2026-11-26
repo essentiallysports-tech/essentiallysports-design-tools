@@ -127,20 +127,23 @@ await test('concepts: the page\'s { text, url, trend } content works (was "[obje
   assert.equal(M.contentOf({ content: { text: 'hi there' } }), 'hi there');
   assert.equal(M.contentOf({ content: 'plain' }), 'plain');
 });
-await test('concepts basic: Haiku, 4 by default, elements stripped, no plan', async () => {
+await test('concepts basic: Haiku, 6 by default, elements stripped, no plan', async () => {
   fresh();
   messagesHandler = aiJson({ plan: { idea: 'x', angle: 'y' }, concepts: [withEls([{ type: 'rule', position: 'below', color: 'b', weight: 'thick' }]), good] });
   const r = await call({ mode: 'concepts', content: SOURCE, designMode: 'basic' });
   assert.equal(r.status, 200);
   assert.ok(aiCalls[0].model.includes('haiku'), aiCalls[0].model);
-  assert.match(JSON.stringify(aiCalls[0].messages), /Return 4 concepts/);
+  assert.match(JSON.stringify(aiCalls[0].messages), /Return 6 concepts, each in a DIFFERENT style/);
+  assert.equal(aiCalls[0].max_tokens, 7000, 'Basic room for 6 concepts');
+  assert.match(JSON.stringify(aiCalls[0].system), /Stacked words/, 'named styles');
+  assert.ok(!/Number behind/.test(JSON.stringify(aiCalls[0].system)), 'Basic styles are pills only');
   assert.ok(!/PRO ELEMENTS/.test(JSON.stringify(aiCalls[0].system)));
   assert.equal(r.body.designMode, 'basic');
   assert.equal(r.body.plan, null);
   assert.ok(r.body.concepts.every(c => c.mode === 'basic' && !('elements' in c)), 'Basic never carries elements');
   assert.ok(usageRows.some(u => u.feature === 'merch-concepts'));
 });
-await test('concepts pro: Sonnet, 6, plan, trend context, strict elements, fit, label', async () => {
+await test('concepts pro: Sonnet, 10, plan, trend context, strict elements, fit, label', async () => {
   fresh();
   const feedItem = { id: 't-magic', title: 'Magic Johnson says Showtime Lakers would win today', category: 'others', type: 'news', source: 'ESPN', url: 'https://www.espn.com/x', publishedAt: new Date().toISOString(), coverage: 3, signal: 'hot', related: [{ title: 'Lakers retire 32 again in 2026 tribute night', source: 'ES', url: 'https://www.essentiallysports.com/x' }], why: 'Throwback talk with 99 replies' };
   M.setTrendsSource(async () => ({ items: [feedItem], updatedAt: new Date().toISOString() }));
@@ -164,7 +167,9 @@ await test('concepts pro: Sonnet, 6, plan, trend context, strict elements, fit, 
   assert.ok(aiCalls[0].model.includes('sonnet'), aiCalls[0].model);
   const sent = JSON.stringify(aiCalls[0]);
   assert.match(sent, /PRO ELEMENTS/);
-  assert.match(sent, /Return the plan and 6 concepts/);
+  assert.match(sent, /Return the plan and 10 concepts, each in a DIFFERENT style/);
+  assert.equal(aiCalls[0].max_tokens, 12000, 'Pro room for 10 concepts');
+  assert.match(sent, /Number behind/); assert.match(sent, /Rule frame/);
   assert.match(sent, /Lakers retire 32 again/, 'full trend from the feed (related headlines)');
   assert.match(sent, /NOT facts/, 'angle ideas labelled');
   assert.equal(r.body.designMode, 'pro');
@@ -188,6 +193,27 @@ await test('concepts pro: Sonnet, 6, plan, trend context, strict elements, fit, 
   assert.equal(again.body.cost.cached, true);
   assert.equal(aiCalls.length, 1);
   M.setTrendsSource(async () => { throw new Error('feed not used'); });
+});
+await test('concepts: a reply cut off at max_tokens keeps its complete concepts and plan', async () => {
+  fresh();
+  const full = JSON.stringify({ plan: { idea: 'Showtime', angle: 'Throwback talk' }, concepts: [good, { ...good, title: 'Second', stack: [{ text: 'MAGIC ERA', size: 'big', fill: 'a', ink: 'white' }] }, { ...good, title: 'Cut' }] });
+  const cut = full.slice(0, full.lastIndexOf('"title":"Cut"') + 10); // inside the third concept
+  messagesHandler = () => reply(200, { stop_reason: 'max_tokens', usage: { input_tokens: 2000, output_tokens: 12000 }, content: [{ type: 'text', text: cut }] });
+  const r = await call({ mode: 'concepts', content: SOURCE, designMode: 'pro' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.designMode, 'pro', 'no Basic fallback for a cut-off reply');
+  assert.deepEqual(r.body.concepts.map(c => c.title), ['Showtime', 'Second']);
+  assert.deepEqual(r.body.plan, { idea: 'Showtime', angle: 'Throwback talk' });
+  assert.equal(aiCalls.length, 1);
+  assert.deepEqual(M.partialItems('{"concepts":[{"a":1},{"b":[2,{"c":3}]},{"d"', 'concepts'), [{ a: 1 }, { b: [2, { c: 3 }] }]);
+  assert.deepEqual(M.partialItems('{"items":[{"a":1}]}'), [{ a: 1 }], 'default key stays items');
+  assert.equal(M.partialPlan('{"concepts":['), null);
+  // Cut off before any whole concept: garbled, then the Basic run.
+  fresh();
+  messagesHandler = b => (b.model.includes('sonnet') ? reply(200, { stop_reason: 'max_tokens', usage: { input_tokens: 10, output_tokens: 10 }, content: [{ type: 'text', text: '{"plan":{"idea":"x","angle":"y"},"concepts":[{"title":"Sho' }] }) : aiJson({ concepts: [good] })());
+  const g = await call({ mode: 'concepts', content: SOURCE, designMode: 'pro' });
+  assert.equal(g.body.designMode, 'basic');
+  assert.equal(g.body.fellBack, 'ai');
 });
 await test('concepts: a trend headline counts as source; AI ideas do not', async () => {
   fresh();

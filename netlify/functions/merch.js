@@ -26,7 +26,7 @@
 //               multiColor: true when the blank has more than one colour.
 //   concepts    { content, trend?, collection?, count?, team?, designMode: 'basic'|'pro' }
 //               -> { concepts: Concept[], plan: { idea, angle } | null, designMode, fellBack?, note? }
-//               Basic: main tier (Haiku), 4 concepts, pills only. Pro: best tier (Sonnet), 6 concepts,
+//               Basic: main tier (Haiku), 6 concepts, pills only. Pro: best tier (Sonnet), 10 concepts,
 //               trend context, plan, optional elements; falls back to Basic on cap / free / AI error.
 //               free mode: { free: true, concepts: null } (the browser uses MerchPrint.fallbackConcepts)
 //   refine      { concept, instruction, content?, trend?, designMode, history? } -> { concept, note, designMode }
@@ -101,7 +101,7 @@ try { MerchRules = require('../../merch-rules.js'); } catch { MerchRules = null;
 
 const FEATURES = Object.freeze({ concepts: 'merch-concepts', copy: 'merch-copy', refine: 'merch-refine', moments: 'merch-moments', brainstorm: 'merch-brainstorm', brainstormContext: 'merch-brainstorm-context' });
 const AI_TIER = 'main'; // Haiku: the cheapest model that writes reliable JSON in ES voice
-const PRO_TIER = 'best'; // Sonnet: Pro concepts and Pro refine (~$0.02 a concepts run, owner-approved)
+const PRO_TIER = 'best'; // Sonnet: Pro concepts and Pro refine (~$0.05 a 10-concept run, owner-approved 2026-11-28: "spend more creds if needed")
 const DESIGN_MODES = ['basic', 'pro'];
 const COLLECTIONS = ['replay', 'nickname', 'quote', 'core', 'current'];
 const COLOR_KEYS = ['a', 'b', 'ink', 'white', 'black'];
@@ -109,7 +109,7 @@ const COLOR_KEYS = ['a', 'b', 'ink', 'white', 'black'];
 const rowColor = v => (COLOR_KEYS.includes(v) ? v : /^#[0-9a-f]{6}$/i.test(String(v || '')) ? String(v).toUpperCase() : '');
 const PALETTE_FROM_KINDS = ['team', 'es', 'custom'];
 const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
-const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 18, momentsBatch: 6, uploadBytes: 25 * 1024 * 1024, colors: 12, photos: 8 });
+const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 10, basicConcepts: 6, proConcepts: 10, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 18, momentsBatch: 6, uploadBytes: 25 * 1024 * 1024, colors: 12, photos: 8 });
 const CAPS = Object.freeze({ person: 10, team: 30 });
 const TEMPLATE_TTL_MS = 24 * 60 * 60 * 1000;
 const SHOP_TTL_MS = 10 * 60 * 1000;
@@ -627,20 +627,22 @@ function shapePlan(raw, concepts) {
 // or { error: 'free' | 'ai' | 'garbled' | 'invalid', cost, dropped }.
 async function runConcepts(designMode, { content, source, collection, count, team, research, policy, track }) {
   const pro = designMode === 'pro';
-  const n = pro ? LIMITS.concepts : count;
+  const n = pro ? LIMITS.proConcepts : count;
   const ask = [
     `Source (the only facts, numbers and quotes you may use, plus any word or number already on the design):\n"""${content}"""`,
     research ? research.section : '',
     pro && research?.ideas ? research.ideas : '',
     collection ? `Collection: ${collection}.` : 'Mix the collections that fit the source.',
     team?.name ? `Team: ${team.name}${team.a ? `, colours ${team.a} and ${team.b || '#ffffff'}` : ''}.` : '',
-    pro ? `Return the plan and ${n} concepts, each a different layout. At most half of them may use elements.` : `Return ${n} concepts.`,
+    pro ? `Return the plan and ${n} concepts, each in a DIFFERENT style from STYLES (its name in "label"). At most half of them may use elements.` : `Return ${n} concepts, each in a DIFFERENT style from STYLES (its name in "label").`,
   ].filter(Boolean).join('\n');
   let result;
   try {
     result = await aiText({
       tier: pro ? PRO_TIER : AI_TIER, system: pro ? G.PRO_SYSTEM : G.BASIC_SYSTEM, messages: [{ role: 'user', content: ask }], json: true,
-      maxTokens: pro ? 8000 : 5000, timeoutMs: pro ? 90000 : 60000, cacheSystem: true, track: { ...track, feature: FEATURES.concepts, task: pro ? 'merch-concepts-pro' : 'merch-concepts-basic' },
+      // 10 Pro / 6 Basic concepts (owner, 2026-11-28: at least 20 designs a brief; merch-styles.js adds
+      // the rest in code). A reply cut off at maxTokens keeps its complete concepts (partialItems).
+      maxTokens: pro ? 12000 : 7000, timeoutMs: pro ? 120000 : 60000, allowCutoff: true, cacheSystem: true, track: { ...track, feature: FEATURES.concepts, task: pro ? 'merch-concepts-pro' : 'merch-concepts-basic' },
     });
   } catch (error) {
     if (inFreeMode() || isBudgetError(error)) return { error: 'free', cost: 0 };
@@ -648,8 +650,13 @@ async function runConcepts(designMode, { content, source, collection, count, tea
     return { error: 'ai', cost: 0 };
   }
   const cost = Number(result.cost || 0);
-  const parsed = parseJson(result.text);
-  const list = Array.isArray(parsed?.concepts) ? parsed.concepts.slice(0, LIMITS.concepts) : null;
+  let parsed = parseJson(result.text);
+  if (!Array.isArray(parsed?.concepts)) {
+    // Cut off (or a stray character after the JSON): keep every complete concept and the plan.
+    const items = partialItems(result.text, 'concepts');
+    if (items.length) parsed = { concepts: items, plan: partialPlan(result.text) };
+  }
+  const list = Array.isArray(parsed?.concepts) && parsed.concepts.length ? parsed.concepts.slice(0, LIMITS.concepts) : null;
   if (!list) return { error: 'garbled', cost };
   const shaped = list.map(c => shapeConcept(c, { content: source, policy, mode: designMode }));
   const concepts = shaped.filter(s => s.concept).map(s => s.concept);
@@ -893,10 +900,13 @@ function momentLine(raw, title) {
   return text.toUpperCase();
 }
 const cleanText = (v, n) => { const t = clip(v, n); return t && !OFFICIAL_RE.test(t) && !((FrameUpRules?.BANNED) || []).some(b => b.re.test(t)) ? t : ''; };
-// Complete {...} objects from a JSON reply that was cut off inside "items": [...].
-function partialItems(text) {
+// Complete {...} objects from a JSON reply that was cut off inside "items": [...]
+// (or another array: key 'concepts' for the concepts reply).
+function partialItems(text, key = 'items') {
   const s = String(text || '');
-  const start = s.indexOf('[', s.indexOf('"items"'));
+  const at = s.indexOf(`"${key}"`);
+  if (at < 0) return [];
+  const start = s.indexOf('[', at);
   if (start < 0) return [];
   const out = [];
   let depth = 0; let from = -1; let inStr = false; let esc = false;
@@ -909,6 +919,12 @@ function partialItems(text) {
     else if (ch === ']' && depth === 0) break;
   }
   return out;
+}
+// The {"plan": {...}} object from a cut-off concepts reply (it comes first), or null.
+function partialPlan(text) {
+  const m = String(text || '').match(/"plan"\s*:\s*(\{[^{}]*\})/);
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch { return null; }
 }
 async function scoreBatch(items, track) {
   const keys = items.map((_, n) => `m${n + 1}`);
@@ -1532,6 +1548,6 @@ exports._test = {
   contentOf, trendOf, sourceFor, designModeOf, shapeElements, shapeFit, codeIntent, applyIntent, heuristicMoment, lineFromHeadline, headlineLine, MOMENT_SCORES, G,
   setClientFactory(fn) { clientFactory = fn; },
   setTrendsSource(fn) { trendsSource = fn; },
-  brainstorm, partialItems, momentLine,
+  brainstorm, partialItems, partialPlan, momentLine,
   reset() { brainstorm.reset(); DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); MOMENT_SCORES.clear(); SHOP.at = 0; SHOP.data = null; COLLECTIONS_CACHE.at = 0; COLLECTIONS_CACHE.data = null; },
 };

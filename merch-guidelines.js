@@ -5,6 +5,7 @@
 //   PRO_SYSTEM     the system prompt for Pro (art director, Sonnet): Basic's
 //                  rules plus richer layouts, trend use and up to 3 elements.
 //   proSystem() / basicSystem()  the same, built on demand (count, refine).
+//   STYLE_NAMES    the named layouts the AI picks from (one per concept); merch-styles.js builds them in code.
 //   SUMMARY        short bullets for the page ("The AI follows these rules").
 //   ICONS / ELEMENT_TYPES / ELEMENT_RULES / LIMITS  what the server accepts.
 //   contrastIssues(concept) / repairContrast(concept)  the colour rule in code.
@@ -21,7 +22,7 @@
 }(typeof self !== 'undefined' ? self : this, (FrameUpRules) => {
   'use strict';
 
-  const VERSION = '2026-11-26-merch5';
+  const VERSION = '2026-11-28-styles1';
 
   // ─── What the server accepts (same lists as MerchPrint.ICONS / ELEMENT_TYPES) ──
   // Original simple shapes drawn by the engine; never league or team marks.
@@ -43,7 +44,7 @@
   const isHex = v => HEX_RE.test(String(v || ''));
   const LIMITS = Object.freeze({
     rows: 10, rowText: 60, elements: 3, numberDigits: 2,
-    basicConcepts: 4, proConcepts: 6, instruction: 300, history: 4,
+    basicConcepts: 6, proConcepts: 10, instruction: 300, history: 4,
     contrastBox: 2.0, contrastInk: 2.4,
     fitScaleMin: 0.6, fitScaleMax: 1.6, fitTopMinIn: 0.5, fitTopMaxIn: 10,
   });
@@ -70,6 +71,47 @@
     '- Compact chest: three to five short rows at a smaller fit (fit.scale 0.7).',
     '- Number-led: a number from the source as its own big row, words under it.',
   ];
+  // Named styles (same ids and names as merch-styles.js, which builds them in
+  // code). The AI picks a DIFFERENT one for every concept and names it in "label".
+  // pro: true = uses an element, so Pro only.
+  const STYLE_NAMES = Object.freeze([
+    { id: 'stack', name: 'Stacked words', line: 'one word per big pill, left, colours alternating a / b' },
+    { id: 'stagger', name: 'Centre stagger', line: 'two words a pill, centred, rows of different widths' },
+    { id: 'headline', name: 'Big + mid', line: 'one big row, then two or three mid rows' },
+    { id: 'banner', name: 'Wide banner', line: 'the line in one or two long big rows, one colour, centred' },
+    { id: 'knockout', name: 'Team knockout', line: 'team-colour tee, white pills, team-colour text (the shirt shows through)' },
+    { id: 'compact', name: 'Compact chest', line: 'short rows at fit.scale 0.7, left' },
+    { id: 'bold', name: 'Bold & big', line: 'one word a pill, centred, fit.scale 1.35' },
+    { id: 'lead-in', name: 'Lead-in', line: 'a mid row leads in, the rest lands big' },
+    { id: 'team-tee', name: 'Team tee', line: 'team-colour tee with plain black or white pills' },
+    { id: 'pyramid', name: 'Pyramid', line: 'each row longer than the last, centred' },
+    { id: 'funnel', name: 'Funnel', line: 'widest row first, narrowing, one colour, centred' },
+    { id: 'three-tone', name: 'Three-tone', line: 'rows rotate a, b and a plain pill' },
+    { id: 'team-mono', name: 'Team mono', line: 'every pill in colour a, left' },
+    { id: 'mono-ink', name: 'Mono ink', line: 'black pills on a light tee, white pills on a dark one' },
+    { id: 'tee-swap', name: 'Dark tee', line: 'black tee with team-colour and white pills' },
+    { id: 'hero', name: 'Hero word', line: 'the strongest word big, the rest in mid rows around it' },
+    { id: 'signed', name: 'Signed quote', line: 'quote in long pills, the "— Name" row in mid' },
+    { id: 'name-first', name: 'Name first', line: 'the name big on top, the words in mid rows under it' },
+    { id: 'tower', name: 'Tower', line: 'one word a pill in colour b, centred, tall' },
+    { id: 'pairs', name: 'Word pairs', line: 'two words a pill, left, starting on colour b' },
+    { id: 'two-line', name: 'Two-line banner', line: 'the whole line in two balanced big rows' },
+    { id: 'colour-pop', name: 'Colour pop', line: 'plain pills with one word popped in colour a' },
+    { id: 'pocket', name: 'Pocket print', line: 'fit.scale 0.6, topIn 1, one colour: a quiet chest print' },
+    { id: 'back-print', name: 'Back print', line: 'fit.scale 1.6, topIn 1.5: built for the back' },
+    { id: 'big-mid', name: 'Big / mid', line: 'rows alternate big and mid' },
+    { id: 'number-behind', name: 'Number behind', line: 'a number from the source, outlined behind the stack', pro: true },
+    { id: 'rule-frame', name: 'Rule frame', line: 'thick rules above and below the stack', pro: true },
+    { id: 'icon-top', name: 'Icon on top', line: 'a sport icon above the stack', pro: true },
+    { id: 'patch', name: 'Patch', line: 'a solid block behind the stack, like a badge', pro: true },
+    { id: 'ticket', name: 'Ticket', line: 'big headline, a thin rule between, details in mid rows', pro: true },
+    { id: 'number-top', name: 'Number on top', line: 'a number from the source, solid, above the stack', pro: true },
+    { id: 'icon-badge', name: 'Icon badge', line: 'a sport icon left of a one-colour stack', pro: true },
+    { id: 'crowned', name: 'Crowned', line: 'a crown icon above and a thin rule below', pro: true },
+  ]);
+  const styleList = pro => STYLE_NAMES.filter(st => pro || !st.pro).map(st => `- ${st.name}: ${st.line}.`);
+  const STYLES_BASIC = ['STYLES (every concept uses a DIFFERENT one; put its name in "label"):', ...styleList(false)];
+  const STYLES_PRO = ['STYLES (every concept uses a DIFFERENT one; put its name in "label"; the ones with numbers only when a number is in the source):', ...styleList(true)];
   const COLOUR = [
     'COLOUR. Use the team palette: "a" is the main team colour, "b" the second, "ink" the text colour that reads on them; "white" is plain white and "black" plain black. Rows alternate a and b, or use one colour throughout for calm designs.',
     `Pills must stand off the tee: every box needs contrast of at least ${LIMITS.contrastBox} against the garment colour, and the text at least ${LIMITS.contrastInk} against its box. A row's fill and ink are never the same colour.`,
@@ -101,17 +143,17 @@
     'Use elements sparingly: at most half of the set, never two of the same type, and never an element that repeats what the words already say.',
   ];
 
-  const SHAPE_BASIC = '{"concepts":[{"collection":"replay|nickname|quote|core|current","title":"short name","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white|black","ink":"a|b|ink|white|black"}],"align":"left|center","rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line on why fans would wear it"}]}';
+  const SHAPE_BASIC = '{"concepts":[{"collection":"replay|nickname|quote|core|current","title":"short name","label":"Stacked words","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white|black","ink":"a|b|ink|white|black"}],"align":"left|center","rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line on why fans would wear it"}]}';
   const SHAPE_PRO = '{"plan":{"idea":"one line","angle":"one line"},"concepts":[{"collection":"...","title":"short name","label":"Big headline","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white|black","ink":"a|b|ink|white|black"}],"align":"left|center","fit":{"scale":1,"topIn":null},"elements":[{"type":"rule","position":"below","color":"b","weight":"thick"}],"rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line"}]}';
 
   const HEAD = 'You design fan-first sports merch for EssentiallySports (ES). Answer with JSON only, no prose. Keep the JSON compact.';
   const ROWS = `Each design: 1 to ${LIMITS.rows} rows, each at most ${LIMITS.rowText} characters.`;
 
   function basicSystem() {
-    return [HEAD, ...PILL, ...COLLECTION_RULES, ...LAYOUTS, ...COLOUR, ...RIGHTS, ...FACTS, ...BASIC_ONLY, ROWS, ...VOICE, `Shape: ${SHAPE_BASIC}`].join('\n');
+    return [HEAD, ...PILL, ...COLLECTION_RULES, ...LAYOUTS, ...STYLES_BASIC, ...COLOUR, ...RIGHTS, ...FACTS, ...BASIC_ONLY, ROWS, ...VOICE, `Shape: ${SHAPE_BASIC}`].join('\n');
   }
   function proSystem() {
-    return [HEAD, ...PILL, ...COLLECTION_RULES, ...LAYOUTS, ...COLOUR, ...RIGHTS, ...FACTS, ...PRO_ART, ...ELEMENTS, ROWS, ...VOICE, `Shape: ${SHAPE_PRO}`].join('\n');
+    return [HEAD, ...PILL, ...COLLECTION_RULES, ...LAYOUTS, ...STYLES_PRO, ...COLOUR, ...RIGHTS, ...FACTS, ...PRO_ART, ...ELEMENTS, ROWS, ...VOICE, `Shape: ${SHAPE_PRO}`].join('\n');
   }
   // The refine prompt: one design changed by a typed instruction.
   function refineSystem(mode = 'basic') {
@@ -217,8 +259,8 @@
   }
 
   return {
-    VERSION, ICONS, ELEMENT_TYPES, ELEMENT_COLORS, ELEMENT_RULES, COLLECTIONS, SIZES, ROW_COLORS, LIMITS, VOICE,
-    SECTIONS: { PILL, COLLECTION_RULES, LAYOUTS, COLOUR, RIGHTS, FACTS, BASIC_ONLY, PRO_ART, ELEMENTS },
+    VERSION, STYLE_NAMES, ICONS, ELEMENT_TYPES, ELEMENT_COLORS, ELEMENT_RULES, COLLECTIONS, SIZES, ROW_COLORS, LIMITS, VOICE,
+    SECTIONS: { PILL, COLLECTION_RULES, LAYOUTS, STYLES_BASIC, STYLES_PRO, COLOUR, RIGHTS, FACTS, BASIC_ONLY, PRO_ART, ELEMENTS },
     BASIC_SYSTEM: basicSystem(), PRO_SYSTEM: proSystem(), MOMENTS_SYSTEM, BRAINSTORM_SYSTEM, BRAINSTORM_ANGLES,
     basicSystem, proSystem, refineSystem, SUMMARY, contrastIssues, repairContrast, colorOf, isHex,
   };
