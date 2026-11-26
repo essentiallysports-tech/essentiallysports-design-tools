@@ -376,23 +376,22 @@
           <span class="mx-score" title="Merch score: how well this could sell as a shirt"><span class="es-sr-only">Merch score </span><span class="mx-score__bar" style="--v:${score}%" aria-hidden="true"></span><span class="mx-score__n">${score}</span></span>
         </div>
         <h3 class="mx-moment__title">${esc(m.title)}</h3>
-        <div class="mx-moment__sell">
+        <div class="mx-moment__print">
+          <p class="mx-moment__label">What to print</p>
+          ${linesOf(m).length ? `<ul class="mx-mlines">${linesOf(m).map((l, n) => {
+            const picked = on_ && state.trend?.momentLine === n;
+            return `<li class="mx-mline${picked ? ' is-on' : ''}">
+              <span class="mx-mline__main"><span class="mx-mline__pill">${esc(l.text)}</span><span class="mx-mline__angle">${esc(ANGLE_LABEL[l.angle] || 'Idea')}</span></span>
+              <button class="es-btn es-btn--sm${picked ? ' is-on' : ''}" type="button" data-moment-line="${esc(m.id)}" data-line="${n}" aria-pressed="${Boolean(picked)}" aria-label="Design “${esc(l.text)}”">${picked ? 'In your brief' : 'Design this'}</button>
+            </li>`;
+          }).join('')}</ul>` : `<p class="mx-moment__empty">No shirt lines yet. <button class="es-btn es-btn--ghost es-btn--sm" type="button" data-moments="retry">Get AI ideas</button></p>`}
+        </div>
+        ${m.ai === false ? '' : `<div class="mx-moment__sell">
           <p class="mx-moment__label">Why it works${m.timing && TIMING_LABEL[m.timing] ? ` <span class="mx-moment__timing">${esc(TIMING_LABEL[m.timing])}</span>` : ''}</p>
           ${m.why ? `<p class="mx-moment__why">${esc(m.why)}</p>` : ''}
           ${m.audience ? `<p class="mx-moment__who"><span>Who buys it</span> ${esc(m.audience)}</p>` : ''}
-        </div>
-        <div class="mx-moment__print">
-          <p class="mx-moment__label">What to print</p>
-          <ul class="mx-mlines">${linesOf(m).map((l, n) => {
-            const picked = on_ && state.trend?.momentLine === n;
-            return `<li class="mx-mline${picked ? ' is-on' : ''}">
-              <span class="mx-mline__pill">${esc(l.text)}</span>
-              <span class="mx-mline__angle">${esc(ANGLE_LABEL[l.angle] || 'Idea')}</span>
-              <button class="es-btn es-btn--sm${picked ? ' is-on' : ''}" type="button" data-moment-line="${esc(m.id)}" data-line="${n}" aria-pressed="${Boolean(picked)}" aria-label="Design “${esc(l.text)}”">${picked ? 'In your brief' : 'Design this'}</button>
-            </li>`;
-          }).join('')}</ul>
-        </div>
-        ${m.ai === false ? '<p class="mx-moment__quick">Quick pick, made without AI. Refresh later for more ideas.</p>' : ''}
+        </div>`}
+        ${m.ai === false ? '<p class="mx-moment__quick">Quick pick without AI. Press Refresh for AI shirt ideas.</p>' : ''}
       </article>`;
     }
     function renderMoments() {
@@ -487,7 +486,7 @@
       const neu = $('mx-strip-new');
       if (neu) neu.disabled = !has || Boolean(state.making);
       if (state.making) return;
-      setText('mx-content-meta', has ? '' : 'Add a line, a link, or pick a moment to start.');
+      if (has) setText('mx-content-meta', '');
     }
     ['mx-text', 'mx-url'].forEach(id => {
       on(id, 'input', syncContent);

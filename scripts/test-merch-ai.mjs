@@ -409,7 +409,7 @@ await test('moments: keyed scoring, 3 shirt lines, why/audience/timing, 30-min c
   assert.equal(top.trend.category, 'nfl');
   const m2 = r.body.moments.find(m => m.id.includes('-m2-'));
   assert.ok(!/OFFICIAL/.test(m2.lines.map(l => l.text).join(' ')), 'official line dropped');
-  assert.equal(m2.lines.length, 1, 'falls back to a headline line');
+  assert.ok(m2.lines.length <= 1 && m2.ai === false, 'no usable AI line: heuristic card (no league marks)');
   const m3 = r.body.moments.find(m => m.id.includes('-m3-'));
   assert.deepEqual(m3.lines.map(l => l.text), ['DYNASTY MODE'], 'duplicates removed');
   assert.equal(m3.timing, 'evergreen'); assert.equal(m3.collection, 'replay');

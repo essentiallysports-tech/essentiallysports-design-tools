@@ -90,7 +90,7 @@ const COLOR_KEYS = ['a', 'b', 'ink', 'white', 'black'];
 const rowColor = v => (COLOR_KEYS.includes(v) ? v : /^#[0-9a-f]{6}$/i.test(String(v || '')) ? String(v).toUpperCase() : '');
 const PALETTE_FROM_KINDS = ['team', 'es', 'custom'];
 const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
-const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 18, momentsBatch: 9, uploadBytes: 25 * 1024 * 1024 });
+const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 18, momentsBatch: 6, uploadBytes: 25 * 1024 * 1024 });
 const CAPS = Object.freeze({ person: 10, team: 30 });
 const TEMPLATE_TTL_MS = 24 * 60 * 60 * 1000;
 const SHOP_TTL_MS = 10 * 60 * 1000;
@@ -604,7 +604,7 @@ async function runConcepts(designMode, { content, source, collection, count, tea
   try {
     result = await aiText({
       tier: pro ? PRO_TIER : AI_TIER, system: pro ? G.PRO_SYSTEM : G.BASIC_SYSTEM, messages: [{ role: 'user', content: ask }], json: true,
-      maxTokens: pro ? 3400 : 2500, timeoutMs: pro ? 60000 : 45000, cacheSystem: true, track: { ...track, feature: FEATURES.concepts, task: pro ? 'merch-concepts-pro' : 'merch-concepts-basic' },
+      maxTokens: pro ? 8000 : 5000, timeoutMs: pro ? 90000 : 60000, cacheSystem: true, track: { ...track, feature: FEATURES.concepts, task: pro ? 'merch-concepts-pro' : 'merch-concepts-basic' },
     });
   } catch (error) {
     if (inFreeMode() || isBudgetError(error)) return { error: 'free', cost: 0 };
@@ -720,7 +720,7 @@ async function runRefine(designMode, { base, instruction, history, content, rese
   ].filter(Boolean).join('\n');
   let result;
   try {
-    result = await aiText({ tier: pro ? PRO_TIER : AI_TIER, system: G.refineSystem(designMode), messages: [{ role: 'user', content: ask }], json: true, maxTokens: 1400, timeoutMs: 40000, cacheSystem: true, track: { ...track, feature: FEATURES.refine, task: pro ? 'merch-refine-pro' : 'merch-refine-basic' } });
+    result = await aiText({ tier: pro ? PRO_TIER : AI_TIER, system: G.refineSystem(designMode), messages: [{ role: 'user', content: ask }], json: true, maxTokens: 3000, timeoutMs: 45000, cacheSystem: true, track: { ...track, feature: FEATURES.refine, task: pro ? 'merch-refine-pro' : 'merch-refine-basic' } });
   } catch (error) {
     if (inFreeMode() || isBudgetError(error)) return { error: 'free', cost: 0 };
     console.error(`merch refine (${designMode}) failed:`, error.message);
@@ -809,8 +809,9 @@ function headlineLine(title) {
   if (q && q.split(/\s+/).length <= 6) return q.toUpperCase();
   const lead = String(title).split(/\s[:|–—-]\s|:\s/)[0];
   const names = lead.match(/\b[A-Z][a-zA-Z'’.]+(?:\s+[A-Z][a-zA-Z'’.]+){0,2}\b/g) || [];
-  const pick = names.sort((a, b) => b.split(' ').length - a.split(' ').length)[0] || lead.split(/\s+/).slice(0, 4).join(' ');
-  return clip(pick, 40).toUpperCase();
+  const isMark = t => LEAGUE_MARKS.some(m => new RegExp(`^${m}$`, 'i').test(t.trim())) || /^(week|playoff|picture|the|a)$/i.test(t.trim());
+  const pick = names.filter(n => !isMark(n) && !LEAGUE_MARKS.some(m => new RegExp(`(^|\\s)${m}(\\s|$)`, 'i').test(n))).sort((a, b) => b.split(' ').length - a.split(' ').length)[0] || '';
+  return pick ? clip(pick, 40).toUpperCase() : '';
 }
 function heuristicMoment(item, maxRank = 1) {
   const title = String(item.title || '');
@@ -825,7 +826,7 @@ function heuristicMoment(item, maxRank = 1) {
   let score = 30 + Math.round(rank * 25) + bonus + (item.signal === 'hot' ? 12 : item.signal === 'rising' ? 6 : 0) + Math.min(8, (Number(item.coverage) || 0) * 2) + (item.team ? 4 : 0);
   if (LOW_MERCH.test(title)) score -= 35;
   const line = headlineLine(title);
-  const lines = [{ text: line, angle: kind === 'quote' ? 'quote' : kind === 'rivalry' ? 'rivalry' : 'callback' }];
+  const lines = line ? [{ text: line, angle: kind === 'quote' ? 'quote' : kind === 'rivalry' ? 'rivalry' : 'callback' }] : [];
   const team = item.team?.name ? clip(item.team.name, 40) : '';
   return { kind, score: Math.max(0, Math.min(100, score)), why: MOMENT_WHY[kind], audience: team ? `${team} fans` : '', timing: kind === 'era' ? 'evergreen' : 'week', collection: kind === 'quote' ? 'quote' : kind === 'nickname' ? 'nickname' : kind === 'era' ? 'replay' : 'current', lines, line, ai: false };
 }
@@ -850,11 +851,30 @@ function momentLine(raw, title) {
   return text.toUpperCase();
 }
 const cleanText = (v, n) => { const t = clip(v, n); return t && !OFFICIAL_RE.test(t) && !((FrameUpRules?.BANNED) || []).some(b => b.re.test(t)) ? t : ''; };
+// Complete {...} objects from a JSON reply that was cut off inside "items": [...].
+function partialItems(text) {
+  const s = String(text || '');
+  const start = s.indexOf('[', s.indexOf('"items"'));
+  if (start < 0) return [];
+  const out = [];
+  let depth = 0; let from = -1; let inStr = false; let esc = false;
+  for (let n = start + 1; n < s.length; n += 1) {
+    const ch = s[n];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === '{') { if (depth === 0) from = n; depth += 1; }
+    else if (ch === '}') { depth -= 1; if (depth === 0 && from >= 0) { try { out.push(JSON.parse(s.slice(from, n + 1))); } catch { /* skip */ } from = -1; } }
+    else if (ch === ']' && depth === 0) break;
+  }
+  return out;
+}
 async function scoreBatch(items, track) {
   const keys = items.map((_, n) => `m${n + 1}`);
   const lines = items.map((i, n) => `${keys[n]} | ${SPORT_LABEL[i.category] || i.category || 'Sports'}${i.team?.name ? ` | ${clip(i.team.name, 40)}` : ''} | ${clip(i.title, 200)}`).join('\n');
-  const result = await aiText({ tier: AI_TIER, system: G.MOMENTS_SYSTEM, messages: [{ role: 'user', content: `Headlines:\n${lines}` }], json: true, maxTokens: 2600, timeoutMs: 25000, cacheSystem: true, track: { ...track, feature: FEATURES.moments } });
-  const parsed = parseJson(result.text);
+  const result = await aiText({ tier: AI_TIER, system: G.MOMENTS_SYSTEM, messages: [{ role: 'user', content: `Headlines:\n${lines}` }], json: true, maxTokens: 5000, timeoutMs: 40000, cacheSystem: true, allowCutoff: true, track: { ...track, feature: FEATURES.moments } });
+  // A reply cut off at the limit still has its complete items: keep those.
+  const parsed = parseJson(result.text) || { items: partialItems(result.text) };
+  if (result.truncated) console.warn(`merch moments: reply cut off; kept ${(parsed.items || []).length} complete items`);
   const out = new Map();
   let dropped = 0;
   (Array.isArray(parsed?.items) ? parsed.items : []).forEach(e => {
@@ -865,7 +885,8 @@ async function scoreBatch(items, track) {
     const seen = new Set();
     const ls = (Array.isArray(e.lines) ? e.lines : []).map(l => ({ text: momentLine(typeof l === 'string' ? l : l?.text, item.title), angle: MOMENT_ANGLES.includes(l?.angle) ? l.angle : 'callback' }))
       .filter(l => l.text && !seen.has(l.text) && seen.add(l.text)).slice(0, 3);
-    if (!ls.length) ls.push({ text: headlineLine(item.title), angle: 'callback' });
+    if (!ls.length && headlineLine(item.title)) ls.push({ text: headlineLine(item.title), angle: 'callback' });
+    if (!ls.length) { dropped += 1; return; }
     out.set(item.id, {
       kind, score: Math.max(0, Math.min(100, Math.round(Number(e.score)))),
       why: cleanText(e.why, 220) || MOMENT_WHY[kind], audience: cleanText(e.audience, 60),
@@ -910,6 +931,10 @@ async function momentsMode(body, track) {
         const r = await scoreMoments(misses, track);
         cost = r.cost;
         r.scores.forEach((data, id) => { MOMENT_SCORES.set(`v2:${id}`, { at: now, data }); ai = true; });
+        // Headlines the AI scored with nothing usable keep the quick pick for the
+        // cache window, so a refresh doesn't pay for them again.
+        const maxR = Math.max(1, ...pool.map(i => Number(i.rank) || 0));
+        misses.filter(i => !r.scores.has(i.id)).forEach(i => MOMENT_SCORES.set(`v2:${i.id}`, { at: now, data: heuristicMoment(i, maxR) }));
         if (MOMENT_SCORES.size > 400) [...MOMENT_SCORES.keys()].slice(0, MOMENT_SCORES.size - 400).forEach(k => MOMENT_SCORES.delete(k));
       } catch (error) {
         if (!inFreeMode() && !isBudgetError(error)) console.error('merch moments scoring failed:', error.message);

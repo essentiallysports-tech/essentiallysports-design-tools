@@ -618,7 +618,7 @@ function isBudgetError(error) {
 // 512 tokens is at least about 1,500 characters of English; under 1,024 characters it can't qualify.
 const CACHE_MIN_CHARS = 1024;
 
-async function anthropicCall({ model, system, messages, effort, maxTokens, timeoutMs, cacheSystem }) {
+async function anthropicCall({ model, system, messages, effort, maxTokens, timeoutMs, cacheSystem, allowCutoff = false }) {
   const send = cache => fetch(`${GATEWAY}/messages`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': process.env.AI_GATEWAY_API_KEY, 'anthropic-version': '2023-06-01' },
@@ -648,9 +648,11 @@ async function anthropicCall({ model, system, messages, effort, maxTokens, timeo
   if (!response.ok) throw gatewayError(response.status, data?.error?.message, `AI request failed: ${response.status}`);
   // A refusal or a cut-off reply counts as a failure so the caller falls back.
   if (data?.stop_reason === 'refusal') throw new Error('The AI declined this request.');
-  if (data?.stop_reason === 'max_tokens') throw new Error('The AI reply was cut off.');
+  const truncated = data?.stop_reason === 'max_tokens';
+  if (truncated && !allowCutoff) throw new Error('The AI reply was cut off.');
   const u = data?.usage || {};
   return {
+    truncated,
     text: (data?.content || []).filter(block => block.type === 'text').map(block => block.text).join(''),
     usage: { input: u.input_tokens || 0, output: u.output_tokens || 0, cacheRead: u.cache_read_input_tokens || 0, cacheWrite: u.cache_creation_input_tokens || 0 },
   };
@@ -681,7 +683,9 @@ async function openaiCall({ model, system, messages, json, maxTokens, timeoutMs 
 // tier: 'light' | 'main' | 'review' | 'best'. messages: [{ role: 'user' | 'assistant', content }].
 // track: { feature, email, token } for spend tracking (optional).
 // Returns { text, model, cost }. Throws on any failure.
-async function aiText({ tier = 'light', system, messages, json = false, effort = 'low', maxTokens = 4000, timeoutMs = 25000, track, cacheSystem = false } = {}) {
+// allowCutoff: return a reply cut off at maxTokens (truncated: true) instead of
+// throwing, for callers that can use the complete part (e.g. a JSON list).
+async function aiText({ tier = 'light', system, messages, json = false, effort = 'low', maxTokens = 4000, timeoutMs = 25000, track, cacheSystem = false, allowCutoff = false } = {}) {
   if (!process.env.AI_GATEWAY_API_KEY) throw new Error('AI_GATEWAY_API_KEY is not set.');
   if (trackDisabled(track)) throw featureOffError(track.feature || track.task);
   assertAiMode();
@@ -690,7 +694,7 @@ async function aiText({ tier = 'light', system, messages, json = false, effort =
   const started = Date.now();
   try {
     const call = model.startsWith('anthropic/') ? anthropicCall : openaiCall;
-    const result = await call({ model, system, messages, json, effort, maxTokens, timeoutMs, cacheSystem });
+    const result = await call({ model, system, messages, json, effort, maxTokens, timeoutMs, cacheSystem, allowCutoff });
     if (!result.text.trim()) throw new Error('The AI returned an empty reply.');
     const cost = costUsd(model, result.usage);
     await logUsage(track, {
@@ -699,7 +703,7 @@ async function aiText({ tier = 'light', system, messages, json = false, effort =
       cache_read_tokens: result.usage.cacheRead || 0, cache_write_tokens: result.usage.cacheWrite || 0,
       cost_usd: Number(cost.toFixed(6)), duration_ms: Date.now() - started,
     });
-    return { text: result.text, model, cost, usage: result.usage };
+    return { text: result.text, model, cost, usage: result.usage, truncated: Boolean(result.truncated) };
   } catch (error) {
     await logUsage(track, { model, ok: false, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started, error: String(error.message || error).slice(0, 200) });
     throw error;

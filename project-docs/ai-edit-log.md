@@ -4,6 +4,13 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-26 — Suhail (Claude): Merch AI replies were being cut off (moments + AI designs), card UI, no hero (main)
+- Cause (usage log): merch-moments and merch-concepts calls failed with ok=false, 0 tokens, 8–12 s since ~05:58, while merch-copy (500 tokens, no cache) worked. The gateway throws "The AI reply was cut off" at max_tokens, so long JSON replies were discarded and the page fell back to the heuristic.
+- _ai-gateway.js: aiText/anthropicCall take allowCutoff (default false) and return truncated: true instead of throwing.
+- merch.js: moments batches of 6, maxTokens 5000, 40 s, allowCutoff + partialItems() keeps every complete item; unusable items are cached as quick picks (no repeat spend). Concepts maxTokens 5000 (Basic) / 8000 (Pro), refine 3000. Heuristic lines never use league marks (no more "NFL" as a line); no line → card says so.
+- Page: card shows What to print first (compact rows: pill + angle chip + Design this), then Why it works / Who buys it (AI cards only); quick-pick cards say "Press Refresh for AI shirt ideas". Create screen: hero and the two hint lines removed (owner: no need); sr-only heading kept.
+- Tests: test-merch-ai 23, check-merch-ui 282, ai-guardrails/free/weekly, reliability, video-ads/trend/gen tests touching cut-off.
+
 ## 2026-11-26 — Suhail (Claude): Merch moments v2 + bigger default designs (branch release/merch6)
 - Moments: the live AI scores were being discarded (trend ids didn't round-trip; 24 headlines in one reply), so every card showed the heuristic. Now: short keys (m1…) per batch of 9, two batches in parallel, 2600 output tokens each, unusable answers logged. Each moment returns 3 shirt lines {text, angle} (fan wording allowed; numbers only from the headline; no league marks/"official"/banned words; deduped), why (≤220), audience, timing (now|week|season|evergreen) and collection. Cache keys 'v2:'. Guidelines MOMENTS_SYSTEM rewritten. Haiku, about $0.001–0.002 per refresh, 30-min cache.
 - Page: moment cards 2 per row: Why it works (+ timing chip, who buys it), What to print (3 lines as ES pills, each with Design this, which puts that line in the brief and sets the collection), "Quick pick, made without AI" note for heuristic cards.

@@ -156,7 +156,7 @@ async function flow(width, theme, mode) {
   ok(await ev(TEE_ONLY_IN_DESIGN), `${tag}: tee colour only in Design`);
 
   // ── Create.
-  ok(await ev("/Make fan merch with/.test(document.getElementById('mx-h-content').textContent) && Boolean(document.querySelector('#mx-h-content .ais-gradient-text'))"), `${tag}: hero with the gradient AI word`);
+  ok(await ev("!document.querySelector('.mx-hero') && !document.getElementById('mx-text-hint') && document.getElementById('mx-h-content').classList.contains('es-sr-only') && !document.getElementById('mx-content-meta').textContent.trim()"), `${tag}: no hero or hint lines; prompt card first`);
   ok(await ev("document.getElementById('mx-create').disabled"), `${tag}: Create designs starts disabled`);
   ok(await ev("document.querySelector('#mx-mode [data-mode=basic]').matches('[aria-checked=true],[aria-pressed=true]') && MerchUI.state.aiMode === 'basic' && /4 designs/.test(document.getElementById('mx-mode-hint').textContent)"), `${tag}: Basic by default with its hint`);
   if (pro) {

@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="merch.css?v=20261126-merch6">
+  <link rel="stylesheet" href="merch.css?v=20261126-merch6b">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -104,15 +104,12 @@
     <!-- 1 Create -->
     <section class="mx-view mx-create" id="mx-view-content" data-view="content" aria-labelledby="mx-h-content">
       <div class="ais-wrap mx-create__wrap">
-        <div class="mx-hero">
-          <h2 class="mx-hero__title" id="mx-h-content" tabindex="-1">Make fan merch with <span class="ais-gradient-text ais-gradient-text--on-light">AI</span></h2>
-          <p class="mx-hero__sub">A line, a quote or a moment in. Print-ready ES designs out.</p>
-        </div>
+        <h2 class="es-sr-only mx-sr" id="mx-h-content" tabindex="-1">Create merch</h2>
 
         <div class="mx-prompt ais-surface" id="mx-prompt">
           <div class="mx-prompt__body">
             <label class="es-sr-only" for="mx-text">Your line, quote or stat</label>
-            <textarea class="mx-prompt__text" id="mx-text" rows="3" maxlength="400" placeholder="Type a line, quote or stat… e.g. Ball don’t lie" aria-describedby="mx-text-hint"></textarea>
+            <textarea class="mx-prompt__text" id="mx-text" rows="3" maxlength="400" placeholder="Type a line, quote or stat… e.g. Ball don’t lie"></textarea>
             <div class="mx-prompt__chips">
               <span class="mx-moment-chip" id="mx-moment-chip" hidden>
                 <svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-sparkle"/></svg>
@@ -152,7 +149,6 @@
             <button class="es-btn es-btn--primary es-btn--lg ais-btn mx-create-btn" type="button" id="mx-create" aria-keyshortcuts="Control+Enter Meta+Enter" disabled><span class="es-ai-mark" aria-hidden="true"></span><span class="mx-create__label">Create designs</span><kbd class="mx-kbd" id="mx-create-kbd" aria-hidden="true">⌘ ↵</kbd></button>
           </div>
         </div>
-        <p class="mx-prompt__note" id="mx-text-hint">Exact quotes print word for word. Names and quotes get a rights check before the shop.</p>
         <p class="mx-prompt__note mx-prompt__note--status" id="mx-content-meta" role="status" aria-live="polite"></p>
 
         <details class="mx-rules" id="mx-rules">
@@ -551,6 +547,6 @@
   <script src="merch-guidelines.js?v=20261126-merch6"></script>
   <script src="merch-print.js?v=20261126-merch5"></script>
   <script src="merch-palette.js?v=20261126-merch5"></script>
-  <script src="merch.js?v=20261126-merch6"></script>
+  <script src="merch.js?v=20261126-merch6b"></script>
 </body>
 </html>
