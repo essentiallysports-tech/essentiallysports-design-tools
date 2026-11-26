@@ -27,6 +27,12 @@
 //   moments     { sport? } -> { moments: [{ id, title, sport, team, kind, score, why, audience, timing, collection, lines:[{text,angle}], line, ai, trend }], at, cached }
 //               (the Trends feed scored for merch: one main-tier call per batch, 30-min cache, heuristic in free mode)
 //   (merch4) `content` is a string or the page's { text, url, trend }; `trend` may also be top-level.
+//   brainstorm-open / -get / -turn / -line / -add / -list: the shared Brainstorm room
+//               (_merch-brainstorm.js; boards in _merch-brainstorm-store.js). open { trend?, content?, designMode }
+//               -> { session, context, created, cost }; turn { sessionId, prompt? | action?, designMode }
+//               -> { lines, note, session, designMode, fellBack?, dropped, cost }; line { sessionId, lineId,
+//               op: star|unstar|edit|remove, text? } -> { session }; add { sessionId, text } -> { line, session };
+//               get { sessionId, withContext? } -> { session, context? }; list -> { sessions, storage }.
 //   copy        { concept, content?, blank? } -> { copy: { title, description, retail, base, margin } }
 //   upload-url  { fileName, size, contentType:'image/png' } -> { uploadUrl, fileUrl, expiresAt }   [push]
 //               (the browser PUTs the PNG straight to uploadUrl)
@@ -80,7 +86,7 @@ try { FrameUpRules = require('../../frameup-rules.js'); } catch { FrameUpRules =
 let MerchRules = null;
 try { MerchRules = require('../../merch-rules.js'); } catch { MerchRules = null; }
 
-const FEATURES = Object.freeze({ concepts: 'merch-concepts', copy: 'merch-copy', refine: 'merch-refine', moments: 'merch-moments' });
+const FEATURES = Object.freeze({ concepts: 'merch-concepts', copy: 'merch-copy', refine: 'merch-refine', moments: 'merch-moments', brainstorm: 'merch-brainstorm', brainstormContext: 'merch-brainstorm-context' });
 const AI_TIER = 'main'; // Haiku: the cheapest model that writes reliable JSON in ES voice
 const PRO_TIER = 'best'; // Sonnet: Pro concepts and Pro refine (~$0.02 a concepts run, owner-approved)
 const DESIGN_MODES = ['basic', 'pro'];
@@ -1381,6 +1387,16 @@ async function uploadRelayMode(body, track) {
   return json(200, { ok: true, size: file.bytes.length });
 }
 
+// ─── Brainstorm room (shared boards; _merch-brainstorm.js) ───────────────────
+let MerchPrint = null;
+try { MerchPrint = require('../../merch-print.js'); } catch { MerchPrint = null; }
+const brainstorm = require('./_merch-brainstorm.js').createBrainstorm({
+  json, clip, fold, aiGate, isAdmin, fellBackFor, LEAGUE_MARKS, OFFICIAL_RE, BANNED: (FrameUpRules && FrameUpRules.BANNED) || [],
+  quoteInSource: (q, s) => rules().quoteInSource(q, s), headlineLine, partialItems, parseJson, usd, SPORT_LABEL,
+  designModeOf, contentOf, trendOf, fullTrend: t => fullTrend(t), G, AI_TIER, PRO_TIER, hash,
+  teamPalette: MerchPrint && typeof MerchPrint.teamPalette === 'function' ? name => MerchPrint.teamPalette(name) : null,
+});
+
 // ─── Handler ────────────────────────────────────────────────────────────────
 const PUSH_MODES = new Set(['upload-url', 'register', 'preview', 'create', 'publish', 'hide', 'upload-relay', 'collection-create', 'collection-set']);
 const FW_MODES = new Set([...PUSH_MODES, 'product', 'archive', 'collections']);
@@ -1407,6 +1423,7 @@ exports.handler = withAiMode(async function handler(event) {
     if (mode === 'list') return await listMode(body);
     if (mode === 'sales') return await salesMode(body);
     if (mode === 'copy') return await copyMode(body, track);
+    if (mode.startsWith('brainstorm-')) { const r = await brainstorm.handle(mode, body, track); if (r) return r; }
     if (FW_MODES.has(mode)) {
       if (!fourthwall.configured()) return json(503, { ok: false, reason: 'not-set-up', error: NOT_SET_UP });
       if (PUSH_MODES.has(mode) && !(await canPush(track))) return json(403, { ok: false, reason: 'no-push', error: NO_PUSH });
@@ -1437,5 +1454,6 @@ exports._test = {
   contentOf, trendOf, sourceFor, designModeOf, shapeElements, shapeFit, codeIntent, applyIntent, heuristicMoment, lineFromHeadline, headlineLine, MOMENT_SCORES, G,
   setClientFactory(fn) { clientFactory = fn; },
   setTrendsSource(fn) { trendsSource = fn; },
-  reset() { DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); MOMENT_SCORES.clear(); SHOP.at = 0; SHOP.data = null; COLLECTIONS_CACHE.at = 0; COLLECTIONS_CACHE.data = null; },
+  brainstorm, partialItems, momentLine,
+  reset() { brainstorm.reset(); DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); MOMENT_SCORES.clear(); SHOP.at = 0; SHOP.data = null; COLLECTIONS_CACHE.at = 0; COLLECTIONS_CACHE.data = null; },
 };

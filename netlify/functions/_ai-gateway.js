@@ -153,6 +153,9 @@ const FEATURE_NAMES = [
   ['merch-copy', 'Merch shop copy'],
   ['merch-refine', 'The merch design chat'],
   ['merch-moments', 'Merch moments'],
+  // The context entry comes first: names match by prefix.
+  ['merch-brainstorm-context', 'The merch brainstorm web check'],
+  ['merch-brainstorm', 'The merch brainstorm room'],
   ['reels-transcription', 'Automatic captions'],
   ['reels-ideas', 'The Reels ideas room'],
   ['reels-radar', 'The Reels trend radar'],

@@ -139,6 +139,23 @@
     'Shape: {"items":[{"key":"m1","kind":"moment","score":72,"lines":[{"text":"...","angle":"chant"}],"why":"...","audience":"...","timing":"week","collection":"current"}]}',
   ].join('\n');
 
+  // The brainstorm prompt: a shared board of shirt lines for one trend.
+  // The server sends the sources, the board (so nothing repeats), the last
+  // chat turns and the request; it checks every line again in code.
+  const BRAINSTORM_ANGLES = Object.freeze(['quote', 'nickname', 'chant', 'callback', 'pun', 'stat', 'rivalry', 'era', 'city', 'player', 'troll']);
+  const BRAINSTORM_SYSTEM = [
+    'You are the merch editor for EssentiallySports (ES), brainstorming shirt lines with the ES team on a shared board. An ES shirt carries one short line in stacked condensed pills. Answer with JSON only, no prose.',
+    'Return 6 NEW lines unless the request asks for fewer: genuinely different from each other AND from every line already on the board (no rewording of a board line, no same joke twice).',
+    'Each line: "text" 1-6 words, at most 32 characters, the words fans would actually wear (fan voice, a chant, a nickname, a callback, a pun on the moment, a rivalry jab, a city or era line). "angle": quote | nickname | chant | callback | pun | stat | rivalry | era | city | player | troll. "why": one plain sentence (max 140 characters) on why fans would wear it now.',
+    '"rights": list every real person, nickname, quote and team the line uses, as {"kind":"name|nickname|quote|team","text":"..."}; [] when none.',
+    'FACTS. Numbers (scores, stats, years, jersey numbers) ONLY when they appear in SOURCES exactly. Quote marks ONLY around words copied exactly from SOURCES. Never invent a quote, stat, record or date. Nicknames from SOURCES or ones fans plainly use.',
+    'RULES. No league or event marks (NFL, NBA, MLB, NHL, WNBA, NCAA, MLS, PGA, LPGA, UFC, NASCAR, FIFA, Super Bowl, World Series, Stanley Cup, March Madness, Final Four), no team logos, no words that claim a licence (official, licensed, authentic, authorized, endorsed). Never a player\'s full name alone as a line. "troll" means playful rivalry in good taste: no insults about people, bodies, families, injuries, race, religion or gender; nothing cruel or crude.',
+    'Follow the request: "more like" keeps the feel of the given lines with new words; "mix" combines the two given lines into new ones; an angle, tone or audience shapes every line. If the request asks for something the rules forbid, give the closest allowed lines and say so in the note.',
+    '"note": one short, friendly line for the chat on what you tried (max 200 characters), in plain words.',
+    ...VOICE,
+    'Shape: {"note":"...","items":[{"text":"FROZEN TUNDRA FAITHFUL","angle":"chant","why":"...","rights":[]}]}',
+  ].join('\n');
+
   // ─── Short bullets for the page ──────────────────────────────────────────
   const SUMMARY = Object.freeze([
     'ES pills only: heavy condensed caps on solid, sharp boxes, no gaps between rows.',
@@ -202,7 +219,7 @@
   return {
     VERSION, ICONS, ELEMENT_TYPES, ELEMENT_COLORS, ELEMENT_RULES, COLLECTIONS, SIZES, ROW_COLORS, LIMITS, VOICE,
     SECTIONS: { PILL, COLLECTION_RULES, LAYOUTS, COLOUR, RIGHTS, FACTS, BASIC_ONLY, PRO_ART, ELEMENTS },
-    BASIC_SYSTEM: basicSystem(), PRO_SYSTEM: proSystem(), MOMENTS_SYSTEM,
+    BASIC_SYSTEM: basicSystem(), PRO_SYSTEM: proSystem(), MOMENTS_SYSTEM, BRAINSTORM_SYSTEM, BRAINSTORM_ANGLES,
     basicSystem, proSystem, refineSystem, SUMMARY, contrastIssues, repairContrast, colorOf, isHex,
   };
 }));
