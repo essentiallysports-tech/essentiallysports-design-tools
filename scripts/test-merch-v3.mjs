@@ -52,8 +52,8 @@ ok('fit: size scales the print, position moves it', () => {
   assert.ok(big.items.every(i => i.x >= 0 && i.x + i.w <= TEE.pixelsWidth));
 });
 ok('fit is clamped to safe values', () => {
-  assert.deepEqual(P.fitOf({ fit: { scale: 9, topIn: -3 } }), { scale: 1.6, topIn: 0.5 });
-  assert.deepEqual(P.fitOf({}), { scale: 1, topIn: null });
+  assert.deepEqual(P.fitOf({ fit: { scale: 9, topIn: -3 } }), { scale: 1.6, topIn: 0.5, xIn: 0 });
+  assert.deepEqual(P.fitOf({}), { scale: 1, topIn: null, xIn: 0 });
 });
 ok('splitWords modes', () => {
   assert.deepEqual(P.splitWords('the king of the court', 'word'), ['THE KING', 'OF THE COURT']);
@@ -210,3 +210,133 @@ console.log(`logo guards: ${n} checks passed`);
   n += 1; console.log('ok photoMock: uncalibrated photos and wrong sides are never drawn on');
 }
 console.log(`merch7 photos: ${n} checks passed`);
+
+// ─── merch-realism: placement (mid-chest default, fit.xIn), designBox, photoGeometry ───
+{
+  const T = 'pro_Vv1XdaPMSdm6jZ5pj24NCQ';
+  const SP = { regionId: 'front_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150, garmentColor: '#FFFFFF' };
+  const pal = { a: '#0A7DFA', b: '#111111', ink: '#FFFFFF' };
+  const short = { palette: pal, stack: [{ text: 'GAME DAY', size: 'big', fill: 'a', ink: 'white' }, { text: 'EVERY DAY', size: 'big', fill: 'b', ink: 'white' }], fit: { scale: 0.7 } };
+  const tall = { palette: pal, stack: ['KOBE', 'SHAQ', 'FISHER', 'HORRY', 'FOX'].map((t, i) => ({ text: t, size: 'big', fill: i % 2 ? 'b' : 'a', ink: 'white' })) };
+  let m = 0; const ok2 = (name, fn) => { fn(); m += 1; console.log('ok', name); };
+  ok2('default placement is mid-chest: short designs ~3 in down, tall ones centred near 37%', () => {
+    const s = P.layout(short, SP);
+    const t = P.layout(tall, SP);
+    assert.ok(s.designIn.top >= 2.5 && s.designIn.top <= 3.26, `short top ${s.designIn.top}`);
+    assert.ok(t.designIn.top >= 2.5 - 1e-6, `tall top ${t.designIn.top}`);
+    assert.ok(t.design.y + t.design.h <= t.h, 'tall stays inside');
+    [s, t].forEach(x => assert.equal(P.checksFor(x).filter(c => c.level === 'error').length, 0));
+    // the slider still overrides it, and Reset (topIn null) returns to it
+    assert.equal(P.layout({ ...short, fit: { scale: 0.7, topIn: 1 } }, SP).design.y, 150);
+    assert.equal(P.layout({ ...short, fit: { scale: 0.7, topIn: null } }, SP).design.y, s.design.y);
+    // small areas (hoodie front 11 x 11 in) keep it inside too
+    const h = P.layout({ ...tall, blanks: ['hoodie'] }, { pixelsWidth: 1650, pixelsHeight: 1650, dpi: 150, kind: 'hoodie' });
+    assert.ok(h.design.y + h.design.h <= h.h && h.design.y > 0);
+  });
+  ok2('fit.xIn moves the design sideways and stays inside the print area', () => {
+    const base = P.layout(short, SP);
+    const right = P.layout({ ...short, fit: { ...short.fit, xIn: 2 } }, SP);
+    assert.equal(right.design.x - base.design.x, 300);
+    assert.ok(Math.abs(right.designIn.x - 2) < 0.02);
+    const far = P.layout({ ...short, fit: { ...short.fit, xIn: 9 } }, SP);
+    assert.equal(far.design.x + far.design.w, far.w, 'clamped to the right edge');
+    const farL = P.layout({ ...short, fit: { ...short.fit, xIn: -9 } }, SP);
+    assert.equal(farL.design.x, 0, 'clamped to the left edge');
+    [far, farL].forEach(x => assert.equal(P.checksFor(x).find(c => c.id === 'area').ok, true));
+    assert.equal(P.fitOf({ fit: { xIn: 99 } }).xIn, P.FIT.xMaxIn);
+    assert.equal(P.fitOf({ fit: { xIn: 'x' } }).xIn, 0);
+    // hard goods stay inside their safe edge
+    const poster = P.layout({ ...short, blanks: ['poster'], fit: { xIn: 9 } }, { pixelsWidth: 1500, pixelsHeight: 2100, dpi: 300, kind: 'poster' });
+    assert.ok(poster.w - poster.design.x - poster.design.w >= Math.round(P.SAFE_IN.poster * 300));
+  });
+  ok2('designBox matches layout (inches from the print area top-left)', () => {
+    const c = { ...short, fit: { scale: 0.7, xIn: 1.5, topIn: 4 } };
+    const s = P.layout(c, SP);
+    const b = P.designBox(c, SP);
+    assert.deepEqual(b, { x: s.design.x / 150, y: s.design.y / 150, w: s.design.w / 150, h: s.design.h / 150 });
+    assert.equal(b.y, 4);
+  });
+  ok2('photoGeometry: same area as photoRect at any canvas size; inverse mapping; uncalibrated', () => {
+    for (const W of [720, 1600]) {
+      const g = P.photoGeometry(T, 0, W);
+      const r = P.photoRect(P.PHOTO_AREAS[T][0], 15, 18);
+      const H = Math.round(W * 960 / 720);
+      assert.ok(Math.abs(g.area.x - r.x * W) < 1e-6 && Math.abs(g.area.w - r.w * W) < 1e-6 && Math.abs(g.area.y - r.y * H) < 0.5);
+      assert.ok(Math.abs(g.area.h - r.h * H) < 0.5); // H is rounded
+      const [xi, yi] = g.toInches(...g.toCanvas(3.25, 5.5));
+      assert.ok(Math.abs(xi - 3.25) < 1e-6 && Math.abs(yi - 5.5) < 1e-6);
+    }
+    assert.equal(P.photoGeometry(T, 2, 720).calibrated, false);
+    assert.equal(P.photoGeometry('pro_x', 0, 720).area, null);
+  });
+  console.log(`merch-realism placement: ${m} checks passed`);
+}
+
+// ─── merch-realism in Chrome: photoMock width, geometry vs ink, print PNG unchanged ───
+// Needs Chrome (skipped without it). The print PNG (render / renderLogo) is compared
+// byte for byte with origin/main's merch-print.js (MERCH_PRINT_BASE=<ref> to change;
+// MERCH_PRINT_CHANGED=1 skips it on a branch that changes the print on purpose).
+{
+  const { execFileSync } = await import('node:child_process');
+  const { startServer, startChrome, findChrome } = await import('./_qa-chrome.mjs');
+  const chromePath = findChrome();
+  if (!chromePath) console.log('skip merch-realism Chrome checks: no Chrome');
+  else {
+    let baseSrc = null;
+    if (process.env.MERCH_PRINT_CHANGED !== '1') {
+      try { baseSrc = execFileSync('git', ['show', `${process.env.MERCH_PRINT_BASE || 'origin/main'}:merch-print.js`], { cwd: (await import('node:url')).fileURLToPath(new URL('..', import.meta.url)), maxBuffer: 1 << 24 }).toString(); } catch { baseSrc = null; }
+    }
+    const page = `<!doctype html><meta charset="utf-8"><body><script src="/frameup-rules.js"></script><script src="/brand-kit.js"></script><script src="/video-ads-teams.js"></script><script src="/merch-rules.js"></script>${baseSrc ? '<script src="/merch-print.base-qa.js"></script><script>window.MPBase = window.MerchPrint;</script>' : ''}<script src="/merch-print.js"></script></body>`;
+    const { server, base } = await startServer({ extra: url => (url.pathname === '/__qa/merch.html' ? { type: 'text/html', body: page } : url.pathname === '/merch-print.base-qa.js' && baseSrc ? { type: 'text/javascript', body: baseSrc } : null) });
+    const chrome = await startChrome(chromePath, { width: 900, height: 700 });
+    try {
+      await chrome.send('Page.navigate', { url: base + '/__qa/merch.html' });
+      for (let i = 0; i < 50 && !(await chrome.evaluate('!!window.MerchPrint')); i++) await new Promise(r => setTimeout(r, 100));
+      const r = await chrome.evaluate(`(async () => {
+        const P = window.MerchPrint, T = 'pro_Vv1XdaPMSdm6jZ5pj24NCQ';
+        const spec = { regionId: 'front_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150 };
+        // a synthetic light-grey "shirt" photo with soft shading and grain (no network)
+        const ph = document.createElement('canvas'); ph.width = 720; ph.height = 960;
+        const pg = ph.getContext('2d'); const gr = pg.createLinearGradient(0, 0, 720, 0);
+        gr.addColorStop(0, '#b8b8b8'); gr.addColorStop(0.5, '#f0f0f0'); gr.addColorStop(1, '#b0b0b0');
+        pg.fillStyle = gr; pg.fillRect(0, 0, 720, 960);
+        const photo = ph.toDataURL('image/jpeg', 0.9);
+        const concept = { palette: { a: '#111111', b: '#111111', ink: '#FFFFFF' }, stack: [{ text: 'GAME DAY', size: 'big', fill: 'a', ink: 'white' }], fit: { scale: 0.8, xIn: 1 } };
+        const out = {};
+        const run = async (W, realism) => { const cv = document.createElement('canvas'); cv.width = 720; const t0 = performance.now(); const res = await P.photoMock(concept, cv, { photo, templateId: T, photoIndex: 0, spec, garmentColor: '#FFFFFF', width: W, realism, logoSpot: 'none' }); return { cv, res, ms: performance.now() - t0 }; };
+        await run(720, true);
+        const big = await run(1600, true); out.bigW = big.cv.width; out.bigH = big.cv.height; out.bigRes = big.res.width; out.bigMs = Math.round(big.ms); out.bigShaded = big.res.realism;
+        const small = await run(720, true); out.smallMs = Math.round(small.ms); out.smallW = small.cv.width;
+        const huge = await run(5000, false); out.hugeW = huge.cv.width;
+        // where the ink lands vs photoGeometry(designBox)
+        const plain = await run(1600, false);
+        const g = plain.cv.getContext('2d'); const W = plain.cv.width, H = plain.cv.height;
+        const d = g.getImageData(0, 0, W, H).data;
+        let x0 = W, y0 = H, x1 = 0, y1 = 0;
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (d[i] < 60) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
+        const geo = P.photoGeometry(T, 0, W, H); const b = P.designBox(concept, spec);
+        const [ex0, ey0] = geo.toCanvas(b.x, b.y); const [ex1, ey1] = geo.toCanvas(b.x + b.w, b.y + b.h);
+        out.ink = [x0, y0, x1 + 1, y1 + 1]; out.expect = [ex0, ey0, ex1, ey1].map(v => Math.round(v * 10) / 10);
+        // the print PNG: byte-identical to the base engine for a fixed concept (explicit fit)
+        if (window.MPBase) {
+          const fixed = { id: 'fixed', palette: { a: '#0A7DFA', b: '#0B1F3A', ink: '#FFFFFF' }, stack: ['WE CENTER', 'FANS IN', 'EVERYTHING'].map((t, i) => ({ text: t, size: i ? 'mid' : 'big', fill: i % 2 ? 'b' : 'a', ink: 'white' })), elements: [{ type: 'icon', name: 'tennis', position: 'above', color: 'a' }], fit: { scale: 1, topIn: 1.75 } };
+          const png = async lib => { const c = document.createElement('canvas'); await lib.render(fixed, { ...spec, garmentColor: '#FFFFFF' }, c, { scale: 0.5, blob: false, phone: false }); return c.toDataURL('image/png'); };
+          const logo = async lib => { const c = document.createElement('canvas'); await lib.renderLogo({ pixelsWidth: 600, pixelsHeight: 300, dpi: 150, garmentColor: '#000000' }, c, { blob: false }); return c.toDataURL('image/png'); };
+          const [a1, b1, a2, b2] = [await png(window.MPBase), await png(P), await logo(window.MPBase), await logo(P)];
+          out.renderSame = a1 === b1; out.renderLen = a1.length; out.logoSame = a2 === b2;
+        }
+        return out;
+      })()`);
+      assert.equal(r.bigW, 1600, 'photoMock({ width: 1600 }) draws a 1600 px canvas');
+      assert.equal(r.bigH, 2133);
+      assert.equal(r.bigRes, 1600);
+      assert.equal(r.bigShaded, true, 'realism ran at 1600');
+      assert.equal(r.smallW, 720);
+      assert.equal(r.hugeW, 2000, 'width is capped at 2000');
+      r.ink.forEach((v, i) => assert.ok(Math.abs(v - r.expect[i]) <= 3, `ink ${r.ink} vs photoGeometry ${r.expect}`));
+      console.log(`ok photoMock width 1600 (${r.bigMs} ms; 720 px ${r.smallMs} ms), ink matches photoGeometry`);
+      if (r.renderSame === undefined) console.log('skip print PNG comparison (no base ref)');
+      else { assert.equal(r.renderSame, true, 'render() PNG changed vs the base'); assert.ok(r.renderLen > 1000); assert.equal(r.logoSame, true, 'renderLogo() PNG changed'); console.log('ok render() / renderLogo() PNGs byte-identical to the base engine'); }
+    } finally { chrome.close(); server.close(); }
+  }
+}

@@ -272,14 +272,22 @@
 
   // ─── Fit: size and position the person sets in FrameUp ─────────────────
   // concept.fit = { scale: 0.6-1.6 (1 = the default compact size), topIn:
-  // inches from the top of the print area (apparel; null = default) }.
-  const FIT = { scaleMin: 0.6, scaleMax: 1.6, topMinIn: 0.5, topMaxIn: 10 };
+  // inches from the top of the print area (apparel; null = default mid-chest),
+  // xIn: the design centre's offset from the print area's centre line, inches
+  // (+ = viewer's right; 0 default; layout() clamps it so the design stays inside) }.
+  const FIT = { scaleMin: 0.6, scaleMax: 1.6, topMinIn: 0.5, topMaxIn: 10, xMaxIn: 10 };
+  // Default apparel placement (owner, 2026-11-28: "keep the full design in the middle
+  // part"): the design's centre ~37% down the print area, its top at least 2.5 in
+  // (14% on small areas) under the top of the print area, at most 3.25 in for short
+  // designs (the old default was 1.75 in, which read as up at the collar).
+  const MID_CHEST = { centre: 0.37, topMaxIn: 3.25, topMinIn: 2.5, topMinFrac: 0.14 };
   const clampN = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
   function fitOf(concept = {}) {
     const f = concept.fit || {};
     const scale = Number(f.scale) > 0 ? clampN(Number(f.scale), FIT.scaleMin, FIT.scaleMax) : 1;
     const topIn = f.topIn === null || f.topIn === undefined || f.topIn === '' || !Number.isFinite(Number(f.topIn)) ? null : clampN(Number(f.topIn), FIT.topMinIn, FIT.topMaxIn);
-    return { scale, topIn };
+    const xIn = Number.isFinite(Number(f.xIn)) && f.xIn !== null && f.xIn !== '' ? clampN(Number(f.xIn), -FIT.xMaxIn, FIT.xMaxIn) : 0;
+    return { scale, topIn, xIn };
   }
   // ─── Pro elements (beside the pills; solid ink, print-safe) ─────────────
   // Basic designs are pills only. Pro may add up to 3 of these:
@@ -520,6 +528,15 @@
     items.push(...extras.filter(x => x.z < 0).sort((p, q) => p.z - q.z), ...result.items, ...extras.filter(x => x.z > 0));
     const all = items.filter(i => i.type !== 'logo');
     const design = all.length ? (() => { const x0 = Math.min(...all.map(i => i.x)); const y0 = Math.min(...all.map(i => i.y)); return { x: x0, y: y0, w: Math.max(...all.map(i => i.x + i.w)) - x0, h: Math.max(...all.map(i => i.y + i.h)) - y0 }; })() : { ...result.bounds };
+    const move = (dx, dy) => { if (!dx && !dy) return; items.forEach(i => { i.x += dx; i.y += dy; }); design.x += dx; design.y += dy; };
+    if (blank.apparel && fit.topIn === null && all.length) {
+      // Mid-chest default: centre ~37% down, top between the old default and 3 in.
+      const lo = Math.round(Math.min(MID_CHEST.topMinIn * a.dpi, H * MID_CHEST.topMinFrac));
+      const hi = Math.max(lo, Math.round(MID_CHEST.topMaxIn * a.dpi));
+      let want = clampN(Math.round(H * MID_CHEST.centre - design.h / 2), lo, hi);
+      want = Math.max(Math.min(want, H - margin - design.h), Math.min(design.y, lo));
+      move(0, want - design.y);
+    }
     if (inlineLogo) {
       // Centre the design + wordmark block in the full box.
       const blockH = design.h + gap + logoH;
@@ -533,7 +550,27 @@
       design.x = x0;
       design.h = logo.y + logo.h - design.y;
     }
-    return { w: W, h: H, dpi: a.dpi, inW: a.inW, inH: a.inH, region: a.region, kind, apparel: blank.apparel, garment, palette: pal, items, design, size: result.size, bigRows: bigRows.length, inlineLogo, fit, designIn: { w: design.w / a.dpi, h: design.h / a.dpi, top: design.y / a.dpi } };
+    // Horizontal offset (fit.xIn): the design centre moves off the centre line, kept
+    // inside the print area (apparel) or the safe edge / mug face (hard goods).
+    let xShift = 0;
+    if (fit.xIn && all.length) {
+      const safe = blank.apparel ? 0 : Math.round((SAFE_IN[kind] || 0) * a.dpi);
+      const face = kind === 'mug' ? Math.round(W * MUG_FACE) : W;
+      const minX = Math.round((W - face) / 2) + safe;
+      const maxX = Math.round((W + face) / 2) - safe;
+      const lo = minX - design.x;
+      const hi = maxX - design.x - design.w;
+      xShift = lo <= hi ? clampN(Math.round(fit.xIn * a.dpi), lo, hi) : 0;
+      move(xShift, 0);
+    }
+    const xIn = (design.x + design.w / 2 - W / 2) / a.dpi;
+    return { w: W, h: H, dpi: a.dpi, inW: a.inW, inH: a.inH, region: a.region, kind, apparel: blank.apparel, garment, palette: pal, items, design, size: result.size, bigRows: bigRows.length, inlineLogo, fit: { ...fit, xIn: Math.round(xIn * 100) / 100 }, designIn: { w: design.w / a.dpi, h: design.h / a.dpi, top: design.y / a.dpi, left: design.x / a.dpi, x: xIn } };
+  }
+
+  // The design's box in print-area inches (from the top-left of the print area).
+  function designBox(concept, spec = {}) {
+    const sc = layout(concept, spec);
+    return { x: sc.design.x / sc.dpi, y: sc.design.y / sc.dpi, w: sc.design.w / sc.dpi, h: sc.design.h / sc.dpi };
   }
 
   // ─── Print checks ──────────────────────────────────────────────────────
@@ -875,6 +912,7 @@
   // that only need a box. scripts/test-merch-v3.mjs guards all of it.
   const PHOTO_W = 720;
   const PHOTO_H = 960;
+  const MOCK_MAX_W = 2000; // photoMock's biggest output (the zoom viewer)
   // merch7 blanks (PROD lane): long sleeve, crewneck, tank, youth tee. The tote's only
   // photo is an angled product shot, so it keeps the flat preview.
   const TEMPLATE_KIND = { tee: 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', hoodie: 'pro_380', longsleeve: 'pro_6ae602fcb22447bfbc', crewneck: 'pro_14kNy0EJQkqopY-Z9Pm41A', tank: 'pro_xPL7YjOBRQWVL50Im8eKAA', youth: 'pro_ODh_gv0ESl6jIcRfvSww0w' };
@@ -996,6 +1034,33 @@
     const c = Math.cos(a), s = Math.sin(a);
     return [[0, 0], [w, 0], [w, h], [0, h]].map(([dx, dy]) => [spot.x + dx * c - dy * s, spot.y + (dx * s + dy * c) / ratio]);
   }
+  // Where the print area sits on a photo rendered at canvasW x canvasH, with the same
+  // calibration math photoMock uses (for a UI overlay: drag / resize on the stage).
+  // -> { calibrated, side, inW, inH, ppi (canvas px per inch), area: { x, y, w, h }
+  // (canvas px, the full print area; x/w follow the body wrap), toCanvas(xIn, yIn)
+  // -> [px, py], toInches(px, py) -> [xIn, yIn] } with inches from the print area's
+  // top-left (as designBox). opts.inW / inH: the template's real area (default the
+  // template's main area). Uncalibrated -> { calibrated: false, area: null }.
+  function photoGeometry(templateId, photoIndex, canvasW = PHOTO_W, canvasH, opts = {}) {
+    const W = Number(canvasW) || PHOTO_W;
+    const H = Number(canvasH) || Math.round(W * PHOTO_H / PHOTO_W);
+    const cal = photoCal(templateId, { photoIndex });
+    if (!cal) return { calibrated: false, side: null, area: null, ppi: null };
+    const [mw, mh] = MAIN_INCHES[templateId]?.[cal.side] || [15, 18];
+    const inW = Number(opts.inW) || mw;
+    const inH = Number(opts.inH) || mh;
+    const ppi = cal.ppi * W;
+    const top = cal.top * H;
+    const toCanvas = (xIn, yIn) => [wrapX(cal, xIn - inW / 2, cal.ppi) * W, top + yIn * ppi];
+    const toInches = (px, py) => {
+      const u = Math.max(-1, Math.min(1, (px / W - cal.body.cx) / cal.body.r));
+      const th = Math.asin(u) - cal.body.yaw * Math.PI / 180;
+      return [th * cal.body.r / cal.ppi + inW / 2, (py - top) / ppi];
+    };
+    const x0 = toCanvas(0, 0)[0];
+    const x1 = toCanvas(inW, 0)[0];
+    return { calibrated: true, side: cal.side, inW, inH, ppi, area: { x: x0, y: top, w: x1 - x0, h: inH * ppi }, toCanvas, toInches };
+  }
   const sideOf = (spec = {}) => (/back/i.test(String(spec.regionId || spec.region || '')) ? 'back' : 'front');
   const templateOf = (templateId, kind) => templateId || TEMPLATE_KIND[kind] || '';
   // The calibration for one photo: by index, else the first calibrated photo with that angle.
@@ -1089,68 +1154,107 @@
     return out;
   }
   const polyPath = (g, poly, W, H) => { g.beginPath(); poly.forEach(([x, y], i) => (i ? g.lineTo(x * W, y * H) : g.moveTo(x * W, y * H))); g.closePath(); };
-  // Fabric realism: the ink takes the shirt's light and folds. The photo's luminance
-  // under the ink, relative to the fabric's lit level, shades the ink (multiply-like
-  // on light shirts; on dark shirts softer, with screen-style highlights on the
-  // folds' crests) and nudges where the ink is sampled along the fold gradient (a
-  // 1-2 px displacement). The fabric's own texture comes through the same map.
-  // Returns false when the photo can't be read (no CORS), so the caller draws plainly.
-  function inkIntoFabric(g, layer, box, light) {
+  // Fabric realism (merch-realism, 2026-11-28): printed ink, not a sticker.
+  //   texture     the photo's high-frequency detail (photo minus a blurred copy: the
+  //               knit / heather) is added to the ink, stronger for light ink over
+  //               dark or heather fabric (the fibres poke through the ink);
+  //   lighting    the shirt's smoothed luminance under the print, relative to the
+  //               fabric's lit level, shades the ink (multiply on light shirts; on
+  //               dark shirts damped, with soft screen highlights on fold crests), so
+  //               side and under-chest shadows darken it and highlights lift it;
+  //   absorption  DTG ink is matte and very slightly translucent: every ink leans a
+  //               few % toward the fabric colour and loses a touch of saturation;
+  //               black ink on light shirts is lifted (never pure #000);
+  //   edges       the layer arrives softened (sub-pixel blur) and is resampled
+  //               (bilinear, premultiplied) along the folds' gradient, more toward
+  //               the sides of the torso cylinder where the fabric turns away.
+  // o: { light, s (output px per photo px), fabric [r,g,b] fallback, cx, r (cylinder
+  // axis + radius, canvas px) }. Returns false when the photo can't be read (no CORS).
+  function inkIntoFabric(g, layer, box, o) {
     let base, ink;
     try {
       base = g.getImageData(box.x, box.y, box.w, box.h);
       ink = layer.getContext('2d').getImageData(box.x, box.y, box.w, box.h);
     } catch { return false; }
+    const light = o.light;
+    const s = Math.max(1, o.s || 1);
     const b = base.data, d = ink.data, w = box.w, h = box.h;
     const L = new Float32Array(w * h);
-    const hist = new Uint32Array(256);
-    let count = 0;
+    let count = 0, fr = 0, fg = 0, fb = 0;
     for (let i = 0, p = 0; p < L.length; p++, i += 4) {
-      const v = 0.299 * b[i] + 0.587 * b[i + 1] + 0.114 * b[i + 2];
-      L[p] = v;
-      if (d[i + 3]) { hist[v | 0]++; count++; }
+      L[p] = 0.299 * b[i] + 0.587 * b[i + 1] + 0.114 * b[i + 2];
+      if (d[i + 3] > 8) { count++; fr += b[i]; fg += b[i + 1]; fb += b[i + 2]; }
     }
     if (!count) return true;
-    // The fabric's lit level: 70th percentile of the luminance under the ink.
+    const fabric = [fr / count, fg / count, fb / count];
+    const fabricL = 0.299 * fabric[0] + 0.587 * fabric[1] + 0.114 * fabric[2];
+    // Ls: the shading map (folds without the knit or JPEG noise); Lg: the fold
+    // gradient for the displacement. Radii follow the upscale, so a 1600 px render
+    // shades like the 720 px one.
+    const Ls = boxBlur(L, w, h, Math.max(2, Math.round(2 * s)));
+    const Lg = boxBlur(Ls, w, h, Math.max(4, Math.round(4 * s)));
+    // The fabric's lit level: 70th percentile of the shading map under the ink.
+    const hist = new Uint32Array(256);
+    for (let p = 0, i = 3; p < Ls.length; p++, i += 4) if (d[i] > 8) hist[Math.min(255, Ls[p] | 0)]++;
     let acc = 0, ref = 128;
     for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= count * 0.7) { ref = Math.max(8, v); break; } }
-    // Smoothed copies: Ls (r 2) shades without JPEG noise; Lg (r 5) gives the fold
-    // gradient for the displacement, so heather specks don't scatter the ink.
-    const Ls = boxBlur(L, w, h, 2);
-    const Lg = boxBlur(Ls, w, h, 4);
+    // Heather / mid-tone fabric shows more knit through the ink than flat white or black.
+    const heather = fabricL > 60 && fabricL < 225 ? 1 : 0.7;
+    // an upscaled photo's knit is spread over more pixels and fainter per pixel
+    const texGain = 1 + 0.35 * (s - 1);
+    const amp = 0.06 * s;
+    const maxD = 1.5 * s;
     const out = new Uint8ClampedArray(d.length);
-    const amp = 0.06;
+    const cx = (o.cx ?? (box.x + w / 2)) - box.x;
+    const rr = Math.max(1, o.r || w / 2);
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const p = y * w + x;
+        // displacement along the fold gradient, stronger toward the torso's sides
+        const u = Math.max(-1, Math.min(1, (x - cx) / rr));
+        const side = 1 + 1.4 * u * u;
         const gx = (Lg[p + (x < w - 1 ? 1 : 0)] - Lg[p - (x > 0 ? 1 : 0)]);
         const gy = (Lg[p + (y < h - 1 ? w : 0)] - Lg[p - (y > 0 ? w : 0)]);
-        const sx = Math.max(0, Math.min(w - 1, Math.round(x - Math.max(-1.5, Math.min(1.5, gx * amp)))));
-        const sy = Math.max(0, Math.min(h - 1, Math.round(y - Math.max(-1.5, Math.min(1.5, gy * amp)))));
-        const q = (sy * w + sx) * 4;
-        const a = d[q + 3];
-        const o = p * 4;
-        if (!a) { out[o + 3] = 0; continue; }
-        // light shirts: mostly the folds plus a little of the knit; dark shirts: folds
-        // only (their knit is JPEG noise that would stripe the ink)
-        const lum = light ? Ls[p] * 0.75 + L[p] * 0.25 : Ls[p];
-        let r = d[q], gg = d[q + 1], bb = d[q + 2];
+        const fx = Math.max(0, Math.min(w - 1.001, x - Math.max(-maxD, Math.min(maxD, gx * amp * side))));
+        const fy = Math.max(0, Math.min(h - 1.001, y - Math.max(-maxD, Math.min(maxD, gy * amp * side))));
+        const x0 = fx | 0, y0 = fy | 0, tx = fx - x0, ty = fy - y0;
+        const q00 = (y0 * w + x0) * 4, q10 = q00 + 4, q01 = q00 + w * 4, q11 = q01 + 4;
+        const w00 = (1 - tx) * (1 - ty) * d[q00 + 3], w10 = tx * (1 - ty) * d[q10 + 3], w01 = (1 - tx) * ty * d[q01 + 3], w11 = tx * ty * d[q11 + 3];
+        const a = w00 + w10 + w01 + w11; // premultiplied bilinear: no dark fringes
+        const o4 = p * 4;
+        if (a < 0.5) { out[o4 + 3] = 0; continue; }
+        let r = (d[q00] * w00 + d[q10] * w10 + d[q01] * w01 + d[q11] * w11) / a;
+        let gg = (d[q00 + 1] * w00 + d[q10 + 1] * w10 + d[q01 + 1] * w01 + d[q11 + 1] * w11) / a;
+        let bb = (d[q00 + 2] * w00 + d[q10 + 2] * w10 + d[q01 + 2] * w01 + d[q11 + 2] * w11) / a;
+        const inkL = (0.299 * r + 0.587 * gg + 0.114 * bb) / 255;
+        // absorption: matte, a touch desaturated, leaning toward the fabric
+        const lean = 0.045 + (light ? 0.06 * (1 - inkL) * (1 - inkL) : 0.02 * inkL);
+        const grey = inkL * 255;
+        r += (grey - r) * 0.07; gg += (grey - gg) * 0.07; bb += (grey - bb) * 0.07;
+        r += (fabric[0] - r) * lean; gg += (fabric[1] - gg) * lean; bb += (fabric[2] - bb) * lean;
+        // lighting
+        const lum = Ls[p];
         if (light) {
-          // multiply-style: the folds' shadows darken the ink as they darken the shirt
-          const k = Math.max(0.4, Math.min(1.03, lum / ref));
+          const k = Math.max(0.42, Math.min(1.04, lum / ref));
           r *= k; gg *= k; bb *= k;
+          // a faint sheen on dark ink where the fabric catches light
+          const hi = lum > ref ? Math.min(0.06, (lum - ref) / 255) * (1 - inkL) : 0;
+          r += (255 - r) * hi; gg += (255 - gg) * hi; bb += (255 - bb) * hi;
         } else {
-          // dark shirt: ink a touch duller and softer, shadows deepen it, the folds'
-          // crests catch light (screen). Differences, not ratios: near-black fabric
-          // would turn every JPEG step into a streak.
+          // differences, not ratios: on near-black fabric every JPEG step would streak
           const dl = (lum - ref) / 255;
-          const k = 0.96 * (dl < 0 ? Math.max(0.55, 1 + dl * 2.2) : 1);
-          const hi = dl > 0 ? Math.min(0.25, dl * 1.2) : 0;
+          const k = dl < 0 ? Math.max(0.5, 1 + dl * 2.6) : 1;
+          const hi = dl > 0 ? Math.min(0.22, dl * 1.3) : 0;
           r *= k; gg *= k; bb *= k;
           r += (255 - r) * hi; gg += (255 - gg) * hi; bb += (255 - bb) * hi;
         }
-        out[o] = r; out[o + 1] = gg; out[o + 2] = bb;
-        out[o + 3] = a * (light ? 0.93 : 0.95); // a trace of the fabric shows through
+        // texture: the knit through the ink (light ink on dark / heather the most)
+        const hf = L[p] - lum;
+        const tex = (light ? 0.9 + 0.9 * inkL : 1.3 + 1.9 * inkL) * heather * texGain;
+        const t = Math.max(-28, Math.min(28, hf * tex));
+        r += t; gg += t; bb += t;
+        out[o4] = r; out[o4 + 1] = gg; out[o4 + 2] = bb;
+        out[o4 + 3] = a * (light ? 0.95 : 0.965); // a trace of the fabric shows through
       }
     }
     // composite the shaded ink over the photo
@@ -1164,8 +1268,39 @@
     g.putImageData(base, box.x, box.y);
     return true;
   }
+  // Faint fabric grain for upscaled photos (a 720 px photo drawn at 1600 px is soft,
+  // so a whisper of fixed noise keeps it from looking like a plastic render).
+  let grainTile = null;
+  function grain(g, W, H, strength) {
+    if (typeof document === 'undefined') return;
+    if (!grainTile) {
+      grainTile = document.createElement('canvas');
+      grainTile.width = grainTile.height = 128;
+      const tg = grainTile.getContext('2d');
+      const im = tg.createImageData(128, 128);
+      let seed = 1234567;
+      for (let i = 0; i < im.data.length; i += 4) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        const v = 128 + ((seed >> 8) % 61) - 30;
+        im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = 255;
+      }
+      tg.putImageData(im, 0, 0);
+    }
+    const pat = g.createPattern(grainTile, 'repeat');
+    if (!pat) return;
+    g.save();
+    g.globalCompositeOperation = 'overlay';
+    g.globalAlpha = strength;
+    g.fillStyle = pat;
+    g.fillRect(0, 0, W, H);
+    g.restore();
+  }
   // opts: { photo: url, kind, garmentColor, spec, logoSpot: 'sleeve'|'neck'|'none',
-  //         templateId, photoIndex, angle, sampleArt, realism (default true), plain }.
+  //         templateId, photoIndex, angle, sampleArt, realism (default true), plain,
+  //         width (output px, default the canvas width, max 2000: the zoom viewer) }.
+  // Fourthwall's photos are 720 px imgproxy URLs whose signature covers the size
+  // (w:1600 answers 400, checked 2026-11-28), so big renders upscale the 720 px
+  // photo smoothly; every calibration is a fraction, so it scales with it.
   // Resolves { width, height, scene, logoNote, photoIndex, angle, side, drawn: true }
   // or null when the photo has no calibration for this print side (or no photo):
   // the design is never drawn on an uncalibrated photo. With plain: true an
@@ -1184,11 +1319,15 @@
     await loadFonts();
     const img = await loadPhoto(opts.photo);
     if (!img) return null;
-    const W = canvas.width || 600;
+    const W = Math.max(16, Math.min(MOCK_MAX_W, Math.round(Number(opts.width) || canvas.width || 600)));
     const H = Math.round(W * (img.naturalHeight || PHOTO_H) / (img.naturalWidth || PHOTO_W));
+    if (canvas.width !== W) canvas.width = W;
     canvas.height = H;
+    const up = W / (img.naturalWidth || PHOTO_W); // > 1: the photo is upscaled
     const g = canvas.getContext('2d');
     g.clearRect(0, 0, W, H);
+    g.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in g) g.imageSmoothingQuality = 'high';
     g.drawImage(img, 0, 0, W, H);
     if (!cal) return { width: W, height: H, scene: null, logoNote: '', drawn: false, caption: 'Design shown in Fourthwall’s mockups', side };
     const scene = layout(concept, spec);
@@ -1201,13 +1340,14 @@
     const og = off.getContext('2d');
     og.scale(k, k);
     await drawScene(scene, og);
-    const layer = document.createElement('canvas');
-    layer.width = W;
-    layer.height = H;
-    const lg = layer.getContext('2d');
+    // The ink is drawn sharp (wrap strips + logo), then softened as one layer: a
+    // per-strip blur would leave hairline seams between the strips.
+    const sharp = document.createElement('canvas');
+    sharp.width = W;
+    sharp.height = H;
+    const lg = sharp.getContext('2d');
     const light = isLight(garment);
     const realism = opts.realism !== false;
-    if (realism && 'filter' in lg) lg.filter = `blur(${light ? 0.3 : 0.4}px)`; // ink soaks in a little
     lg.save();
     polyPath(lg, cal.torso, W, H);
     lg.clip();
@@ -1238,7 +1378,14 @@
         lg.restore();
       }
     }
-    lg.filter = 'none';
+    const layer = document.createElement('canvas');
+    layer.width = W;
+    layer.height = H;
+    const kg = layer.getContext('2d');
+    // ink soaks in a little; on an upscaled photo the ink is as soft as the photo
+    if (realism && 'filter' in kg) kg.filter = `blur(${((light ? 0.3 : 0.4) + 0.3 * Math.max(0, up - 1)).toFixed(2)}px)`;
+    kg.drawImage(sharp, 0, 0);
+    kg.filter = 'none';
     // Where ink can be: the torso box plus the logo spot.
     const pr = photoRect(cal, scene.inW, scene.inH);
     const tx = cal.torso.map(p => p[0]);
@@ -1252,7 +1399,7 @@
     box.w = Math.min(W, Math.ceil(Math.max(...xs)) + 2) - box.x;
     box.h = Math.min(H, Math.ceil(Math.max(...ys)) + 2) - box.y;
     const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
-    const shaded = realism && box.w > 0 && box.h > 0 && inkIntoFabric(g, layer, box, light);
+    const shaded = realism && box.w > 0 && box.h > 0 && inkIntoFabric(g, layer, box, { light, s: up, cx: cal.body.cx * W, r: cal.body.r * W });
     if (!shaded) {
       // Plain (photo not readable): multiply only on near-white shirts (keeps the
       // folds; white ink would vanish into any coloured shirt), straight otherwise.
@@ -1262,6 +1409,7 @@
       g.drawImage(layer, 0, 0);
       g.restore();
     }
+    if (realism && up > 1.2) grain(g, W, H, Math.min(0.06, 0.025 * up));
     const ms = typeof performance !== 'undefined' ? Math.round(performance.now() - t0) : 0;
     const index = Number(Object.keys(PHOTO_AREAS[templateId]).find(i => PHOTO_AREAS[templateId][i] === cal));
     return { width: W, height: H, scene, logoNote, photoIndex: index, angle: cal.angle, side, drawn: true, realism: !!shaded, shadeMs: ms };
@@ -1447,7 +1595,7 @@
 
   return {
     VERSION: '2026-11-26-merch5', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, ICONS, ICON_SHAPES, ELEMENT_TYPES, elementsOf, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
-    render, renderLogo, checks, preview, closeup, photoMock, photoFor, photosFor, photoRect, photoCal, logoCorners, PHOTO_AREAS, PHOTO_PX, PHOTO_HERO, TEMPLATE_KIND, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
+    render, renderLogo, checks, preview, closeup, photoMock, photoGeometry, designBox, MID_CHEST, photoFor, photosFor, photoRect, photoCal, logoCorners, PHOTO_AREAS, PHOTO_PX, PHOTO_HERO, TEMPLATE_KIND, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     kitSports, kitTeams, kitSwatches, paletteFromKit, pillInk, ES_SWATCHES, boxContrast, resolve,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,
