@@ -3,6 +3,28 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-28-merch-styles",
+      "date": "2026-11-28",
+      "title": "Merch: 20+ designs per idea, drag to place, zoom",
+      "items": [
+        {
+          "title": "20+ designs every time",
+          "text": "Each brief now gives 20 to 28 designs: the AI's picks first (10 in Pro, 6 in Basic), then the same words in named ES styles. Filter the strip by All, AI picks or Styles.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Drag and resize on the shirt",
+          "text": "Drag the design on the tee photo or close-up to move it, pull a corner to resize, hold Shift to snap to the centre.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Zoom and realer prints",
+          "text": "Click the stage to zoom in. Prints now sit mid-chest and take on the fabric's folds and texture.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-27-merch-ads-products",
       "date": "2026-11-27",
       "title": "Merch: make ads, more products, several colours, realer mockups",

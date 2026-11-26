@@ -189,7 +189,7 @@
       "maxDuration": 60
     },
     "api/merch.js": {
-      "maxDuration": 120
+      "maxDuration": 300
     },
     "api/fourthwall-webhook.js": {
       "maxDuration": 15

@@ -1363,3 +1363,9 @@ html[data-theme="dark"] .mx-zoom__busy { background: rgb(31 33 38 / .92); color:
 .mx-angle:hover img { transform: none !important; }
 /* Publish form: section labels in the same 14/600 ink as the studio's labels (no shouty caps). */
 #mx-view-publish .mx-eyebrow { color: var(--mx-ink); font: 600 14px/20px var(--es-font-ui); letter-spacing: 0; text-transform: none; }
+
+/* 20+ styles: filmstrip filter */
+.mx-strip-filter { display: inline-flex; gap: 4px; }
+.mx-strip-filter__btn { min-height: 28px; padding: 0 10px; border-radius: 999px; border: 0; background: transparent; box-shadow: inset 0 0 0 1px var(--mx-line, #d6dbe1); color: inherit; font: 600 12px/1 var(--es-font-ui); cursor: pointer; }
+.mx-strip-filter__btn.is-on { background: var(--mx-brand, #0A7DFA); box-shadow: none; color: #fff; }
+.mx-strip-filter__btn:focus-visible { outline: 2px solid var(--mx-brand, #0A7DFA); outline-offset: 2px; }

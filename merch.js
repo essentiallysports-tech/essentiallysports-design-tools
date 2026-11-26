@@ -67,8 +67,8 @@
   // weekly AI cap and the server falls back to Basic (fellBack) on cap / free mode / AI error.
   const AI_KEY = 'designMode'; // request + reply field for Basic / Pro ('mode' is the API action, and free mode rewrites it)
   const AI_MODES = {
-    basic: { label: 'Basic', note: 'Simple ES pill designs. Quick, and light on your AI usage.', hint: '4 designs · ES pills · about 15 s', count: 4 },
-    pro: { label: 'Pro', note: 'Smarter AI (more usage), richer designs with extra elements, chat edits.', hint: '6 designs · AI art director, extras · about 40 s', count: 6 },
+    basic: { label: 'Basic', note: 'Simple ES pill designs. Quick, and light on your AI usage.', hint: '6 AI designs + ES styles (20+) · pills · about 20 s', count: 6 },
+    pro: { label: 'Pro', note: 'Smarter AI (more usage), richer designs with extra elements, chat edits.', hint: '10 AI designs + ES styles (28) · art director, extras · about 60 s', count: 10 },
   };
   const MODE_STORE = 'frameup.merch.aiMode';
   const FOLD_STORE = 'mx.folds';
@@ -665,6 +665,12 @@
         if (!pro) delete x.elements; // Basic is pills only
         return x;
       });
+      // At least 20 designs a brief (owner, 2026-11-28): the AI picks first, then the same
+      // words in named ES styles (merch-styles.js: no AI, no cost; print-checked, deduped).
+      let all = next;
+      try {
+        if (window.MerchStyles && next.length) all = window.MerchStyles.expand(next, { mode: pro ? 'pro' : 'basic', min: 20, max: 28, garment: WHITE, sport: trend?.sport || state.sport || '', source: content.text || '' });
+      } catch (error) { console.warn('merch styles', error); }
       // Print-checking, then a check mark before the designs show.
       m.done = true;
       m.stage = makingSteps(m).length;
@@ -674,18 +680,19 @@
       endMaking();
       state.busy = '';
       syncCreateBtn();
-      if (!next.length) {
+      if (!all.length) {
         go('content', { focus: 'none' });
         setText('mx-content-meta', 'No designs came back. Try different words.');
         $('mx-text')?.focus();
         return;
       }
-      state.concepts = next;
-      state.selected = next[0].id;
+      state.concepts = all;
+      state.selected = all[0].id;
+      state.stripFilter = 'all';
       state.history = {}; state.future = []; state.chat = {}; state.notes = {}; state.lastEdit = {}; state.pal = {}; state.errCount = {};
       state.ack = false; if ($('mx-ack')) $('mx-ack').checked = false;
       state.image = null; state.copyFor = ''; state.product = null; state.progFailed = false;
-      track('merch', { action: 'concepts', mode: state.madeMode, asked, count: next.length, trend: Boolean(trend) });
+      track('merch', { action: 'concepts', mode: state.madeMode, asked, count: all.length, ai: next.length, trend: Boolean(trend) });
       if (state.step === 'designs') enterStudio(); else renderSteps();
     }
 
@@ -809,22 +816,36 @@
         box.innerHTML = '<div class="mx-film mx-film__skel es-skeleton" aria-hidden="true"></div>'.repeat(AI_MODES[state.making.mode].count);
       } else {
         box.setAttribute('aria-busy', 'false');
-        box.innerHTML = state.concepts.map(c => {
+        const f = state.stripFilter || 'all';
+        let shown = state.concepts.filter(c => f === 'all' || (f === 'style' ? c.source === 'style' : c.source !== 'style'));
+        if (!shown.length) shown = state.concepts;
+        state.stripShown = shown;
+        box.innerHTML = shown.map(c => {
           const sel = c.id === state.selected;
           const pro = (MP().elementsOf ? MP().elementsOf(c) : (c.elements || [])).length > 0;
           return `<button class="mx-film${sel ? ' is-on' : ''}" type="button" role="radio" aria-checked="${sel}" tabindex="${sel ? 0 : -1}" data-pick="${esc(c.id)}" data-id="${esc(c.id)}" title="${esc(conceptLabel(c))}: ${esc(c.title)}" aria-label="${esc(conceptLabel(c))}: ${esc(c.title)}${c.variantOf ? ', variation' : ''}${pro ? ', with extras' : ''}">
             <canvas class="mx-film__img" width="192" height="224" aria-hidden="true"></canvas>
             <span class="mx-film__label">${esc(conceptLabel(c))}</span>
-            ${c.variantOf || pro ? `<span class="mx-film__tags" aria-hidden="true">${c.variantOf ? '<span class="mx-film__tag">Variation</span>' : ''}${pro ? '<span class="mx-film__tag mx-film__tag--pro">Extras</span>' : ''}</span>` : ''}
+            ${c.variantOf || pro ? `<span class="mx-film__tags" aria-hidden="true">${c.source === 'style' ? '<span class="mx-film__tag">Style</span>' : c.variantOf ? '<span class="mx-film__tag">Variation</span>' : ''}${pro ? '<span class="mx-film__tag mx-film__tag--pro">Extras</span>' : ''}</span>` : ''}
           </button>`;
         }).join('');
       }
       if (keepNew) box.append(keepNew);
-      setText('mx-strip-count', state.making ? '' : plural(state.concepts.length, 'design'));
+      const ais = state.concepts.filter(c => c.source !== 'style').length;
+      setText('mx-strip-count', state.making ? '' : `${plural(state.concepts.length, 'design')}${ais && ais < state.concepts.length ? ` · ${ais} AI picks` : ''}`);
+      const chips = $('mx-strip-filter');
+      if (chips) chips.hidden = state.making || !state.concepts.some(c => c.source === 'style');
       syncContent();
       requestAnimationFrame(() => { filmIntoView(); syncFilmFade(); });
-      if (!state.making) state.concepts.forEach(drawThumb);
+      if (!state.making) (state.stripShown || state.concepts).forEach(drawThumb);
     }
+    on('mx-strip-filter', 'click', e => {
+      const b = e.target.closest('[data-strip-filter]');
+      if (!b) return;
+      state.stripFilter = b.dataset.stripFilter;
+      $('mx-strip-filter').querySelectorAll('[data-strip-filter]').forEach(x => { const on = x === b; x.classList.toggle('is-on', on); x.setAttribute('aria-pressed', String(on)); });
+      renderStrip();
+    });
     function selectDesign(id, focus = false) {
       if (id === state.selected || state.making) return;
       state.selected = id;
@@ -1486,9 +1507,14 @@
       const list = MP().variations ? MP().variations(c) : [];
       if (!list.length) { setText('mx-fit-read', 'No other layouts fit these words. Edit the pills and try again.'); return; }
       const root = c.variantOf || c.id;
-      const keep = state.concepts.filter(x => x.variantOf !== root || x.id === c.id);
+      // Replace only this design's earlier "Try other layouts" results (never the
+      // style designs), and skip layouts that already exist in the strip.
+      const keep = state.concepts.filter(x => !(x.variantOf === root && x.variant && x.source !== 'style') || x.id === c.id);
       const pos = keep.findIndex(x => x.id === c.id);
-      const fresh = list.filter(v => v.id !== c.id).map(v => ({ ...v, variantOf: root, mode: c.mode, paletteFrom: c.paletteFrom, garment: { ...(v.garment || {}) } }));
+      const sig = x => JSON.stringify([(x.stack || []).map(r => [r.text, r.size, r.fill, r.ink]), x.align || 'left', x.garment?.color || '', x.fit?.scale || 1, x.fit?.topIn ?? null, (x.elements || []).map(e => [e.type, e.position, e.name || e.text || ''])]);
+      const have = new Set(keep.map(sig));
+      const fresh = list.filter(v => v.id !== c.id).map(v => ({ ...v, variantOf: root, mode: c.mode, paletteFrom: c.paletteFrom, garment: { ...(v.garment || {}) } })).filter(v => { const k = sig(v); if (have.has(k)) return false; have.add(k); return true; });
+      if (!fresh.length) { setText('mx-fit-read', 'Every layout for these words is already in the filmstrip.'); return; }
       state.concepts = [...keep.slice(0, pos + 1), ...fresh, ...keep.slice(pos + 1)];
       renderStrip();
       track('merch', { action: 'variations', count: fresh.length });

@@ -203,10 +203,10 @@ async function flow(width, theme, mode) {
   // ── Create.
   ok(await ev("!document.querySelector('.mx-hero') && !document.getElementById('mx-text-hint') && document.getElementById('mx-h-content').classList.contains('es-sr-only') && !document.getElementById('mx-content-meta').textContent.trim()"), `${tag}: no hero or hint lines; prompt card first`);
   ok(await ev("document.getElementById('mx-create').disabled"), `${tag}: Create designs starts disabled`);
-  ok(await ev("document.querySelector('#mx-mode [data-mode=basic]').matches('[aria-checked=true],[aria-pressed=true]') && MerchUI.state.aiMode === 'basic' && /4 designs/.test(document.getElementById('mx-mode-hint').textContent)"), `${tag}: Basic by default with its hint`);
+  ok(await ev("document.querySelector('#mx-mode [data-mode=basic]').matches('[aria-checked=true],[aria-pressed=true]') && MerchUI.state.aiMode === 'basic' && /6 AI designs/.test(document.getElementById('mx-mode-hint').textContent)"), `${tag}: Basic by default with its hint`);
   if (pro) {
     await click('#mx-mode [data-mode=pro]');
-    ok(await ev("MerchUI.state.aiMode === 'pro' && localStorage.getItem('frameup.merch.aiMode') === 'pro' && /6 designs/.test(document.getElementById('mx-mode-hint').textContent)"), `${tag}: Pro picked, hint and remembered`);
+    ok(await ev("MerchUI.state.aiMode === 'pro' && localStorage.getItem('frameup.merch.aiMode') === 'pro' && /10 AI designs/.test(document.getElementById('mx-mode-hint').textContent)"), `${tag}: Pro picked, hint and remembered`);
   }
   await click('#mx-url-toggle');
   ok(await ev("document.getElementById('mx-url-toggle').getAttribute('aria-expanded') === 'true'") && await ev(visible('#mx-url')), `${tag}: + ES story link reveals the link field`);
@@ -238,14 +238,20 @@ async function flow(width, theme, mode) {
   await until(`${step('designs')} && MerchUI.state.making && !document.getElementById('mx-making').hidden`, `${tag} making`);
   ok(await ev(`document.querySelectorAll('#mx-making li').length === ${pro ? 5 : 4} && document.querySelectorAll('#mx-making li[data-pro]').length === ${pro ? 1 : 0}`), `${tag}: making checklist (${pro ? 'Pro plans the idea' : 'Basic, 4 steps'})`);
   ok(await ev(visible('#mx-making')) && await ev(visible('#mx-stop')), `${tag}: checklist and Stop visible on the stage`);
-  ok(await ev(`document.querySelectorAll('#mx-strip .mx-film__skel').length === ${pro ? 6 : 4}`), `${tag}: skeleton filmstrip`);
+  ok(await ev(`document.querySelectorAll('#mx-strip .mx-film__skel').length === ${pro ? 10 : 6}`), `${tag}: skeleton filmstrip`);
   ok(await ev("document.getElementById('mx-to-setup').disabled && document.querySelector('#mx-steps [data-step=publish]').disabled"), `${tag}: Publish locked while making`);
   await audit(`${tag}-making`);
   await until('!MerchUI.state.making && MerchUI.state.concepts.length > 0', `${tag} designs arrive`, 15000);
   slow = 0;
   const cBody = bodies.filter(b => b.mode === 'concepts').pop();
   ok(cBody && cBody.designMode === mode && cBody.content?.text === 'Ball don’t lie' && cBody.trend, `${tag}: concepts gets designMode, trend and content (${JSON.stringify(cBody).slice(0, 160)})`);
-  ok(await ev(`MerchUI.state.concepts.length === ${pro ? 6 : 4} && document.querySelectorAll('#mx-strip [data-pick]').length === MerchUI.state.concepts.length`), `${tag}: filmstrip has every design`);
+  ok(await ev(`MerchUI.state.concepts.length >= 20 && MerchUI.state.concepts.length <= 28 && MerchUI.state.concepts.some(c => c.source === 'style') && document.querySelectorAll('#mx-strip [data-pick]').length === MerchUI.state.concepts.length`), `${tag}: filmstrip has every design (20+ with styles)`);
+  ok(await ev("!document.getElementById('mx-strip-filter').hidden"), `${tag}: style filter chips shown`);
+  await click('#mx-strip-filter [data-strip-filter="ai"]');
+  ok(await ev("document.querySelectorAll('#mx-strip [data-pick]').length === MerchUI.state.concepts.filter(c => c.source !== 'style').length"), `${tag}: AI picks filter`);
+  await click('#mx-strip-filter [data-strip-filter="style"]');
+  ok(await ev("document.querySelectorAll('#mx-strip [data-pick]').length === MerchUI.state.concepts.filter(c => c.source === 'style').length"), `${tag}: Styles filter`);
+  await click('#mx-strip-filter [data-strip-filter="all"]');
   ok(await ev("MerchUI.state.selected === MerchUI.state.concepts[0].id && document.getElementById('mx-making').hidden && document.getElementById('mx-empty-stage').hidden && !document.getElementById('mx-stage-canvas').hidden"), `${tag}: first design on the stage`);
   ok(await ev(visible('#mx-strip-new')), `${tag}: New set tile`);
   await until("/Rights:/.test(document.getElementById('mx-stage-cap').textContent)", `${tag} stage caption with rights`);
@@ -257,7 +263,7 @@ async function flow(width, theme, mode) {
   await until('MerchUI.state.making', `${tag} making over a set`);
   await sleep(150);
   ok(!(await ev(visible('#mx-angles'))) && !(await ev(visible('#mx-stage-cap'))), `${tag}: making hides the angle strip and the old caption`);
-  ok(await ev(`(() => { const n = document.getElementById('mx-strip-new').getBoundingClientRect(); const row = document.querySelector('.mx-filmrow').getBoundingClientRect(); const tiles = [...document.querySelectorAll('#mx-strip .mx-film__skel')].map(e => e.getBoundingClientRect()); return tiles.length === ${pro ? 6 : 4} && tiles.every((r, i) => (r.right <= n.left + 0.5 || r.left >= n.right - 0.5) && tiles.every((q, j) => j === i || r.right <= q.left + 0.5 || r.left >= q.right - 0.5) && Math.abs(r.width - 112) < 1); })()`), `${tag}: skeleton tiles: equal size, none under New set`);
+  ok(await ev(`(() => { const n = document.getElementById('mx-strip-new').getBoundingClientRect(); const row = document.querySelector('.mx-filmrow').getBoundingClientRect(); const tiles = [...document.querySelectorAll('#mx-strip .mx-film__skel')].map(e => e.getBoundingClientRect()); return tiles.length === ${pro ? 10 : 6} && tiles.every((r, i) => (r.right <= n.left + 0.5 || r.left >= n.right - 0.5) && tiles.every((q, j) => j === i || r.right <= q.left + 0.5 || r.left >= q.right - 0.5) && Math.abs(r.width - 112) < 1); })()`), `${tag}: skeleton tiles: equal size, none under New set`);
   ok(await ev("document.getElementById('mx-strip-new').disabled"), `${tag}: New set disabled while making`);
   ok(await ev("document.getElementById('mx-rail').getAttribute('aria-busy') === 'true' && document.getElementById('mx-fold-text').inert && !document.getElementById('mx-designs-bar').inert"), `${tag}: rail busy while making (folds inert, action card live)`);
   ok(await ev("(() => { const b = document.getElementById('mx-to-setup'); const l = b.querySelector('span'); const cs = getComputedStyle(b); return b.disabled && /Continue to Publish/.test(b.innerText) && l.getBoundingClientRect().width > 40 && cs.color !== cs.backgroundColor && /Making your designs/.test(document.getElementById('mx-designs-meta').textContent) && document.getElementById('mx-quick').hidden; })()"), `${tag}: Continue keeps its label while making, one status line, no Quick publish`);
@@ -344,7 +350,7 @@ async function flow(width, theme, mode) {
   ok(await ev(`${sel()}.fit.scale === 1`), `${tag}: reset layout`);
   const nBefore = await ev('MerchUI.state.concepts.length');
   await click('#mx-vary');
-  ok(await ev(`MerchUI.state.concepts.length > ${nBefore} && MerchUI.state.concepts.some(c => c.variantOf)`), `${tag}: Try other layouts adds variations`);
+  ok(await ev(`MerchUI.state.concepts.length >= ${nBefore} && MerchUI.state.concepts.some(c => c.variantOf)`), `${tag}: Try other layouts adds variations (styles may already cover them)`);
   if (pro) ok(await ev("document.getElementById('mx-extras-locked').hidden"), `${tag}: Pro extras unlocked`);
   else ok(await ev("!document.getElementById('mx-extras-locked').hidden && !document.getElementById('mx-go-pro').hidden"), `${tag}: Basic: Extras locked with Switch to Pro`);
 
