@@ -42,8 +42,12 @@
     { id: 'current', label: 'Current', blurb: 'This week’s story, while it’s hot.' },
   ];
   const COLLECTION_IDS = COLLECTIONS.map(c => c.id);
-  // Stack colour keys (Concept.stack[].fill / .ink) and rights kinds.
-  const COLOR_KEYS = ['a', 'b', 'ink', 'white'];
+  // Stack colour keys (Concept.stack[].fill / .ink) and rights kinds. A row
+  // colour is one of these keys or a '#RRGGBB' hex the person picked (merch5).
+  const COLOR_KEYS = ['a', 'b', 'ink', 'white', 'black'];
+  const isRowColor = v => COLOR_KEYS.includes(v) || /^#[0-9a-f]{6}$/i.test(String(v || ''));
+  // A row colour in its stored form (keys as they are, hex uppercase), or '' when invalid.
+  const rowColor = v => (COLOR_KEYS.includes(v) ? v : /^#[0-9a-f]{6}$/i.test(String(v || '')) ? String(v).toUpperCase() : '');
   const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
   // Original ES lines for the Core collection (the board's own words).
   const CORE_LINES = [
@@ -335,7 +339,7 @@
   }
 
   return {
-    VERSION, RIGHTS_POLICY, POLICIES, policyFrom, COLLECTIONS, COLLECTION_IDS, COLOR_KEYS, RIGHTS_KINDS, CORE_LINES, ES_PALETTE,
+    VERSION, RIGHTS_POLICY, POLICIES, policyFrom, COLLECTIONS, COLLECTION_IDS, COLOR_KEYS, isRowColor, rowColor, RIGHTS_KINDS, CORE_LINES, ES_PALETTE,
     BLANKS, BLANK_IDS, pinnedTemplates, clip, fold, bannedIn, inventedNumbers, quoteInSource,
     LEAGUE_MARKS, buildRightsIndex, teamsIn, leagueMarksIn, peopleIn, scanRights, conceptLines, scanConcept, ACK_STATEMENT, ackFor, ackCovers,
     MIN_MARGIN, MAX_PRICE, marginFor, suggestedPrice, round2,

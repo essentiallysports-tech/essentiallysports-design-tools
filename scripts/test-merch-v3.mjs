@@ -71,10 +71,17 @@ ok('Fourthwall product: every mockup, variant images labelled by colour, no repe
 console.log(`merch v3: ${n} checks passed`);
 
 // ─── merch4 engine ──────────────────────────────────────────────────────
-ok('pills touch without overlapping (even padding)', () => {
+ok('ES pill spacing (merch5): 0 gap; same-colour rows overlap by h - step, different colours touch', () => {
   const c = P.yourWords(line);
-  const pills = P.layout(c, TEE).items.filter(i => i.type === 'pill');
-  for (let i = 1; i < pills.length; i++) assert.ok(Math.abs(pills[i].y - (pills[i - 1].y + pills[i - 1].h)) <= 1, 'touching, no overlap');
+  const scene = P.layout(c, TEE);
+  const pills = scene.items.filter(i => i.type === 'pill');
+  for (let i = 1; i < pills.length; i++) {
+    const g = P.pillGeom(pills[i - 1].size, scene.dpi / 72);
+    const want = pills[i].bg === pills[i - 1].bg && pills[i].knockout === pills[i - 1].knockout ? Math.round(g.h) - Math.round(g.step) : 0;
+    assert.equal(pills[i - 1].y + pills[i - 1].h - pills[i].y, want, `row ${i}`);
+  }
+  const one = P.layout({ ...c, stack: c.stack.map(r => ({ ...r, fill: 'a', ink: 'white' })) }, TEE).items.filter(i => i.type === 'pill');
+  assert.ok(one.slice(1).every((p, i) => p.y < one[i].y + one[i].h), 'one colour: every row overlaps the one above');
 });
 ok('navy second colour on a dark tee becomes a white pill with team-colour text', () => {
   const c = { palette: { a: '#0A7DFA', b: '#033162', ink: '#FFFFFF' }, stack: [{ text: 'THEY', size: 'big', fill: 'a', ink: 'white' }, { text: 'DONT', size: 'big', fill: 'b', ink: 'white' }] };

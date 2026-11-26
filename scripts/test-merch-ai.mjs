@@ -339,6 +339,40 @@ await test('refine: free mode -> code intents only, else { free, error }', async
   assert.equal(aiCalls.length, 0);
 });
 
+// ─── merch5: black and hex pill colours ──────────────────────────────────
+const hexGood = { ...good, stack: [{ text: 'SHOWTIME', size: 'big', fill: '#E4002B', ink: '#FFFFFF' }, { text: 'MAGIC', size: 'small', fill: 'black', ink: 'white' }], paletteFrom: { kind: 'custom' } };
+await test('validator: concepts accept hex and black rows, reject bad hex', async () => {
+  fresh();
+  messagesHandler = aiJson({ concepts: [hexGood, { ...good, stack: [{ text: 'SHOWTIME', size: 'big', fill: '#12345', ink: 'white' }] }, { ...good, stack: [{ text: 'SHOWTIME', size: 'big', fill: 'red', ink: 'white' }] }] });
+  const r = await call({ mode: 'concepts', content: SOURCE, count: 3, designMode: 'basic' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.concepts.length, 1, 'bad hex and colour names dropped');
+  assert.equal(r.body.dropped, 2);
+  assert.deepEqual(r.body.concepts[0].stack.map(x => [x.fill, x.ink]), [['#E4002B', '#FFFFFF'], ['black', 'white']]);
+  assert.deepEqual(r.body.concepts[0].paletteFrom, { kind: 'custom' });
+  for (const bad of ['#12345', 'red', '#ZZZZZZ']) assert.equal(M.shapeConcept({ ...good, stack: [{ text: 'X', size: 'big', fill: bad, ink: 'white' }] }, { content: SOURCE }).error, 'row', bad);
+});
+await test('refine: the prompt teaches hex rows; an AI round trip keeps them', async () => {
+  fresh();
+  assert.match(G.refineSystem('basic'), /#RRGGBB/);
+  assert.match(G.refineSystem('pro'), /Keep every hex exactly/);
+  assert.match(G.basicSystem(), /Same-colour rows overlap slightly like the ES editor; different colours touch/);
+  // The AI echoes the hex rows and centres the stack.
+  messagesHandler = b => aiJson({ concept: { ...JSON.parse(b.messages[0].content.match(/The design now \(JSON\): (.*)/)[1]), align: 'center' }, note: 'Centred it.' })();
+  const r = await call({ mode: 'refine', concept: { ...hexGood, id: 'mc-hex001' }, content: SOURCE, instruction: 'move it to the middle please and keep it calm', designMode: 'basic' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.match(aiCalls[0].messages[0].content, /#E4002B/, 'the hex goes to the AI');
+  assert.equal(r.body.concept.align, 'center');
+  assert.deepEqual(r.body.concept.stack.map(x => x.fill), ['#E4002B', 'black']);
+  assert.deepEqual(r.body.concept.paletteFrom, { kind: 'custom' });
+  // A code intent (black tee) repairs keys but never a person's hex.
+  const navy = { ...good, id: 'mc-hex002', palette: { a: '#552583', b: '#0c2340', ink: '#ffffff' }, stack: [{ text: 'SHOWTIME', size: 'big', fill: '#0C2340', ink: '#FFFFFF' }, { text: 'MAGIC', size: 'small', fill: 'b', ink: 'ink' }] };
+  const dark = await call({ mode: 'refine', concept: navy, content: SOURCE, instruction: 'black tee' });
+  assert.equal(dark.body.intent, 'black');
+  assert.equal(dark.body.concept.stack[0].fill, '#0C2340', 'hex kept on the black tee');
+  assert.notEqual(dark.body.concept.stack[1].fill, 'b', 'the navy key is repaired');
+});
+
 // ─── moments ───────────────────────────────────────────────────────────────
 const FEED = {
   updatedAt: '2026-11-26T15:00:00.000Z',

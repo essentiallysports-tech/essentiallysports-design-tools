@@ -21,7 +21,7 @@
 }(typeof self !== 'undefined' ? self : this, (FrameUpRules) => {
   'use strict';
 
-  const VERSION = '2026-11-26-merch4';
+  const VERSION = '2026-11-26-merch5';
 
   // ─── What the server accepts (same lists as MerchPrint.ICONS / ELEMENT_TYPES) ──
   // Original simple shapes drawn by the engine; never league or team marks.
@@ -37,7 +37,10 @@
   });
   const COLLECTIONS = Object.freeze(['replay', 'nickname', 'quote', 'core', 'current']);
   const SIZES = Object.freeze(['big', 'mid', 'small']);
-  const ROW_COLORS = Object.freeze(['a', 'b', 'ink', 'white']);
+  // Row colour keys; a row may also carry a '#RRGGBB' hex the person picked.
+  const ROW_COLORS = Object.freeze(['a', 'b', 'ink', 'white', 'black']);
+  const HEX_RE = /^#[0-9a-f]{6}$/i;
+  const isHex = v => HEX_RE.test(String(v || ''));
   const LIMITS = Object.freeze({
     rows: 10, rowText: 60, elements: 3, numberDigits: 2,
     basicConcepts: 4, proConcepts: 6, instruction: 300, history: 4,
@@ -50,7 +53,7 @@
   // ─── The guidelines, in plain words (one source for the prompts and the page) ──
   const PILL = [
     'THE ES PILL. Every design is a stack of ES pills: Acumin Post 900 (heavy condensed), ALL CAPS, no letter-spacing, each line on a solid, sharp-cornered box (no rounded corners, no outlines, no gradients, no shadows).',
-    'Rows stack and touch: no gaps between rows. Each row is its own box, as wide as its words.',
+    'Rows stack with no gaps between them. Same-colour rows overlap slightly like the ES editor; different colours touch. Each row is its own box, as wide as its words.',
     'Three sizes: "big" (the headline row), "mid" (0.62 of big, for a supporting line) and "small" (a name, a date line, an attribution). Most designs are big rows; mid and small are for hierarchy.',
     'Short rows print bigger: aim for 3 to 16 characters a row; one to three words a pill. Split long lines at natural breaks, never mid-name.',
   ];
@@ -68,8 +71,8 @@
     '- Number-led: a number from the source as its own big row, words under it.',
   ];
   const COLOUR = [
-    'COLOUR. Use the team palette: "a" is the main team colour, "b" the second, "ink" the text colour that reads on them; "white" is plain white. Rows alternate a and b, or use one colour throughout for calm designs.',
-    `Pills must stand off the tee: every box needs contrast of at least ${LIMITS.contrastBox} against the garment colour, and the text at least ${LIMITS.contrastInk} against its box. A row's fill and ink are never the same key.`,
+    'COLOUR. Use the team palette: "a" is the main team colour, "b" the second, "ink" the text colour that reads on them; "white" is plain white and "black" plain black. Rows alternate a and b, or use one colour throughout for calm designs.',
+    `Pills must stand off the tee: every box needs contrast of at least ${LIMITS.contrastBox} against the garment colour, and the text at least ${LIMITS.contrastInk} against its box. A row's fill and ink are never the same colour.`,
     'On dark tees (black, navy, team colours) use white pills with team-colour text for the second colour. On white tees use the team colours for the boxes. Never put a navy pill on a black tee or a yellow pill on a white tee without a stronger colour beside it.',
     'Garments: white, black, or a team colour. Give the garment as a hex and a plain name.',
   ];
@@ -98,8 +101,8 @@
     'Use elements sparingly: at most half of the set, never two of the same type, and never an element that repeats what the words already say.',
   ];
 
-  const SHAPE_BASIC = '{"concepts":[{"collection":"replay|nickname|quote|core|current","title":"short name","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white","ink":"a|b|ink|white"}],"align":"left|center","rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line on why fans would wear it"}]}';
-  const SHAPE_PRO = '{"plan":{"idea":"one line","angle":"one line"},"concepts":[{"collection":"...","title":"short name","label":"Big headline","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white","ink":"a|b|ink|white"}],"align":"left|center","fit":{"scale":1,"topIn":null},"elements":[{"type":"rule","position":"below","color":"b","weight":"thick"}],"rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line"}]}';
+  const SHAPE_BASIC = '{"concepts":[{"collection":"replay|nickname|quote|core|current","title":"short name","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white|black","ink":"a|b|ink|white|black"}],"align":"left|center","rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line on why fans would wear it"}]}';
+  const SHAPE_PRO = '{"plan":{"idea":"one line","angle":"one line"},"concepts":[{"collection":"...","title":"short name","label":"Big headline","team":{"id":"slug","name":"Team"}|null,"palette":{"a":"#hex","b":"#hex","ink":"#hex"},"garment":{"color":"#hex","name":"White"},"stack":[{"text":"ROW","size":"big|mid|small","fill":"a|b|ink|white|black","ink":"a|b|ink|white|black"}],"align":"left|center","fit":{"scale":1,"topIn":null},"elements":[{"type":"rule","position":"below","color":"b","weight":"thick"}],"rights":[{"kind":"name|nickname|quote|team","text":"..."}],"why":"one line"}]}';
 
   const HEAD = 'You design fan-first sports merch for EssentiallySports (ES). Answer with JSON only, no prose. Keep the JSON compact.';
   const ROWS = `Each design: 1 to ${LIMITS.rows} rows, each at most ${LIMITS.rowText} characters.`;
@@ -115,6 +118,7 @@
     const pro = mode === 'pro';
     return [
       'You are the ES merch art director. You change ONE existing design the way the person asks and keep everything else. Answer with JSON only: {"concept":{...the whole design in the same shape...},"note":"one short line on what changed"}.',
+      'Custom colours: a row\'s "fill" or "ink" may be an exact hex ("#RRGGBB") the person picked instead of a key. Keep every hex exactly as it is unless the instruction asks to change that row\'s colours; never turn a hex into a key. New rows use the keys.',
       'Keep the design\'s collection and its words unless the instruction asks to change them. Never add a number or quote that is not in the source; never add league marks, logos or "official". If the instruction asks for something the rules forbid, make the closest allowed change and say so in the note.',
       ...PILL, ...COLOUR, ...RIGHTS, ...FACTS.slice(0, 1),
       ...(pro ? [...PRO_ART.slice(2), ...ELEMENTS] : BASIC_ONLY),
@@ -131,7 +135,7 @@
 
   // ─── Short bullets for the page ──────────────────────────────────────────
   const SUMMARY = Object.freeze([
-    'ES pills only: heavy condensed caps on solid, sharp boxes, rows touching.',
+    'ES pills only: heavy condensed caps on solid, sharp boxes, no gaps between rows.',
     'Big, mid and small rows; short lines print bigger.',
     'Five collections: replay, nickname, quote, core, current.',
     'Team colours, and every pill stands off the shirt colour.',
@@ -148,6 +152,7 @@
   function colorOf(key, palette = {}) {
     if (key === 'white') return WHITE;
     if (key === 'black') return BLACK;
+    if (isHex(key)) return String(key).toLowerCase();
     return /^#[0-9a-f]{6}$/i.test(String(palette[key] || '')) ? String(palette[key]).toLowerCase() : BLACK;
   }
   // Rows whose box melts into the garment or whose text melts into the box.
@@ -166,18 +171,20 @@
   }
   // Fixes rows in place of the AI: a box that melts into the tee becomes the
   // palette key that stands off it best (white on dark tees), then the text
-  // takes the key that reads best on its box. Returns { concept, fixed }.
+  // takes the key that reads best on its box. Only keys are changed: a hex a
+  // person picked stays as it is (the print checks flag it instead).
+  // Returns { concept, fixed }.
   function repairContrast(concept = {}) {
     const garment = (concept.garment && concept.garment.color) || WHITE;
     const pal = concept.palette || {};
     let fixed = 0;
     const stack = (Array.isArray(concept.stack) ? concept.stack : []).map(row => {
       let { fill, ink } = row;
-      if (contrast(colorOf(fill, pal), garment) < LIMITS.contrastBox) {
+      if (!isHex(fill) && contrast(colorOf(fill, pal), garment) < LIMITS.contrastBox) {
         const best = ROW_COLORS.map(k => [k, contrast(colorOf(k, pal), garment)]).sort((x, y) => y[1] - x[1])[0];
         if (best && best[1] > contrast(colorOf(fill, pal), garment)) { fill = best[0]; fixed += 1; }
       }
-      if (fill === ink || contrast(colorOf(ink, pal), colorOf(fill, pal)) < LIMITS.contrastInk) {
+      if (!isHex(ink) && (fill === ink || contrast(colorOf(ink, pal), colorOf(fill, pal)) < LIMITS.contrastInk)) {
         const best = ROW_COLORS.filter(k => k !== fill).map(k => [k, contrast(colorOf(k, pal), colorOf(fill, pal))]).sort((x, y) => y[1] - x[1])[0];
         if (best && (fill === ink || best[1] > contrast(colorOf(ink, pal), colorOf(fill, pal)))) { ink = best[0]; fixed += 1; }
       }
@@ -190,6 +197,6 @@
     VERSION, ICONS, ELEMENT_TYPES, ELEMENT_COLORS, ELEMENT_RULES, COLLECTIONS, SIZES, ROW_COLORS, LIMITS, VOICE,
     SECTIONS: { PILL, COLLECTION_RULES, LAYOUTS, COLOUR, RIGHTS, FACTS, BASIC_ONLY, PRO_ART, ELEMENTS },
     BASIC_SYSTEM: basicSystem(), PRO_SYSTEM: proSystem(), MOMENTS_SYSTEM,
-    basicSystem, proSystem, refineSystem, SUMMARY, contrastIssues, repairContrast, colorOf,
+    basicSystem, proSystem, refineSystem, SUMMARY, contrastIssues, repairContrast, colorOf, isHex,
   };
 }));

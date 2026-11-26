@@ -85,7 +85,10 @@ const AI_TIER = 'main'; // Haiku: the cheapest model that writes reliable JSON i
 const PRO_TIER = 'best'; // Sonnet: Pro concepts and Pro refine (~$0.02 a concepts run, owner-approved)
 const DESIGN_MODES = ['basic', 'pro'];
 const COLLECTIONS = ['replay', 'nickname', 'quote', 'core', 'current'];
-const COLOR_KEYS = ['a', 'b', 'ink', 'white'];
+const COLOR_KEYS = ['a', 'b', 'ink', 'white', 'black'];
+// A row colour: a key, or a '#RRGGBB' hex the person picked (stored uppercase). '' = invalid.
+const rowColor = v => (COLOR_KEYS.includes(v) ? v : /^#[0-9a-f]{6}$/i.test(String(v || '')) ? String(v).toUpperCase() : '');
+const PALETTE_FROM_KINDS = ['team', 'es', 'custom'];
 const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
 const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 24, uploadBytes: 25 * 1024 * 1024 });
 const CAPS = Object.freeze({ person: 10, team: 30 });
@@ -443,9 +446,23 @@ function shapeFit(raw) {
   const topIn = t === null || t === undefined || t === '' || !Number.isFinite(Number(t)) ? null : Math.min(G.LIMITS.fitTopMaxIn, Math.max(G.LIMITS.fitTopMinIn, Math.round(Number(t) * 10) / 10));
   return { scale, topIn };
 }
+// Where the pill colours came from (the page's picker): { kind: 'team'|'es'|'custom',
+// sport?, team?, index? }. Anything else is dropped.
+function shapePaletteFrom(raw) {
+  if (!raw || typeof raw !== 'object' || !PALETTE_FROM_KINDS.includes(raw.kind)) return null;
+  const out = { kind: raw.kind };
+  const sport = typeof raw.sport === 'string' ? clip(raw.sport, 40) : '';
+  const team = typeof raw.team === 'string' ? clip(raw.team, 80) : '';
+  if (sport) out.sport = sport;
+  if (team) out.team = team;
+  const index = Number(raw.index);
+  if (raw.index != null && raw.index !== '' && Number.isInteger(index) && index >= 0 && index < 32) out.index = index;
+  return out;
+}
 // opts.mode: the design mode the reply is for ('basic' strips every element);
 // without it the concept's own `mode` decides (copy / create keep what they get).
 // opts.repair: fix pill colours that melt into the garment (off for copy / create).
+// Repair only changes colour keys: a hex a person picked is kept (the page's print checks flag it).
 function shapeConcept(raw, { content = '', policy = 'acknowledge', mode, repair = true } = {}) {
   if (!raw || typeof raw !== 'object') return { error: 'not an object' };
   const collection = String(raw.collection || '').toLowerCase();
@@ -468,8 +485,12 @@ function shapeConcept(raw, { content = '', policy = 'acknowledge', mode, repair 
   const stack = [];
   for (const r of raw.stack) {
     const text = clip(r?.text, LIMITS.rowText);
-    if (!text || !['big', 'mid', 'small'].includes(r.size) || !COLOR_KEYS.includes(r.fill) || !COLOR_KEYS.includes(r.ink) || r.fill === r.ink) return { error: 'row' };
-    stack.push({ text, size: r.size, fill: r.fill, ink: r.ink });
+    const fill = rowColor(r?.fill);
+    const ink = rowColor(r?.ink);
+    if (!text || !['big', 'mid', 'small'].includes(r.size) || !fill || !ink) return { error: 'row' };
+    // Fill and ink compared as colours: the same key, or a hex equal to the other side.
+    if (fill === ink || ((HEX.test(fill) || HEX.test(ink)) && G.colorOf(fill, palette) === G.colorOf(ink, palette))) return { error: 'row' };
+    stack.push({ text, size: r.size, fill, ink });
   }
   const align = raw.align === 'center' ? 'center' : (raw.align === 'left' || raw.align == null ? 'left' : null);
   if (!align) return { error: 'align' };
@@ -481,6 +502,8 @@ function shapeConcept(raw, { content = '', policy = 'acknowledge', mode, repair 
   let concept = { id: `mc-${crypto.randomUUID().slice(0, 8)}`, collection, title, team, palette, garment, stack, align, blanks, rights, why: clip(raw.why, LIMITS.why), mode: designMode };
   const label = clip(raw.label, LIMITS.label);
   if (label) concept.label = label;
+  const from = shapePaletteFrom(raw.paletteFrom);
+  if (from) concept.paletteFrom = from;
   const fit = shapeFit(raw.fit);
   if (fit) concept.fit = fit;
   let droppedElements = 0;

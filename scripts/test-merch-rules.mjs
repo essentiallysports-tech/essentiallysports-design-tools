@@ -23,7 +23,17 @@ test('default policy is acknowledge; env can switch to strict, junk is ignored',
 test('contract ids: collections and rights kinds', () => {
   assert.deepEqual(R.COLLECTION_IDS, ['replay', 'nickname', 'quote', 'core', 'current']);
   assert.deepEqual(R.RIGHTS_KINDS, ['name', 'nickname', 'quote', 'team']);
-  assert.deepEqual(R.COLOR_KEYS, ['a', 'b', 'ink', 'white']);
+  assert.deepEqual(R.COLOR_KEYS, ['a', 'b', 'ink', 'white', 'black']);
+});
+test('row colours: keys, black and hex are accepted; bad hex and names are not', () => {
+  ['a', 'b', 'ink', 'white', 'black', '#0A7DFA', '#e4002b'].forEach(v => assert.equal(R.isRowColor(v), true, v));
+  ['#12345', 'red', '#GGGGGG', '', null, '0A7DFA', '#0A7DFAA'].forEach(v => assert.equal(R.isRowColor(v), false, String(v)));
+  assert.equal(R.rowColor('#e4002b'), '#E4002B', 'hex stored uppercase');
+  assert.equal(R.rowColor('black'), 'black');
+  assert.equal(R.rowColor('red'), '');
+  // Hex and black rows scan like any other row.
+  const scan = R.scanConcept(concept([{ text: 'BALL DONT LIE', size: 'big', fill: '#E4002B', ink: 'black' }]), { source: 'ball dont lie', policy: 'acknowledge' });
+  assert.equal(scan.blocked.length, 0);
 });
 test('team index comes from the repo team lists', () => {
   assert.ok(index.teams.length > 150);

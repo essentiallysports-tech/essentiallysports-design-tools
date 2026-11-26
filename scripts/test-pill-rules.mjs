@@ -100,4 +100,21 @@ const composeTag = gen.indexOf('<script src="frameup-compose.js');
 assert.ok(rulesTag > 0 && rulesTag < composeTag, 'generate.html loads the rulebook before the composer');
 assert.ok(/new FontFace\(family, `url\(\$\{SCRIPT_BASE\}\$\{file\}\)/.test(fs.readFileSync(path.join(ROOT, 'frameup-compose.js'), 'utf8')), 'ensureFonts registers the pill face next to the script');
 
+// ── 5. Merch pills step like the editor (merch5) ─────────────────────────
+// Same-colour rows advance by pillMetrics().step (overlapping the box under
+// the letters, as drawPills does); different colours advance by the full
+// height (touching, 0 gap).
+{
+  const M = require('../merch-print.js');
+  const spec = { pixelsWidth: 1800, pixelsHeight: 2400, dpi: 150, garmentColor: '#FFFFFF' };
+  const scale = spec.dpi / 72;
+  const concept = { palette: { a: '#0A7DFA', b: '#033162', ink: '#FFFFFF' }, stack: ['ONE', 'TWO', 'THREE'].map((text, i) => ({ text, size: 'big', fill: i < 2 ? 'a' : 'b', ink: 'white' })) };
+  const pills = M.layout(concept, spec).items.filter(i => i.type === 'pill');
+  const cap = pills[0].size * M.CAP;
+  const m = R.pillMetrics(pills[0].size, cap, scale);
+  assert.ok(m.step < m.h, 'merch: step < h');
+  assert.equal(pills[1].y - pills[0].y, Math.round(m.step), 'merch: same-colour row advances by pillMetrics().step');
+  assert.equal(pills[2].y - pills[1].y, Math.round(R.pillMetrics(pills[1].size, cap, scale).h), 'merch: a different colour advances by the full height');
+}
+
 console.log(`pill rules checks passed (${pairs} brand-kit pairs)`);

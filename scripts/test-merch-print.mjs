@@ -65,7 +65,7 @@ test('pills: one row per word, rows touch, alternating the team pair', () => {
   assert.equal(pills.length, 5);
   assert.equal(pills[0].bg, '#552583'); assert.equal(pills[1].bg, '#FDB927');
   assert.equal(pills[0].ink, '#FFFFFF'); assert.equal(pills[1].ink, '#000000');
-  for (let i = 1; i < pills.length; i++) assert.ok(pills[i].y <= pills[i - 1].y + pills[i - 1].h + 2, 'touching rows');
+  for (let i = 1; i < pills.length; i++) assert.equal(pills[i].y, pills[i - 1].y + pills[i - 1].h, 'different colours touch: 0 gap');
   assert.ok(pills.every(p => p.x === pills[0].x), 'left aligned');
   const centred = P.layout(roster({ align: 'center' }), TEE).items.filter(i => i.type === 'pill');
   assert.ok(new Set(centred.map(p => Math.round(p.x + p.w / 2))).size <= 2, 'centred stack');
@@ -225,6 +225,108 @@ test('hard goods: the ES wordmark can sit under the design in the same print', (
   assert.equal(P.layout(roster(), { ...TEE, logo: 'inline' }).items.some(i => i.type === 'logo'), false, 'apparel keeps the logo as its own print');
 });
 
+// ─── merch5: ES pill spacing and pill colours ───────────────────────────
+const scaleOf = s => s.dpi / 72;
+test('ES pill spacing: same colour overlaps by exactly h - step; different colours touch', () => {
+  const same = roster({ stack: ['KOBE', 'SMUSH', 'LUKE'].map(t => ({ text: t, size: 'big', fill: 'a', ink: 'white' })) });
+  const s = P.layout(same, TEE);
+  const pills = s.items.filter(i => i.type === 'pill');
+  for (let i = 1; i < pills.length; i++) {
+    const g = P.pillGeom(pills[i - 1].size, scaleOf(s));
+    assert.ok(g.step < g.h, 'step < h');
+    assert.equal(pills[i - 1].y + pills[i - 1].h - pills[i].y, Math.round(g.h) - Math.round(g.step), 'overlap = h - step');
+    assert.ok(pills[i].y - pills[i - 1].y > pills[i - 1].baseline, 'the lower box starts under the letters');
+  }
+  // Mixed: a, a, b, b, a -> overlap, touch, overlap, touch.
+  const mixed = roster({ stack: ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE'].map((t, i) => ({ text: t, size: 'big', fill: [0, 1, 4].includes(i) ? 'a' : 'b', ink: [0, 1, 4].includes(i) ? 'white' : 'ink' })) });
+  const m = P.layout(mixed, TEE);
+  const mp = m.items.filter(i => i.type === 'pill');
+  const gap = i => mp[i].y - (mp[i - 1].y + mp[i - 1].h);
+  assert.ok(gap(1) < 0, 'same colour overlaps');
+  assert.equal(gap(2), 0, 'a -> b touches');
+  assert.ok(gap(3) < 0, 'b -> b overlaps');
+  assert.equal(gap(4), 0, 'b -> a touches');
+  // Draw order is row order (the lower row covers the upper's bottom padding).
+  assert.deepEqual(mp.map(p => p.text), ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE']);
+  // Same-colour stacks are shorter than the touching version: the fit uses the same rule.
+  assert.equal(m.design.h, mp[mp.length - 1].y + mp[mp.length - 1].h - mp[0].y);
+  assert.deepEqual(P.blocking(P.checksFor(s)), []);
+});
+test('ES pill spacing: a knockout row never overlaps a plain row of the same box colour', () => {
+  const c = roster({ garment: { color: '#552583', name: 'Purple' }, stack: [{ text: 'KNOCK', size: 'big', fill: 'white', ink: 'a' }, { text: 'PLAIN', size: 'big', fill: 'white', ink: 'black' }] });
+  const pills = P.layout(c, { ...TEE, garmentColor: '#552583' }).items.filter(i => i.type === 'pill');
+  assert.equal(pills[0].knockout, true); assert.equal(pills[1].knockout, false);
+  assert.equal(pills[1].y, pills[0].y + pills[0].h, 'touching');
+});
+test('ES pill spacing: a Pro "between" rule clears a same-colour second row', () => {
+  const c = roster({ mode: 'pro', stack: [{ text: 'HEAD', size: 'big', fill: 'a', ink: 'white' }, { text: 'LINE', size: 'big', fill: 'a', ink: 'white' }], elements: [{ type: 'rule', position: 'between', color: 'b', weight: 'thick' }] });
+  const s = P.layout(c, TEE);
+  const pills = s.items.filter(i => i.type === 'pill');
+  const rule = s.items.find(i => i.role === 'rule');
+  assert.ok(rule.y >= pills[0].y + pills[0].h, 'rule under the first row');
+  assert.ok(pills[1].y >= rule.y + rule.h, 'second row under the rule');
+  assert.deepEqual(P.blocking(P.checksFor(s)), []);
+});
+test('pill colours: black and hex fills render; an explicit hex is never swapped', () => {
+  const c = roster({ stack: [{ text: 'HEX', size: 'big', fill: '#e4002b', ink: '#ffffff' }, { text: 'BLACK', size: 'big', fill: 'black', ink: 'white' }, { text: 'AUTO', size: 'big', fill: '#FFB81C' }] });
+  const pills = P.layout(c, TEE).items.filter(i => i.type === 'pill');
+  assert.equal(pills[0].bg, '#E4002B'); assert.equal(pills[0].ink, '#FFFFFF'); assert.equal(pills[0].custom, true);
+  assert.equal(pills[1].bg, '#000000'); assert.equal(pills[1].ink, '#FFFFFF');
+  assert.equal(pills[2].bg, '#FFB81C'); assert.equal(pills[2].ink, P.pillInk('#FFB81C'), 'missing ink on a hex fill: pillTextColor');
+  // Navy hex on a black tee stays navy (a key would swap to white).
+  const dark = { ...TEE, garmentColor: '#020202' };
+  const navy = roster({ stack: [{ text: 'NAVY', size: 'big', fill: '#0C2340', ink: '#FFFFFF' }] });
+  const s = P.layout(navy, dark);
+  assert.equal(s.items[0].bg, '#0C2340', 'hex kept');
+  const keyed = P.layout(roster({ palette: { a: '#552583', b: '#0C2340', ink: '#FFFFFF' }, stack: [{ text: 'NAVY', size: 'big', fill: 'b', ink: 'ink' }] }), dark);
+  assert.notEqual(keyed.items[0].bg, '#0C2340', 'a key still swaps');
+});
+test('checks: a low-contrast hex pill is an error naming the pill', () => {
+  const s = P.layout(roster({ stack: [{ text: 'KOBE', size: 'big', fill: 'a', ink: 'white' }, { text: 'NAVY', size: 'big', fill: '#0C2340', ink: '#FFFFFF' }] }), { ...TEE, garmentColor: '#020202' });
+  const g = P.checksFor(s).find(c => c.id === 'garment');
+  assert.equal(g.level, 'error');
+  assert.match(g.text, /"NAVY"/); assert.match(g.text, /#0C2340/); assert.match(g.text, /black tee/);
+  const unread = P.checksFor(P.layout(roster({ stack: [{ text: 'GREY', size: 'big', fill: '#555555', ink: '#666666' }] }), TEE)).find(c => c.id === 'garment');
+  assert.equal(unread.level, 'error'); assert.match(unread.text, /"GREY"/);
+});
+test('kit helpers: sports, teams, swatches, palette from a swatch, ES swatches', () => {
+  const sports = P.kitSports();
+  assert.ok(sports.includes('NBA') && sports.includes('Tennis') && sports.includes('Neutral'));
+  assert.equal(new Set(sports).size, sports.length);
+  const nba = P.kitTeams('NBA');
+  assert.ok(nba.length >= 30 && nba.every(t => t.name && t.entry.sport === 'NBA'));
+  assert.deepEqual(nba.map(t => t.name), [...nba.map(t => t.name)].sort((a, b) => a.localeCompare(b)), 'teams A-Z');
+  const KIT = require('../brand-kit.js');
+  assert.deepEqual(P.kitTeams('Tennis').map(t => t.name), KIT.filter(e => e.sport === 'Tennis').map(e => e.variation), 'variations keep their order');
+  const lal = nba.find(t => /Lakers/.test(t.name)).entry;
+  const sw = P.kitSwatches(lal);
+  assert.ok(sw.length >= 2 && new Set(sw.map(x => x.bg)).size === sw.length, 'unique backgrounds');
+  sw.forEach(x => { assert.match(x.bg, /^#[0-9A-F]{6}$/); assert.match(x.ink, /^#[0-9A-F]{6}$/); assert.ok(x.label); assert.ok(Number.isInteger(x.index)); });
+  const pal = P.paletteFromKit(lal, sw[1].index);
+  assert.equal(pal.a, sw[1].bg);
+  assert.notEqual(pal.b, pal.a);
+  assert.ok(P.boxContrast(pal.ink, pal.b) >= 2.4, 'ink reads on b');
+  assert.deepEqual(P.ES_SWATCHES.map(x => x.label), ['ES Blue', 'Navy', 'White', 'Black']);
+  assert.equal(P.ES_SWATCHES[0].bg, '#0A7DFA'); assert.equal(P.ES_SWATCHES[0].ink, '#FFFFFF');
+  assert.ok(P.boxContrast('#0C2340', '#020202') < P.MIN_CONTRAST, 'navy on black is too close');
+  assert.ok(P.boxContrast('#E4002B', '#FFFFFF') >= P.MIN_CONTRAST);
+  assert.equal(P.pillInk('#FFFFFF'), '#000000');
+});
+
+test('sample data (merch-demo.js): one concept has a hex row; refine keeps it', () => {
+  globalThis.self = globalThis.self || globalThis;
+  require('../merch-demo.js');
+  const D = globalThis.self.MerchDemo;
+  const c = D.CONCEPTS.find(x => x.stack.some(r => /^#[0-9A-F]{6}$/i.test(r.fill)));
+  assert.ok(c, 'a demo concept with a hex row');
+  assert.deepEqual(P.blocking(P.checks(c, { garmentColor: c.garment.color })), [], 'prints cleanly');
+  const hexFills = x => x.stack.map(r => r.fill).filter(f => /^#/.test(f));
+  for (const instruction of ['swap', 'black tee', 'centre', 'bigger']) {
+    const [status, body] = D.reply({ mode: 'refine', concept: c, instruction });
+    assert.equal(status, 200);
+    assert.deepEqual(hexFills(body.concept), hexFills(c), instruction);
+  }
+});
 fails.forEach(f => console.log(`FAIL ${f}`));
 console.log(`merch print: ${passed} passed, ${fails.length} failed`);
 process.exit(fails.length ? 1 : 0);

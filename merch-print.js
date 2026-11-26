@@ -113,6 +113,65 @@
     return NAMED.map(([n, v]) => { const [R, G, B] = rgb(v); return [n, (r - R) ** 2 * 0.3 + (g - G) ** 2 * 0.59 + (b - B) ** 2 * 0.11]; }).sort((x, y) => x[1] - y[1])[0][0];
   }
 
+  // ─── Pill colour options (Social / Newsletter's Sport → Team picker) ────
+  // ES_BRAND_KIT entries: { sport, team | variation, primary, palette[] } of
+  // { background, foreground, mist } pairs.
+  const kitList = () => (Array.isArray(deps.kit) ? deps.kit : []).filter(e => e && e.sport);
+  const kitName = e => String(e.team || e.variation || '');
+  function kitSports() {
+    return [...new Set(kitList().map(e => e.sport))];
+  }
+  // [{ name, entry }]: teams A–Z; variations (Tennis, Golf, Neutral) keep their order.
+  function kitTeams(sport) {
+    const list = kitList().filter(e => e.sport === sport && kitName(e)).map(entry => ({ name: kitName(entry), entry }));
+    return list.every(t => t.entry.team) ? list.sort((x, y) => x.name.localeCompare(y.name)) : list;
+  }
+  const pairsOf = entry => {
+    const pal = Array.isArray(entry?.palette) && entry.palette.length ? entry.palette : entry?.primary ? [entry.primary] : [];
+    return pal.filter(p => p && hexOk(p.background));
+  };
+  // [{ bg, ink, label, index }]: one swatch per distinct box colour; index is
+  // the pair's place in entry.palette (for paletteFromKit).
+  function kitSwatches(entry) {
+    const pairs = pairsOf(entry);
+    const seen = new Set();
+    const out = [];
+    pairs.forEach((p, index) => {
+      const bg = hex(p.background);
+      if (seen.has(bg)) return;
+      seen.add(bg);
+      const others = pairs.filter(o => hex(o.background) !== bg);
+      const ink = hex(FrameUpRules.pillTextColor({ ...p, background: bg }, others)) || pillInk(bg);
+      out.push({ bg, ink, label: `${colorName(bg)} pill, ${colorName(ink).toLowerCase()} text`, index });
+    });
+    return out;
+  }
+  // { a, b, ink } for a picked swatch: a = that box colour, b = the next box
+  // colour of the entry that reads as a different colour, ink = the text
+  // colour on b (rows keep their a / b keys).
+  function paletteFromKit(entry, index = 0) {
+    const pairs = pairsOf(entry);
+    if (!pairs.length) return { ...MerchRules.ES_PALETTE };
+    const i = Number.isInteger(Number(index)) && pairs[Number(index)] ? Number(index) : 0;
+    const pair = pairs[i];
+    const a = hex(pair.background);
+    const rest = [...pairs.slice(i + 1), ...pairs.slice(0, i)];
+    const cands = [...rest.map(p => p.background), pair.mist, pair.foreground].map(hex).filter(Boolean);
+    let b = cands.find(c => c !== a && contrast(a, c) >= 1.6) || (isLight(a) ? BLACK : WHITE);
+    if (contrast(a, b) < 1.6) b = isLight(a) ? BLACK : WHITE;
+    const ink = pillInk(b, pairs.filter(p => hex(p.background) !== b));
+    return { a, b, ink };
+  }
+  // ES colours (ES Blue, Navy, White, Black), text by the ES pairs.
+  const ES_SWATCHES = Object.freeze([
+    { bg: ES_BLUE, label: 'ES Blue', with: [WHITE] },
+    { bg: '#033162', label: 'Navy', with: [WHITE] },
+    { bg: WHITE, label: 'White', with: [ES_BLUE] },
+    { bg: BLACK, label: 'Black', with: [WHITE] },
+  ].map(s => Object.freeze({ bg: s.bg, ink: pillInk(s.bg, s.with), label: s.label })));
+  // Box colour vs garment colour (MIN_CONTRAST is the print check's floor).
+  const boxContrast = (c, garment) => contrast(hex(c) || BLACK, hex(garment) || WHITE);
+
   // ─── Print area ────────────────────────────────────────────────────────
   function areaOf(spec = {}, kind = 'tee') {
     const d = DEFAULT_AREAS[kind] || DEFAULT_AREAS.tee;
@@ -150,18 +209,31 @@
   }
 
   // ─── Colours of a row on this garment ──────────────────────────────────
+  // A row colour is a palette key (a | b | ink), white, black, or a hex
+  // ('#RRGGBB', any case) the person picked.
   function resolve(key, pal) {
     if (key === 'a' || key === 'b' || key === 'ink') return hex(pal[key]) || BLACK;
     if (key === 'white') return WHITE;
+    if (key === 'black') return BLACK;
     return hex(key) || hex(pal.a) || BLACK;
   }
+  // Text colour for a pill box (the editor's rule: FrameUpRules.pillTextColor).
+  // others: the other pairs of the same brand-kit entry, or plain hex strings.
+  function pillInk(bg, others = []) {
+    const b = hex(bg) || BLACK;
+    const pairs = (Array.isArray(others) ? others : []).map(o => (typeof o === 'string' ? { background: o } : o)).filter(o => o && hexOk(o.background));
+    return hex(FrameUpRules.pillTextColor({ background: b }, pairs)) || (isLight(b) ? BLACK : WHITE);
+  }
   // The box must stand off the shirt; type in the shirt colour is a knockout;
-  // otherwise type must stand off the box.
+  // otherwise type must stand off the box. A hex the person picked is never
+  // swapped (the checks flag it instead); keys keep the automatic swap.
   function rowColors(row, pal, garment, apparel) {
     const options = [pal.a, pal.b, pal.ink, WHITE, BLACK].map(hex).filter(Boolean);
+    const custom = hexOk(row.fill);
+    const customInk = hexOk(row.ink);
     let bg = resolve(row.fill || 'a', pal);
-    let ink = resolve(row.ink || (row.fill === 'b' ? 'ink' : 'white'), pal);
-    if (contrast(bg, garment) < MIN_CONTRAST) {
+    let ink = row.ink ? resolve(row.ink, pal) : custom ? pillInk(bg) : resolve(row.fill === 'b' ? 'ink' : 'white', pal);
+    if (!custom && contrast(bg, garment) < MIN_CONTRAST) {
       const a = hex(pal.a) || ES_BLUE;
       // The second colour lost on the shirt: white (on dark) or black (on light) pill, team-colour text.
       const swap = isLight(garment) ? BLACK : WHITE;
@@ -169,9 +241,10 @@
       else bg = options.filter(c => c !== garment).sort((x, y) => (contrast(y, garment) >= MIN_CONTRAST ? 1 : 0) - (contrast(x, garment) >= MIN_CONTRAST ? 1 : 0) || options.indexOf(x) - options.indexOf(y))[0];
     }
     const knockout = apparel && contrast(ink, garment) < 1.15 && contrast(bg, garment) >= MIN_CONTRAST;
-    if (!knockout && contrast(ink, bg) < 2.4) ink = options.filter(c => c !== bg).sort((x, y) => contrast(y, bg) - contrast(x, bg))[0];
-    return { bg, ink, knockout };
+    if (!knockout && !customInk && contrast(ink, bg) < 2.4) ink = custom ? pillInk(bg) : options.filter(c => c !== bg).sort((x, y) => contrast(y, bg) - contrast(x, bg))[0];
+    return { bg, ink, knockout, custom };
   }
+  const sameLook = (p, q) => Boolean(p && q && p.bg) && p.bg === q.bg && Boolean(p.knockout) === Boolean(q.knockout);
 
   // Wraps long text into balanced rows (stacked pills read best at 8-16 letters).
   function wrapText(text, goal) {
@@ -264,15 +337,35 @@
   }
 
   // Rows -> placed pills inside box (sized so the widest row and the whole
-  // stack fit; rows touch the way the editor's Cover pills do).
+  // stack fit). ES pill spacing (the editor's drawPills): 0 gap between rows.
+  // A row the same colour as the row above (same box colour and knockout)
+  // starts at the upper row's pillMetrics().step, so it overlaps the upper
+  // box's padding under the letters; a row in a different colour starts at the
+  // upper row's full height (touching). Heights and steps are whole pixels so
+  // the overlap is exactly h - step. Rows draw in order: the lower box covers
+  // the upper box's bottom padding, never its letters (step > baseline).
+  function rowAdvance(prev, cur, size, scale) {
+    const g = pillGeom(size * prev.rel, scale);
+    return sameLook(prev, cur) ? Math.round(g.step) : Math.round(g.h);
+  }
+  function stackHeight(rows, size, scale) {
+    let y = 0;
+    rows.forEach((r, i) => { if (i) y += rowAdvance(rows[i - 1], r, size, scale); });
+    return y + Math.round(pillGeom(size * rows[rows.length - 1].rel, scale).h);
+  }
   function stackRows(rows, box, measure, scale, align) {
-    const at100 = rows.map(r => { const g = pillGeom(100 * r.rel, scale); return { w: measure(r.text, 100 * r.rel) + g.padL + g.padR, step: g.step, h: g.h }; });
+    const at100 = rows.map(r => { const g = pillGeom(100 * r.rel, scale); return { w: measure(r.text, 100 * r.rel) + g.padL + g.padR }; });
     const maxW = Math.max(...at100.map(r => r.w));
-    // Rows touch without overlapping, so every pill keeps even padding
-    // (the editor overlaps the box under the letters; on a print that
-    // reads as uneven spacing).
-    const totalH = at100.reduce((s, r) => s + r.h, 0);
-    const size = Math.max(4, Math.floor(Math.min(box.w / maxW, box.h / totalH) * 100));
+    // Width scales linearly with size; the stack height doesn't quite (the
+    // 1px gaps in step scale with the canvas), so search the biggest size
+    // whose real stack height fits the box.
+    let lo = 4;
+    let hi = Math.max(4, Math.floor((box.w / maxW) * 100));
+    if (stackHeight(rows, hi, scale) <= box.h) lo = hi;
+    else {
+      while (hi - lo > 1) { const mid = Math.floor((lo + hi) / 2); if (stackHeight(rows, mid, scale) <= box.h) lo = mid; else hi = mid; }
+    }
+    const size = lo;
     const items = [];
     let y = 0;
     let blockW = 0;
@@ -281,18 +374,18 @@
       const g = pillGeom(s, scale);
       const w = measure(r.text, s) + g.padL + g.padR;
       blockW = Math.max(blockW, w);
-      items.push({ type: 'pill', text: r.text, size: s, w, h: g.h, padL: g.padL, baseline: g.baseline, y, bg: r.bg, ink: r.ink, knockout: r.knockout, small: r.rel < 1, align: r.align || align });
-      y += g.h;
+      if (i) y += rowAdvance(rows[i - 1], r, size, scale);
+      items.push({ type: 'pill', text: r.text, size: s, w, h: Math.round(g.h), padL: g.padL, baseline: g.baseline, y, bg: r.bg, ink: r.ink, knockout: r.knockout, custom: Boolean(r.custom), small: r.rel < 1, align: r.align || align });
     });
+    const stackH = items.length ? Math.max(...items.map(p => p.y + p.h)) : 0;
     const x0 = box.x + (box.w - blockW) / 2;
-    const y0 = box.y + (box.valign === 'top' ? 0 : (box.h - y) / 2);
+    const y0 = Math.round(box.y + (box.valign === 'top' ? 0 : (box.h - stackH) / 2));
     items.forEach(p => {
       p.x = Math.round(p.align === 'center' ? x0 + (blockW - p.w) / 2 : x0);
-      p.y = Math.round(y0 + p.y);
+      p.y = y0 + p.y;
       p.w = Math.round(p.w);
-      p.h = Math.round(p.h);
     });
-    return { items, size, bounds: { x: Math.round(x0), y: Math.round(y0), w: Math.round(blockW), h: Math.round(y) } };
+    return { items, size, bounds: { x: Math.round(x0), y: y0, w: Math.round(blockW), h: stackH } };
   }
 
   // ─── Layout (pure) ─────────────────────────────────────────────────────
@@ -356,12 +449,15 @@
     let result = stackRows(rows, box, m, scale, align);
     const extras = [];
     if (els.length) {
+      // A 'between' rule sits under the first row: a second row of the same
+      // colour overlaps the first, so it moves down by that overlap too.
+      const overlapOf = r => (r.items.length > 1 ? Math.max(0, r.items[0].y + r.items[0].h - r.items[1].y) : 0);
       // Room the elements need around the stack, relative to the big pill height.
       const need = (r) => {
         const ph = pillGeom(r.size, scale).h;
         const e = { top: 0, bottom: 0, left: 0, gapIn: 0 };
         els.forEach(el => {
-          if (el.type === 'rule') { const t = Math.max(Math.round(0.05 * a.dpi), Math.round(ph * (el.weight === 'thick' ? 0.16 : 0.07))); const g = Math.round(t * 1.6); if (el.position === 'above') e.top += t + g; else if (el.position === 'below') e.bottom += t + g; else e.gapIn += t + 2 * g; }
+          if (el.type === 'rule') { const t = Math.max(Math.round(0.05 * a.dpi), Math.round(ph * (el.weight === 'thick' ? 0.16 : 0.07))); const g = Math.round(t * 1.6); if (el.position === 'above') e.top += t + g; else if (el.position === 'below') e.bottom += t + g; else e.gapIn += t + 2 * g + overlapOf(r); }
           if (el.type === 'icon') { const sz = Math.round(ph * 1.1); if (el.position === 'above') e.top += sz + Math.round(ph * 0.25); else if (el.position === 'below') e.bottom += sz + Math.round(ph * 0.25); else e.left += sz + Math.round(ph * 0.3); }
           if (el.type === 'number' && el.position === 'above') e.top += Math.round(ph * 1.9);
           if (el.type === 'block') { const pad = Math.round(ph * 0.3); e.top += pad; e.bottom += pad; e.left += pad / 2; }
@@ -457,7 +553,11 @@
     const whiteOnWhite = scene.apparel && contrast(scene.garment, WHITE) < 1.2 && boxes.some(i => contrast(i.bg, WHITE) < 1.2);
     const unreadable = boxes.find(i => i.type === 'pill' && !i.knockout && contrast(i.ink, i.bg) < 2.4);
     const garmentOk = !lost && !whiteOnWhite && !unreadable;
-    add('garment', garmentOk, 'error', garmentOk ? 'Every colour stands out from the blank.' : unreadable ? `"${unreadable.text}" is hard to read on its box. Swap the colours.` : `The "${(lost || boxes[0]).text || (lost || boxes[0]).name || (lost || boxes[0]).role || 'design'}" ${lost?.type === 'pill' || !lost ? 'box' : 'element'} disappears on a ${colorName(scene.garment).toLowerCase()} ${scene.apparel ? 'shirt' : 'blank'}. Pick another colour.`);
+    const blankName = `${colorName(scene.garment).toLowerCase()} ${scene.apparel ? 'tee' : 'blank'}`;
+    add('garment', garmentOk, 'error', garmentOk ? 'Every colour stands out from the blank.'
+      : lost && lost.type === 'pill' && lost.custom ? `The custom colour ${lost.bg} on the "${lost.text}" pill is too close to the ${blankName}, so the pill won’t stand out. Pick another colour for that pill.`
+      : unreadable && unreadable.custom ? `"${unreadable.text}" is hard to read on its custom colour ${unreadable.bg}. Pick another text colour or pill colour.`
+      : unreadable ? `"${unreadable.text}" is hard to read on its box. Swap the colours.` : `The "${(lost || boxes[0]).text || (lost || boxes[0]).name || (lost || boxes[0]).role || 'design'}" ${lost?.type === 'pill' || !lost ? 'box' : 'element'} disappears on a ${colorName(scene.garment).toLowerCase()} ${scene.apparel ? 'shirt' : 'blank'}. Pick another colour.`);
     const minCap = Math.min(...boxes.filter(i => i.type === 'pill').map(i => i.size * CAP / scene.dpi), Infinity);
     const need = scene.apparel ? MIN_CAP_IN.apparel : MIN_CAP_IN.other;
     const capOk = !Number.isFinite(minCap) || minCap >= need - 1e-6;
@@ -996,8 +1096,9 @@
   }
 
   return {
-    VERSION: '2026-11-26b', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, ICONS, ICON_SHAPES, ELEMENT_TYPES, elementsOf, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
+    VERSION: '2026-11-26-merch5', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, ICONS, ICON_SHAPES, ELEMENT_TYPES, elementsOf, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
     render, renderLogo, checks, preview, closeup, photoMock, photoFor, PHOTO_AREAS, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
+    kitSports, kitTeams, kitSwatches, paletteFromKit, pillInk, ES_SWATCHES, boxContrast, resolve,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,
   };

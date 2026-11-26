@@ -520,6 +520,33 @@ await test('concepts keep the blanks they name', () => {
   assert.deepEqual(M.shapeConcept(good, { content: SOURCE }).concept.blanks, ['tee']);
 });
 
+// ─── merch5: black and hex pill colours, paletteFrom ─────────────────────
+const hexRow = { text: 'SHOWTIME', size: 'big', fill: '#e4002b', ink: '#FFFFFF' };
+await test('shapeConcept accepts black and hex rows (hex stored uppercase) and rejects bad colours', () => {
+  const c = M.shapeConcept({ ...good, stack: [hexRow, { text: '5 TITLES', size: 'small', fill: 'black', ink: 'white' }] }, { content: SOURCE }).concept;
+  assert.deepEqual(c.stack.map(r => [r.fill, r.ink]), [['#E4002B', '#FFFFFF'], ['black', 'white']]);
+  for (const bad of ['#12345', 'red', '#GGGGGG', 'navy', '']) assert.equal(M.shapeConcept({ ...good, stack: [{ ...hexRow, fill: bad }] }, { content: SOURCE }).error, 'row', bad);
+  assert.equal(M.shapeConcept({ ...good, stack: [{ ...hexRow, fill: '#FFFFFF', ink: 'white' }] }, { content: SOURCE }).error, 'row', 'hex fill equal to its ink (resolved)');
+  assert.equal(M.shapeConcept({ ...good, stack: [{ ...hexRow, fill: 'a', ink: '#552583' }] }, { content: SOURCE }).error, 'row', 'hex ink equal to the a key');
+});
+await test('repair keeps a person\'s hex (even low contrast); keys are still repaired', () => {
+  const dark = { ...good, garment: { color: '#020202', name: 'Black' }, palette: { a: '#552583', b: '#0c2340', ink: '#ffffff' } };
+  const c = M.shapeConcept({ ...dark, stack: [{ text: 'SHOWTIME', size: 'big', fill: '#0C2340', ink: '#FFFFFF' }, { text: 'LAKERS', size: 'big', fill: 'b', ink: 'ink' }] }, { content: SOURCE }).concept;
+  assert.equal(c.stack[0].fill, '#0C2340', 'hex kept');
+  assert.notEqual(c.stack[1].fill, 'b', 'navy key on black repaired');
+  const kept = M.shapeConcept({ ...dark, stack: [{ text: 'SHOWTIME', size: 'big', fill: '#0C2340', ink: '#FFFFFF' }] }, { content: SOURCE, repair: false }).concept;
+  assert.equal(kept.stack[0].fill, '#0C2340');
+});
+await test('paletteFrom: valid shapes kept and clipped, anything else dropped', () => {
+  const from = pf => M.shapeConcept({ ...good, paletteFrom: pf }, { content: SOURCE }).concept.paletteFrom;
+  assert.deepEqual(from({ kind: 'team', sport: 'NBA', team: 'Los Angeles Lakers', index: 1 }), { kind: 'team', sport: 'NBA', team: 'Los Angeles Lakers', index: 1 });
+  assert.deepEqual(from({ kind: 'es', index: 0 }), { kind: 'es', index: 0 });
+  assert.deepEqual(from({ kind: 'custom', sport: 5, team: { x: 1 }, index: -1 }), { kind: 'custom' });
+  assert.equal(from({ kind: 'team', team: 'x'.repeat(200) }).team.length, 80);
+  assert.equal(from({ kind: 'logo' }), undefined);
+  assert.equal(from('team'), undefined);
+  assert.equal(from(null), undefined);
+});
 // ─── v2: history in Supabase ───────────────────────────────────────────────
 const mugBody = extra => createBody({ blank: 'mug', logo: undefined, retail: 17.99, color: 'White', title: 'Showtime Mug', ...extra });
 await test('create (mug) writes the design, the product and an event', async () => {
@@ -806,6 +833,15 @@ await test('the secret never reached a log line', () => {
   assert.ok(!all.includes(PASS));
   assert.ok(!all.includes(BASIC));
   assert.ok(!all.includes(Buffer.from(`${USER}:${PASS}`).toString('base64')));
+});
+
+await test('create keeps an explicit hex row as drawn', async () => {
+  M.reset(); resetFw(); liveTemplates(); db.reset(); serviceOn(true); queue = testQueue();
+  const r = await call(mugBody({ concept: { ...good, stack: [hexRow, good.stack[1]], paletteFrom: { kind: 'custom' } } }));
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const [design] = db.table('frameup_merch_designs');
+  assert.equal(design.concept.stack[0].fill, '#E4002B');
+  assert.deepEqual(design.concept.paletteFrom, { kind: 'custom' });
 });
 
 process.stdout.write(`test-merch: ${passed} tests passed\n`);

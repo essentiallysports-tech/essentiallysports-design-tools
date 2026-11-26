@@ -51,7 +51,8 @@
     { id: 's3', collection: 'nickname', title: 'Megatron', team: { id: 'det', name: 'Detroit Lions' }, palette: { a: '#B0B7BC', b: '#0076B6', ink: '#0076B6' }, garment: { color: '#020718', name: 'French Navy' },
       stack: [{ text: 'Megatron', size: 'big', fill: 'a', ink: 'ink' }], align: 'center', blanks: ['tee'], rights: [{ kind: 'nickname', text: 'Megatron' }, { kind: 'team', text: 'Lions colours' }], why: 'Almost famous: one word, one era.' },
     { id: 's4', collection: 'core', title: 'We center fans', team: null, palette: { a: '#0A7DFA', b: '#033162', ink: '#FFFFFF' }, garment: { color: '#FFFFFF', name: 'White' },
-      stack: [{ text: 'We center', size: 'big', fill: 'a', ink: 'ink' }, { text: 'fans', size: 'big', fill: 'b', ink: 'ink' }], align: 'left', blanks: ['tee'], rights: [], why: 'An ES line, ours to sell.' },
+      // merch5: one pill in a custom colour (a hex row; the engine never swaps it).
+      stack: [{ text: 'We center', size: 'big', fill: 'a', ink: 'ink' }, { text: 'fans', size: 'big', fill: '#E4002B', ink: '#FFFFFF' }], align: 'left', blanks: ['tee'], rights: [], why: 'An ES line, ours to sell, with one pill in a custom red.' },
   ];
   // Pro adds a plan and richer layouts, two with extras (elements) beside the pills.
   const PRO_CONCEPTS = [
@@ -86,6 +87,8 @@
     [/white tee|light/i, c => [{ ...c, garment: { color: '#FFFFFF', name: 'White' } }, 'Put it on a white tee.']],
     [/swap/i, c => [{ ...c, palette: { ...c.palette, a: c.palette.b, b: c.palette.a } }, 'Swapped the two pill colours.']],
   ];
+  // Refine keeps custom (hex) rows as they are: intents copy rows ({ ...r }) and
+  // only change palette keys, alignment, size or the garment (like the server).
   function refine(body, scenario) {
     const c = body.concept;
     if (!c || !Array.isArray(c.stack)) return [400, { ok: false, error: 'Pick a design first.' }];
