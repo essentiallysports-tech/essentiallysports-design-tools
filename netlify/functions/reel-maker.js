@@ -100,12 +100,11 @@ const clean = (value, max = 400) => String(value == null ? '' : value).replace(/
 
 // ─── Trends ────────────────────────────────────────────────────────────────
 // ── Reels 2.0: lane B ── wider sports + the ES angle.
-// The 2-day board covers NFL, CFB and MLB (and whatever is in Google's
-// trending searches). Golf and tennis have their own news feeds only on the
-// 1-day board, so it is merged in (soft-fail). NBA, WNBA and NASCAR have no
-// feed of their own: the classifier files them under "others", and they are
-// picked out here by league words, so those lists are thin (general sports
-// headlines and trending searches only).
+// The 2-day board covers NFL, CFB, MLB, NBA, WNBA and NASCAR (and whatever is
+// in Google's trending searches). Golf and tennis have their own news feeds
+// only on the 1-day board, so it is merged in (soft-fail). NBA, WNBA and
+// NASCAR are first-class categories in the feed now; OTHER_LEAGUES still
+// picks them out of "others" for an older cached board.
 const TREND_SPORTS = [...REEL_SPORTS, 'tennis', 'nba', 'wnba', 'nascar'];
 const TRENDS_PER_SPORT = 12;
 const OTHER_LEAGUES = [

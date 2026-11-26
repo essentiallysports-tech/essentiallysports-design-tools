@@ -169,7 +169,7 @@ function trendResearch(trend, { now = Date.now() } = {}) {
 // The trend's league as the brief's "Sport:" line when the brief has none
 // (the page adds it from a local map that can lose old entries; the trend's
 // own category is the ground truth). 'others' adds nothing.
-const SPORT_OF = { nfl: 'NFL', cfb: 'CFB', mlb: 'MLB', golf: 'Golf', tennis: 'Tennis' };
+const SPORT_OF = { nfl: 'NFL', cfb: 'CFB', mlb: 'MLB', golf: 'Golf', tennis: 'Tennis', nba: 'NBA', wnba: 'WNBA', nascar: 'NASCAR' };
 function withTrendSport(brief, trend) {
   const sport = trend && SPORT_OF[trend.category];
   if (!sport || /^\s*sport\s*:/im.test(String(brief || ''))) return brief;

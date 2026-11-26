@@ -833,7 +833,7 @@ async function refineMode(body, track) {
 // instance); free mode, AI off, the hourly limit or an AI error use the
 // heuristic scorer. Never an error because of the AI.
 const MOMENT_KINDS = ['quote', 'nickname', 'moment', 'era', 'stat', 'rivalry'];
-const SPORT_LABEL = { nfl: 'NFL', cfb: 'College Football', mlb: 'MLB', golf: 'Golf', tennis: 'Tennis', others: 'Others' };
+const SPORT_LABEL = { nfl: 'NFL', cfb: 'College Football', mlb: 'MLB', golf: 'Golf', tennis: 'Tennis', nba: 'NBA', wnba: 'WNBA', nascar: 'NASCAR', others: 'Others' };
 const MOMENT_TTL_MS = 30 * 60 * 1000;
 const MOMENT_SCORES = new Map(); // 'v2:' + trend id -> { at, data: { kind, score, why, audience, timing, collection, lines, line, ai } }
 const MOMENT_ANGLES = ['quote', 'nickname', 'chant', 'callback', 'pun', 'stat', 'rivalry', 'era'];
@@ -1548,6 +1548,6 @@ exports._test = {
   contentOf, trendOf, sourceFor, designModeOf, shapeElements, shapeFit, codeIntent, applyIntent, heuristicMoment, lineFromHeadline, headlineLine, MOMENT_SCORES, G,
   setClientFactory(fn) { clientFactory = fn; },
   setTrendsSource(fn) { trendsSource = fn; },
-  brainstorm, partialItems, partialPlan, momentLine,
+  brainstorm, partialItems, partialPlan, momentLine, SPORT_LABEL,
   reset() { brainstorm.reset(); DAILY.day = ''; DAILY.team = 0; DAILY.people = new Map(); HISTORY.length = 0; TEMPLATES.clear(); AI_CACHE.clear(); MOMENT_SCORES.clear(); SHOP.at = 0; SHOP.data = null; COLLECTIONS_CACHE.at = 0; COLLECTIONS_CACHE.data = null; },
 };

@@ -3,6 +3,24 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-28-trends-nba-wnba-nascar",
+      "date": "2026-11-28",
+      "title": "Trends: NBA, WNBA and NASCAR get their own feeds",
+      "items": [
+        {
+          "title": "Three new sports on the board",
+          "text": "NBA, WNBA and NASCAR now have their own chips and sections on Trends, with their own news searches, team logos for NBA and WNBA stories, and a fair share of the Post now picks. They no longer sit under Others.",
+          "page": "generate.html",
+          "target": "[data-shell-id=\"trends\"]"
+        },
+        {
+          "title": "In Merch and Reels too",
+          "text": "Merch moments and the Brainstorm room label these stories NBA, WNBA or NASCAR and can filter by them. Reels Studio's trend list fills up for all three.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-28-merch-styles",
       "date": "2026-11-28",
       "title": "Merch: 20+ designs per idea, drag to place, zoom",

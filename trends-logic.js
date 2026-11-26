@@ -10,7 +10,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const SHORT = { golf: 'Golf', tennis: 'Tennis', nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', others: 'Sports' };
+  const SHORT = { golf: 'Golf', tennis: 'Tennis', nfl: 'NFL', cfb: 'College FB', mlb: 'MLB', nba: 'NBA', wnba: 'WNBA', nascar: 'NASCAR', others: 'Sports' };
   const AD_SPORTS = ['nfl', 'cfb', 'mlb']; // Video Ads makes ads for these
   const REEL_SPORTS = ['nfl', 'cfb', 'mlb', 'golf']; // Reels Studio's sport list ('' = any)
   const KEYS = {

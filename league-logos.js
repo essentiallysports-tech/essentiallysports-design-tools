@@ -31,6 +31,12 @@
     mlb: { label: 'MLB', file: 'mlb.svg', bg: WHITE, aliases: ['major league baseball', 'baseball'] },
     golf: { label: 'Golf', file: 'golf.svg', bg: WHITE, aliases: ['pga', 'pga tour', 'liv', 'liv golf', 'lpga'] },
     tennis: { label: 'Tennis', file: 'tennis.svg', bg: SUNK, aliases: ['atp', 'wta'] },
+    // NBA and WNBA reuse the logo library's vendored marks (assets/logos/leagues/,
+    // logo-library.js MARKS); NASCAR has no vendored mark yet, so it keeps the
+    // neutral trophy tile with its own label.
+    nba: { label: 'NBA', src: 'assets/logos/leagues/nba.webp', bg: WHITE, aliases: ['national basketball association'] },
+    wnba: { label: 'WNBA', src: 'assets/logos/leagues/wnba.webp', bg: WHITE, aliases: ["women's national basketball association"] },
+    nascar: { label: 'NASCAR', file: 'sports.svg', bg: SUNK, aliases: ['cup series', 'nascar cup series', 'stock car racing'] },
     sports: { label: 'Sports', file: 'sports.svg', bg: SUNK, aliases: ['others', 'other', 'all'] },
   };
 
@@ -43,7 +49,7 @@
 
   const make = (id, label) => {
     const entry = LOGOS[id];
-    return { id, label: label || entry.label, src: DIR + entry.file, bg: entry.bg };
+    return { id, label: label || entry.label, src: entry.src || DIR + entry.file, bg: entry.bg };
   };
 
   function idFor(value) {

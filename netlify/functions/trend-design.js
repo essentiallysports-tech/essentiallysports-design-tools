@@ -7,8 +7,8 @@
 //   2. Google News "Sports" top stories for the US.
 //   3. A focused Google News search per category (last 24 hours, US edition).
 //
-// Every item is sorted into Golf, Tennis, NFL, College Football, MLB or Others
-// with league, team and player names.
+// Every item is sorted into Golf, Tennis, NFL, College Football, MLB, NBA,
+// WNBA, NASCAR or Others with league, team and player names.
 //
 // Freshness rules (the page says "Updated X min ago" from updatedAt):
 //   - Real publish times only: an item with no date, or a date more than 15
@@ -39,7 +39,7 @@ const FORCE_MIN_MS = 2 * 60 * 1000; // "Refresh" rebuilds only data older than t
 const MAX_AGE_H = { '1d': { news: 48, search: 24 }, '2d': { news: 48, search: 48 } };
 const FUTURE_SKEW_MS = 15 * 60 * 1000;
 const HALF_LIFE_H = { news: 8, search: 12 };
-const CORE_SPORTS = new Set(['nfl', 'cfb', 'mlb', 'golf', 'tennis']);
+const CORE_SPORTS = new Set(['nfl', 'cfb', 'mlb', 'golf', 'tennis', 'nba', 'wnba', 'nascar']);
 // A trend id is a hash of the story's words, so its angles stay right as long
 // as the story is on the board (48 h at most): keep them for 6 h per instance.
 const ENRICH_TTL_MS = 6 * 60 * 60 * 1000;
@@ -54,11 +54,22 @@ const CATEGORIES = [
   { id: 'nfl', label: 'NFL' },
   { id: 'cfb', label: 'College Football' },
   { id: 'mlb', label: 'MLB' },
+  { id: 'nba', label: 'NBA' },
+  { id: 'wnba', label: 'WNBA' },
+  { id: 'nascar', label: 'NASCAR' },
   { id: 'others', label: 'Others' },
 ];
 
 const NEWS = 'https://news.google.com/rss';
 const US = 'hl=en-US&gl=US&ceid=US:en';
+// Focused Google News searches for the newer sports; newsSearch() adds the
+// window (when:1d for Trends, when:2d for Video Ads / Reels).
+const Q = {
+  nba: 'NBA OR "NBA Cup" OR Lakers OR Celtics OR Knicks OR Warriors OR Thunder',
+  wnba: 'WNBA OR "Caitlin Clark" OR "A\'ja Wilson" OR Unrivaled',
+  nascar: 'NASCAR OR "Cup Series" OR "Xfinity Series" OR "O\'Reilly Auto Parts Series" OR "Truck Series" OR "Daytona 500"',
+};
+const newsSearch = (id, window) => ({ id, kind: 'news', category: id, url: `${NEWS}/search?q=${encodeURIComponent(`${Q[id]} when:${window}`)}&${US}` });
 const SOURCES = [
   { id: 'trends', kind: 'search', url: 'https://trends.google.com/trending/rss?geo=US' },
   { id: 'sports', kind: 'news', url: `${NEWS}/headlines/section/topic/SPORTS?${US}` },
@@ -67,12 +78,20 @@ const SOURCES = [
   { id: 'mlb', kind: 'news', category: 'mlb', url: `${NEWS}/search?q=${encodeURIComponent('MLB when:1d')}&${US}` },
   { id: 'golf', kind: 'news', category: 'golf', url: `${NEWS}/search?q=${encodeURIComponent('"PGA Tour" OR "LIV Golf" OR LPGA OR "DP World Tour" when:1d')}&${US}` },
   { id: 'tennis', kind: 'news', category: 'tennis', url: `${NEWS}/search?q=${encodeURIComponent('ATP OR WTA tennis when:1d')}&${US}` },
+  newsSearch('nba', '1d'),
+  newsSearch('wnba', '1d'),
+  newsSearch('nascar', '1d'),
 ];
-// Video Ads looks back two days, and only at the sports it makes ads for.
+// Video Ads looks back two days, and only at the sports it makes ads for
+// (it filters to NFL, CFB and MLB). Reels Studio reads the same window, so
+// NBA, WNBA and NASCAR have their 2-day searches here too.
 const SOURCES_2D = [
   { id: 'nfl', kind: 'news', category: 'nfl', url: `${NEWS}/search?q=${encodeURIComponent('NFL when:2d')}&${US}` },
   { id: 'cfb', kind: 'news', category: 'cfb', url: `${NEWS}/search?q=${encodeURIComponent('"college football" OR CFP OR Heisman when:2d')}&${US}` },
   { id: 'mlb', kind: 'news', category: 'mlb', url: `${NEWS}/search?q=${encodeURIComponent('MLB when:2d')}&${US}` },
+  newsSearch('nba', '2d'),
+  newsSearch('wnba', '2d'),
+  newsSearch('nascar', '2d'),
   { id: 'trends', kind: 'search', url: 'https://trends.google.com/trending/rss?geo=US' },
 ];
 
@@ -110,9 +129,37 @@ const RULES = {
     ...w(['tennis', 'atp', 'wta', 'wimbledon', 'roland garros', 'french open', 'australian open', 'davis cup', 'billie jean king cup', 'atp finals', 'wta finals', 'grand slam'], 6),
     ...w(['jannik sinner', 'sinner', 'carlos alcaraz', 'alcaraz', 'novak djokovic', 'djokovic', 'aryna sabalenka', 'sabalenka', 'coco gauff', 'gauff', 'iga swiatek', 'swiatek', 'taylor fritz', 'ben shelton', 'jessica pegula', 'daniil medvedev', 'alexander zverev', 'elena rybakina', 'naomi osaka', 'frances tiafoe', 'madison keys', 'emma navarro'], 5),
   ],
+  // NBA, WNBA and NASCAR are their own sports now (not Others). Team names
+  // are the 30 NBA and 14 WNBA teams in logo-library-data.js; nicknames that
+  // are everyday words (Heat, Magic, Jazz, Kings, Sky, Storm, Fire ...) weigh
+  // little and need a league or player name next to them.
+  nba: [
+    ...w(['nba', 'nba cup', 'emirates nba cup', 'nba finals', 'nba draft', 'nba all-star', 'in-season tournament'], 6),
+    ...w(['western conference', 'eastern conference'], 2), // MLS and the NHL use them too
+    ...w(['triple-double', 'double-double', 'point guard', 'three-pointer', '3-pointer', 'rebounds', 'assists', 'dunk', 'buzzer-beater'], 2),
+    ...w(['lakers', 'celtics', 'knicks', 'bucks', 'nuggets', 'mavericks', 'mavs', 'cavaliers', 'cavs', 'timberwolves', '76ers', 'sixers', 'pistons', 'pacers', 'hornets', 'grizzlies', 'pelicans', 'raptors', 'clippers', 'trail blazers', 'blazers', 'golden state', 'warriors', 'thunder'], 4),
+    ...w(['houston rockets', 'san antonio spurs', 'miami heat', 'orlando magic', 'utah jazz', 'sacramento kings', 'phoenix suns', 'brooklyn nets', 'chicago bulls', 'atlanta hawks', 'washington wizards', 'oklahoma city thunder', 'golden state warriors'], 5),
+    ...w(['heat', 'magic', 'jazz', 'kings', 'suns', 'nets', 'bulls', 'hawks', 'wizards', 'rockets', 'spurs'], 2),
+    ...w(['lebron james', 'lebron', 'stephen curry', 'steph curry', 'giannis antetokounmpo', 'giannis', 'luka doncic', 'luka dončić', 'victor wembanyama', 'wembanyama', 'shai gilgeous-alexander', 'nikola jokic', 'jokic', 'jayson tatum', 'kevin durant', 'anthony edwards', 'ja morant', 'jalen brunson', 'joel embiid', 'cooper flagg', 'anthony davis', 'devin booker', 'donovan mitchell', 'tyrese haliburton', 'kawhi leonard', 'james harden', 'damian lillard', 'zion williamson', 'trae young', 'paolo banchero', 'jimmy butler', 'kyrie irving', 'tyrese maxey', 'karl-anthony towns', 'jaylen brown', 'chet holmgren', 'jalen williams', 'cade cunningham', 'evan mobley', 'adam silver', 'steve kerr', 'jj redick'], 5),
+  ],
+  wnba: [
+    ...w(['wnba', 'wnba draft', 'wnba finals', 'commissioner\'s cup'], 6),
+    ...w(['unrivaled'], 4),
+    ...w(['indiana fever', 'las vegas aces', 'new york liberty', 'minnesota lynx', 'phoenix mercury', 'seattle storm', 'chicago sky', 'atlanta dream', 'dallas wings', 'los angeles sparks', 'washington mystics', 'connecticut sun', 'golden state valkyries', 'portland fire', 'toronto tempo'], 5),
+    ...w(['valkyries', 'mystics'], 3),
+    ...w(['fever', 'aces', 'liberty', 'lynx', 'mercury', 'sparks'], 1),
+    ...w(['caitlin clark', 'a\'ja wilson', 'angel reese', 'paige bueckers', 'breanna stewart', 'sabrina ionescu', 'napheesa collier', 'aliyah boston', 'kelsey plum', 'brittney griner', 'diana taurasi', 'cameron brink', 'kahleah copper', 'jackie young', 'chelsea gray', 'alyssa thomas', 'satou sabally', 'sophie cunningham', 'jewell loyd', 'nneka ogwumike', 'arike ogunbowale', 'rickea jackson', 'kate martin', 'cathy engelbert'], 5),
+  ],
+  nascar: [
+    ...w(['nascar', 'cup series', 'xfinity series', 'o\'reilly auto parts series', 'truck series', 'craftsman truck series', 'daytona 500', 'coca-cola 600', 'southern 500', 'brickyard 400', 'championship 4', 'nascar playoffs', 'nascar chase', 'clash at the coliseum', 'nascar hall of fame'], 6),
+    ...w(['daytona', 'talladega', 'martinsville', 'bristol motor speedway', 'phoenix raceway', 'charlotte motor speedway', 'homestead-miami', 'stock car', 'pit road', 'green flag', 'checkered flag'], 3),
+    ...w(['hendrick motorsports', 'joe gibbs racing', '23xi racing', 'trackhouse racing', 'spire motorsports', 'rfk racing', 'richard childress racing', 'legacy motor club', 'front row motorsports', 'kaulig racing', 'jr motorsports', 'wood brothers'], 5),
+    ...w(['team penske'], 3),
+    ...w(['kyle larson', 'denny hamlin', 'william byron', 'chase elliott', 'joey logano', 'ryan blaney', 'christopher bell', 'tyler reddick', 'kyle busch', 'ross chastain', 'bubba wallace', 'chase briscoe', 'austin cindric', 'alex bowman', 'brad keselowski', 'chris buescher', 'ty gibbs', 'shane van gisbergen', 'carson hocevar', 'jimmie johnson', 'dale earnhardt jr', 'kevin harvick', 'connor zilisch', 'josh berry', 'michael mcdowell', 'dale jarrett', 'jeff gordon', 'kyle petty', 'richard petty'], 5),
+  ],
   others: [
-    ...w(['nba', 'wnba', 'nhl', 'mls', 'soccer', 'premier league', 'champions league', 'world cup', 'ufc', 'mma', 'boxing', 'formula 1', 'f1', 'nascar', 'indycar', 'olympics', 'olympic', 'march madness', 'college basketball', 'ncaab', 'stanley cup', 'nba finals', 'fifa', 'uswnt', 'usmnt', 'wrestlemania', 'wwe'], 6),
-    ...w(['lakers', 'celtics', 'warriors', 'knicks', 'bucks', 'nuggets', 'heat', 'mavericks', 'thunder', 'cavaliers', 'timberwolves', 'lebron', 'steph curry', 'stephen curry', 'giannis', 'luka doncic', 'wembanyama', 'caitlin clark', 'a\'ja wilson', 'angel reese', 'messi', 'ronaldo', 'pochettino', 'oilers', 'maple leafs', 'bruins', 'rangers', 'panthers', 'jets', 'verstappen', 'lewis hamilton'], 3),
+    ...w(['nhl', 'mls', 'soccer', 'premier league', 'champions league', 'world cup', 'ufc', 'mma', 'boxing', 'formula 1', 'f1', 'indycar', 'olympics', 'olympic', 'march madness', 'college basketball', 'ncaab', 'stanley cup', 'fifa', 'uswnt', 'usmnt', 'wrestlemania', 'wwe'], 6),
+    ...w(['messi', 'ronaldo', 'pochettino', 'tottenham', 'oilers', 'maple leafs', 'bruins', 'rangers', 'panthers', 'jets', 'verstappen', 'lewis hamilton'], 3),
   ],
 };
 // Context words that settle shared nicknames.
@@ -120,6 +167,9 @@ const CONTEXT = {
   nfl: ['quarterback', 'touchdown', 'qb', 'week ', 'snap', 'yards', 'sack', 'nfl'],
   mlb: ['pitcher', 'inning', 'home run', 'mlb', 'baseball', 'bullpen', 'roster spot', 'free agent'],
   cfb: ['college', 'ncaa', 'freshman', 'recruit', 'commit', 'bowl'],
+  nba: ['points', 'rebounds', 'assists', 'triple-double', 'basketball'],
+  wnba: ['women\'s basketball'],
+  nascar: ['laps', 'pole position', 'motorsports', 'racing'],
 };
 
 // Generic sports words only add to a score that already has a real sports signal.
@@ -538,7 +588,7 @@ function imageCandidates(item) {
   // try the first two and three words of each run ("Joe Mixon").
   const runs = names(plain).filter(n => words(n).length >= 2);
   const found = runs.flatMap(n => { const w = words(n); return w.length <= 2 ? [n] : [w.slice(0, 2).join(' '), w.slice(-2).join(' '), w.slice(0, 3).join(' '), w.length <= 4 ? n : null]; })
-    .filter(n => n && !/^(NFL|MLB|NBA|WTA|ATP|PGA|LPGA|CFP|DP World|World Tour|College Football|Playoff|Free Agents?|Executive|Awards?|Top \d+)\b/i.test(n));
+    .filter(n => n && !/^(NFL|MLB|NBA|WNBA|NASCAR|Cup Series|NBA Cup|WTA|ATP|PGA|LPGA|CFP|DP World|World Tour|College Football|Playoff|Free Agents?|Executive|Awards?|Top \d+)\b/i.test(n));
   // Single well-known surnames (e.g. "Andreeva", "McIlroy") are tried after full names.
   const singles = names(plain).filter(n => words(n).length === 1 && n.length > 4 && !/^[A-Z]{2,}$/.test(n));
   const teams = TEAM_HINT.test(item.title) ? [item.title.match(new RegExp(`[A-Z][a-z]+(?:\\s[A-Z][a-z]+)?\\s${TEAM_HINT.source.slice(3, -3)}`))?.[0]].filter(Boolean) : [];
@@ -633,20 +683,55 @@ function rankScore(item, now = Date.now()) {
   return recency * momentum * relevance;
 }
 
-// ── Team logos (NFL, CFB, MLB) from video-ads-teams.js ─────────────────────
+// ── Team logos ──────────────────────────────────────────────────────────────
+// NFL, CFB and MLB from video-ads-teams.js (ESPN logo URLs); NBA and WNBA
+// from the logo library's team rows (logo-library-data.js: the same files the
+// editor's logo picker uses, under assets/logos/). NASCAR has no team list:
+// its stories are found by keywords only.
+let LOGO_ROWS = null;
+try { LOGO_ROWS = require('../../logo-library-data.js'); } catch (error) { /* team logos are optional */ }
+// Nicknames that are everyday words or another name ("Magic Johnson", "by
+// storm", "Sky Sports", "a dream season"): only the full name finds these
+// teams. In a story already filed under NBA, "Heat" or "Kings" is the team.
+const FULL_NAME_ONLY = {
+  nba: new Set(['Magic']),
+  wnba: new Set(['Sky', 'Storm', 'Dream', 'Fire', 'Fever', 'Liberty', 'Wings', 'Mercury', 'Aces', 'Sparks', 'Sun', 'Tempo']),
+};
+const LOGO_SPORTS = ['nba', 'wnba'];
+function teamPool(category) {
+  if (['nfl', 'cfb', 'mlb'].includes(category)) {
+    if (!TEAMS) return [];
+    return TEAMS.TEAMS.filter(team => team.sport === category).map(team => ({ name: team.name, short: team.short, logo: TEAMS.logoFor(team) || '' }));
+  }
+  if (LOGO_SPORTS.includes(category) && Array.isArray(LOGO_ROWS)) {
+    return LOGO_ROWS.filter(row => row.l === category).map(row => ({
+      name: row.n, short: FULL_NAME_ONLY[category].has(row.s) ? '' : row.s,
+      label: row.s, logo: row.f ? `assets/logos/${row.f}` : (row.u || ''),
+    }));
+  }
+  return [];
+}
 const TEAM_RES = {};
 function teamFor(item) {
-  if (!TEAMS || !['nfl', 'cfb', 'mlb'].includes(item.category)) return null;
   if (!TEAM_RES[item.category]) {
-    const pool = TEAMS.TEAMS.filter(team => team.sport === item.category);
-    const names = [...pool.map(team => [team.name, team]), ...pool.map(team => [team.short, team])].sort((a, b) => b[0].length - a[0].length);
+    const pool = teamPool(item.category);
+    const names = [...pool.map(team => [team.name, team]), ...pool.filter(team => team.short).map(team => [team.short, team])].sort((a, b) => b[0].length - a[0].length);
     TEAM_RES[item.category] = names.map(([name, team]) => [new RegExp(`(^|[^A-Za-z])${escapeRe(name)}(?![A-Za-z])`), team]);
   }
+  if (!TEAM_RES[item.category].length) return null;
   const text = item.type === 'search' ? `${item.title} · ${(item.related || []).map(r => r.title).join(' · ')}` : item.title;
-  const found = TEAM_RES[item.category].find(([re]) => re.test(text));
+  // The team named first is the story's team ("Lakers rally past Celtics");
+  // at the same spot the longer name wins ("Golden State Warriors").
+  let found = null;
+  for (const [re, team] of TEAM_RES[item.category]) {
+    const m = re.exec(text);
+    if (!m) continue;
+    const at = m.index + m[1].length;
+    if (!found || at < found.at) found = { at, team };
+  }
   if (!found) return null;
-  const team = found[1];
-  return { name: team.name, short: team.short, logo: TEAMS.logoFor(team) || '' };
+  const team = found.team;
+  return { name: team.name, short: team.short || team.label || '', logo: team.logo || '' };
 }
 
 // ── Storylines: the same story told by several outlets ────────────────────
@@ -664,7 +749,7 @@ const STORY_PHRASES = [
   [/\bwaiver wire\b|\bfantasy football\b/i, 'Fantasy'],
   [/\bcoaching (?:search|carousel|hot seat)\b|\bfired\b|\bfires\b/i, 'Coaching moves'],
 ];
-const NOT_STORY = new Set('nfl mlb nba nhl wnba pga lpga atp wta liv tour world golf tennis college football baseball basketball playoff playoffs week season draft rankings ranking power finals final championship open cup game games team teams news update updates report reports rumors rumor free agency agent agents top best first last year years day days fantasy odds picks title titles win wins loss losses coach coaches players player star stars league sports sport cfp heisman ncaa ncaaf espn athletic dp ryder mvp series american national state university city united north south east west new york los angeles san bay sunday monday tuesday wednesday thursday friday saturday january february march april may june july august september october november december'.split(' '));
+const NOT_STORY = new Set('nfl mlb nba nhl wnba nascar pga lpga atp wta liv tour world golf tennis college football baseball basketball playoff playoffs week season draft rankings ranking power finals final championship open cup game games team teams news update updates report reports rumors rumor free agency agent agents top best first last year years day days fantasy odds picks title titles win wins loss losses coach coaches players player star stars league sports sport cfp heisman ncaa ncaaf espn athletic dp ryder mvp series american national state university city united north south east west new york los angeles san bay sunday monday tuesday wednesday thursday friday saturday january february march april may june july august september october november december'.split(' '));
 function storyKeys(item) {
   const text = item.type === 'search' ? `${item.query || item.title} · ${item.title}` : item.title;
   const keys = new Map(); // key -> label hint
@@ -777,7 +862,7 @@ function suggestTemplate(item) {
 // What to search for in the photo library: the main person, else the team,
 // else the storyline, else the league.
 const TITLE_WORDS = new Set('Announces Announced Interest Could Would Should Take Takes Top Questions Players Entering Lose Loses Latest Free Updated Early Fresh Five Three Four Ten Sell Buy Total Did Does Week Joins Signs Says Set Gets Makes Wins Beats Leads Rises Drops Names Hires Fires Reveals Confirms Reacts Return Returns Comeback News Report Rumors Odds Picks Predictions Projection Prediction Rankings Ranking Power Playoff Draft Mock Observations Simulator Takeaways Grades Live Watch Today Tonight Game Games Season Team Teams Star Stars Coach Hype Alarm Reveal Reveals Get Say Comes Metrics Interest Outlines Says'.split(' '));
-const NOT_PEOPLE = /^(?:NFL|MLB|NBA|NHL|WTA|ATP|PGA|LPGA|LIV|CFP|DP|College|Playoff|Power|Free|World|Tour|Week|Draft|Super|Pro|Ryder|Grand|Heisman|Hall|Tennis|Golf|Finals?|Open|Masters|Championship)\b/;
+const NOT_PEOPLE = /^(?:NFL|MLB|NBA|WNBA|NASCAR|NHL|WTA|ATP|PGA|LPGA|LIV|CFP|DP|College|Playoff|Power|Free|World|Tour|Week|Draft|Super|Pro|Ryder|Grand|Heisman|Hall|Tennis|Golf|Finals?|Open|Masters|Championship)\b/;
 function photoQuery(item) {
   const wiki = String(item.imageSubject || '').replace(/\s*\([^)]*\)$/, '');
   const text = item.type === 'search' ? `${item.query || item.title} · ${(item.related || []).map(r => r.title).join(' · ')}` : item.title;
@@ -1079,5 +1164,5 @@ exports._test = {
   storyKeys, buildStorylines, signalFor, esFit, suggestTemplate, photoQuery, grounded, ENRICH_SYSTEM, parseAngle, ANGLE_LENSES,
   reset() { Object.keys(previousBuild).forEach(k => delete previousBuild[k]); Object.keys(caches).forEach(k => delete caches[k]); Object.keys(inflights).forEach(k => delete inflights[k]); enrichCache.clear(); titleCache.clear(); imageCache.clear(); },
   setCacheAge(window, ms) { if (caches[window]) caches[window].at = Date.now() - ms; },
-  FRESH_MS, STALE_MAX_MS, ENRICH_TTL_MS, ENRICH_BATCH, MAX_AGE_H,
+  FRESH_MS, STALE_MAX_MS, ENRICH_TTL_MS, ENRICH_BATCH, MAX_AGE_H, CATEGORIES, CORE_SPORTS, SOURCES, SOURCES_2D, RULES,
 };
