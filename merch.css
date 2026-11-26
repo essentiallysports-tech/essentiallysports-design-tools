@@ -1172,3 +1172,194 @@ html[data-theme="dark"] .mx-ad .mx-input { background: #1F2126; color: #FFFFFF; 
   .mx-ad__canvas { width: min(400px, 100%); }
   .mx-ad__side { overflow: visible; }
 }
+
+/* ── Rail polish (2026-11-27) ──────────────────────────────────────────
+   One finish for the Design rail (and the same parts in Publish):
+   8px grid (cards 16 / 20, gaps 12 / 16), labels 13/600, meta 13 ink-3,
+   body 14-15, controls 36px, one swatch language, icon buttons that only
+   show hover / focus-visible, a filled primary. */
+
+/* The one primary on this page reads as filled brand (the shared button
+   system keeps the rim, shape, motion and disabled look). */
+.mx-page {
+  --es-btn-primary-bg: var(--es-brand-fill, #0A6FDE);
+  --es-btn-primary-bg-hover: color-mix(in srgb, var(--es-brand-fill, #0A6FDE) 88%, #000);
+  --es-btn-primary-ink: #FFFFFF;
+  --mx-ctl-h: 36px;
+}
+
+/* Action card: primary, Quick publish, then the quiet meta line. */
+.mx-actions--rail { top: -4px; gap: var(--es-space-2, 8px); padding: var(--es-space-4, 16px); }
+.mx-actions--rail .es-btn--primary { order: -2; }
+.mx-actions--rail .mx-quickbtn { order: -1; }
+.mx-actions--rail > .mx-meta { order: 1; padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+.mx-actions--rail .mx-blocker { order: 0; justify-content: center; padding: 0 2px; }
+.mx-quickbtn { font-weight: 600; }
+
+/* Rail cards share padding and summary height. */
+.mx-ask { padding: var(--es-space-4, 16px); }
+.mx-fold > summary { min-height: 48px; }
+.mx-fold__body { gap: var(--es-space-4, 16px); padding: var(--es-space-1, 4px) var(--es-space-4, 16px) var(--es-space-4, 16px); }
+.mx-fold > summary .mx-pro { flex: none; }
+.mx-pal__key { color: var(--mx-ink-2); font-size: 13px; font-weight: 600; line-height: 20px; }
+.mx-sublabel { line-height: 20px; }
+.mx-hint { margin: 0; color: var(--mx-ink-3); font-size: 12px; line-height: 1.4; }
+.mx-hint:empty { display: none; }
+.mx-rail .es-select--sm, .mx-rail .mx-input--sm { min-height: var(--mx-ctl-h); height: var(--mx-ctl-h); }
+.mx-rail .mx-pill .mx-input--sm { min-height: 32px; height: 32px; }
+
+/* Focus rings on every rail control. */
+.mx-rail :is(button, select, input, summary, [tabindex]):focus-visible { outline: 2px solid var(--es-focus-color, #0A6FDE); outline-offset: 2px; }
+.mx-rail :is(.mx-input, .es-select):focus-visible { outline: none; }
+.mx-fold > summary:focus-visible { outline-offset: -2px; }
+
+/* Icon buttons (pill ↑ ↓ ×, extra ×): 28px, quiet; hover / focus-visible only. */
+.mx-rail .mx-icon { width: 28px; height: 28px; border-radius: 8px; background: transparent !important; box-shadow: none !important; color: var(--mx-ink-3); }
+.mx-rail .mx-icon .mx-i { width: 16px; height: 16px; }
+@media (hover: hover) { .mx-rail .mx-icon:not(:disabled):hover { background: color-mix(in srgb, var(--mx-ink) 8%, transparent) !important; color: var(--mx-ink); } }
+.mx-rail .mx-icon:focus:not(:focus-visible) { background: transparent !important; }
+.mx-rail .mx-icon:disabled { opacity: .35; background: transparent !important; color: var(--mx-ink-3); cursor: default; }
+
+/* Pills: round colour swatch, the size control lines up with the input. */
+.mx-pill { gap: var(--es-space-2, 8px); padding: var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-3, 12px); }
+.mx-pill__top { gap: var(--es-space-2, 8px); }
+.mx-pill__acts { display: flex; gap: 0; flex: none; }
+.mx-pill .mx-pill__dot { width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--mx-ring-strong), 0 0 0 2px var(--mx-surface); }
+.mx-pill .mx-pill__dot[aria-expanded="true"] { box-shadow: inset 0 0 0 1px var(--mx-ring-strong), 0 0 0 2px var(--mx-surface), 0 0 0 4px var(--mx-brand); }
+.mx-pill .mx-pill__dot.is-custom::after { top: -2px; right: -2px; }
+.mx-pill > .mx-pill__sizes { margin-left: 32px; }
+
+/* One swatch language: 32px circles, a hairline ring that keeps white and
+   black visible, a 2px gap + 2px brand ring when picked. Pill colours keep
+   their "Aa" so you see the ink on the fill. */
+.mx-swatches, .mx-palset { gap: 10px; }
+.mx-swatch, .mx-palset .mx-swatch, .mx-swatch--aa { box-sizing: border-box; width: 32px; min-width: 32px; height: 32px; padding: 0; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--mx-ring-strong); font-size: 12px; }
+.mx-palset--sm .mx-swatch, .mx-pop .mx-swatch--aa, .mx-pop .mx-swatch { width: 28px; min-width: 28px; height: 28px; font-size: 11px; }
+.mx-swatch:is([aria-pressed="true"], [aria-checked="true"]), .mx-palset .mx-swatch:is([aria-pressed="true"], [aria-checked="true"]), .mx-swatch--aa:is([aria-pressed="true"], [aria-checked="true"]) { box-shadow: inset 0 0 0 1px var(--mx-ring-strong), 0 0 0 2px var(--mx-surface), 0 0 0 4px var(--mx-brand); }
+.mx-swatch:focus-visible { outline: 2px solid var(--es-focus-color, #0A6FDE); outline-offset: 4px; }
+html[data-theme="dark"] .mx-page { --mx-ring-strong: rgb(255 255 255 / .28); }
+
+/* Colours fold: label + chosen name on one row, the source as a hint. */
+.mx-sec__head { align-items: baseline; }
+.mx-sec__head .mx-meta { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mx-pal { gap: var(--es-space-3, 12px); }
+.mx-pal__selects { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-3, 12px); }
+.mx-pal__line { grid-template-columns: 64px minmax(0, 1fr); gap: var(--es-space-3, 12px); min-height: var(--mx-ctl-h); }
+.mx-pal__line:has(> .mx-palset:empty) { display: none; }
+.mx-pal__line > .mx-palset { padding: 4px 0; }
+.mx-custom { gap: var(--es-space-2, 8px); }
+.mx-custom__color { width: var(--mx-ctl-h); height: var(--mx-ctl-h); border-radius: 10px; }
+.mx-custom__hex { width: 120px; height: var(--mx-ctl-h); min-height: var(--mx-ctl-h); }
+
+/* Layout & size: a 2-column grid, labels on one line, equal control heights. */
+.mx-fit__opts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: var(--es-space-3, 12px); }
+.mx-fit__opts > .mx-pal__field { grid-template-rows: 20px var(--mx-ctl-h); gap: 6px; }
+.mx-fit__opts .es-segmented { display: flex; box-sizing: border-box; width: 100%; height: var(--mx-ctl-h); padding: 2px; }
+.mx-fit__opts .es-segmented__item { min-height: 0; height: 100%; }
+.mx-fit__row { grid-template-columns: 104px minmax(0, 1fr) 56px; gap: var(--es-space-3, 12px); min-height: 32px; font-size: 14px; }
+.mx-fit__actions { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
+.mx-fit__actions .es-btn .mx-i { width: 16px; height: 16px; }
+#mx-fit-reset .mx-i { color: var(--mx-ink-3); }
+
+/* Extras: each extra is a small card (type + remove, then its options). */
+.mx-elements { gap: var(--es-space-2, 8px); }
+.mx-el { display: grid; grid-template-columns: none; gap: var(--es-space-2, 8px); padding: var(--es-space-2, 8px) var(--es-space-2, 8px) var(--es-space-3, 12px) var(--es-space-3, 12px); }
+.mx-el__head { display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); min-height: 28px; }
+.mx-el__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--es-space-2, 8px); padding-right: 4px; }
+.mx-el__fields > * { width: 100%; min-width: 0; }
+.mx-el__fields .es-select { background-color: var(--mx-surface); }
+.mx-el__fields .mx-el__num { text-align: center; }
+.mx-el-add { gap: var(--es-space-2, 8px); }
+.mx-el-add .es-btn .mx-i { width: 14px; height: 14px; }
+@layer es-buttons {
+  html body .mx-el-add .es-btn:disabled { border: 1px dashed var(--mx-line-2) !important; background: transparent !important; color: var(--mx-ink-3) !important; opacity: .8; cursor: not-allowed; }
+}
+
+/* Making: the rail waits (no stale editing), the stage hides the last
+   design's angles and caption, skeleton tiles share the row evenly. */
+.mx-rail.is-busy > :not(.mx-actions--rail):not(.mx-pop) { opacity: .45; filter: saturate(.4); pointer-events: none; user-select: none; }
+@media (prefers-reduced-motion: no-preference) { .mx-rail > :not(.mx-actions--rail) { transition: opacity 200ms var(--mx-ease), filter 200ms var(--mx-ease); } }
+.mx-stage:is([data-state="making"], [data-state="empty"]) :is(.mx-angles, .mx-stage__cap, .mx-stage__zoom) { display: none !important; }
+
+/* Publish: the same label and control language. */
+.mx-form .mx-pal__field { gap: 6px; }
+
+/* Filmstrip: one scrolling row, New set is its last tile (never on top of a
+   design); edges fade while there is more to scroll. Badges sit under the
+   art, labels take up to two lines. */
+.mx-filmrow { --fade: 40px; position: relative; gap: var(--es-space-3, 12px); margin: -4px; padding: 4px 4px 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding-inline: 4px; scrollbar-width: thin; }
+.mx-filmrow[data-fade-end="true"] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent); mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent); }
+.mx-filmrow[data-fade-start="true"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade)); mask-image: linear-gradient(to right, transparent, #000 var(--fade)); }
+.mx-filmrow[data-fade-start="true"][data-fade-end="true"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent); mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent); }
+.mx-strip { flex: none; margin: 0; padding: 0; overflow: visible; scroll-snap-type: none; }
+.mx-strip-new { flex: 0 0 112px; scroll-snap-align: end; }
+.mx-film, .mx-film__skel { flex: 0 0 112px; width: 112px; }
+.mx-film { gap: 6px; }
+.mx-film__label { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; white-space: normal; text-overflow: clip; overflow-wrap: anywhere; min-height: calc(12px * 1.3 * 2); }
+.mx-film__tags { position: static; display: flex; flex-wrap: wrap; gap: 4px; padding: 0 2px; }
+.mx-film__tag { padding: 1px 6px; border-radius: 999px; background: var(--mx-sunk); color: var(--mx-ink-2); font-size: 11px; font-weight: 600; line-height: 16px; }
+.mx-film__tag--pro { background: var(--mx-brand-soft); color: var(--mx-brand-text); }
+html[data-theme="dark"] .mx-page .mx-film__tag { background: #2A2D34; color: #BFC8D9; }
+html[data-theme="dark"] .mx-page .mx-film__tag--pro { background: rgb(84 164 251 / .16); color: #9DCBFD; }
+
+/* The idea: label, then the idea in ink (2 lines), the angle in ink-2 on
+   its own line; More opens the rest. */
+.mx-idea { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 2px var(--es-space-3, 12px); }
+.mx-idea__tag { min-height: 21px; }
+.mx-idea__body { display: grid; gap: 2px; min-width: 0; }
+.mx-idea__text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; color: var(--mx-ink); font-size: 14px; line-height: 1.5; }
+.mx-idea__angle { margin: 0; overflow: hidden; color: var(--mx-ink-2); font-size: 13px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
+.mx-idea.is-open .mx-idea__text { display: block; -webkit-line-clamp: unset; line-clamp: none; }
+.mx-idea.is-open .mx-idea__angle { white-space: normal; }
+.mx-idea__more { align-self: start; min-height: 21px; font-size: 13px; }
+html[data-theme="dark"] .mx-page .mx-idea__angle { color: var(--mx-ink-2) !important; }
+@media (max-width: 720px) { .mx-idea { grid-template-columns: minmax(0, 1fr) auto; } .mx-idea__body { grid-column: 1 / -1; grid-row: 2; } }
+
+/* Zoom viewer */
+.mx-stage__canvas { cursor: zoom-in; }
+.mx-zoom { display: none; width: min(1120px, calc(100vw - 32px)); max-width: none; height: min(920px, calc(100dvh - 32px)); max-height: none; padding: var(--es-space-4, 16px) var(--es-space-5, 20px); }
+.mx-zoom[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: var(--es-space-3, 12px); }
+.mx-zoom__head { display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-3, 12px); min-width: 0; }
+.mx-zoom__titles { display: grid; gap: 2px; min-width: 0; }
+.mx-zoom__titles .mx-dialog__title { margin: 0; }
+.mx-zoom__titles .mx-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mx-zoom__ctrls { display: flex; align-items: center; gap: var(--es-space-2, 8px); flex: none; }
+.mx-zoom__level { min-width: 72px; font-variant-numeric: tabular-nums; }
+.mx-zoom__view { position: relative; display: grid; place-items: center; min-height: 0; overflow: hidden; border-radius: 14px; background: var(--mx-stage, #EEF0F3); cursor: zoom-in; touch-action: none; }
+.mx-zoom__view[data-zoomed="true"] { cursor: grab; }
+.mx-zoom__view.is-dragging { cursor: grabbing; }
+.mx-zoom__view:focus-visible { outline: 2px solid var(--es-focus-color, #0A6FDE); outline-offset: -2px; }
+.mx-zoom__canvas { display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; transform-origin: center; will-change: transform; user-select: none; -webkit-user-drag: none; }
+@media (prefers-reduced-motion: no-preference) { .mx-zoom__view:not(.is-dragging) .mx-zoom__canvas { transition: transform 160ms var(--mx-ease); } }
+.mx-zoom__busy { position: absolute; top: var(--es-space-3, 12px); right: var(--es-space-3, 12px); display: inline-flex; align-items: center; gap: var(--es-space-2, 8px); margin: 0; padding: 6px 12px; border-radius: 999px; background: color-mix(in srgb, var(--mx-surface, #fff) 90%, transparent); box-shadow: var(--mx-shadow); color: var(--mx-ink-2); font-size: 13px; font-weight: 500; }
+.mx-zoom__busy[hidden] { display: none; }
+.mx-zoom__angles { justify-content: center; }
+.mx-zoom__angles .mx-angle__dot { box-shadow: 0 0 0 2px var(--es-surface, #FFFFFF); }
+.mx-zoom__angles .mx-angle[aria-checked="true"] img { box-shadow: 0 0 0 2px var(--es-surface, #FFFFFF), 0 0 0 4px var(--mx-brand); }
+.mx-zoom__help { text-align: center; }
+html[data-theme="dark"] .mx-zoom__view { background: #15171B; }
+html[data-theme="dark"] .mx-zoom__angles .mx-angle__dot { box-shadow: 0 0 0 2px #1F2126; }
+html[data-theme="dark"] .mx-zoom__angles .mx-angle[aria-checked="true"] img { box-shadow: 0 0 0 2px #1F2126, 0 0 0 4px var(--mx-brand); }
+html[data-theme="dark"] .mx-zoom__busy { background: rgb(31 33 38 / .92); color: #BFC8D9; }
+@media (max-width: 720px) { .mx-zoom { padding: var(--es-space-3, 12px); } .mx-zoom__help { display: none; } }
+
+/* Model / angle strip: equal tiles, an inset ring when picked (no size
+   change), centred under the photo; calibrated tiles show the design. */
+.mx-angles { justify-content: safe center; gap: var(--es-space-3, 12px); align-self: center; max-width: 100%; padding: 4px; }
+.mx-angle { box-sizing: border-box; width: 64px; gap: 4px; border-radius: 12px; }
+.mx-angle__pic { display: block; box-sizing: border-box; width: 56px; height: 56px; border-radius: 10px; overflow: hidden; background: var(--mx-surface); box-shadow: inset 0 0 0 1px var(--mx-line); }
+.mx-angle img, .mx-angle[aria-checked="true"] img, .mx-angle:focus-visible img { display: block; width: 100%; height: 100%; border-radius: 0; box-shadow: none; object-fit: cover; object-position: 50% 30%; transform: none; }
+.mx-angle__pic { position: relative; }
+.mx-angle__pic::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--mx-line); pointer-events: none; }
+.mx-angle[aria-checked="true"] .mx-angle__pic::after { box-shadow: inset 0 0 0 2px var(--mx-brand); }
+.mx-angle:focus-visible { outline: none; }
+.mx-angle:focus-visible .mx-angle__pic::after { box-shadow: inset 0 0 0 2px var(--es-focus-color, #0A6FDE), inset 0 0 0 4px var(--mx-surface); }
+.mx-angle__label { font-size: 12px; line-height: 16px; }
+.mx-angle[aria-checked="true"] .mx-angle__label { font-weight: 600; }
+.mx-angle.is-plain img { filter: saturate(.7) brightness(1.02); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) { .mx-angle:not([aria-checked="true"]):hover .mx-angle__pic { transform: translateY(-2px); } .mx-angle__pic { transition: transform 160ms var(--mx-ease); } }
+.mx-angle__dot { display: none; }
+.mx-stage__cap { color: var(--mx-ink-3); font-size: 13px; }
+.mx-angle:hover img { transform: none !important; }
+/* Publish form: section labels in the same 14/600 ink as the studio's labels (no shouty caps). */
+#mx-view-publish .mx-eyebrow { color: var(--mx-ink); font: 600 14px/20px var(--es-font-ui); letter-spacing: 0; text-transform: none; }

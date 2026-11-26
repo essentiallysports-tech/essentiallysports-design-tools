@@ -545,6 +545,16 @@
       if (wrap && wrap !== box && /making/.test(wrap.className || '')) wrap.hidden = !m;
       show('mx-empty-stage', empty);
       show('mx-stage-canvas', !m && !empty);
+      if (typeof syncZoomBtn === 'function') syncZoomBtn();
+      if (m && typeof closeZoom === 'function') closeZoom();
+      // While the AI works the rail waits: no editing the last design.
+      const rail = $('mx-rail');
+      if (rail) {
+        rail.setAttribute('aria-busy', String(Boolean(m)));
+        rail.classList.toggle('is-busy', Boolean(m));
+        [...rail.children].forEach(el => { if (!el.classList.contains('mx-actions--rail') && !el.classList.contains('mx-pop')) el.inert = Boolean(m); });
+      }
+      if (m) { const ang = $('mx-angles'); if (ang) { ang.hidden = true; ang.innerHTML = ''; ang.dataset.key = ''; } }
       if (!m) return;
       const steps = makingSteps(m);
       const n = AI_MODES[m.mode].count;
@@ -745,8 +755,33 @@
       if ($('mx-idea-text')) {
         setText('mx-idea-text', p?.idea || '');
         setText('mx-idea-angle', p?.angle ? `Angle: ${p.angle}` : '');
+        syncIdeaMore();
       } else setText('mx-idea', p ? [p.idea ? `The idea: ${p.idea}` : '', p.angle ? `Angle: ${p.angle}` : ''].filter(Boolean).join(' · ') : '');
     }
+
+    // The idea box: two lines, "More" when it runs longer.
+    function syncIdeaMore() {
+      const box = $('mx-idea');
+      const more = $('mx-idea-more');
+      if (!box || !more) return;
+      box.classList.remove('is-open');
+      more.setAttribute('aria-expanded', 'false');
+      more.textContent = 'More';
+      requestAnimationFrame(() => {
+        const t = box.querySelector('.mx-idea__text');
+        const a = $('mx-idea-angle');
+        more.hidden = box.hidden || !((t && t.scrollHeight > t.clientHeight + 1) || (a && a.scrollWidth > a.clientWidth + 1));
+      });
+    }
+    on('mx-idea-more', 'click', () => {
+      const box = $('mx-idea');
+      const open = !box.classList.contains('is-open');
+      box.classList.toggle('is-open', open);
+      const more = $('mx-idea-more');
+      more.setAttribute('aria-expanded', String(open));
+      more.textContent = open ? 'Less' : 'More';
+    });
+    window.addEventListener('resize', () => { if (!$('mx-idea')?.hidden && !$('mx-idea')?.classList.contains('is-open')) syncIdeaMore(); });
 
     // Filmstrip: every design as a small close-up; skeleton tiles while making.
     const thumbSpec = () => { const s = printSpec(); return { pixelsWidth: s.pixelsWidth, pixelsHeight: s.pixelsHeight, dpi: s.dpi }; };
@@ -756,7 +791,7 @@
       const cv = filmBtn(c.id)?.querySelector('canvas');
       if (!cv) return;
       try {
-        if (MP().closeup) await MP().closeup(c, c.garment?.color, cv, { kind: kind(), spec: thumbSpec(), pad: 0.12 });
+        if (MP().closeup) await MP().closeup(c, c.garment?.color, cv, { kind: kind(), spec: thumbSpec(), pad: 0.1 });
         else await P('preview')(c, c.garment?.color, cv, { size: 224, kind: kind() });
       } catch (error) { console.warn('merch thumb', error); }
     }
@@ -777,16 +812,17 @@
         box.innerHTML = state.concepts.map(c => {
           const sel = c.id === state.selected;
           const pro = (MP().elementsOf ? MP().elementsOf(c) : (c.elements || [])).length > 0;
-          return `<button class="mx-film${sel ? ' is-on' : ''}" type="button" role="radio" aria-checked="${sel}" tabindex="${sel ? 0 : -1}" data-pick="${esc(c.id)}" data-id="${esc(c.id)}" title="${esc(c.title)}" aria-label="${esc(conceptLabel(c))}: ${esc(c.title)}${c.variantOf ? ', variation' : ''}">
+          return `<button class="mx-film${sel ? ' is-on' : ''}" type="button" role="radio" aria-checked="${sel}" tabindex="${sel ? 0 : -1}" data-pick="${esc(c.id)}" data-id="${esc(c.id)}" title="${esc(conceptLabel(c))}: ${esc(c.title)}" aria-label="${esc(conceptLabel(c))}: ${esc(c.title)}${c.variantOf ? ', variation' : ''}${pro ? ', with extras' : ''}">
             <canvas class="mx-film__img" width="192" height="224" aria-hidden="true"></canvas>
             <span class="mx-film__label">${esc(conceptLabel(c))}</span>
-            ${c.variantOf || pro ? `<span class="mx-film__tags">${c.variantOf ? '<span class="mx-film__tag">Variation</span>' : ''}${pro ? '<span class="mx-film__tag mx-film__tag--pro">Extras</span>' : ''}</span>` : ''}
+            ${c.variantOf || pro ? `<span class="mx-film__tags" aria-hidden="true">${c.variantOf ? '<span class="mx-film__tag">Variation</span>' : ''}${pro ? '<span class="mx-film__tag mx-film__tag--pro">Extras</span>' : ''}</span>` : ''}
           </button>`;
         }).join('');
       }
       if (keepNew) box.append(keepNew);
       setText('mx-strip-count', state.making ? '' : plural(state.concepts.length, 'design'));
       syncContent();
+      requestAnimationFrame(() => { filmIntoView(); syncFilmFade(); });
       if (!state.making) state.concepts.forEach(drawThumb);
     }
     function selectDesign(id, focus = false) {
@@ -797,7 +833,8 @@
       closePop(false);
       if (template()) pickColorFor(selectedConcept());
       $('mx-strip')?.querySelectorAll('[data-pick]').forEach(b => { const sel = b.dataset.pick === id; b.classList.toggle('is-on', sel); b.setAttribute('aria-checked', String(sel)); b.tabIndex = sel ? 0 : -1; });
-      if (focus) filmBtn(id)?.focus();
+      if (focus) filmBtn(id)?.focus({ preventScroll: true });
+      filmIntoView();
       renderEditor();
       renderStudioChecks();
       drawStage();
@@ -809,6 +846,25 @@
       const i = state.concepts.findIndex(c => c.id === state.selected);
       selectDesign(state.concepts[(i + d + n) % n].id, focus);
     }
+    // The row scrolls (New set is its last tile); edges fade while there is more.
+    function filmIntoView() {
+      const row = $('mx-strip')?.closest('.mx-filmrow');
+      const b = state.selected && filmBtn(state.selected);
+      if (!row || !b) return;
+      const r = row.getBoundingClientRect();
+      const t = b.getBoundingClientRect();
+      const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (t.left < r.left + 8) row.scrollBy({ left: t.left - r.left - 8, behavior: reduce ? 'auto' : 'smooth' });
+      else if (t.right > r.right - 8) row.scrollBy({ left: t.right - r.right + 8, behavior: reduce ? 'auto' : 'smooth' });
+    }
+    function syncFilmFade() {
+      const row = $('mx-strip')?.closest('.mx-filmrow');
+      if (!row) return;
+      row.dataset.fadeStart = String(row.scrollLeft > 2);
+      row.dataset.fadeEnd = String(row.scrollLeft + row.clientWidth < row.scrollWidth - 2);
+    }
+    document.querySelector('.mx-filmrow')?.addEventListener('scroll', syncFilmFade, { passive: true });
+    window.addEventListener('resize', syncFilmFade);
     on('mx-strip', 'click', e => { const b = e.target.closest('[data-pick]'); if (b) selectDesign(b.dataset.pick); });
     on('mx-strip', 'keydown', e => {
       if (!e.target.closest('[data-pick]')) return;
@@ -848,7 +904,7 @@
         try {
           // Photos with Fourthwall's own sample print are never offered (they'd show someone else's art).
           const list = MP().photosFor(t.colors || [], col.hex, t.templateId, { region: state.side || 'front' });
-          if (Array.isArray(list)) return list.filter(p => p && p.url && !p.sampleArt).map((p, i) => ({ url: p.url, angle: p.angle || 'unknown', index: Number.isInteger(p.index) ? p.index : i, calibrated: Boolean(p.calibrated), primary: Boolean(p.primary), ...meta }));
+          if (Array.isArray(list)) return list.filter(p => p && p.url && !p.sampleArt).map((p, i) => ({ url: p.url, angle: p.angle || 'unknown', index: Number.isInteger(p.index) ? p.index : i, view: p.view || p.side || '', calibrated: Boolean(p.calibrated), primary: Boolean(p.primary), ...meta }));
         } catch (error) { console.warn('merch photosFor', error); }
       }
       // Older engine: PHOTO_AREAS by template id then photo index, or the merch6
@@ -857,7 +913,7 @@
       const old = MP().PHOTO_AREAS?.[kindOf(t)];
       const oldOk = Boolean(old && Array.isArray(old.templates) && old.templates.includes(t.templateId));
       const calAt = i => Boolean(byId ? byId[i] && (!byId[i].side || byId[i].side === (/back/i.test(state.side || '') ? 'back' : 'front')) : oldOk && i === 0);
-      return col.photos.filter(p => !(typeof p === 'object' && p?.sampleArt)).map((p, i) => ({ url: photoUrl(p), angle: (typeof p === 'object' && p?.angle) || (i === 0 ? 'front' : 'unknown'), index: typeof p === 'object' && Number.isInteger(p?.index) ? p.index : i })).filter(p => p.url).map(p => ({ ...p, calibrated: calAt(p.index), ...meta }));
+      return col.photos.filter(p => !(typeof p === 'object' && p?.sampleArt)).map((p, i) => ({ url: photoUrl(p), angle: (typeof p === 'object' && p?.angle) || (i === 0 ? 'front' : 'unknown'), index: typeof p === 'object' && Number.isInteger(p?.index) ? p.index : i, view: (typeof p === 'object' && p?.view) || '' })).filter(p => p.url).map(p => ({ ...p, calibrated: calAt(p.index), ...meta }));
     }
     // The photo the stage shows: the one picked in the switcher (same angle
     // in the new colour), else the first calibrated one, else the first.
@@ -868,14 +924,21 @@
       const same = pick && (list.find(p => p.index === pick.index && p.angle === pick.angle) || list.find(p => p.angle !== 'unknown' && p.angle === pick.angle) || list.find(p => p.index === pick.index));
       return same || list.find(p => p.primary) || list.find(p => p.calibrated) || list[0];
     }
-    const angleName = p => ANGLE_LABEL_PHOTO[p.angle] || `Photo ${p.index + 1}`;
+    // A side photo says which way it faces (3/4 front, 3/4 back).
+    const angleName = p => (p.angle === 'side' && /^(front|back)$/.test(p.view || '') ? `3/4 ${p.view}` : ANGLE_LABEL_PHOTO[p.angle] || `Photo ${p.index + 1}`);
+    // Strip labels: never two the same (a second "Side" becomes "Side 2").
+    function angleLabels(list) {
+      const seen = {};
+      const names = list.map(angleName);
+      return names.map(n => { const total = names.filter(x => x === n).length; seen[n] = (seen[n] || 0) + 1; return total > 1 ? `${n} ${seen[n]}` : n; });
+    }
     // Draws the design on a fresh canvas, then copies it to the visible one (no half-drawn frames).
     const plainPhotos = new Map();
     function loadPhotoImg(src) {
       if (!plainPhotos.has(src)) plainPhotos.set(src, new Promise(resolve => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => resolve(img); img.onerror = () => { const plain = new Image(); plain.onload = () => resolve(plain); plain.onerror = () => resolve(null); plain.src = src; }; img.src = src; }));
       return plainPhotos.get(src);
     }
-    async function paint(c, view, { garment, photoPick = state.photoAt } = {}) {
+    async function paint(c, view, { garment, photoPick = state.photoAt, width = 720 } = {}) {
       const off = document.createElement('canvas');
       const spec = thumbSpec();
       const k = kind();
@@ -883,7 +946,7 @@
       let caption = '';
       try {
         if (view === 'closeup' && MP().closeup) {
-          off.width = 720; off.height = 840;
+          off.width = width; off.height = Math.round(width * 840 / 720);
           await MP().closeup(c, g, off, { kind: k, spec, pad: 0.14 });
           caption = 'Close-up of the print on the shirt colour.';
         } else {
@@ -894,19 +957,20 @@
             // photo as it is and say where the design is shown.
             const img = await loadPhotoImg(ph.url);
             if (img) {
-              off.width = 720;
-              off.height = Math.round(720 * (img.naturalHeight || 960) / (img.naturalWidth || 720));
+              off.width = width;
+              off.height = Math.round(width * (img.naturalHeight || 960) / (img.naturalWidth || 720));
               off.getContext('2d').drawImage(img, 0, 0, off.width, off.height);
               return { off, caption: `${angleName(ph)}${ph.name ? ` · ${ph.name}` : ''}: Fourthwall’s blank photo. The design is shown in Fourthwall’s mockups.`, photo: ph, pic: 'plain' };
             }
           }
           if (ph && ph.calibrated && MP().photoMock) {
-            off.width = 720;
-            done = await MP().photoMock(c, off, { photo: ph.url, kind: k, garmentColor: ph.hex, spec, logoSpot: logoSpotFor(), templateId: state.templateId || '', angle: ph.angle, photoIndex: ph.index, realism: true });
+            off.width = width;
+            // width: engines that know it fetch a larger photo; older ones draw at the canvas size.
+            done = await MP().photoMock(c, off, { photo: ph.url, kind: k, garmentColor: ph.hex, spec, logoSpot: logoSpotFor(), templateId: state.templateId || '', angle: ph.angle, photoIndex: ph.index, realism: true, ...(width !== 720 ? { width } : {}) });
           }
           if (done) caption = `FrameUp preview on Fourthwall’s blank photo${ph.angle !== 'unknown' && ph.angle !== 'front' ? ` · ${angleName(ph)}` : ''}${ph.name ? ` · ${ph.name}` : ''}${done.logoNote ? ` · ES logo on the ${({ 'back-neck': 'back neck', label: 'inside label', neck: 'neck' })[done.logoNote] || done.logoNote}, shown in Fourthwall’s mockups` : ''}`;
           else {
-            await P('preview')(c, g, off, { logoSpot: logoSpotFor(), size: 720, kind: k, spec });
+            await P('preview')(c, g, off, { logoSpot: logoSpotFor(), size: width, kind: k, spec });
             caption = BLANK_INFO[k].apparel ? 'FrameUp drawn preview (Fourthwall’s blank photo isn’t available).' : `FrameUp drawn preview of the ${BLANK_INFO[k].label.toLowerCase()}.`;
           }
         }
@@ -927,7 +991,8 @@
       cv.getContext('2d').drawImage(off, 0, 0);
       cv.setAttribute('role', 'img');
       cv.setAttribute('aria-label', `${conceptLabel(c)} design, ${state.view === 'closeup' ? 'close-up' : `on a ${nounLower()}`}: ${(c.stack || []).map(r => r.text).join(' / ')}`);
-      cv.title = caption;
+      cv.title = caption ? `${caption} Click to zoom.` : 'Click to zoom.';
+      syncZoomBtn();
       // The caption is the one rights display in Design.
       const cap = $('mx-stage-cap');
       if (cap) cap.innerHTML = `<span class="mx-stage__title">${esc(c.title || 'Untitled design')}</span> · <span class="mx-stage__rights">Rights: ${esc(rightsText(c))}</span>${state.view === 'tee' && caption && /Fourthwall’s mockups\.$/.test(caption) ? `<span class="mx-stage__photo-note">${esc(caption)}</span>` : ''}`;
@@ -935,37 +1000,221 @@
     }
     // Model / angle switcher: every Fourthwall photo of the blank in this colour.
     function renderAngles() {
-      const box = $('mx-angles');
-      if (!box) return;
       const c = selectedConcept();
       const list = c && state.view === 'tee' && !state.making && apparel() ? photosOf(c.garment?.color) : [];
-      box.hidden = list.length < 2;
-      if (list.length < 2) { box.innerHTML = ''; return; }
-      const cur = photoChoice(c.garment?.color);
+      const cur = list.length ? photoChoice(c.garment?.color) : null;
       const key = list.map(p => `${p.url}|${p.calibrated}`).join(',') + `|${cur?.url}`;
-      if (box.dataset.key === key) return;
-      box.dataset.key = key;
-      box.innerHTML = list.map(p => {
+      ['mx-angles', 'mx-zoom-angles'].forEach(id => {
+        const box = $(id);
+        if (!box) return;
+        box.hidden = list.length < 2;
+        if (list.length < 2) { box.innerHTML = ''; box.dataset.key = ''; return; }
+        if (box.dataset.key === key) return;
+        box.dataset.key = key;
+        box.innerHTML = angleButtons(list, cur);
+      });
+      if (list.length >= 2) queueAngleThumbs();
+    }
+    function angleButtons(list, cur) {
+      const labels = angleLabels(list);
+      return list.map((p, i) => {
         const on_ = p === cur || (cur && p.url === cur.url);
-        return `<button class="mx-angle${p.calibrated ? '' : ' is-plain'}" type="button" role="radio" aria-checked="${on_}" tabindex="${on_ ? 0 : -1}" data-angle-i="${p.index}" data-angle="${esc(p.angle)}" aria-label="${esc(angleName(p))}${p.calibrated ? ', with your design' : ', Fourthwall photo only'}" title="${esc(p.calibrated ? `${angleName(p)}: your design drawn on it` : `${angleName(p)}: Fourthwall’s photo; the design shows in Fourthwall’s mockups`)}"><img src="${esc(imgUrl(p.url))}" alt="" loading="lazy"><span class="mx-angle__label">${esc(angleName(p))}</span>${p.calibrated ? '<span class="mx-angle__dot" aria-hidden="true"></span>' : ''}</button>`;
+        const name = labels[i];
+        return `<button class="mx-angle${p.calibrated ? ' is-drawn' : ' is-plain'}" type="button" role="radio" aria-checked="${on_}" tabindex="${on_ ? 0 : -1}" data-angle-i="${p.index}" data-angle="${esc(p.angle)}" data-url="${esc(p.url)}" aria-label="${esc(name)}${p.calibrated ? ', design shown on this photo' : ', photo only'}" title="${esc(p.calibrated ? `${name}: design shown on this photo` : `${name}: photo only (the design shows in Fourthwall’s mockups)`)}"><span class="mx-angle__pic"><img src="${esc(imgUrl(p.url))}" alt="" loading="lazy"></span><span class="mx-angle__label">${esc(name)}</span></button>`;
       }).join('');
+    }
+    // Calibrated thumbnails show a small version of the design (cached).
+    const angleThumbs = new Map();
+    let angleThumbTimer = 0;
+    function designKey(c) { return JSON.stringify([c.id, c.stack, c.palette, c.elements, c.fit, c.align, c.split, c.garment, state.templateId, state.side]); }
+    function queueAngleThumbs() {
+      clearTimeout(angleThumbTimer);
+      angleThumbTimer = setTimeout(drawAngleThumbs, 250);
+    }
+    async function drawAngleThumbs() {
+      const c = selectedConcept();
+      if (!c || state.making || !MP().photoMock) return;
+      const k = kind();
+      const list = photosOf(c.garment?.color).filter(p => p.calibrated);
+      const dk = designKey(c);
+      for (const p of list) {
+        const key = `${dk}|${p.url}`;
+        let url = angleThumbs.get(key);
+        if (!url) {
+          try {
+            const off = document.createElement('canvas');
+            off.width = 144;
+            const done = await MP().photoMock(c, off, { photo: p.url, kind: k, garmentColor: p.hex, spec: thumbSpec(), logoSpot: logoSpotFor(), templateId: state.templateId || '', angle: p.angle, photoIndex: p.index, realism: true });
+            if (!done) continue;
+            url = off.toDataURL('image/jpeg', 0.85);
+          } catch { continue; }
+          if (angleThumbs.size > 48) angleThumbs.delete(angleThumbs.keys().next().value);
+          angleThumbs.set(key, url);
+        }
+        if (designKey(selectedConcept() || {}) !== dk) return;
+        document.querySelectorAll(`.mx-angles [data-url="${CSS.escape(p.url)}"] img`).forEach(img => { if (img.getAttribute('src') !== url) { img.src = url; img.closest('.mx-angle')?.classList.add('has-design'); } });
+      }
     }
     function pickAngle(btn) {
       const c = selectedConcept();
       if (!c || !btn) return;
+      const strip = btn.closest('.mx-angles')?.id || 'mx-angles';
       state.photoAt = { angle: btn.dataset.angle, index: Number(btn.dataset.angleI) || 0 };
       track('merch', { action: 'angle', angle: btn.dataset.angle });
-      drawStage().then(() => $('mx-angles')?.querySelector(`[data-angle-i="${CSS.escape(btn.dataset.angleI)}"]`)?.focus({ preventScroll: true }));
+      drawStage().then(() => {
+        if (strip === 'mx-zoom-angles') zoomRender(true);
+        $(strip)?.querySelector(`[data-angle-i="${CSS.escape(btn.dataset.angleI)}"]`)?.focus({ preventScroll: true });
+      });
     }
-    on('mx-angles', 'click', e => pickAngle(e.target.closest('[data-angle-i]')));
-    on('mx-angles', 'keydown', e => {
-      const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-      if (!d) return;
-      e.preventDefault();
-      const all = [...$('mx-angles').querySelectorAll('[data-angle-i]')];
-      const i = Math.max(0, all.findIndex(b => b.getAttribute('aria-checked') === 'true'));
-      pickAngle(all[(i + d + all.length) % all.length]);
+    ['mx-angles', 'mx-zoom-angles'].forEach(id => {
+      on(id, 'click', e => pickAngle(e.target.closest('[data-angle-i]')));
+      on(id, 'keydown', e => {
+        const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+        if (!d) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const all = [...$(id).querySelectorAll('[data-angle-i]')];
+        const i = Math.max(0, all.findIndex(b => b.getAttribute('aria-checked') === 'true'));
+        pickAngle(all[(i + d + all.length) % all.length]);
+      });
     });
+
+    // ── Zoom viewer: the stage photo / close-up at 1x-4x, drawn larger ──
+    // Opens from the zoom button or a click on the stage. +/- / wheel / pinch
+    // (ctrl+wheel) zoom, drag or arrows pan, 0 resets, Esc closes. The modal
+    // dialog keeps focus inside and focus goes back to where it came from.
+    const ZOOM_W = 1600;
+    const zoom = { s: 1, x: 0, y: 0, token: 0, from: null, drag: null };
+    const zoomDlg = () => $('mx-zoom');
+    const zoomOpen = () => Boolean(zoomDlg()?.open);
+    function zoomCanOpen() { return Boolean(selectedConcept()) && !state.making && !$('mx-stage-canvas')?.hidden; }
+    function syncZoomBtn() { const b = $('mx-zoom-open'); if (b) b.disabled = !zoomCanOpen(); }
+    function zoomBounds() {
+      const view = $('mx-zoom-view');
+      const cv = $('mx-zoom-canvas');
+      if (!view || !cv) return { mx: 0, my: 0 };
+      const w = cv.offsetWidth * zoom.s;
+      const h = cv.offsetHeight * zoom.s;
+      return { mx: Math.max(0, (w - view.clientWidth) / 2), my: Math.max(0, (h - view.clientHeight) / 2) };
+    }
+    function zoomApply() {
+      const { mx, my } = zoomBounds();
+      zoom.x = Math.min(mx, Math.max(-mx, zoom.x));
+      zoom.y = Math.min(my, Math.max(-my, zoom.y));
+      const cv = $('mx-zoom-canvas');
+      if (cv) cv.style.transform = `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.s})`;
+      setText('mx-zoom-level', `${Math.round(zoom.s * 100)}%`);
+      const out = $('mx-zoom-out'); if (out) out.disabled = zoom.s <= 1;
+      const inn = $('mx-zoom-in'); if (inn) inn.disabled = zoom.s >= 4;
+      const view = $('mx-zoom-view');
+      if (view) { view.dataset.zoomed = String(zoom.s > 1); view.setAttribute('aria-label', `Zoomed preview at ${Math.round(zoom.s * 100)}%`); }
+    }
+    // Zoom to s around a point (px from the view's centre; default the centre).
+    function zoomTo(s, px = 0, py = 0) {
+      const next = Math.min(4, Math.max(1, Math.round(s * 100) / 100));
+      const k = next / zoom.s;
+      zoom.x = px - (px - zoom.x) * k;
+      zoom.y = py - (py - zoom.y) * k;
+      zoom.s = next;
+      if (next === 1) { zoom.x = 0; zoom.y = 0; }
+      zoomApply();
+    }
+    const zoomStep = dir => zoomTo(dir > 0 ? zoom.s * 1.5 : zoom.s / 1.5);
+    function zoomCaption() {
+      const c = selectedConcept();
+      if (!c) return '';
+      const ph = state.view === 'tee' && apparel() ? photoChoice(c.garment?.color) : null;
+      return [c.title || conceptLabel(c), state.view === 'closeup' ? 'Close-up' : ph ? angleName(ph) : `On a ${nounLower()}`, ph?.name || c.garment?.name || ''].filter(Boolean).join(' · ');
+    }
+    // Copy the stage at once, then draw the larger render behind a spinner.
+    async function zoomRender(keep = false) {
+      const c = selectedConcept();
+      const cv = $('mx-zoom-canvas');
+      if (!c || !cv || !zoomOpen()) return;
+      const t = ++zoom.token;
+      const stage = $('mx-stage-canvas');
+      if (stage && stage.width) { cv.width = stage.width; cv.height = stage.height; cv.getContext('2d').drawImage(stage, 0, 0); }
+      setText('mx-zoom-cap', zoomCaption());
+      if (!keep) { zoom.s = 1; zoom.x = 0; zoom.y = 0; }
+      zoomApply();
+      show('mx-zoom-busy', true);
+      $('mx-zoom-view')?.setAttribute('aria-busy', 'true');
+      const { off } = await paint(c, state.view, { width: ZOOM_W });
+      if (t !== zoom.token || !zoomOpen()) return;
+      if (off.width && off.height) { cv.width = off.width; cv.height = off.height; cv.getContext('2d').drawImage(off, 0, 0); cv.dataset.hires = String(off.width); }
+      show('mx-zoom-busy', false);
+      $('mx-zoom-view')?.setAttribute('aria-busy', 'false');
+      zoomApply();
+    }
+    function openZoom(from) {
+      const dlg = zoomDlg();
+      if (!dlg || !zoomCanOpen() || dlg.open) return;
+      zoom.from = from || document.activeElement;
+      ['mx-zoom-angles'].forEach(id => { const b = $(id); if (b) b.dataset.key = ''; });
+      dlg.showModal();
+      renderAngles();
+      zoomRender();
+      $('mx-zoom-view')?.focus({ preventScroll: true });
+      track('merch', { action: 'zoom', view: state.view });
+    }
+    function closeZoom() { const dlg = zoomDlg(); if (dlg?.open) dlg.close(); }
+    on('mx-zoom', 'close', () => {
+      zoom.token += 1;
+      zoom.drag = null;
+      const back = zoom.from && zoom.from.isConnected && !zoom.from.disabled ? zoom.from : $('mx-zoom-open');
+      zoom.from = null;
+      // After the browser's own focus restore, so ours wins.
+      back?.focus?.({ preventScroll: true });
+      setTimeout(() => back?.focus?.({ preventScroll: true }), 0);
+    });
+    on('mx-zoom-open', 'click', e => openZoom(e.currentTarget));
+    on('mx-stage-canvas', 'click', () => openZoom($('mx-zoom-open')));
+    on('mx-zoom-close', 'click', closeZoom);
+    on('mx-zoom-in', 'click', () => zoomStep(1));
+    on('mx-zoom-out', 'click', () => zoomStep(-1));
+    on('mx-zoom-reset', 'click', () => zoomTo(1));
+    // A click on the backdrop closes it.
+    on('mx-zoom', 'click', e => { if (e.target === zoomDlg()) closeZoom(); });
+    on('mx-zoom', 'keydown', e => {
+      if (e.metaKey || e.altKey) return;
+      if (e.target.closest?.('.mx-angles')) return;
+      const k = e.key;
+      if (k === '+' || k === '=') { e.preventDefault(); zoomStep(1); }
+      else if (k === '-' || k === '_') { e.preventDefault(); zoomStep(-1); }
+      else if (k === '0') { e.preventDefault(); zoomTo(1); }
+      else if (/^Arrow/.test(k) && !e.target.closest?.('button')) {
+        e.preventDefault();
+        const step = e.shiftKey ? 160 : 48;
+        zoom.x += k === 'ArrowLeft' ? step : k === 'ArrowRight' ? -step : 0;
+        zoom.y += k === 'ArrowUp' ? step : k === 'ArrowDown' ? -step : 0;
+        zoomApply();
+      }
+    });
+    const viewPoint = (e) => { const r = $('mx-zoom-view').getBoundingClientRect(); return [e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2]; };
+    on('mx-zoom-view', 'wheel', e => {
+      e.preventDefault();
+      // Pinch arrives as ctrl+wheel with small deltas; a mouse wheel as larger steps.
+      const f = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0025));
+      zoomTo(zoom.s * f, ...viewPoint(e));
+    }, { passive: false });
+    on('mx-zoom-view', 'dblclick', e => { if (zoom.s > 1) zoomTo(1); else zoomTo(2, ...viewPoint(e)); });
+    on('mx-zoom-view', 'pointerdown', e => {
+      if (zoom.s <= 1 || e.button !== 0) return;
+      zoom.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, ox: zoom.x, oy: zoom.y };
+      try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* synthetic or ended pointer */ }
+      e.currentTarget.classList.add('is-dragging');
+    });
+    on('mx-zoom-view', 'pointermove', e => {
+      const d = zoom.drag;
+      if (!d || d.id !== e.pointerId) return;
+      zoom.x = d.ox + (e.clientX - d.x);
+      zoom.y = d.oy + (e.clientY - d.y);
+      zoomApply();
+    });
+    const endDrag = e => { if (zoom.drag && zoom.drag.id === e.pointerId) { zoom.drag = null; e.currentTarget.classList.remove('is-dragging'); } };
+    on('mx-zoom-view', 'pointerup', endDrag);
+    on('mx-zoom-view', 'pointercancel', endDrag);
+    window.addEventListener('resize', () => { if (zoomOpen()) zoomApply(); });
     const nounLower = () => BLANK_INFO[kind()].noun.toLowerCase();
     function renderViewToggle() {
       document.querySelectorAll('#mx-view-toggle [data-view], [data-stage]').forEach(b => {
@@ -1163,9 +1412,11 @@
           <div class="mx-pill__top">
             <button class="mx-pill__dot" type="button" data-pill-color="${i}" aria-haspopup="dialog" aria-expanded="false" aria-controls="mx-pill-pop" style="--sw:${esc(bg)};--sw-ink:${esc(ink)}" aria-label="Pill ${n} colour: ${esc(fillWord(c, r))}. Change" title="Pill colour"></button>
             <input class="mx-input mx-input--sm" type="text" value="${esc(r.text)}" maxlength="60" aria-label="Pill ${n} text" data-pill-text="${i}">
-            <button class="mx-icon es-icon-btn" type="button" data-pill-act="up" data-i="${i}" aria-label="Move pill ${n} up"${i === 0 ? ' disabled' : ''}>↑</button>
-            <button class="mx-icon es-icon-btn" type="button" data-pill-act="down" data-i="${i}" aria-label="Move pill ${n} down"${i === stack.length - 1 ? ' disabled' : ''}>↓</button>
-            <button class="mx-icon es-icon-btn" type="button" data-pill-act="drop" data-i="${i}" aria-label="Remove pill ${n}"${stack.length < 2 ? ' disabled' : ''}>×</button>
+            <span class="mx-pill__acts">
+              <button class="mx-icon es-icon-btn" type="button" data-pill-act="up" data-i="${i}" aria-label="Move pill ${n} up" title="Move up"${i === 0 ? ' disabled' : ''}><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-up"/></svg></button>
+              <button class="mx-icon es-icon-btn" type="button" data-pill-act="down" data-i="${i}" aria-label="Move pill ${n} down" title="Move down"${i === stack.length - 1 ? ' disabled' : ''}><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-down"/></svg></button>
+              <button class="mx-icon es-icon-btn" type="button" data-pill-act="drop" data-i="${i}" aria-label="Remove pill ${n}" title="Remove"${stack.length < 2 ? ' disabled' : ''}><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-close"/></svg></button>
+            </span>
           </div>
           <div class="es-segmented es-segmented--sm mx-pill__sizes" role="group" aria-label="Pill ${n} size">${SIZES.map(([k, l]) => `<button class="es-segmented__item" type="button" data-pill-size="${k}" data-i="${i}" aria-pressed="${(r.size || 'big') === k}">${l}</button>`).join('')}</div>
         </div>`;
@@ -1485,14 +1736,15 @@
       const t = template();
       const hard = t && !apparel();
       box.hidden = hard;
-      if (hard) { setText('mx-tee-colors-note', `A ${BLANK_INFO[kind()].label.toLowerCase()} prints on white. Change the product in Publish.`); return; }
+      if (hard) { setText('mx-tee-colors-note', 'White'); setText('mx-tee-colors-hint', `A ${BLANK_INFO[kind()].label.toLowerCase()} prints on white. Change the product in Publish.`); return; }
       const { real, list } = teeColorChoices(c);
       const cur = currentTee(c, list);
       box.setAttribute('role', 'radiogroup');
       if (!box.getAttribute('aria-label')) box.setAttribute('aria-label', `${BLANK_INFO[kind()].noun} colour`);
       setText('mx-tee-colors-label', `${BLANK_INFO[kind()].noun} colour`);
       box.innerHTML = list.map(g => { const sel = g === cur; return `<button class="mx-swatch${PAL()?.isLight(g.color) ? ' is-light' : ''}" type="button" role="radio" aria-checked="${sel}" tabindex="${sel || (!cur && g === list[0]) ? 0 : -1}" style="--sw:${esc(g.color)}" aria-label="${esc(g.name)}" title="${esc(g.name)}" data-hex="${esc(g.color)}" data-name="${esc(g.name)}"></button>`; }).join('');
-      setText('mx-tee-colors-note', `${cur ? cur.name : c.garment?.name || ''}${real ? ' · Fourthwall’s colours for this blank' : state.templatesError ? ' · the shop’s colours didn’t load' : ' · loading the shop’s colours…'}`);
+      setText('mx-tee-colors-note', cur ? cur.name : c.garment?.name || '');
+      setText('mx-tee-colors-hint', real ? 'Fourthwall’s colours for this blank.' : state.templatesError ? 'The shop’s colours didn’t load; showing ES defaults.' : 'Loading the shop’s colours…');
     }
     function pickTee(btn) {
       const c = selectedConcept();
@@ -1530,7 +1782,7 @@
       show('mx-el-add', pro);
       const types = MP().ELEMENT_TYPES || { number: ['behind', 'above'], rule: ['above', 'below', 'between'], block: ['behind'], icon: ['above', 'below', 'left'] };
       const icons = MP().ICONS || ['star'];
-      const sel = (field, i, opts, value, label) => `<select class="mx-input mx-input--sm" data-el-field="${field}" data-i="${i}" aria-label="${esc(label)}">${opts.map(([v, l]) => `<option value="${esc(v)}"${String(value) === String(v) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+      const sel = (field, i, opts, value, label) => `<select class="es-select es-select--sm" data-el-field="${field}" data-i="${i}" aria-label="${esc(label)}">${opts.map(([v, l]) => `<option value="${esc(v)}"${String(value) === String(v) ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
       const note = pro && state.proNote ? '<p class="mx-meta mx-extras__note">Pro is on. It applies to your next Create or AI change. You can add extras here now.</p>' : '';
       setHtml('mx-elements', note + (list.length ? list.map((e, i) => {
         const n = `Extra ${i + 1} (${(EL_LABEL[e.type] || e.type).toLowerCase()})`;
@@ -1541,14 +1793,18 @@
         const pos = types[e.type] || ['above'];
         if (pos.length > 1) bits.push(sel('position', i, pos.map(p => [p, POS_LABEL[p] || p]), e.position || pos[0], `${n} position`));
         bits.push(sel('color', i, EL_COLORS, e.color || 'a', `${n} colour`));
-        return `<div class="mx-el" data-el="${i}"><span class="mx-el__type">${esc(EL_LABEL[e.type] || e.type)}</span><div class="mx-el__fields">${bits.join('')}</div><button class="mx-icon es-icon-btn" type="button" data-el-drop="${i}" aria-label="Remove ${esc(n)}">×</button></div>`;
+        return `<div class="mx-el" data-el="${i}"><div class="mx-el__head"><span class="mx-el__type">${esc(EL_LABEL[e.type] || e.type)}</span><button class="mx-icon es-icon-btn" type="button" data-el-drop="${i}" aria-label="Remove ${esc(n)}" title="Remove"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-close"/></svg></button></div><div class="mx-el__fields">${bits.join('')}</div></div>`;
       }).join('') : '<p class="mx-meta">No extras yet. Pills alone are the classic ES look.</p>'));
-      setText('mx-elements-count', `${list.length} of 3`);
       const num = sourceNumber();
       $('mx-el-add')?.querySelectorAll('[data-el-add]').forEach(b => {
         const noNum = b.dataset.elAdd === 'number' && !num;
         b.disabled = !pro || list.length >= 3 || noNum;
-        b.title = !pro ? 'Switch to Pro to add extras.' : list.length >= 3 ? 'Up to 3 extras.' : noNum ? 'Numbers come from your story: add one to your words first.' : '';
+        b.title = !pro ? 'Switch to Pro to add extras.' : list.length >= 3 ? 'Up to 3 extras.' : noNum ? 'Needs a number in your story: add one to your words first.' : '';
+        // The reason, for screen readers too (the label stays the chip's word).
+        let why = b.querySelector('.es-sr-only');
+        const reason = b.disabled ? (!pro ? 'needs Pro' : list.length >= 3 ? 'up to 3 extras' : 'needs a number in your story') : '';
+        if (reason && !why) { why = document.createElement('span'); why.className = 'es-sr-only'; b.append(why); }
+        if (why) why.textContent = reason ? ` (${reason})` : '';
       });
     }
     on('mx-go-pro', 'click', () => {

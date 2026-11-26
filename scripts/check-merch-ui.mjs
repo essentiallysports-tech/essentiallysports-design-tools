@@ -154,6 +154,36 @@ async function audit(tag) {
 // The tee colour picker lives only in Design.
 const TEE_ONLY_IN_DESIGN = "(() => { const t = document.getElementById('mx-tee-colors'); return Boolean(t && t.closest('#mx-view-designs')) && !document.querySelector('#mx-view-publish #mx-tee-colors, #mx-view-publish [data-hex]'); })()";
 
+// ─── Rail polish: primary, swatches, layout grid, extras, no overflow ─────
+async function railChecks(tag, pro) {
+  ok(await ev("(() => { const b = document.getElementById('mx-to-setup'); return b.classList.contains('es-btn--primary') && !b.disabled && getComputedStyle(b).color === 'rgb(255, 255, 255)'; })()"), `${tag}: Continue to Publish is the filled primary`);
+  ok(await ev("(() => { const d = [...document.querySelectorAll('#mx-pills [data-pill-color]')]; return d.length > 0 && d.every(x => { const r = x.getBoundingClientRect(); const cs = getComputedStyle(x); return r.width <= 28 && r.height <= 28 && Math.abs(r.width - r.height) < 0.5 && (cs.borderRadius === '50%' || parseFloat(cs.borderRadius) >= r.width / 2); }); })()"), `${tag}: pill colour dots are small round swatches`);
+  ok(await ev("(() => { const d = [...document.querySelectorAll('#mx-pills .mx-icon')].map(b => b.getBoundingClientRect()); return d.length > 0 && d.every(r => Math.abs(r.width - d[0].width) < 0.5 && Math.abs(r.height - d[0].height) < 0.5); })()"), `${tag}: pill icon buttons share one size`);
+  ok(await ev("(() => { const p = document.querySelector('#mx-pills .mx-pill'); if (!p) return false; const i = p.querySelector('[data-pill-text]').getBoundingClientRect(); const s = p.querySelector('.mx-pill__sizes').getBoundingClientRect(); return Math.abs(i.left - s.left) <= 1; })()"), `${tag}: the size control lines up with the pill input`);
+  await ev("['layout','extras','colors','text'].forEach(f => document.getElementById('mx-fold-' + f).open = true); true");
+  await sleep(150);
+  ok(await ev("(() => { const ks = [...document.querySelectorAll('#mx-fold-layout .mx-fit__opts .mx-pal__key')].map(k => k.getBoundingClientRect().top); const cs = [document.getElementById('mx-fit-split'), document.querySelector('#mx-fold-layout .mx-fit__opts .es-segmented')].map(e => e.getBoundingClientRect()); return ks.length === 2 && Math.abs(ks[0] - ks[1]) <= 2 && Math.abs(cs[0].height - cs[1].height) <= 1 && Math.abs(cs[0].top - cs[1].top) <= 1; })()"), `${tag}: Layout labels share a baseline, controls one height`);
+  ok(await ev("(() => { const a = document.getElementById('mx-vary').getBoundingClientRect(); const b = document.getElementById('mx-fit-reset'); const r = b.getBoundingClientRect(); return Math.abs(a.top - r.top) <= 1 && Math.abs(a.height - r.height) <= 1 && !b.classList.contains('es-btn--ghost'); })()"), `${tag}: Try other layouts and Reset layout match, one row`);
+  ok(await ev("(() => { const f = document.getElementById('mx-fold-extras'); const n = (f.textContent.match(/\\d of 3/g) || []).length; return n === (MerchUI.state.aiMode === 'pro' ? 1 : 0); })()"), `${tag}: Extras count shows once (summary only)`);
+  ok(await ev("(() => { const a = document.getElementById('mx-tee-colors-note').textContent.trim(); const h = document.getElementById('mx-tee-colors-hint'); return a.length > 0 && !/Fourthwall/.test(a) && (!h || /colours/.test(h.textContent)); })()"), `${tag}: tee colour name as meta, the source as a hint`);
+  ok(await ev("(() => { const t = [...document.querySelectorAll('#mx-tee-colors .mx-swatch')].map(e => e.getBoundingClientRect()); const p = [...document.querySelectorAll('#mx-pal-es .mx-swatch')].map(e => e.getBoundingClientRect()); return t.length && p.length && [...t, ...p].every(r => Math.abs(r.width - t[0].width) < 0.5 && Math.abs(r.height - t[0].height) < 0.5); })()"), `${tag}: tee and pill swatches share one size`);
+  ok(await ev("(() => { const k = [...document.querySelectorAll('#mx-fold-colors .mx-pal__line')].filter(l => l.checkVisibility()).map(l => l.firstElementChild.getBoundingClientRect().left); const s = [...document.querySelectorAll('#mx-fold-colors .mx-pal__line')].filter(l => l.checkVisibility()).map(l => l.children[1].getBoundingClientRect().left); return k.length >= 2 && k.every(x => Math.abs(x - k[0]) <= 1) && s.every(x => Math.abs(x - s[0]) <= 1); })()"), `${tag}: colour row labels share a column`);
+  ok(await ev("(() => { const c = document.getElementById('mx-pal-custom').getBoundingClientRect(); const h = document.getElementById('mx-pal-hex').getBoundingClientRect(); return Math.abs(c.height - h.height) <= 1; })()"), `${tag}: custom colour well and hex field one height`);
+  if (pro) {
+    if (!(await ev("document.querySelectorAll('#mx-elements .mx-el').length"))) await click('#mx-el-add [data-el-add=icon]');
+    ok(await ev("(() => { const e = document.querySelector('#mx-elements .mx-el'); if (!e) return false; const h = e.querySelector('.mx-el__head'); const f = [...e.querySelectorAll('.mx-el__fields > *')].map(x => x.getBoundingClientRect()); return h && h.querySelector('[data-el-drop]') && f.length >= 2 && Math.abs(f[0].width - f[1].width) <= 1; })()"), `${tag}: an extra is a card: header with remove, options in equal columns`);
+    ok(await ev("[...document.querySelectorAll('#mx-el-add [data-el-add]')].every(b => !b.disabled || (b.title && b.querySelector('.es-sr-only')?.textContent.trim()))"), `${tag}: disabled extra chips say why`);
+  }
+  ok(await ev("(() => { const rail = document.getElementById('mx-rail'); const r = rail.getBoundingClientRect(); const bad = [...rail.querySelectorAll('*')].filter(e => e.checkVisibility() && !e.closest('.mx-pop') && e.getBoundingClientRect().width > 0 && e.getBoundingClientRect().right > r.right + 1); return rail.scrollWidth <= rail.clientWidth + 1 && bad.length === 0; })()"), `${tag}: nothing overflows the rail sideways`);
+  await ev("document.getElementById('mx-fold-extras').open = false; document.getElementById('mx-fold-layout').open = false; true");
+}
+// Filmstrip: tiles never overlap each other or New set; badges sit off the art; labels fit or carry a title.
+async function filmChecks(tag) {
+  ok(await ev("(() => { const tiles = [...document.querySelectorAll('#mx-strip [data-pick]'), document.getElementById('mx-strip-new')].map(e => e.getBoundingClientRect()); return tiles.every((r, i) => tiles.every((q, j) => j === i || r.right <= q.left + 0.5 || r.left >= q.right - 0.5)); })()"), `${tag}: filmstrip tiles never overlap (New set is the last tile)`);
+  ok(await ev("[...document.querySelectorAll('#mx-strip [data-pick]')].every(b => { const t = b.querySelector('.mx-film__tags'); if (!t) return true; const a = b.querySelector('.mx-film__img').getBoundingClientRect(); const r = t.getBoundingClientRect(); return r.top >= a.bottom - 0.5 || r.bottom <= a.top + 0.5; })"), `${tag}: badges sit outside the art`);
+  ok(await ev("[...document.querySelectorAll('#mx-strip [data-pick] .mx-film__label')].every(l => l.scrollHeight <= l.clientHeight + 1 || l.closest('[title]'))"), `${tag}: tile labels fit or carry the full name`);
+}
+
 // ─── Full flow ────────────────────────────────────────────────────────────
 async function flow(width, theme, mode) {
   const tag = `${width}-${theme}-${mode}`;
@@ -220,6 +250,21 @@ async function flow(width, theme, mode) {
   ok(await ev(visible('#mx-strip-new')), `${tag}: New set tile`);
   await until("/Rights:/.test(document.getElementById('mx-stage-cap').textContent)", `${tag} stage caption with rights`);
   if (pro) ok(await ev("!document.getElementById('mx-idea').hidden"), `${tag}: the idea line (Pro)`);
+  await filmChecks(tag);
+  // ── Making again over a finished set (New set): nothing stale shows.
+  slow = 1500;
+  await click('#mx-strip-new');
+  await until('MerchUI.state.making', `${tag} making over a set`);
+  await sleep(150);
+  ok(!(await ev(visible('#mx-angles'))) && !(await ev(visible('#mx-stage-cap'))), `${tag}: making hides the angle strip and the old caption`);
+  ok(await ev(`(() => { const n = document.getElementById('mx-strip-new').getBoundingClientRect(); const row = document.querySelector('.mx-filmrow').getBoundingClientRect(); const tiles = [...document.querySelectorAll('#mx-strip .mx-film__skel')].map(e => e.getBoundingClientRect()); return tiles.length === ${pro ? 6 : 4} && tiles.every((r, i) => (r.right <= n.left + 0.5 || r.left >= n.right - 0.5) && tiles.every((q, j) => j === i || r.right <= q.left + 0.5 || r.left >= q.right - 0.5) && Math.abs(r.width - 112) < 1); })()`), `${tag}: skeleton tiles: equal size, none under New set`);
+  ok(await ev("document.getElementById('mx-strip-new').disabled"), `${tag}: New set disabled while making`);
+  ok(await ev("document.getElementById('mx-rail').getAttribute('aria-busy') === 'true' && document.getElementById('mx-fold-text').inert && !document.getElementById('mx-designs-bar').inert"), `${tag}: rail busy while making (folds inert, action card live)`);
+  ok(await ev("(() => { const b = document.getElementById('mx-to-setup'); const l = b.querySelector('span'); const cs = getComputedStyle(b); return b.disabled && /Continue to Publish/.test(b.innerText) && l.getBoundingClientRect().width > 40 && cs.color !== cs.backgroundColor && /Making your designs/.test(document.getElementById('mx-designs-meta').textContent) && document.getElementById('mx-quick').hidden; })()"), `${tag}: Continue keeps its label while making, one status line, no Quick publish`);
+  await audit(`${tag}-making-again`);
+  await until('!MerchUI.state.making && MerchUI.state.concepts.length > 0', `${tag} set arrives again`, 15000);
+  slow = 0;
+  await until("document.getElementById('mx-rail').getAttribute('aria-busy') === 'false' && !document.getElementById('mx-fold-text').inert", `${tag} rail live again`);
 
   // ── Fold defaults and memory.
   ok(await ev("document.getElementById('mx-fold-text').open && document.getElementById('mx-fold-colors').open && !document.getElementById('mx-fold-layout').open && !document.getElementById('mx-fold-extras').open"), `${tag}: fold defaults (Text, Colours open; Layout, Extras closed)`);
@@ -316,6 +361,7 @@ async function flow(width, theme, mode) {
   ok(rBody && rBody.designMode === mode && rBody.instruction === 'use Lakers colours please', `${tag}: refine sends the instruction and mode (${rBody?.instruction} / ${rBody?.designMode})`);
   await until("!document.getElementById('mx-to-setup').disabled", `${tag} continue enabled`);
   ok(await ev("document.querySelector('#mx-studio-checks .mx-check-row--error') ? !document.getElementById('mx-design-blocker').hidden : document.getElementById('mx-design-blocker').hidden"), `${tag}: blocker line matches the checks`);
+  await railChecks(tag, pro);
   await audit(`${tag}-design`);
 
   // ── Publish.
@@ -664,6 +710,44 @@ async function adFlow(tag, { live }) {
   ok(calls.filter(c => c === 'copy').length <= 1, `${tag}: no extra AI call for the ad (${calls.filter(c => c === 'copy').length} copy)`);
   await ev("document.getElementById('mx-ad').close(); delete window.__mxAdSave; true");
 }
+// Zoom viewer: open, hi-res render, zoom, pan, angle inside, close + focus back.
+async function zoomChecks(tag) {
+  ok(await ev("!document.getElementById('mx-zoom-open').disabled"), `${tag}: zoom button ready`);
+  await click('#mx-zoom-open');
+  await until("document.getElementById('mx-zoom').open && document.getElementById('mx-zoom').contains(document.activeElement)", `${tag} zoom opens with focus inside`);
+  await until("document.getElementById('mx-zoom-canvas').dataset.hires === '1600' && document.getElementById('mx-zoom-busy').hidden", `${tag} zoom draws the larger render`, 15000);
+  ok(await ev("document.getElementById('mx-zoom-level').textContent === '100%' && document.getElementById('mx-zoom-out').disabled && /\\S/.test(document.getElementById('mx-zoom-cap').textContent)"), `${tag}: zoom starts at 100% with a caption`);
+  await audit(`${tag}-zoom`);
+  await click('#mx-zoom-in');
+  ok(await ev("document.getElementById('mx-zoom-level').textContent === '150%'"), `${tag}: + zooms in`);
+  await ev("document.getElementById('mx-zoom-view').focus(); true");
+  await key('+');
+  ok(await ev("document.getElementById('mx-zoom-level').textContent === '225%'"), `${tag}: + key zooms in`);
+  await key('ArrowRight');
+  ok(await ev("/translate\\(-\\d/.test(document.getElementById('mx-zoom-canvas').style.transform)"), `${tag}: arrows pan`);
+  await ev(`(() => { const v = document.getElementById('mx-zoom-view'); const r = v.getBoundingClientRect(); const o = { bubbles: true, pointerId: 7, button: 0, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 }; v.dispatchEvent(new PointerEvent('pointerdown', o)); v.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: o.clientX + 60, clientY: o.clientY + 40 })); v.dispatchEvent(new PointerEvent('pointerup', o)); return true; })()`);
+  ok(await ev("(() => { const m = document.getElementById('mx-zoom-canvas').style.transform.match(/translate\\((-?[\\d.]+)px, (-?[\\d.]+)px\\)/); return m && Number(m[2]) > 0; })()"), `${tag}: drag pans`);
+  await key('0');
+  ok(await ev("document.getElementById('mx-zoom-level').textContent === '100%' && /translate\\(0px, 0px\\) scale\\(1\\)/.test(document.getElementById('mx-zoom-canvas').style.transform)"), `${tag}: 0 resets`);
+  await ev("(() => { const v = document.getElementById('mx-zoom-view'); const r = v.getBoundingClientRect(); v.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true, deltaY: -60, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })); return true; })()");
+  ok(await ev("parseInt(document.getElementById('mx-zoom-level').textContent, 10) > 100"), `${tag}: pinch / ctrl+wheel zooms`);
+  if (await ev("document.querySelectorAll('#mx-zoom-angles [data-angle-i]').length >= 2")) {
+    const before = await ev('MerchUI.state.photoAt?.index ?? 0');
+    await ev("(() => { const b = [...document.querySelectorAll('#mx-zoom-angles [data-angle-i]')].find(x => x.getAttribute('aria-checked') !== 'true'); b.click(); return true; })()");
+    await until(`(MerchUI.state.photoAt?.index ?? 0) !== ${before} && document.getElementById('mx-zoom').open`, `${tag} angle from the zoom`);
+    ok(true, `${tag}: angles work inside the zoom`);
+  }
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  await until("!document.getElementById('mx-zoom').open", `${tag} Esc closes the zoom`);
+  ok(await until("document.activeElement && document.activeElement.id === 'mx-zoom-open'", `${tag} focus back`, 2000), `${tag}: focus goes back to the zoom button`);
+  await click('#mx-angles [data-angle-i="0"]');
+  await ev("document.getElementById('mx-stage-canvas').click(); true");
+  await until("document.getElementById('mx-zoom').open", `${tag} a click on the stage opens the zoom`);
+  await ev("document.getElementById('mx-zoom-close').click(); true");
+  await until("!document.getElementById('mx-zoom').open", `${tag} close button`);
+}
+
 async function merch7(width, theme) {
   const tag = `${width}-${theme}-m7`;
   scenario = 'ok';
@@ -673,7 +757,13 @@ async function merch7(width, theme) {
   await quickDesigns(tag);
   // ── Model / angle switcher (White tee: four Fourthwall photos).
   await until("document.querySelectorAll('#mx-angles [data-angle-i]').length >= 3", `${tag} angle switcher`);
-  ok(await ev("document.querySelector('#mx-angles [aria-checked=true]') && document.getElementById('mx-angles').getAttribute('role') === 'radiogroup' && document.querySelectorAll('#mx-angles .mx-angle__dot').length >= 1"), `${tag}: switcher opens on a photo with the design`);
+  ok(await ev("document.querySelector('#mx-angles [aria-checked=true]') && document.getElementById('mx-angles').getAttribute('role') === 'radiogroup' && document.querySelectorAll('#mx-angles .mx-angle.is-drawn').length >= 1"), `${tag}: switcher opens on a photo with the design`);
+  ok(await ev("(() => { const p = [...document.querySelectorAll('#mx-angles .mx-angle__pic')].map(e => e.getBoundingClientRect()); return p.length >= 2 && p.every(r => Math.abs(r.width - p[0].width) < 0.5 && Math.abs(r.height - p[0].height) < 0.5); })()"), `${tag}: angle thumbnails all one size (picked one too)`);
+  ok(await ev("(() => { const l = [...document.querySelectorAll('#mx-angles .mx-angle__label')].map(e => e.textContent.trim()); return l.length >= 2 && new Set(l).size === l.length; })()"), `${tag}: angle labels are unique (${await ev("[...document.querySelectorAll('#mx-angles .mx-angle__label')].map(e => e.textContent.trim()).join(', ')")})`);
+  ok(await ev("(() => { const b = [...document.querySelectorAll('#mx-angles .mx-angle')].map(e => e.getBoundingClientRect()); const c = document.getElementById('mx-stage-canvas').getBoundingClientRect(); const mid = (Math.min(...b.map(r => r.left)) + Math.max(...b.map(r => r.right))) / 2; return Math.abs(mid - (c.left + c.right) / 2) <= 4; })()"), `${tag}: angle strip centred under the stage image`);
+  ok(await ev("[...document.querySelectorAll('#mx-angles .mx-angle')].every(b => /design shown on this photo|photo only/.test(b.title))"), `${tag}: every angle says whether the design is on it`);
+  await until("[...document.querySelectorAll('#mx-angles .mx-angle.is-drawn img')].some(i => i.src.startsWith('data:'))", `${tag} angle thumbnails with the design`);
+  await zoomChecks(tag);
   const plain = await ev("document.querySelector('#mx-angles .is-plain')?.dataset.angleI ?? ''");
   if (plain !== '') {
     await click(`#mx-angles [data-angle-i="${plain}"]`);
