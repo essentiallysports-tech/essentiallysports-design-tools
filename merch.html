@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="merch.css?v=20261127-m7">
+  <link rel="stylesheet" href="merch.css?v=20261127-polish1">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -61,6 +61,8 @@
     <symbol id="mx-i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
     <symbol id="mx-i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
     <symbol id="mx-i-warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="mx-i-zoom" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6"/><path d="M8 11h6"/></symbol>
+    <symbol id="mx-i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
     <symbol id="mx-i-close" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
     <symbol id="mx-i-drag" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></symbol>
     <symbol id="mx-i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
@@ -284,6 +286,7 @@
               <button class="es-segmented__item" type="button" role="radio" aria-checked="false" tabindex="-1" data-view="closeup">Close-up</button>
             </div>
             <div class="mx-stage__tools">
+              <button class="es-icon-btn mx-tool mx-stage__zoom" type="button" id="mx-zoom-open" aria-haspopup="dialog" aria-controls="mx-zoom" aria-label="Zoom in on the preview" title="Zoom" disabled><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-zoom"/></svg></button>
               <button class="es-icon-btn mx-tool" type="button" id="mx-undo" aria-label="Undo" title="Undo (⌘Z)" aria-keyshortcuts="Meta+Z Control+Z" disabled><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-undo"/></svg></button>
               <button class="es-icon-btn mx-tool" type="button" id="mx-redo" aria-label="Redo" title="Redo (⇧⌘Z)" aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z" disabled><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-redo"/></svg></button>
               <button class="es-badge es-badge--good mx-stage__badge" type="button" id="mx-stage-badge" aria-controls="mx-fold-checks" hidden>Print-ready</button>
@@ -321,7 +324,11 @@
         <section class="mx-filmarea" aria-labelledby="mx-strip-label">
           <div class="mx-idea" id="mx-idea" hidden>
             <span class="mx-idea__tag"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-sparkle"/></svg>The idea</span>
-            <p class="mx-idea__text"><span id="mx-idea-text"></span> <span class="mx-idea__angle" id="mx-idea-angle"></span></p>
+            <div class="mx-idea__body" id="mx-idea-body">
+              <p class="mx-idea__text"><span id="mx-idea-text"></span></p>
+              <p class="mx-idea__angle" id="mx-idea-angle"></p>
+            </div>
+            <button class="mx-link mx-idea__more" type="button" id="mx-idea-more" aria-expanded="false" aria-controls="mx-idea-body" hidden>More</button>
           </div>
           <p class="mx-note" id="mx-fell" role="status" hidden></p>
           <div class="mx-filmarea__head">
@@ -371,6 +378,7 @@
                   <span class="mx-meta" id="mx-tee-colors-note"></span>
                 </div>
                 <div class="mx-swatches" id="mx-tee-colors" role="radiogroup" aria-labelledby="mx-tee-colors-label"></div>
+                <p class="mx-hint" id="mx-tee-colors-hint"></p>
               </div>
               <div class="mx-sec mx-pal" aria-labelledby="mx-pal-label" role="group">
                 <span class="mx-sublabel" id="mx-pal-label">Pill colours</span>
@@ -378,7 +386,10 @@
                   <label class="mx-pal__field"><span class="mx-pal__key">Sport</span><select class="es-select es-select--sm" id="mx-pal-sport"></select></label>
                   <label class="mx-pal__field"><span class="mx-pal__key">Team</span><select class="es-select es-select--sm" id="mx-pal-team"></select></label>
                 </div>
-                <div class="mx-palset" id="mx-pal-swatches" role="radiogroup" aria-label="Team colours"></div>
+                <div class="mx-pal__line">
+                  <span class="mx-pal__key" aria-hidden="true">Team</span>
+                  <div class="mx-palset" id="mx-pal-swatches" role="radiogroup" aria-label="Team colours"></div>
+                </div>
                 <div class="mx-pal__line">
                   <span class="mx-pal__key" id="mx-pal-es-label">ES</span>
                   <div class="mx-palset" id="mx-pal-es" role="radiogroup" aria-labelledby="mx-pal-es-label"></div>
@@ -419,9 +430,9 @@
               <label class="mx-fit__row" for="mx-fit-scale"><span>Size</span><input type="range" id="mx-fit-scale" min="60" max="160" step="5" value="100" aria-describedby="mx-fit-read"><output id="mx-fit-scale-out" for="mx-fit-scale">100%</output></label>
               <label class="mx-fit__row" id="mx-fit-top-row" for="mx-fit-top"><span>From the top</span><input type="range" id="mx-fit-top" min="0.5" max="8" step="0.25" value="1.75" aria-describedby="mx-fit-read"><output id="mx-fit-top-out" for="mx-fit-top">1.75 in</output></label>
               <p class="mx-meta" id="mx-fit-read" aria-live="polite"></p>
-              <div class="mx-row mx-row--between">
+              <div class="mx-fit__actions">
                 <button class="es-btn es-btn--sm" type="button" id="mx-vary" title="The same words in other ES pill layouts. No AI cost."><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-sparkle"/></svg>Try other layouts</button>
-                <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-fit-reset">Reset layout</button>
+                <button class="es-btn es-btn--sm" type="button" id="mx-fit-reset"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-undo"/></svg>Reset layout</button>
               </div>
             </div>
           </details>
@@ -430,10 +441,7 @@
             <summary><span class="mx-fold__title">Extras</span><span class="mx-pro"><span class="ais-gradient-text ais-gradient-text--on-light">Pro</span></span><span class="mx-fold__meta" id="mx-fold-extras-meta"></span></summary>
             <div class="mx-fold__body">
               <div class="mx-sec" id="mx-elements-sec" hidden>
-                <div class="mx-sec__head">
-                  <p class="mx-meta">Simple shapes beside the pills, in solid ink. Up to 3.</p>
-                  <span class="mx-meta" id="mx-elements-count"></span>
-                </div>
+                <p class="mx-meta">Simple shapes beside the pills, in solid ink. Up to 3.</p>
                 <div class="mx-elements" id="mx-elements" role="group" aria-label="Extras"></div>
                 <div class="mx-el-add" id="mx-el-add" role="group" aria-label="Add an extra">
                   <button class="es-btn es-btn--sm" type="button" data-el-add="number">Number</button>
@@ -642,6 +650,28 @@
 
     <dialog class="mx-ad" id="mx-ad" aria-labelledby="mx-ad-h"></dialog>
 
+    <!-- Zoom viewer for the Design stage (merch.js: openZoom) -->
+    <dialog class="es-dialog mx-dialog mx-zoom" id="mx-zoom" aria-labelledby="mx-zoom-h" aria-describedby="mx-zoom-help">
+      <div class="mx-zoom__head">
+        <div class="mx-zoom__titles">
+          <h2 class="mx-dialog__title" id="mx-zoom-h">Zoom</h2>
+          <p class="mx-meta" id="mx-zoom-cap"></p>
+        </div>
+        <div class="mx-zoom__ctrls" role="group" aria-label="Zoom level">
+          <button class="es-icon-btn mx-tool" type="button" id="mx-zoom-out" aria-label="Zoom out" title="Zoom out (−)" aria-keyshortcuts="-"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-minus"/></svg></button>
+          <button class="es-btn es-btn--sm mx-zoom__level" type="button" id="mx-zoom-reset" aria-label="Reset zoom" title="Reset (0)" aria-keyshortcuts="0"><span id="mx-zoom-level">100%</span></button>
+          <button class="es-icon-btn mx-tool" type="button" id="mx-zoom-in" aria-label="Zoom in" title="Zoom in (+)" aria-keyshortcuts="+"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-plus"/></svg></button>
+          <button class="es-icon-btn mx-tool" type="button" id="mx-zoom-close" aria-label="Close zoom" title="Close (Esc)"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-close"/></svg></button>
+        </div>
+      </div>
+      <div class="mx-zoom__view" id="mx-zoom-view" tabindex="0" role="img" aria-label="Zoomed preview">
+        <canvas class="mx-zoom__canvas" id="mx-zoom-canvas" width="720" height="840"></canvas>
+        <p class="mx-zoom__busy" id="mx-zoom-busy" role="status" hidden><span class="mx-spin" aria-hidden="true"></span>Sharpening…</p>
+      </div>
+      <div class="mx-angles mx-zoom__angles" id="mx-zoom-angles" role="radiogroup" aria-label="Model and angle" hidden></div>
+      <p class="mx-hint mx-zoom__help" id="mx-zoom-help">Scroll or pinch to zoom, drag to move. Keys: + and − zoom, 0 resets, arrows move, Esc closes.</p>
+    </dialog>
+
     <dialog class="es-dialog mx-dialog mx-quick" id="mx-quick-dlg" aria-labelledby="mx-quick-h" aria-describedby="mx-quick-copy">
       <form method="dialog" class="mx-dialog__form" id="mx-quick-form">
         <div class="mx-quick__head">
@@ -691,6 +721,6 @@
   <script src="merch-print.js?v=20261127-real1"></script>
   <script src="merch-palette.js?v=20261126-merch5"></script>
   <script src="merch-ads.js?v=20261127-m7b"></script>
-  <script src="merch.js?v=20261127-m7"></script>
+  <script src="merch.js?v=20261127-polish1"></script>
 </body>
 </html>
