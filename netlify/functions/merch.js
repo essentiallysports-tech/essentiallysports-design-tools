@@ -1026,7 +1026,7 @@ async function copyMode(body, track) {
   let result;
   try {
     result = await aiText({
-      tier: AI_TIER, json: true, maxTokens: 700, timeoutMs: 25000, track: { ...track, feature: FEATURES.copy },
+      tier: AI_TIER, json: true, maxTokens: 1600, timeoutMs: 35000, track: { ...track, feature: FEATURES.copy },
       system: `You write shop copy for EssentiallySports fan merch. JSON only: {"title":"...","description":"...","adLine":"..."}. Title: at most 60 characters, names the design and the product. Description: 2 or 3 short sentences for fans. adLine: a social ad headline for this product, at most 48 characters, fan voice, no hashtags or emojis. Never invent numbers, facts or quotes; never call it official or licensed.\n${VOICE}`,
       messages: [{ role: 'user', content: `Product: ${template.label} (${template.name}).\nDesign rows: ${concept.stack.map(r => r.text).join(' / ')}\nDesign idea: ${concept.title}. ${concept.why}\nSource: """${source}"""` }],
     });

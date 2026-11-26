@@ -4,6 +4,9 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-27 — Suhail (Claude): Merch copy call gets room (main)
+- Live usage log: 5 of 17 merch-copy calls on 2026-11-26 failed (ok=false, 0 tokens) — the same cut-off as moments (the gateway throws at max_tokens; the page fell back to code titles/descriptions). maxTokens 700 → 1600, timeout 25 → 35 s (title + description + adLine). Cost unchanged per call (output tokens only as used).
+
 ## 2026-11-28 — Suhail (Claude, Agent PROD): Merch7 products, multi-colour, photo angles (branch feature/merch7-products)
 - Status: committed on feature/merch7-products (base origin/main 33d8ac6), not pushed. Pairs with feature/merch7-ui-ads (page) and feature/merch7-mockups (engine); integration on release/merch7. Contract: merch7-contract.md (scratchpad).
 - New blanks (verified 2026-11-26 with public, no-key GET /product-templates/search/{q} + /product-templates/{id}; DTG, supportsBackendRendering, min order 0): longsleeve pro_6ae602fcb22447bfbc (Gildan Ultra Cotton LS, $14.79, front_large 2250x2700, sleeves for the logo), crewneck pro_14kNy0EJQkqopY-Z9Pm41A (Gildan Classic Crewneck, $18.79, front_large 2250x2700, sleeves), tank pro_xPL7YjOBRQWVL50Im8eKAA (Bella+Canvas Jersey Tank, $14.20, front 1800x2400, logo inside), youth pro_ODh_gv0ESl6jIcRfvSww0w (Gildan Youth Classic Tee, $9.69, front 1500x1800, logo inside), tote pro_367 (Econscious Eco-Friendly Tote, $15.56, front 1500x1500 FULL_REGION, logo inside). Each has one checked alternate id, a snapshot (10 colours max) and `methods: ['DTG']` so the search fallback skips DTFX / embroidery twins. Suggested prices (merch-rules.js BLANKS): 34.99 / 44.99 / 27.99 / 22.99 / 24.99 (owner to confirm).
