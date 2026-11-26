@@ -1,5 +1,5 @@
 {
- "_note": "Trimmed from the public GET /open-api/v1.0/product-templates/{id} on 2026-11-25 (up to 5 colours, descriptions cut). Used by scripts/test-merch.mjs.",
+ "_note": "Trimmed from the public GET /open-api/v1.0/product-templates/{id} (tee..mug on 2026-11-25, photos added and longsleeve/crewneck/tank/youth/tote on 2026-11-26; up to 5 colours, descriptions cut). Used by scripts/test-merch.mjs and scripts/test-merch-products.mjs.",
  "templates": {
   "tee": {
    "productId": "pro_Vv1XdaPMSdm6jZ5pj24NCQ",
@@ -62,7 +62,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/MMkocS1sfnAe7TJiwEvc6svDULAzZSayTmAIqTs94kM/w:720/sm:1/enc/Exv6_LUDaRavTScr/HV1DqT4cczNl4z-h/G12I2AqgrBUz-17I/V7sLI0QIRC7eRtCZ/GlPfetqfo6CF4a6L/wcOEFVFikY4BnvXq/3jt9lAImnWTQYdHz/8xSjI3OJM3n3JZ0N/A6D51P9od3jIpWsc/bz-dTleE3P9UnK96/t6BewbO1C6lqzv7F/ZnbVHrQKIkdVuGHA/9rly4ZjYnUQ9L92o/L4Vq2w.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/dWVBwl7ed41fnaldubACYjJXobA9oK8R0j9HgpX8fXg/w:720/sm:1/enc/VFt94B-j9N8ml1Ad/48DnSD83o2ExJPt2/-Pu43YfRLash5cxi/FiS8vIj1xuIsZg8r/6OXvXCi1SzSI6o2Q/H8-b-6a6U-R3oIpd/W4jGSMpRv3yPf0ry/k47X8oTWrFioyoHp/2IMyADbrmtu0QXxk/eUrTdv-5mTOWwiSr/Oexn0zpukEWok1mh/wOgZhqpdH8HteDi-/8eMbDrxV4pkwfdAq/BxrVog.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/KnpPPSrusTsdZY25pBvfVm79YS8tXPQR3HcJ3lbraxc/w:720/sm:1/enc/3a_I7Y51Ff_5bd0K/bD6I8e_rlsBnrcJp/uyEap8H9nvz_so1A/zkkYpTNDoe6OMgpd/q4iIBAaxi5P_FSLy/LycJVQDr3oanZb1i/qB9KcK3sK5Ox8I8w/58QgMKcUO55WGqQF/QGwNxLVLkn7HqRI2/t5F-zmY4O_2JUPvq/PYf7KGAo7D_MjUpQ/CNHLEZBltLTodMmJ/xy_dE5bDYaAS6ta3/p-L5HA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/ColeytEpQgitKvi80Bo2ikBSACsqcGTBnV5eFMKgOpc/w:720/sm:1/enc/YXNS4bIDLVMRDGlH/obLMPRvlcJNUt8Ps/hyyk7lHTGHHXpd7T/rL5vVC9pWkcYTCyu/oGaLV8jsTlU_M24S/ep4Jr6XjX6kQdEwr/DtO6qBo0GAD_xtYo/fojeSbQ265dTFIAD/t3_GLVwdkdkSbWe7/VzKAyx7wVgM0o3ox/9V_JgWPAxRQlmFMi/HsN_tDplVp9ylznO/nbqTJgpaPlD07nqA/erQxvQ.jpg",
+       "designOverlay": null
+      }
+     ]
     },
     {
      "color": {
@@ -107,7 +125,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/6CYnUsgTJMxjbFuKypOJC-fbqwyNqWtcTjYMMN0zq8M/w:720/sm:1/enc/iJDk1mowjSLhINna/uGGBlBOkqF8LS96T/fPPWhgP_OXXRveuE/JTMMlecqDqim8SAy/P2JQuXXU0h8nkrlI/kIcO6yA92NiXPheS/VvHcgQrPcmRB5lsj/rJ0g28m6awyhcwvh/kxAy_-phAD9_nNJ1/kuI9YsNtdH7NOYtE/_SuPNain8fgEFz43/gDVmYOgyUVKp0oqO/hqOLHcmhpr9aog62/g5blxw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/dshZrqh13cvXhKIyCYzj7wmbm52LkVkFSDt-MhPP2aQ/w:720/sm:1/enc/fb0SdjGxYHPnjCJh/pi8bLaKNJkCBxQ51/1MAd32HiF0dXjzPW/3UJhoxlSdPJQEaJu/k1sITCx70toGNSzg/6RAP-UTZKZpsyD2G/pyzIVoC3liYLjKxi/QpOAh51tQAzjuk72/B3b9kRlmc1qn2mQL/O2FtypFFSaQ1RD6l/JgGr3C21GuWp2UQ8/Xrxh2glHAOzXmfMR/J87NmX-wsdROviUZ/rnAvBA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/G4ileouW9l2nY5oMLC9Dw3-ZbGXLxsG_Pvgpi5-l_hY/w:720/sm:1/enc/HivoobJMqQghob1M/Oex1IE_-KFDSWe3Y/7q_lZNhyBGOkRDBY/hoxcQExv9dH62ZNd/AbCo5SCARHgDy90f/E_OvpigLXw_0Ii-b/9f6rT3-LBeDVIxGm/Zc66FNJyZD0pkJGx/dRrmmcfc4vBqtIym/FpYcsMt44fbjNggN/UTaqhV-dDde6PcaG/tuA1IMI1wFL1igPL/3NYLAKQJ-UuCyKPb/4Q812Q.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/5qft5UjR8O9shdJ5sxfdmIbtTs5XYrFdOwy0IYS5R-c/w:720/sm:1/enc/mmWU6jtqsuyl3Ks5/nHRwDi1x5uxPj5lm/_l7-oisIJuy1Fbw0/-5Avw00T2gaW3Mmn/Utq4BjKZWJ4dTXRh/lvfnbELvopAZgZK1/M6PqSbDat0E4RQed/zWrBvoKZpmONl4ME/ZXrXpSjRvqfmFeCN/UbXk9vezmCTu4vTE/5oIxh1su3KmKxjnp/EKunOuiHaRCHfjWp/TnoHGig2JhDh4ipo/1qK8NQ.jpg",
+       "designOverlay": null
+      }
+     ]
     },
     {
      "color": {
@@ -152,7 +188,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/JlZRh3G_d1lJumNzXOzkpo2GgDIYeuGxb2UEGgsCSzc/w:720/sm:1/enc/ERAphWI7I36oSWoy/udPg3mNxudmNlzuK/i5PwUYEAHD_8SjLz/jgzD6wg4yoCTY0BR/XSXdVtdzA0I5O_DJ/b75OYDimSstX_kor/o-UWDtIZ1Ut5QHbX/0nld0jyssdSMdrvd/6xUUPKdRiJs8wnxc/XnKweTt5ZQ9AxSYr/SzDpZshOHmpkUBzB/XG-YOW92R78jMqme/9rmCRR2WqVo5VjU1/aDUvgg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/St867f917cFyYX2tf8OmVo4iNfmGslbOiWx6GyyTnsQ/w:720/sm:1/enc/JmfwTDthWkJZfanK/NG9cZnG8CdLHkFVe/cVDHIzYOTgihQRnL/be3fLBu9d1tIpXR_/-j7qSbfarFIOCiVk/-7e5RzFL0dZ58LZa/1FVMFomDcarS9w3Z/2J5jtkw0rcDsMfXw/shp3589rvtKLq7lS/BaKGX_bBUPTzemJh/Y_Hjc7Aq1XabSKcl/774gB_Q5d60WrRrV/dwmTe1m5FkXDWKaP/6fQpMg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/whg8tcyVBX1ftsMu5UrfJ46roOOZVgyOJxGa-0H-7-8/w:720/sm:1/enc/S-ZmpunbgJ7JVM04/vnWymDYdwxQoCSiJ/YYHZ-9gsN4Kj6-qL/XJnu-6jmJHFAuy8f/sU4YUKLAgUrYzjmt/uNKpBae0scg8F3xs/y_TB5Ij31HET27sL/VwCOMrhnuJtSEbNS/BVD8MLTaneg7W0Pf/OKE8iqEq4bwTKXvg/okGROZC3gNodPDfz/4W53vMaRLXSPca_d/kv-quvzRZT5tuQ37/VE8W0Q.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Qq-GP7x4QxpvtjGrJsEO1bEX9O7vp6ltSFMODvGYd2o/w:720/sm:1/enc/Ks1z1j6C3fdTIZA1/7VocxhmMBoXIJi-Z/Rz_aL3vftOoCPgQL/0q5TVo47eqaNiH2o/wYZ2Uy27r4ocnHgl/hzl8PILJXMd8_fzM/vrySTYvNI7WIcJ9h/lQTOZkF5Ve6ntPuY/74C1mbjL2D0wcING/LroFP69uacBKCwaA/eT88jY1NVpgvPz7k/sK7kb7CrGXhG8SGY/A2w45vVhFc7ZGo2N/RTX3eg.jpg",
+       "designOverlay": null
+      }
+     ]
     }
    ],
    "customizableAreas": [
@@ -378,7 +432,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/2TJ9mT6D5K4Mv-GGcXoDEXjPN0vQNdJc1TU_wtyXwl0/w:720/sm:1/enc/crXltowfa4aX2mhk/HSVRi8HZbhHBt9Ji/cWWL7HYTdwv6j0vH/LJbrm4WRw53ThOIg/AfCv28qatNNsez0q/3qWUgktA_rg3QxaF/LhZCgsIqy8QRaah4/IM1-q8sTsPdU99P8/jrL1Gdq_XTj0f1Ju/Xn7_ACgOCC_xdQB3/ddlcJGJAsVAyuv9U/pXq7CDWKKMEjVsKQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/X0C-u_tk9cKacj6TIa60T9b4RghZlw9xdc501sKgPpQ/w:720/sm:1/enc/g0vrxb2mu8srXA4K/PQ4ya4mwHP1t3P9m/_otJdnJFfNn2FCTy/2qTtc32jS_oNoj2f/5Xh6BXJmiTUk_mou/_zgbnzkPFWU_NYCk/defP7TmHtRldki7u/A4dJemhJ95PYPA5E/yD5X6UNIFeTN3Qpa/vMf1VENKcSVvOb5W/iuUaeB_nIA3SSTZ3/cYr4Kx7S6WfOcpXm.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/u2oOf_yudW5tm3A6IR1qBQakVAOgJNNjz37_r_cgu3E/w:720/sm:1/enc/N17GlTVBcghrbIIo/Sr_a47iD20oPNuDO/sK_Ni3CtwSBBGwXl/zf-TFWabBS9dQ8YT/uB9EOY_qJPieSBff/0p_ojsUZ5qkVhGXm/EIEwKQmgHDDj93Qw/KdZ57f2e1h6iXgWx/VKwk-LldfBlNegam/_Jds0JIb3JwP6BER/nNuLidhOF0jqpnXk/n7NTK50mt2i6aZnh.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/DPKKwcBpVAQ7JqUTnf2YygWL60CIVsbYzsF8Awz41VA/w:720/sm:1/enc/jbGaCWtrIMDXHfT-/8a_kQi725Bc6m3hK/uzjUV1ZwHAKzV2c0/pdc1zo85Q3pdO53g/n3cKKfGdxR0EOpI9/zqcO8HQRQArOKWbE/yeOf7bMxw9-IwWnB/bc-ojb87ANDn0AKg/bKmvihoTw8lYIYk3/PnavyTussr1qn3FO/bpQbd3XNDCNZsqXV/DBLJImdeVXeBdvLw.jpg",
+       "designOverlay": null
+      }
+     ]
     },
     {
      "color": {
@@ -423,7 +495,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/BUvCZpmfSXc5l8p_ylzfuP1l0zQu57gWnEv7hddivhs/w:720/sm:1/enc/vn-U1yT7T9vG0p1W/0iW06zD2F7wV3w9g/h95-zCG6mtKtezSx/lrhHitkG6FE7Juv_/kf_S1_kRjTGRAQnT/fHIB375GYNanlKlb/CFi3tJXvj41C-B_4/Z7qTtot8xnja4LHO/yPErXHOuMDMOxqYp/aYwzc-IFv-cVNKTX/ee1riQjJOkvG5r4N/WuHt3QoxP94Expj3.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/1fdBIiS5SFFNVvut-G6tXoVoAlZdae-hVF2wveKBqxo/w:720/sm:1/enc/dtQqa3kA9_GTZCMn/IO3N9_m24NMGesSm/KTHpNpf0W1dEkgsz/AOWCcZQ-ya0u8AaN/pVluR78o9MEfp4n9/EhNErZLh0cSRtZWS/fM4DQVhwypdWERo0/icUHIORES3azUd96/PK4Q0pUBnXKjaQHK/6xUc2FS4pif-efNB/zQPMy5FWYg1LIW7F/A6Eb5V_f9ov2q9nP.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/QFZFnjs5U2O8bmutp2E-gE2dx5ktBUHRogRYiQ1pM9c/w:720/sm:1/enc/x3VWgpfSm4DZeK__/5k206svxBZSmFANA/f9iSbeEE5tdCjwr4/ySjMDoBmZGFtVc-I/d6695zhh6m1f_b1z/OkVY8aFrlJItx5LB/iH5Cmsiam2zniUGP/98_GfOmhA9TtDHjU/az0ZtGkL4BoZLaWa/TEooMluMx_IggZDt/btlzvPpMbUWay2kN/1o6cBoIcVwL0C5o1.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/0EG-CdNIYPIdgKe5rmSS85VQa6KYEqJFIxJ3ftWpBXc/w:720/sm:1/enc/g7FxvT4sV3cjW1Q7/9PVVEyl7yhhlbKkR/oiZU4FQ7cqimYKFf/ccUenpGMy99EOaAK/Bj38j8b9zGKaq993/iKvnIoy2bXZoMsSU/RfA7rTvBf2PLV7rc/OHWZPyDDKz5AmERh/MaWaSHKB7wNLYOjz/A44Vw9whK7b2OnQI/ULUbTnJjZLlMQ0vR/iJ1x9hXgonigurHf.jpg",
+       "designOverlay": null
+      }
+     ]
     },
     {
      "color": {
@@ -468,7 +558,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/dnjB-tr7I8rUfmgz8Q-tPB_00HJKg7KV24B1n_ngMVU/w:720/sm:1/enc/NsD47DdPnzHKT72N/qbYt2Z2dSYemJPKM/9o_vLG7uCklpvepN/IwkFll1b0hV_uUwS/xW7GC4KJF2wynLY3/Ok42fUnYfrPuFbve/xWWZMtBdbtzL0gws/Xj777chry7kK_vmx/MdRUCjOG0T5sp2Z5/-3Sn2EiTd5lgx8kW/i9177ENnzdMoZsdT/GHIFaYWvMe29u7K1.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/w7b2WbiKkNI47h9T0ZPHyG0h4Jt5T6gNhwl37g3R0FM/w:720/sm:1/enc/vc_MbRKQ0LSuFMeu/D2gZIACUEyZujsDu/KXRDraxuo5DMWCQi/psjlvmUAgae_mbrI/HSIT4-Q-wGpCT13l/pzspRUbzo_75aeo3/IyQA-JDC6ig9HRjQ/uVSOR41n5K2oiEpE/ZkfcogKsP6Q7VUnO/IxZYpqGLe7W7gn9Z/7ddgmXz6ezaTUjAN/gZTHqribj5GN_kmn.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/1o_J6bo_T7LXff9-lW5h7IcTA6yNpB2MWCSnQhsKCGo/w:720/sm:1/enc/W54QbrOwJ2dmXAgI/v2RvJkoK1uHtLfXU/nok1j7T8osnHA6m-/WKBs6k9g8I-18GEe/a7ENfuEEuTthPQWT/PUEIh8kq56vKGKbI/qKSQMc9u7VXiWAus/cnFrJXGd86W5AVKA/6VXd0713YKpb45p1/Y3IPDruF4dJXEoRL/32R0NDP_Czjy2azz/6SpdMsRki3EfdG-o.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/iVds3Kood5AC80gGGwTscgNUJpWeAMeiD61BeMAUP8I/w:720/sm:1/enc/Zoz5aAYd7C0iajzs/FVgLI4Snh86VC_P7/G11BBjuNTbZ9AHsK/Q7LYFCkvM17kicwj/D_r5WKgTwzQPx58_/AZgkQqXpt_fi_vAG/C7PTwvuNkpXzwwWi/qshlQy-nzw5Q5V76/8gC4cU_dvittLODK/K94JXhfZ_bjc2vaH/PgzBVDUCcI97WTbq/sz57TatZIP0ZitXq.jpg",
+       "designOverlay": null
+      }
+     ]
     },
     {
      "color": {
@@ -513,7 +621,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/KhTbS8MNUlq9fq7CKE_rbVjdB86Sbczbnr7dgJI5m9s/w:720/sm:1/enc/ZEkVJGJFf7CO6QgT/CMLfb6TnYfa0Hrvi/WhUWsc_z5rtiWbLP/bnO0jl2CYyolBnpJ/bxXBs3XtHJzLkkl8/F17aHCYPUuXBdSkS/Edg5svQWFLu6VwxM/05x02dfVwdirKKtD/LCHrIQg4YzgqrAol/Zw94G20hDarrrmWd/jWH524iTRv5piOJz/T0V1t94SBTNZTDvF.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/ncsolNv2EzJMWbDs8z_jJ13NbHiFtxOhgyDSlXM7jMM/w:720/sm:1/enc/94m8Ai6rIQLdQTPi/GmTGJ8sSSaj-p_4Z/P07z0IgpRlTypSUI/aWU0WAKOdosJKXtG/8Pz15QiQCwJb5ujp/BfJjKfZvWsr26Uza/VZVvUqW2lboiz4yJ/r3AdY8W5PHND6Oon/vmUvysI-fudXBVg9/pjyDfaRb4dk5tkf5/gxqhdyHx-pBEFJ78/1xh54tUCkNrFoHsH.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/6HEb7TiTIbmUGLJLsQ2zQYeGJHmOpibbT4kOiJ3gH68/w:720/sm:1/enc/E5TUyFPwEvkU5hvf/DdmY19AmjH4PhMix/vbSFYaGRdwynVuYO/j5YWy6g8FyDJ5WrA/fdX8ppsdOF_vQFc6/ClIl2vUtSS5Biwuv/geC5uq1DC5xANa1j/oQhOy9X0cUW6dasK/5_2pVeqKrv1V5TeZ/HuL1v9mMBFgi9Zn7/k9Lgi0FwMDC_LgTK/2pQAkp318Z93-kho.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/EGVVyP-9uPaC5qT3SD_qiQZTOq57l0X_HEilNsAJLv4/w:720/sm:1/enc/JTyNH3W0he7LnfRz/v9qaQbV61wqt4-R5/tVaCZDgjfR_q_oKP/88uHIOp4HNKwaEmq/Z607LBp1wgg2TNpA/lguCr7U3UrmuRFy2/vIrUdE1wjXqhweUi/mySmCIUQYrTKp-DW/ih9OrdCMkT4pU7Zt/Uemsj0FEPq0VLirr/wR4jj1G9MFkW8tX2/AXzRcwvsfXJTa33R.jpg",
+       "designOverlay": null
+      }
+     ]
     },
     {
      "color": {
@@ -558,7 +684,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/sdpZv6JwVn8EekecKGTP9DvfRlbjrOAtg5PKEesdICU/w:720/sm:1/enc/L0JwSpVzJEygAOgu/Vk_cC6bfbQ1qvTHz/WqqBRgPOHnFXMgrH/1gU332eI7BgG2hVw/Mlo0gxfzn89i4BXF/B_rXHTnLbe1TO6wZ/yg2iUHLnTvbRNj1s/VWXq_2Hk8zatqpTq/DlPdaSTF-no-pRGi/BLxcuz-UMzsos7Xd/ecL19DY44AQc_DMB/nLvzI4BafrQi46dt.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/tQyZJ5vZNecU8KvItaxaHkJlqcLCVW6Wvqme2STwmKI/w:720/sm:1/enc/QwgaSBXoacP6wqk4/xUIZd6euAe2P-euu/Z6QrQ8FDMW6Jg30P/c4HdfLgvesdI8KTz/JEtkvSD9EP5417pr/fGBwF2RYvk-8vW4M/J9lBTAQSpeYe77hN/9n-WvnxS_743iH0d/nbME5pCGMQ_X0mXB/AKpKB41BQ1BQo-Tl/tsmdm_clEdBO1GCp/r2bpuD7L0buRGnYw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Q7fX5_jeyKLzNakKeRglSIQXcQU7VCr9CD96OnsX_us/w:720/sm:1/enc/1M2GnynmukrlAhlL/XjG7rcGUTTGfBHoy/qAt7bSV_qR_ot5yO/n3tILjOIM9yAjcyz/dowVZV0PMfDj0Ra4/3TOFrTUGlccqBY9i/A9qDorQAa5rXP5O2/dBEhcj2Jmk41lIbj/MzkdwJbCMuuoolxA/AKj_vOIyEMvkSeqD/WVQhulA_k-ei-Qwf/V_zskIkCRqJcwe87.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/hV0_SssmBRueF7A-heiXOzBG4Kvoail2-RqLorbGwz8/w:720/sm:1/enc/7ZK-hpZ2TaAeKKuo/p42GC4fmY7xphi5t/8252wsoySKbjeOo0/jT7a9aEbVl02ZqmL/4ZZO7QNCFUTDr2Yu/mEg10ROGpi3UcO4n/thzVfAK2Dq-FLDH_/mN1W95SxcQdWQ4ik/qWUJk5SxFBb0Oe_l/6zIClJ6jHDXSBdF_/q3My5zOTiZnp8kpq/BsucVOGNKnbMLW8u.jpg",
+       "designOverlay": null
+      }
+     ]
     }
    ],
    "customizableAreas": [
@@ -744,7 +888,7 @@
     "currency": "USD"
    },
    "priceTo": {
-    "amount": 18.0,
+    "amount": 18,
     "currency": "USD"
    },
    "colorVariants": [
@@ -767,7 +911,7 @@
        "variantId": "prv_dhUxh5bjQbSHqYI_-Yr0Mg",
        "size": "8\" x 10\"",
        "price": {
-        "amount": 7.0,
+        "amount": 7,
         "currency": "USD"
        },
        "available": true
@@ -776,7 +920,7 @@
        "variantId": "prv_xPy7ZNCeSZmwbbnzX8h3yg",
        "size": "10\" x 10\"",
        "price": {
-        "amount": 8.0,
+        "amount": 8,
         "currency": "USD"
        },
        "available": true
@@ -791,7 +935,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/TQRb03NYJ0JROq_tdK3vzq_ek0SFQ6mX6NfzroNH7Fc/w:720/sm:1/enc/nFBk6K3RRUZiasrV/4XAfpnhMz8Ft2dwW/S754-nHJP1z6FUh5/WGHUgzKYyxdFSWWH/xyv3m1h9OJfh2oGw/b313eSoJJQbl27hy/TabBXJQjG09uU2cM/dkfari19m3Z0I3PX/aQUZNAz0S8TQSNYF/sO2f7r8hU8n35dnZ/oudV0QUi0xe0-zul/z9IiNRPZsg1c5lnM/Mmz_sVsqcb4J3HB_/hFVB2w.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/kG2KtGGJJ6VMipLSTnkDwNeScFT-7YblwrSdnNuae1E/w:720/sm:1/enc/3qMajyzzMsY63U0V/RoEYJvPIFA1tibtk/iSYIEDQr0jYiifyK/QT3eEDL3-lb5qVK2/YZptiEntPBPVGfLf/6mU2F8KYszbeASBu/dOL03hRZOX7gzmCb/lzuCO-rqZiunRMlL/MmQMax7hxk50UQGT/TDR3VQ9GFYkDEVmR/WNHzDmhUOPfOsj6Q/Hof9DLs8JhGhEGQA/wzKaQhBNkjzW807A/Bu9UDA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/n6xyVAb1t_KuG5d4oAEegt3B9g7bcNkZCGaSFyvX7v0/w:720/sm:1/enc/D_OTRBUU7pKYWEnc/ANbSHBGI8UkBq-or/KRBnJadOHVG2tRBX/FRnitxRus2fH7B_t/br_XuVQ6i42R-Bkc/-GfCh6vl_hVFpuyy/g-g1vrDIqaw_WA_l/AgBhVSjsmZmtG1Vp/Z6iMoxrf2H_TP1Mg/TJ8QwmOP5zzOEMlk/jEbVeSM3M7y7qfpt/iyLXrsWSq0z0t2Vk/tzdcLRguqvHVoz1x/TDCeEw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Gc27UpYyHdfitn8APvKv9CedcOiFCzxt9wd2ONr6vgY/w:720/sm:1/enc/3zI7zbuxC0Y0bpQ1/NxoHbLBzg9-pWVSP/dLLaFylKjMwD-Ebz/nqntQ2A6AqtVaYW6/AUAVLCCZGWbPWgyl/7FmnmqOe4ARmVeef/4YxjjQJYz_NkVlQH/wkxqJA24zFGlkMVM/SOTuk0bFy_ou4Rv8/OESZUZHkQ-qQIRYR/ynumBzb9tRxMK9_9/qGO0ZnZRVMUfkg7w/42p3JQtl-rs1PLku/85sgOg.jpg",
+       "designOverlay": null
+      }
+     ]
     }
    ],
    "customizableAreas": [
@@ -879,7 +1041,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/47Gl5hSeftBDl1af_sPL9QRsPB3YLmfcsY5hZYxiVgI/w:720/sm:1/enc/xSjIZrBMswoC5eyu/tP7jJ_gPEIF2hbQ9/wi7EenAjnpT5Cwms/q6FCbmnZY_JWDri4/uNW03DK9cb_BBEfl/Njv_HI8RZFutjz-W/T_53l8sxTBHYQGIC/OaykxrVL149HOyQT/JcGMXor9P4MLgyLq/8IDWqIJskVmlR8ee/e8deI8mrjS38gPcj/cF3WapjEExiVyvWB.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/kOMych2OZwGfmoaUQHs0P2OwY818uGPUq26t_EyzHrY/w:720/sm:1/enc/UF_cxPS_HgtCPgLc/wi5gLhsYck8XKAKh/PAfl9FF80fJj-FFg/mb9BAYTM-TqcINnZ/F0WXxRBcJ0vz-YCW/Lf6wlg8B-lhKNKSc/9bT5Km6CQaJG2kRC/NqRTfarjIeQapoef/9FvaxaQobabRc6vc/8wPjlUNw79nJHq0_/oXrk3z3pSL91lS6o/SWM3YoXL1U1_e4qp.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/oEi_RY3TGplvIbdFXZvWGGMeuQEM8q_z28KYWKhGC1M/w:720/sm:1/enc/N5tegZYmNwM6nTD8/Ig20DxKE9M9WBTTZ/mM2Gfl0du25im37P/XaKlgOOpOadpMJWH/tZjGBq2NXRPzBOZG/YNuqGCTlqGKKs_D_/lucFfureIx5L3Bz1/1llawr-JuX9xPLez/5EAkpP30gkQqwwBN/NpH50m1xw9MyIw3q/0XI3eJn7ThpHvx7G/p75H9rjirpiJTWZ1.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/HZnO9ze6YF6B-lnT-u_XZEmjpdvpqFTsqzEACDBjjIM/w:720/sm:1/enc/GANExqL6V2yln6wZ/m9NM_ISL28z80qu1/HvumV-_2Lp_ooFKy/k_wJjZEUL1cavGcf/xaJTFvTeu4Vqm1Px/wmLUFRVHXpx755a3/NOEyLE0BDGstrpEP/UCfSHBLyFlAKJdj3/18KtPOQ8P5jCrfJL/ym12CfW_A8Ov5zH3/vNuoZyAKLgs2E7vZ/gSJtcJSt8rFZ6SQB.jpg",
+       "designOverlay": null
+      }
+     ]
     }
    ],
    "customizableAreas": [
@@ -915,7 +1095,7 @@
    "productId": "pro_4v5OfYhyRx62KW5b7Oj6Uw",
    "slug": "white-glossy-mug-sublimation",
    "name": "White Glossy Mug",
-   "description": "<p>Add some vivid prints to this heat-resistant mug. Dishwasher &amp; microwave safe \u2014 drink options galore!&nbsp;</p><p",
+   "description": "<p>Add some vivid prints to this heat-resistant mug. Dishwasher &amp; microwave safe — drink options galore!&nbsp;</p><p",
    "category": "Drinkware/Coffee Mugs",
    "brand": "Mugz",
    "productionMethod": "SUBLIMATION",
@@ -963,7 +1143,25 @@
        "available": true
       }
      ],
-     "available": true
+     "available": true,
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/JwU34XF1lPQZuJZjUj601DZX_xVfaywWtMlhYTIKeso/w:720/sm:1/enc/pEmmIFPHt0Qax8FA/ZJiaDaywdFeAj7yI/PNsFD5evNZ-_3UV6/kw0J-VHffeC6W-mb/zZc-DisZNvb_S9Ui/NfM_kg8sF8OsaERH/eYuywOKKVv_-HXLy/nDBh4Kzzs1QYPqfA/c-SVtZIvUa3WYgc-/JCztbKbZS6-WFCPt/J4nLL_u8axAfrcQZ/WZzCZofdc845vy7k/seFXyK7JqmhlmuPY/UcWsBQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/sKn9DLFJGkIg66sC0n1kBsAw5trj73QuPLZwflAa2V4/w:720/sm:1/enc/uhoqm3TtvoE3KKDr/T5zOboqh0-fHG49x/8v34N3MdxRMeTYvM/x5XLOByESYgGb88u/XRyAiWxFfac3-Mj3/t7DU0lAPX40dOzQt/Xha1_Leu9EV0wG36/8iY8JEnLAZxO_ADi/CGYzJw-2Wadb0PgL/UOLL5XNuzZtastx4/2zqadzAxvJ7hWNTs/jHmyvS8iFCYoWvmZ/xuvdnbszt1s9HNwG/17djhA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Sd2IicuYQmCqtjwaN4dUFaV7gJ3ujhCLlgq1LxO6I94/w:720/sm:1/enc/GFS_UWGoiUiJcCew/kq4OD8tVA1ZjhE0u/tZhdjVizIUDMrMp5/fClo6Ws6LPoDTFZm/0jX38tsqUM-4bGBl/harbIcKZ8viLm4OL/VupiehIFFibXOsA5/MFdiQxdnT4CWKMR5/paVQ5lZWFVzB5AlR/j9sZMG-u1TZJD6gR/IM4qHGqbanGpTFZu/uJR6o5pFr6urukRM/C4I8Mh_hg66PDihC/uo5IEQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Pj30rjBxGbq4zVSub6pg3lYckuNjWVznkCoeUegNwXs/w:720/sm:1/enc/LeHHfqjnuNfIqQmk/Jc5O4do0442VLqyT/D-ThUZ3m08xiWZDS/NdIz6o0-7f2IO6bK/WQhKa1Tv7sWXyBMu/KdSyDMKid_4-nlN2/oVWnZDeZWItaLWeD/N3Vzw7FwRlmyEOMH/VJDUqxlL4K_hQU6h/YFXyquoOndrtmyh6/J7pWgNEvw5jebIPS/06ZirhCIABeO6rTY/UjIIiOdNYd38TZxu/QBwFHQ.jpg",
+       "designOverlay": null
+      }
+     ]
     }
    ],
    "customizableAreas": [
@@ -997,6 +1195,2528 @@
     "url": null,
     "content": null
    },
+   "supportsBackendRendering": true
+  },
+  "longsleeve": {
+   "productId": "pro_6ae602fcb22447bfbc",
+   "slug": "gildan-ultra-cotton-long-sleeve-t-shirt-1",
+   "name": "Gildan Ultra Cotton Long Sleeve T-Shirt",
+   "description": "<p>This classic long sleeve is a wardrobe essential - available in inclusive sizes &amp; made with 100% cotton. It featu",
+   "category": "Apparel/Long Sleeve Tees",
+   "brand": "Gildan",
+   "productionMethod": "DTG",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 14.79,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 20.79,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "Black",
+      "hex": "#14191e"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/DYTldawYZQWVjxzwpU6_gidG5oj18_nzbc7DPaUrlmk/w:720/sm:1/enc/3Ter-yO5K27xfn2F/UwnLcwnD6NxOnTMI/Y8dDN8_m1jKgBZKQ/yllyt0LEfd72BWD4/Cpz9lroAuJW2Zj0N/1jF92UAAlHB1LCog/6ytFs2jSA_r6kFxH/7SHdWsksghDW7lhz/PKc0zjU4ZSUFRm0u/iJ6Q0zLyZ2w-PLS1/sUzpW_LsmWxiqBAV/AkAiUqjG5F_kAY6b/Sbs4g2_nnhBE6eza/Ju4BRw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/RwRluvvDkzH9sRQrx1Via7IKCW9YGzcGfxosqpX2Iic/w:720/sm:1/enc/YMHSBezix0u99WK_/RyZoIuSU5yR5wkr-/6lGZTfZR-QXWKUSv/aHgoGcFA8wVl9125/ROLsOfVeXgDVIaxC/5N-w_zKpMLpAWeZ7/Q1e7fECB9Fs0wltX/xzH2dqrjnPWLSzVE/TJDW3gBJe-DLkX2b/LUUzjdCdh5N2N31v/zXaCWQL-e1WaiVBP/0bHBffBpzOILrJG4/sNaxdOL6da67MzQR/baBuzg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/bwH3lq9dE3X85x6MJXSGQ7a92An5bmvY9PEgeJXH3ts/w:720/sm:1/enc/QuSvk0dAwGbE5Gzj/6wyjG0WRzISiJJff/Wg-mmiG5lQCD8tBi/R4snaFyzXOEy9q8a/N81emafFy0ereyJI/mYQmVyo4481LVEPO/ZTgriqCPwqwib9Mp/JqzeFVmD0PZG84uI/XcJidLxJI7xWtK0I/Tc2OhgPBt2TOVBRS/_AR10rzkNhtVJWe7/6sZ9n_wsjVmIREq2/wEvB2xZpNMGXCMZ5/ExIxPA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/C68ubIpqaoSm52N9N3v95PTQvjpSmQPxCjQq8utlat0/w:720/sm:1/enc/93L4X6t2-Lg5Kq-p/E5LfBrXk4CAdqifv/2zmvu4YnOUqag6Z5/ZmIywqQq63lpN6I0/QieJDbaOiH_fSXon/bNEsz3A2nRcivGRT/9VGHdUAUBirZYySu/2K5LzNwl8yqeODA4/hwjvQltrwrZ2gQ3_/1-sp83sEv6h4XAB9/dGV-Ge4hVqSHX8Yz/diEkZ_AoF-juHWOd/DgJQXwMeAmijtoM9/Wmu52w.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/MYdiD-rx0J6D0tboS6GDhWub1Q1taoaCh1Q1JvXMc2k/w:720/sm:1/enc/NxMztwqC43-yO13p/zARl1vLrtxwZ5Z1t/mzn865j7GFv2Ajiv/6_La1Ilbsx942RjM/HuFqj2_Tg-tt7R_6/-axq9TG6XEBO9vT-/N40q9s_z1o6bJZYV/C2Vx0EZGy0Xp4LnK/vR2RTB7A5LJlUe1S/i5HbPaiJfRr3GSaR/oOawTCV10mRUdtK6/fqT2i2QP4HdH6H0_/6MZYxqjCwr72Lc2p/B4VrOw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/awQzaFl-WuorHKPMQOXsshdLkTzDlHYAjhRtSHNYY7c/w:720/sm:1/enc/WtSCYEK9hAxFThpF/xCYOpHrvkxEcN6ly/MEVgFd7tE7ZeDkCO/8rTvEfLZeNyEDr6x/liaDkwp1HE_-p2Xa/KIM2ospUTSvOyhgQ/whSGP3FeAhKZ1PtC/pqWpfkEGdCk-DwJf/bOIzdJhYFDfGtQnG/Qs_7FmUqAHIe0-hd/IcPEAaS3qo-a7oLF/6eWuz-ID9t2jboDJ/s4JSmLgb8RcpLSY3/wGmNwQ.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_bwi2dfW2S2iKCCXT5c4oCw",
+       "size": "S",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_Q4903WhMTPmtmC1PJ95Fig",
+       "size": "M",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_XZ0YIqTwQKCnKdiy_MIzsg",
+       "size": "L",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_NPXcD3lGT0OhJxvRd8Ksig",
+       "size": "XL",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_l33nBp2lTGmwhQKFwubTvA",
+       "size": "2XL",
+       "price": {
+        "amount": 16.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_O3pd9GtqTzySPn6dll2ZsA",
+       "size": "3XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_Td3UMtG0RSKq7vH5BkgPGA",
+       "size": "4XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_OKx86TIrQRaU1S0-mYAtlQ",
+       "size": "5XL",
+       "price": {
+        "amount": 24.79,
+        "currency": "USD"
+       },
+       "available": false
+      }
+     ],
+     "status": "PARTIALLY_OUT_OF_STOCK",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Navy",
+      "hex": "#191c25"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/r3NwaLWRxM01hN6U2GCFiSjPVNnWVof9oAjQc5pv_gU/w:720/sm:1/enc/wNQMtIK7_UB15I7T/LKaUlZEpRpiPkaZQ/NIwdomDDUO4-LVtQ/ng7-Yof-BSC2rNR_/xw4CF3Sp3nRjwORE/8XDoiRUDzZ5xDYz0/dNJmXc62dlme07Xg/8bafIbUwS6LAfXYS/eSm4pPurNgMtBhTu/f8m82gl8z1AK8mAC/cyNfXV8Lw4G78kYO/w567M2h-66Ow4_Me/hG9UEYwtUO9dgEZE/bU2NHw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/64eEyEX7VaIfxvlnuw4LhJOapezqPJ6JKIhzanviki4/w:720/sm:1/enc/Nv0ZfZhS-jpKFyNC/X5LREWkSBJgTFkip/GMtuRleiaRIHPqDa/OJbJT06MUmoIEON9/n4CBmkj7kG910XbO/IfOITU4KfLlPHmCi/j9W-V_z5fQqUv7dn/-QDjjVrRNa-UMpQN/NQVygzQXLPUurEMX/D0XDlrDoO-9S1u2j/iHLBwjyAgd-mmeAc/moxsOenDeW4eOLxC/CGlSrgiyp7XyLvcp/XXLhGA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/zKt_OtVMuoIWqTVZL1PxpjfPmlo8JVjlikCdSp0yCsc/w:720/sm:1/enc/ej2Jx5PBGgUO9zp0/c6LX1MZGLBXaOal_/NiKp3T5ANPjHc7EP/iVg01xEQQ646j8Mr/WldMdugBUDLxEvHl/lq0-T0IIQpe8AT4X/MrSadHjOV-sDxHIQ/3U41b1ESAzUkgx4T/8tmbetNIL3QjAyYc/masIunaTcYls3w8s/5lvCKVtFDFpvfZDs/eTRavrbhJ0hO74XM/ANMFE3dB8aIW-9lu/SQGtcQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/B-e1sQG9HCon5CaAt2FeunWgKy2PN4ybJ9r4yF6tWUI/w:720/sm:1/enc/X16QARNxuVLGBqa1/7wcAXKIDgpR6HJeg/ufl3aAfFfjsl1YUz/zcKuTCNLpow8ujoD/yZsAtRx80ScWt3FO/ELL-yBmHCxUKvcEX/YaarLxmwRzbqO1VI/MXwt2g8WxYUXXhm7/mKlEzPOyWFK2J_wA/SjGGPVnzwU2e3kft/2YjdS5XYmYJJ7Py3/rGiVdteAXB3ysmjA/dUvWGgqJ_tRuybSO/wmJRtg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/EKg7lKnfkWbPNkMM2HXbskOSKuwRlE9tDgfeYc-ZaEk/w:720/sm:1/enc/HCqivo_j02ycBINz/AGhgQNTCeueymIqg/M2ZtGnz0sMwb770r/7tagl174kU-itDaN/00zDCe9UHGDXoqqy/YiBbPDUqQWFw7F-b/v9ITY_XYLGSyjszP/8MHwtQRzmD26fCio/52cwSbyQoWl_zv6v/TKOdm9eTdJVOyssJ/eVOgcZEdv5Nm-le5/7_Fe6VpWv4DDLooi/CQL0TAU26IhZtPiO/QL221w.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/aANkoFHTG3r6Xw_QzGxIanDD0U-J6bFnE83uhmS2KTs/w:720/sm:1/enc/HmaU1265SYrFySPS/UY3aN5UlOtz7EjZ3/SMoR1ciDMbB_puoQ/GhqhNdxDdTHbAdp6/gRLrlLsXsu4bYxa8/BuePSpCxByMxUusj/1BWosapDaCBAKJAj/1G-KofOLyNsZEl-J/nV3qlxRe9mTbNrS1/ZWWJgAagpGda0UEF/S0fdcuAumK2-ElCW/KP3iH-7TDyDw2vLk/q4qtKvmtsOVZbDSk/K8MWSA.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_JeDG_RlMRnSoPCTKOfYRcQ",
+       "size": "S",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_hxwrBGo9Qv-VGRM9fz8jbA",
+       "size": "M",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_P7aOftQ3SuquFoRhrVtK3Q",
+       "size": "L",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_QUwzGNnKTX2jbK9z4i0G2A",
+       "size": "XL",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_tlAJvZ5nRTS1l_GzZrvLgg",
+       "size": "2XL",
+       "price": {
+        "amount": 16.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_gUTm9GO7SDuDatv4SVmROw",
+       "size": "3XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_r7YY3oMnSyyrLlVEV0VukA",
+       "size": "4XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_8DL7Eu0lQ5ypSaTH4sxRxw",
+       "size": "5XL",
+       "price": {
+        "amount": 24.79,
+        "currency": "USD"
+       },
+       "available": false
+      }
+     ],
+     "status": "PARTIALLY_OUT_OF_STOCK",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Royal",
+      "hex": "#295293"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/0Fz4VGrNPUGf_0voeiT8kyrs35hCh5DkGXlbWz4YGOs/w:720/sm:1/enc/hm-ukAGSozuTd6lo/gE9RvpTDUeg6MdUv/-t-cvrxFJQQ238-I/hMpXdhukQ-pUvc8F/gIB4XirZqFRY5DEP/jFINZpFi24devUGX/h7ZYWn5r8HcM-lYp/_O5JBZOA2WbKKMPe/HwKghOZIG3ufBPqy/T8mLMY9iDdWuXN6B/xG-l0lROp7b-PPn9/NF5ChupbgauKaLbD/_zFzsQBCDxDz5PkA/JSUI_A.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/KAGtl1ecoMhkarK57Trc3yqkiSVgYpiPWJ774hKh0vE/w:720/sm:1/enc/XrdpkEUaBj348bQx/EqJDsVsdLIeQPKLo/COUTTdlNEGS2yBau/FbLqr-ygzt1vgXnt/Wkhl1em4yriiWsF7/Aj2B9_Ydz252Hdtv/LBtN5tn-Xn6OplO6/sS4ut2j4Sy_R4amO/JMLKl-PFGh58jR5t/Nn-zXJJlIe_H5sQg/tJZDlF370kI5Oi_q/6KAmLMLSPHIx_b26/42i_m2zqSy1516jY/vvW7jQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/CJmreeaQpBNFlSJ_bQ45LruT0uHWLxFPx0YefAaE8eE/w:720/sm:1/enc/sGdiyoY9dXjNKxNy/rtdYZJ_ej-1UNPJ0/7bR8LMMspOsjKzHG/QvzkeBMVp1xKeeYR/881LII-J6o00DRPi/7fEW-PP_ti-UM4LT/MWgdS8AIpZ8x9_1z/lqfk4Q46VZkmlJVu/wYvaLU0A5Wnl1fJB/5xOjuTotaBu7mrZ8/ipv-Fcfd5fcrGsOy/Nk-0XZPp08GCDD1H/pwnaZysO0w2J4G6I/E1T1og.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/BBG_daeV4g6IbdXESVpirSnicsFJYry11m0guCvv5S4/w:720/sm:1/enc/QI4M6rBLMHIci0ff/rtAzQsS3etoLyDMw/iDti5HELXXmrfq_f/FVO9lc3TToFQ8L0F/YqlhQJoB0Sez9iXG/PNzswyn0jFQsfkMd/MxGfXbk1XusUQlN1/VEqUFnOIgPEv_-3x/8qAytW2zR20uUQ3y/SA5-55Hi-MgEYJiU/DBer5mk6Ie9MCQ-z/BLkCTUO-dg_QtHVN/YuU15x3f6Vd7JEs2/P-P1gA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/KWfoA84sfTamXDpbTg9JEPuSW_90IPxYDi0py0l8wis/w:720/sm:1/enc/SrfHu47AKP-jwjAi/2VHcMcNkPdUOMNNW/ssNsOJWDz0V0L-Ti/oUAqJTe8CaZp9-Vv/VhZfhuW8pg_Zpjou/5cScHZOyeTVmS_OD/PiVnqsa8BCZ0BErY/0d3i9NC5Kf0_BIP8/1Lq9MyOnz0tN2TkS/i8AyWVGDNFqOmj9C/8i7olIsv_cDJoU5U/Opp6aHVEwOhiDL3Y/mzJBmLBYSyMOGF8U/JhwCqA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/YF6oQM8ES_9GCWKW8xeXCfzlTswCpjRnFgHkghSEni4/w:720/sm:1/enc/OGA0pKhELqrXb7zr/mu3lWOZF0MGdup5M/fVyT5IcXUXCJxhrZ/6DOPzIHeMklSKOeH/G_n7rvDIZeQOuxWu/cbo04LSASXVcX0XY/oEJJsmJv7dq9VGFz/11SlosRIvIfqDGuh/8g9LQDVtVUHSAuty/KiCjVTJPtxtzNFmR/SFnH51xZBnmgrHgv/j0bsI3tAIOTu1JC6/k-UJES03JZnARTHt/j1YlKA.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_2Z6LLQd6SYuy0BnADN_1Kw",
+       "size": "S",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_zCO9N1RfS7iSLplYK1rbig",
+       "size": "M",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_JbZUaUBjSZCe5ahY_Z6fqw",
+       "size": "L",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_MLOTVw9LSfOdvjg7vHyb8A",
+       "size": "XL",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_nzrYlSi9RyW1K7SVUpxuiQ",
+       "size": "2XL",
+       "price": {
+        "amount": 16.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_fINtDZUCTqm882zgRyOGUg",
+       "size": "3XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "",
+       "size": "4XL",
+       "price": {
+        "amount": 0,
+        "currency": "USD"
+       },
+       "available": false
+      },
+      {
+       "variantId": "",
+       "size": "5XL",
+       "price": {
+        "amount": 0,
+        "currency": "USD"
+       },
+       "available": false
+      }
+     ],
+     "status": "PARTIALLY_OUT_OF_STOCK",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Red",
+      "hex": "#af011f"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/oyrmu21k2mi9qa6kfIkdnnBPVcNsPw5DwNlrNr8hpbA/w:720/sm:1/enc/r29i5F1ABjkw_qtq/QfMlgtJGcZV5imzf/ZXLfweGL9RdnjDKu/uUCOtrE3TlbiOpgW/eqOOs1ijsIzvGqQ4/3ZUBsUEDheDGufU0/K_-gLd81YAeJUxJF/FifZajBULf56fAK1/k9Q_sFoIow0DorDC/R5mVHgXhDfwspuFB/l8011eCODfdnx7_j/pDJfH_wbEGgUfxvQ/fZydw3FmnOKu64aq/B2IrVA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/4ZJXUy4dgsw9s3Qr2tA_a6IrDNDUvXx61q7uzhyiuZE/w:720/sm:1/enc/sJsGun5jDX-a0EOM/1w2xCxGYy4JlBgtJ/NirscQ2__KlSRvWc/SzFOgvLqLPkAoJCu/6no8-E816kjxM-T6/FpB3vHJOvtTXQtA1/M0ICt-QOJ63KDQdX/2TzzP_oRwxBOfhz4/ELLJkG44_9UDFfe5/D-VwKzzHFt1dADzN/yUs69dFFqkBIwclq/DkGx1yGfsIK9s37r/Nvjw7OGDBlLAr6XY/ktZfdw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/IyehUQ7BLimkbVQ5hLdQszKrVmu1as9a2lbQhplzEe0/w:720/sm:1/enc/nxebJcqdPMl9NG07/xTbs0nAYZAMFaCBP/F--vM8W_b70o2eiT/c4orEZP1p3uhWaly/ktJFUgxJT0eKpykV/zzJgHWgcibK-VEkZ/lM9xYGk9VBl1U2wc/rcXmcqa7Zvd3Dlb1/STCaczUMUEgDGhAf/RvUMbNbE03pnIN5W/zlxlLWOixjuFbPji/My7k_PvyArKVxB50/bZhhjk2bKZIvjqyl/ldyxhg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/jpbUz2PboRKKiF6_r6pRy6fNkw0fVz2tHDLdTF_3occ/w:720/sm:1/enc/yLD0KUlbuIkudbMr/1ptgiTbq9p6vqvvC/GQtO1B6RC9ZQO_FY/DiDUV7MHPY06v6i4/NPcbZqOSz2t3dr6C/cCy_WB7ZyodBxUN0/awOnvQynt51NRjlG/0IcYqDBYdvf56FoW/M0C23u2CRhIoK7eO/VERgls6cC_nJeps4/VLs01899XlPwaD4H/cmzj9djas_0WOah6/cAlDRIUcI5-JwC2k/H1lvjQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/WIjgzKtvkFG9ZEz4R8ExBBg3Jyg1Gu-iLDH-5uE5MYs/w:720/sm:1/enc/l5iVvxZE8MTh8dIy/lzqNemBvRc0YJQfR/XNksvhfR4qpSd91r/E80ugAyLxiI35MlI/qEYVPVMi3zCyXq3z/ezL3l4hjL3rwmf4O/9RP_ED_qktT9ZKDQ/-9WX0x6XXIb-6a4B/kdD_e1tAXJbsxnZH/xMGRgoj3xOs8P2KF/vzeiRaba0jLAzlZ1/jBAIcjlP1N3hrbkK/CNjFt_SDDpRUD49Y/2h6z-A.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/R3xHLx-9Y6rRlrlNFjolf9wIp_2ySdhFh1FCoSyOxrg/w:720/sm:1/enc/1Ij9ahHL02CIx4TP/_XPI6nVhD0HvVPjL/P3grVoz5yAxH1iMW/4u0opw0Gqt7YdLiG/mB4h0fclFK6G8y7I/qFzyT4ZWt6BcgaqX/he7AWpGp7uAXCCBq/hBDgcs3bGkeK7lxX/dJxdqn3uJAxl9adH/_73T2V-x35aMkBnw/EA3GPWzUaCWg6KmY/max23Inzh7La-v-p/He0ac26bIMkfDeBV/gKg4hQ.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_txzyyn5ZT0CmBfbc8fBaew",
+       "size": "S",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_fQVLt1fbQhKtKR9kPEM2Cw",
+       "size": "M",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_hoRFXVCOS5upK-Mv_Jiypg",
+       "size": "L",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_9EeqxDSST0eAw4WCrJ58PQ",
+       "size": "XL",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_gGrxa7RvRNuXjfFluPpCXA",
+       "size": "2XL",
+       "price": {
+        "amount": 16.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_ufnDJVUPTvCLTEohmjnmnA",
+       "size": "3XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_xiKCs2cCTtGubudIzBiWJw",
+       "size": "4XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_aYzUuVreT-6_JG0UrmpP7Q",
+       "size": "5XL",
+       "price": {
+        "amount": 24.79,
+        "currency": "USD"
+       },
+       "available": false
+      }
+     ],
+     "status": "PARTIALLY_OUT_OF_STOCK",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "White",
+      "hex": "#f1f0f5"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/lLO4haOMilZrFe6Pj6K5nCSOfuBppyyHVPVVUiVhxcM/w:720/sm:1/enc/f2hFaPNa8RU1D3te/wb-U1MdGY7SQwc6c/iC1PW1pHiy77QNu4/XfXtlZNxOTt3xEGJ/IU8MHiA1q3tFsLM0/sYWR5WumraftFnX_/zWCDgk3siiay2W9i/wHfwWr6aHm9et7_l/6fxRo6EGgkKkX3iC/WgdyDaZGzOwVqJBd/KMhM35e3uA6DkcTO/cU9E9fwu9l_ZicIC/es3HtDzNlzGuMRAn/fvXMnA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/WCeLMVrnBIQn1iz1x2MX9NsccwoDsQhuU3WHWyDJVfc/w:720/sm:1/enc/k4-YqVc7rFW0hDIA/RnZgxCpn-DXQIbuF/M-MU0UijUiNviZHc/UIB4BQN0ZDvZ3VA2/FkFg79zjn8S-YLlw/FBQO-NziQ9FBy-7J/8mnhv3OfnBvouRfS/CpiB7V5gEDaNrmkV/mWuajbMjHdtLgngQ/QkEiaLo0z0p3GVmK/2mskt0ZTp3YrdiAb/SVMpeTD1-NAnkz7V/R35kKcQ3W2wk8seo/XVrPTQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/3gcv5ncseoQOO1rifo6NKwT_hsvncM8Yn0QM64BRtLc/w:720/sm:1/enc/bjRw4nKmZBsMjnpW/BsYNT9zd72h2hom3/hv8e7Uivqhd1oUvm/wfFfDyUSNDFvlFgt/WgEVyUC-OXUPz0uD/2JQ0-sjwGKi3lJ6W/5GVJMjeBR-HtlkCN/0yt97X2w-8zATjmy/E2jbQAl-Oj6GLhiQ/jt8D1jPDUnri9sER/cZ4syPVbxbFqCAke/z495yYAQIs1Xmvh8/639Aa7kZ6xc0oD5n/Zbli2w.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Z6_98Y7V-WBcXneGv_-82H-aloAs7B6gkr-JsksZRmY/w:720/sm:1/enc/1UFZ6fawLnNmI7B0/FHLvlog9kcIhC1Q9/QUav81V7IeW4stWx/fUX6lp9X0-Sn3KSv/IlXViI0ndeOmBdIQ/eCgZJmEH9iC4TebZ/X69DcjtScvS_0kzh/-2UUauovF9qm8MxB/98-WuiHgqTkIVxHd/h-6NnEv7pttiG2bA/qSh08yd3feARZ_QV/fUzvK9zWX1m07FVk/4N_LZ6tnv4OQc37q/SQAq3A.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/yJ2WNtTmYJ9OH7Q0b_CjT2NVP0938FS-mJF3SimZ5yo/w:720/sm:1/enc/XhL_MKAnccqTIrzh/c3zKFdB3mf85b6A1/qJIAprD_9vEgI4jU/z2QY7BoMfSsmcpNL/aYgr93CouHyvnwfE/vbNui8aEf7R4j9OR/qnE30SAMviLTQ3za/RRWCqayDRedZ6hVo/XVMDDj4ujX80aEMA/JwxJNB43l5A80ejL/zmPZsiWays1d9Jd5/c2g1O9ED5QoGSyVh/g-0AdGavrhqh9xYv/2H2glA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/uen219HxPDTpOvQCMFMSC1Zib9ZY0VZhl_THlzciEl8/w:720/sm:1/enc/YC4-T07zex7q5svN/nbcdGEdzn2dy6kFI/PPod9X4zCW_WnH2U/_Vxqhq6sCtOSc7gJ/5Mx8us-EJo_Qcdy4/Dc-yZTZXTIvhpf7O/AiH05qrOenC0ReRt/UfrD5O3B5iMwsnR1/pirOJ7iEIUIPOJOp/Q19lGWeEMi2rp0XS/M7mLJs3HyaJzGZr9/-532K3Q6RM6NA_xL/R97EDulK6vi6voz3/yDAgPw.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_K-JtnVGoQ4GACvqijVsHxQ",
+       "size": "S",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_SdRSQ3acTuixOV8MFhtJcg",
+       "size": "M",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_NYlt_ZykRLaz3cC0HfzTsA",
+       "size": "L",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_q32w9-jPTtKfXkw0c-R8QA",
+       "size": "XL",
+       "price": {
+        "amount": 14.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_pR_w5HnYSFO1SC-vR7QLdA",
+       "size": "2XL",
+       "price": {
+        "amount": 16.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_xXjt_EmcSna6Glp-Q7iDgA",
+       "size": "3XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_x1AorFTkRS2iz9zyG3fXeQ",
+       "size": "4XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_siKLpjvDQHOAny1suVTRyg",
+       "size": "5XL",
+       "price": {
+        "amount": 24.79,
+        "currency": "USD"
+       },
+       "available": false
+      }
+     ],
+     "status": "PARTIALLY_OUT_OF_STOCK",
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "sleeve_right",
+     "name": "Right Sleeve",
+     "type": "sleeve_right",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 1800,
+      "inchesWidth": 3,
+      "inchesHeight": 12
+     },
+     "placements": []
+    },
+    {
+     "regionId": "back",
+     "name": "Back",
+     "type": "back",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1800,
+      "pixelsHeight": 2400,
+      "inchesWidth": 12,
+      "inchesHeight": 16
+     },
+     "placements": []
+    },
+    {
+     "regionId": "back_large",
+     "name": "Back Large",
+     "type": "back_large",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": []
+    },
+    {
+     "regionId": "embroidery_wrist_left",
+     "name": "Left wrist",
+     "type": "embroidery_wrist_left",
+     "available": true,
+     "productionMethod": "EMBROIDERY",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 300,
+      "pixelsWidth": 600,
+      "pixelsHeight": 900,
+      "inchesWidth": 2,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "embroidery_wrist_right",
+     "name": "Right wrist",
+     "type": "embroidery_wrist_right",
+     "available": true,
+     "productionMethod": "EMBROIDERY",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 300,
+      "pixelsWidth": 600,
+      "pixelsHeight": 900,
+      "inchesWidth": 2,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "front",
+     "name": "Front",
+     "type": "front",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1800,
+      "pixelsHeight": 2400,
+      "inchesWidth": 12,
+      "inchesHeight": 16
+     },
+     "placements": [
+      {
+       "id": "fullSize",
+       "name": "Full size"
+      },
+      {
+       "id": "largeCenter",
+       "name": "Large center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center chest"
+      }
+     ]
+    },
+    {
+     "regionId": "front_large",
+     "name": "Front Large",
+     "type": "front_large",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": [
+      {
+       "id": "fullSize",
+       "name": "Full size"
+      },
+      {
+       "id": "largeCenter",
+       "name": "Large Center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left Chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center Chest"
+      }
+     ]
+    },
+    {
+     "regionId": "label_inside",
+     "name": "Inside Label",
+     "type": "label_inside",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "label_outside",
+     "name": "Outside Label",
+     "type": "label_outside",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "sleeve_left",
+     "name": "Left Sleeve",
+     "type": "sleeve_left",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 1800,
+      "inchesWidth": 3,
+      "inchesHeight": 12
+     },
+     "placements": []
+    }
+   ],
+   "supportsBackendRendering": true
+  },
+  "crewneck": {
+   "productId": "pro_14kNy0EJQkqopY-Z9Pm41A",
+   "slug": "gildan-classic-crewneck-sweatshirt-dtg",
+   "name": "Gildan Classic Crewneck Sweatshirt",
+   "description": "<p>One of our most loved crewnecks! It features air-jet spun yarn which acts like fabric softener to reduce creases and ",
+   "category": "Apparel/Sweatshirts",
+   "brand": "Gildan",
+   "productionMethod": "DTG",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 18.79,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 26.79,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "Black",
+      "hex": "#000000"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/rNAfOnGyhnSPNvT37WJca1ASzjg9DJZE6U_tLG-5dDU/w:720/sm:1/enc/RpzA8xuJe3zjLzuP/dxb_Amay3sGkHDjl/z8mGY5WArSSR-Iz6/ZJGwZLXGbyTanRo4/xnqGf5xWJR9RFV-G/qqw78MYpmMpUIU_g/iqXEgLi_xc8jOf5f/rsxrBQf4CrjqXLwy/tioC1zZ6xuKBYrWM/LSMq-Zgu5XjlIRXo/5BBitP5L87yq2opL/EfsbiiH6T4RoB4k8/su-Xt7PB92D50VNp/aosB6g.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/OnF0GddcMSZPL7SfSQFR0DB_kBELfoEfCNiK8AoZuDg/w:720/sm:1/enc/71hfGTzWjKGa4ySR/Ikll5prwxDlFiUar/esi8oWgw1AwEbaSI/9l8lf1NNbPTV6b83/Bt2fO5EYUwAJ0-eE/a3HvSodG6a5lFKOP/S_QWWHy5QS6psNj5/GNOwxTrOhjm6f_Eo/9HUetOF8oryiwza9/X5pW_iztY6gTIXb-/TCH10EyvfHSe_6h1/v9HmMeq8PpBEdzg8/aXU_V9932GjaucYm/BhfT-Q.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/HcVrwWmAIKHKEo051uihRTvVVVsiyGEwVe5BAWhAgVk/w:720/sm:1/enc/CZ2lDtGf6iTDUNT-/wL4tV5F8qYdd1nz1/JYNZA4awvCxpjyBw/pwu-4GBTDgxcJ3Od/i7X10Su5zzDNAAS4/ZiiLjiNYtFi6RBYq/laj99kWH7DeMwot_/BM0QT4kDsNY5j8Qu/OrX2JTiyEmLEjTBy/8EBSRxQqtLKeE4RA/7xvekhXQ226cJRVm/8IiDSLaVCAWjCm2Y/AzBr19JsCpPWPFeo/JqRp8g.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/MuvIf77CwAH-0vPFS-dsrGctQaG8XBCEtfbhTYNGYg8/w:720/sm:1/enc/tbwz29WZ5pk49SkH/GXjv4jY7XaTjMRAP/KYSbPOXOGEUJYzNS/VDIhN_SySQkm1W3T/1bJyju8XQEkCqAwm/7An-TiKYE_cebxdw/qb95G8koIfA99CsE/uk73eHhIx6wNQyTb/vM7lMRwwy6vkME3_/aAHh88NxPWcXbq_P/InL6f2HaxqIja7VK/26MH9tFLTQOEQPIs/HXFBw-01I-92bZ42/8QvojA.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_zLiZ5Rm0R8mwwR037ZIERg",
+       "size": "S",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_n5poVfFpSAK4986_Q6cnwg",
+       "size": "M",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_yq4HgykUSNGJFFNYvDcn4A",
+       "size": "L",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_T-ijwQPeTSeRXeMFAx8csQ",
+       "size": "XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_cHmt2uBiSxy2KBD_49N7dg",
+       "size": "2XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_nDbkwmNtS3u9n-5saW2PUw",
+       "size": "3XL",
+       "price": {
+        "amount": 22.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_Jd2gaacoTxyvSzSX9D8_lw",
+       "size": "4XL",
+       "price": {
+        "amount": 24.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_k53ZTf8VQsKvRH55DABM3Q",
+       "size": "5XL",
+       "price": {
+        "amount": 26.79,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Navy",
+      "hex": "#050c1d"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/JLcmbGpzd7xLYInRwfEHZNidc8O2M83y1mB0837Pkd0/w:720/sm:1/enc/l6wXBJk0mjKzDOnw/3AG0L8_4T1ExXjsb/j55xklXTHdadHJ3N/cmALFNXFccweiP7s/-3cMb2ixrPDelMiL/dQyfP2Cta5wRopIf/hDKOd0aKrY-Z5NRh/j_uLJQBRIXUlNTCC/HWGLWw7291aGHQ03/q0BqLslP0GcKRFGt/io6fTaOhtaqTovsU/znnfoa5luT2PwD9O/LfXRajhbeIRYB73B/0KYg4g.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/wxI6-IKdwAcvL-9qVUeY353cuU4KnmHfwjbadbWILLk/w:720/sm:1/enc/yogIF5EPQl8hWv4F/A1yiZ11ABoQEXl4s/jiLnqbLtvDEcgrwT/a48nTmvERP_DHdLp/SxOYrPsIvRiyNl7H/DyvOaAM25Q_jxh1U/Ye5mpjCGx41WzORp/EWA393sP527mLPgy/-0UUcwWoFpaZjfXQ/Vll6kz1sJDFrO3ja/AeOnWBPIOSyV9g_J/NYwFDBX_mUv9LwO8/wtHqtJic2d6Es5DQ/Pbaabg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/4-fF2LtnAwig0uCES7x5bGaiiQhYFU2m9l9BKRQyVX0/w:720/sm:1/enc/UNN2iyoy0QnZstaQ/ULDy0wW8yAB4ZWwo/6v9TjwwB5A1Zq9gr/zi1pstyCw0r5uF19/bxaSJSo3pp_U_0T4/_w4Y9DlOBkSfXv5O/7DwKBtWFEQiK1wuY/wXH633-tBHiJa7wX/PvYwvxzmJf3gDPq6/W-sqvgVeUoonHd8C/5nMCFAu9KvYpdPEU/1kth4ZQDlc-4aLwV/7mqJhZHaaHuJcEqZ/GyRqAw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/XI5MxszeC7WRv22iad2p4FIH5W2NxnK6DlcbCkbeJUw/w:720/sm:1/enc/-bHUGsgbcEa9Wf5i/Ez79Wpo3bi0K7LuZ/Hhjg_dqfJiw6B-jP/hDJLK-4LUuGgfLKh/BNh1ber3_aXfsFUD/LyRhQe-Zt3MGE0uO/UBP4q09lxoVXy7ZA/c0-Wbq7mjolYeboo/OmXyPzhWyFjBECLt/sM7MMo_gfrMeL_iN/0pD2KaKf55PiP8zS/5wNnwlxuThcRE7_5/SqfRQZiHRpDKG4r3/oMcxmg.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_lDDz9ud4SN-iv7mAUTK7Yw",
+       "size": "S",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_pF82Yh_QRY2pgwUkkm0_mA",
+       "size": "M",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_11sHQLMhRaG3tGUYtCHWDQ",
+       "size": "L",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_BpWqe0SVR2-PzDlAOcpyJQ",
+       "size": "XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_982vq6O-Rti-XGFFA1nh5Q",
+       "size": "2XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_AgrcvSQLRruFq053sfM0Sg",
+       "size": "3XL",
+       "price": {
+        "amount": 22.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_ATHFUr0HSTWc3TbkF7jyBw",
+       "size": "4XL",
+       "price": {
+        "amount": 24.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_wB058ettQbKlrAdcMgqEmw",
+       "size": "5XL",
+       "price": {
+        "amount": 26.79,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Maroon",
+      "hex": "#47171c"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/NSuplnvPHFyQHjprSbz2X_rGL9KtU3meI7zVBf5Cur4/w:720/sm:1/enc/Zw-1aPptpt5ROprS/WIL_Az700ZhxrMb-/CUU1WX3lmBWrSZMk/ljHShLbz0UzXK_pa/pu7be57-l6_ijppI/1BdvSIelivJtiuDb/BaUp7yZDqEfU3bgi/O6kYFttQ8oritaXG/mk-BHesXbZWqZ2o6/XxaoaOz25J7Eh1je/YwrdvSBStB98GVzr/ufwcOZoq58MJyp7_/HzUlyM0WR394yWJq/-i0T4g.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/MPGxDKrbRZ0bKDNiPCB_2nERSEQcq8HO-KUZl_4BOUU/w:720/sm:1/enc/wsyzog9tEtfm5Brf/SiNMcgbBkyjbLNMw/mi_4kP0gzZl_jhh8/I9R5KQlzODPjigd6/DmHDD-DaWl0S7Msc/RowKhqcX9XxkcBgx/KyQS-4vCpbEyD8dZ/PLIVy6AyAa3yKxPQ/ZbbP1ydZPmajfAeC/gtkkQOW0CKeMVu9Q/J4rBaO_HquV1O7Pj/UjgI79wf9Z_OvoQA/l_2IE1bMAKZ-R_22/JyBQDQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/l-wzak9y7qpmJxtpi1WJyrshL3TtNLbUHgiBhBsp0Ug/w:720/sm:1/enc/1kIzh2_X3BbGKi2o/BvVh5XxcwlhWCpjc/09dKs02y0uz8WcPx/QFOLtli8S3VQs_22/4NdShj_RseU8fpQn/of-JOAo9pyuC4S7S/v91c7K9NM2FaiutT/7S32LUu6Cs0xwvYZ/x-Vn2P-17OwP7Nui/nwSLagDMMrsWVCAj/nV6UkA3Dhm6IdQjn/jE9cs92i4LOwPQd1/I1KQEq0Zia2tuJxZ/lmaXmg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/wcJ65szbMN5x5f81C5znYHmqtShb40qJTooHVhn7aAM/w:720/sm:1/enc/6PLMaYexLjP1deyM/aaB1vHPnK34QKizx/0F3GXIKQZN8MYyOp/UOx1A4xutryORQmG/FV2d1OckYoJQyCJ9/zP-Zbij8QLdtqbf-/eTUa4YiaThmdwIJa/-sSCKCnDqdaaS1W9/oIKpIT9W7X8TTiP3/nW2vWcSQvBMTwX5c/FEnfjpN3FqaP5qh8/TTKPfppQQqf8fDH_/tq7hl_UvGa2gfrvw/vk7TvA.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_8_92-ptfT4qCEuUMcW5mCg",
+       "size": "S",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_yiuoMcUxRRCbHxSgpjN4Wg",
+       "size": "M",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_uH2RacdqSTKY1FqbDdzxwQ",
+       "size": "L",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_z_gMqCjFTeKu6Bx7M6aJCw",
+       "size": "XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_oCqCcoYDTvmH5Hrtb_lcWg",
+       "size": "2XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "",
+       "size": "3XL",
+       "price": {
+        "amount": 0,
+        "currency": "USD"
+       },
+       "available": false
+      },
+      {
+       "variantId": "",
+       "size": "4XL",
+       "price": {
+        "amount": 0,
+        "currency": "USD"
+       },
+       "available": false
+      },
+      {
+       "variantId": "",
+       "size": "5XL",
+       "price": {
+        "amount": 0,
+        "currency": "USD"
+       },
+       "available": false
+      }
+     ],
+     "status": "PARTIALLY_OUT_OF_STOCK",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Red",
+      "hex": "#da0a1a"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/-q5IuWuaxj3v4NdXa3IAU8eRHEiZSR3L_Nxscci3upE/w:720/sm:1/enc/gbrSEJyxYIM5ziGn/ZcPcoBvMkhXNjVYU/H3v0aYlpRFllbzDr/JEwUHgbzcnMzfg7E/PDnFgMHbUoxl6E6h/E8syOODtAvisLQCS/uVozQJ1Rt0kZO70D/QegwqmL1Q9jcyWA4/fI1DYTiu9aGMZD9o/8PBJGS7Uh_ul49ZB/LtBt0G3IR1_MbPCE/mhMsoxsrzvKe6M9h/GrIvkO9WkYJxHFl0/z6Mtdw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/XnHJSGwwAEsA66X2nk2oAJmCxN3QzKGWjvWczKfckdU/w:720/sm:1/enc/7TT4QwJ7e38LVRw9/BfJDeuV7A-AzDXOI/8kTpbadF8cpp6aZ2/aLUP88vmDEGzrUdd/KFb0Nyu8mN_HMf0G/lOTXBdsSKCd7B4b3/J8WmEm-klowLPJUA/TD3ZduTpMd2ocqV6/zGjRaiY7tBHrIkXQ/JBb9TfkO3dNS-uUg/glPMqCSyGe4l3w4l/HDIacRw_6wAOxQ9f/BbAmR6qnmj2Yaqrq/RT2RHQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Di9SNf7y5RP0a1wor22NC1j8FMWUnxugFv3somg9Ods/w:720/sm:1/enc/TZ5sxzcoaQBLo0Tm/7ailm9yQnCgu2bDS/khi3LQ7aR7W9lIPR/HRCvY7Uqr7wgotsU/nrg-Dfe9jDcgayKD/UKCuArJjBjvR5Nmn/ASkQ_fbyzT1WJvsL/DCKRVXiIyLAplJrb/gs7qHKMFUqLkdVSq/pzeggCF5bHPPuHrV/hoi5UeF5oAr2_-ow/pGIRXkqlYxLj0c6F/uZXWlN7LEOHBAKc4/LvW6Vg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/ymw2QxV9APDGX7tgxDcHoXKOdu-M3YR2nRkOLyhNt6E/w:720/sm:1/enc/wK2vGhVvfDoroDe3/xGboSrPdP_TkKzS9/e8V4EcuumC5AJdfr/Xl30_DC4WOz_2jUP/91MjUNtYB1J2hUVs/zE8w1dySaRvcBnGi/22gMX7ghh2mZUXYH/EiLF9oPXcovgv8mU/8z5eJhNSm9Fyi4WT/nseiFjpAGg8-7ViO/hpSwe7l6lD-EqgyH/7dU1shO8IXNEkp25/Q4tsqeASJLayukdV/VQ6Anw.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_WxUlMhUwRjWQBytsIiudaQ",
+       "size": "S",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_zkVyvmM5RZ2eDD44oeS5kw",
+       "size": "M",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_lTXIQj18R8O9j0QlgGqlWw",
+       "size": "L",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_spjfN60LT062L3VZ4hUqdg",
+       "size": "XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_BtAjNAnlRhCQhJnbhmD3fA",
+       "size": "2XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_mVOsRcikQB6EmPPdb6hMrw",
+       "size": "3XL",
+       "price": {
+        "amount": 22.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_vHqhRJRGS12672N6YDds6g",
+       "size": "4XL",
+       "price": {
+        "amount": 24.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_nVGF-93ZTWKxM2fXj-UXtA",
+       "size": "5XL",
+       "price": {
+        "amount": 26.79,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "White",
+      "hex": "#ffffff"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/s5PBXFv32vL5Byh5OF7f0pTAVIJUbq-2zEb5FJ9SbX0/w:720/sm:1/enc/1C5dMYIyfVii-pdq/RlWVj-Cc6fjhWQHr/qVBfmyUPSq1G04n9/rgMQzV4hfwsUXxuT/aVHu6l2iW2E3-NnM/2YGL4gsIY5mopMFi/i-ZC85PXNIMBCBy1/MBKOATT7lmWACWXs/FOSnhw7EcmT85kkb/2oQ89a7lpmvz2p7g/oyQjatI5mVWWb7p5/GmGoPV14K-XQZ1iF/jOTRFtZqSzSjceel/3umo2Q.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/e-yLVBJTUux7nA6a2E06a9FQ0KdzvyZvhUhPdcY3-94/w:720/sm:1/enc/z926h-j-U7OPP7Xx/4MjaiJ4yzis6xUx8/xkoUxBWNvJ9ynVFt/Qp2-5rKL9o1MyoUY/guBDuM_cRSw0IW2D/vVQJ4Syq4F__IVP2/ekOcI0jUgykPGqrU/7SNtw71bIF60P0aX/IPcmxwshZqIY3xkU/O-CzTbuzrRl-tYls/HWGWbTIADxx4mBAk/f3V_PGvJ_MExx1ck/prZqOU87dK4c8ytO/OhDBAA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/pzilxCdnCWbnt3R5wTqMTF5aMLXpH4H9uNoLHrWJO08/w:720/sm:1/enc/3WPr8ZLp6DWjBDc_/7SZL5JrOHaaRBiCC/zNvar_HdA_IDGmi5/IbOUWPc8zsDwUDDF/wr9DB2OfL6gmkyax/HmF6Em4239O8wwU_/eSy-_lwkhYC1tmEF/DqE2B-d9IvtsgwNU/qPg4ILXMxzQHCsS8/Rbo9yglbNRmcYAh7/GBgKpJF82t1IqZaX/ruT_VSBqMw-pm44P/EIDMvZ81JmIc4eXM/k2JR5A.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/0eBh2WRaMI4q5LtJGp2SEPcGwq2Jw7vwJ9NsBEBkeqI/w:720/sm:1/enc/Zt_KsaLS-h1Djvoh/T3N5kAGgPtVn3mOD/cBA5WZVNDfMmHTRR/BJqBQxXyGBch9a3E/gthmx-2rYzLjVJyF/EMEWyiyV30o4WtKr/ew_zu_XLQFvePCzi/e_2wBJQEgn7CFwyF/vnBDnD_lEFWYdm-a/Xrf8VvAZtqvwn94S/FGvbWZSZtIr6D7xf/OLfw3P6QWV2BJFv_/ycIhWY31-62ypBKa/VmOVFw.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_h-0Q851kQ16ckTU3CIyqSA",
+       "size": "S",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_TFjV1VfmQVSqAF17L2VoAQ",
+       "size": "M",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_3EuG00TEQ0-h3dI8vK8EcQ",
+       "size": "L",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_as_WdjBGS7eIHkYknUmZsg",
+       "size": "XL",
+       "price": {
+        "amount": 18.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_Z_-cc6rPQoioNIBr42Q97A",
+       "size": "2XL",
+       "price": {
+        "amount": 20.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_d0AbsqhAR0i9A-oreumSaA",
+       "size": "3XL",
+       "price": {
+        "amount": 22.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_xOx4AAFcRVSfAg2GED4L1Q",
+       "size": "4XL",
+       "price": {
+        "amount": 24.79,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_gBjyjMZnRI6QXbINtVP65A",
+       "size": "5XL",
+       "price": {
+        "amount": 26.79,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "label_inside_dtf",
+     "name": "Label Inside",
+     "type": "label_inside_dtf",
+     "available": true,
+     "productionMethod": "DTFX",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 336,
+      "inchesWidth": 3,
+      "inchesHeight": 2.24
+     },
+     "placements": []
+    },
+    {
+     "regionId": "label_outside",
+     "name": "Outside Label",
+     "type": "label_outside",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "sleeve_left",
+     "name": "Left Sleeve",
+     "type": "sleeve_left",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 1800,
+      "inchesWidth": 3,
+      "inchesHeight": 12
+     },
+     "placements": []
+    },
+    {
+     "regionId": "sleeve_right",
+     "name": "Right Sleeve",
+     "type": "sleeve_right",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 1800,
+      "inchesWidth": 3,
+      "inchesHeight": 12
+     },
+     "placements": []
+    },
+    {
+     "regionId": "back_large",
+     "name": "Back Large",
+     "type": "back_large",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": []
+    },
+    {
+     "regionId": "embroidery_wrist_left",
+     "name": "Left wrist",
+     "type": "embroidery_wrist_left",
+     "available": true,
+     "productionMethod": "EMBROIDERY",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 300,
+      "pixelsHeight": 450,
+      "inchesWidth": 2,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "embroidery_wrist_right",
+     "name": "Right wrist",
+     "type": "embroidery_wrist_right",
+     "available": true,
+     "productionMethod": "EMBROIDERY",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 300,
+      "pixelsHeight": 450,
+      "inchesWidth": 2,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "front_large",
+     "name": "Front",
+     "type": "front",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": [
+      {
+       "id": "fullSize",
+       "name": "Full size"
+      },
+      {
+       "id": "largeCenter",
+       "name": "Large center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center chest"
+      }
+     ]
+    },
+    {
+     "regionId": "front_large",
+     "name": "Front Large",
+     "type": "front_large",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 2250,
+      "pixelsHeight": 2700,
+      "inchesWidth": 15,
+      "inchesHeight": 18
+     },
+     "placements": [
+      {
+       "id": "fullSize",
+       "name": "Full size"
+      },
+      {
+       "id": "largeCenter",
+       "name": "Large center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center chest"
+      }
+     ]
+    }
+   ],
+   "supportsBackendRendering": true
+  },
+  "tank": {
+   "productId": "pro_xPL7YjOBRQWVL50Im8eKAA",
+   "slug": "bellacanvas-jersey-tank",
+   "name": "Bella+Canvas Jersey Tank",
+   "description": "<p>A tank top with soft lightweight fabric and a classic fit. A good option for brands looking for a premium tank.</p><u",
+   "category": "Apparel/Tank Tops",
+   "brand": "Bella+Canvas",
+   "productionMethod": "DTG",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 14.2,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 16.2,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "Black",
+      "hex": "#000000"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/BqHU1Pr-7lTdi_050mSFz7L0Y-HXVyF071Lm1umvrPo/w:720/sm:1/enc/GT3O1MG4DN5X2fYc/vfyjTPmhT0DTZsRy/DH3m5mzqSj68fHYq/UepNQeY9Na_iPJ94/5rOW7vaqRFcibtt8/NNBZ4Fjuiz6rsU9P/29DYdRycxMD24c6G/78Fa87Pw2wioSmEg/Fwf9lry_X3c0-L_7/e1JK7pRVeN3co93K/Ws8b65AmaLSf3B8Q/uEDLXbzkExhpmyHM/IRD1DLH0zm2SvbNl/wS9_8Q.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/0KurpWPq_Q_AiRg9J212wV1yI9LHf58y-gqenhJMMA0/w:720/sm:1/enc/98PUFUwtsfvi8Zy0/Q3OQ0fFixnaUcfHR/MKHSbYzdTGz1dGQ3/9nd9y3hlTN7Nq5P1/vrGhAYP9DhuMhnOz/r2lvgsXqdmYgvT2d/PCek8B_T2fjbZQda/DYAjdA3RgT5cdTRN/h26B_4ZmMBbDBGRl/Sp4ugSwpwNdCMjfG/-32jwt_Jqnmc3_WQ/TVSmiq09Rkvss5f5/A5E3HlTrPlmAuKHK/SdTTqw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/PO8mXjpRJejfwa8WUaCIumZtT3lcST3AGJyhmkxEZTY/w:720/sm:1/enc/G1oMkBii-4Nquv9D/IIk9-8XtooR1DVil/KfEUQs7__Go7XBlG/9NCoLGuW7wSDnLh_/6byXEsaYbjCOesjt/AhOUDnMpMOIdU9hT/-V8MTm661DgDRwR4/sGgTXEqVcnOWYXfC/W1KZKYma9j2xqh8f/QsnvmIu2OzmP2Rla/Zk3S_wbjS3q0-7qY/ew6MxKERY6THtKTh/HVblHjwbrHRM4Lc0/wgp7Gw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/S-bcDZn2FMj64fgMrXgsg3pymwvCBR3Fi-wN-J0so5Q/w:720/sm:1/enc/6WTnrmq-TQlzMTh1/U5gJJg8vlpjYopSu/6r8VUQ1dD8aq4-nF/2BrJ1wwpMtazPZrY/oQRCv9ipISEUzA6N/mPD8YRf9ug-v9EwI/EAsd8PB5vMc1lf-N/vcpY779V-5MWq2Y-/EBbMLvs9erdpHJRu/ehfKqNTLDIo5Ut6n/Zxf4kRKm3-Sg9udQ/umOUxlVVyg1H3bpl/1xzlOv7kh7TeKScA/oIsl1Q.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/6m-v9CAzu8LqKVnTZTF_7plWCkyBpoxIAIMWW0e0PhQ/w:720/sm:1/enc/4u7G7QQwmoqqaCxr/Ib3zv4NBeZa_eAkJ/IFCvBL6FN5NcqWNN/JFuGAtAsodVYCpda/rvEhu1AItlc8s9_c/i2zv0JDvTmHqAoNr/FtBWiy5bOE002uFC/9-rojDF8BiQGrQJ-/Ns1s3M8QOT44tBmn/z-ksx1bijXpHXarn/sGz9f-gce2tnBwoh/5uFQagHer2XzDibS/NIU0G3ASOCQf3hPN/JN7u2Q.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/p1uqwvp5DeqcgzIHnjRfBWnTtW0eLN9tzj_ZtawEmGw/w:720/sm:1/enc/GN6zPh8P_1Dstlce/6Jn0XbvdnWbMsIKq/Dh_EpSsARc6NkcEc/D7b_wZNjK3_ENtlm/8cqi0VWSCTZrVkNw/yAYO7XeZUcRKFkmj/XI_9ii10DDk0aJn2/Btn9DhmJNH0KHERx/_zHQL-Sy105Xvgdm/7z0xL-79trzO4z2m/qSXtD7WXeFVxr1_r/HARAT8xGn2CkOpb8/F4w8V-uYd9NzUBjx/HKVblQ.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_p4d5vRfTTVuKJEXcajSeZg",
+       "size": "XS",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_E96g12CqSVqryzpBkPEXdg",
+       "size": "S",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_JUCAMMbMQEeZy-GXmAVIFw",
+       "size": "M",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_M7ogRTQoR-675jZTW7pF6w",
+       "size": "L",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_w_utqsuvQGqNZwLUoRrhpQ",
+       "size": "XL",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_g-rDa5gTQd2oIIh1ut_l_g",
+       "size": "2XL",
+       "price": {
+        "amount": 16.2,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Navy",
+      "hex": "#202b45"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/bl3Uko7WkiXoVPSb83tsilxAtxPLraUnwCQjXlbkMA0/w:720/sm:1/enc/VPawuKNyXAqVIs4b/OogZeMQuNxNktQJ2/9b3arQlX5u1fN61P/0KJSxRQOi5F2LIfk/GyNunjitYpB0ktc8/aDOh_RRsi37CMPVi/GEhtlzpmqnHchcFn/SnoSCD_33zzT_joG/XQmbjqFpdhpWQJAH/5-8duNYwxj1SNC1S/PSeDevlZZGr_wdKE/UQcs2UqFAIzyuqsK/2dAtn-MJzZxAkLMp/rn-G-Q.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Qi1MmNsaxAO6-eUXBfmmaKpvMJiwMxY0E9pPqr9QaNA/w:720/sm:1/enc/mMO404CfmKFl9Gj0/bvpE5brPtv2tj-am/lNp5B_7fdITkefGL/5easLjkJPiIj3yNx/n-LwwpgD7flqmHjd/dI6nUhHLYHlsLRot/xdthMOsVmMmdj2CA/vW8TH3Hvg0_npp1r/9zbHWu6UCTggMJJp/Q0RFMMsxufTr7sTd/q2AbJd5dLjlCex8f/aZii9Pz_rmHa9FRg/q7oWWAuRnzHwnyGL/gt588w.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/QkXp-yZYziYnm_lUgMw7sPpjiwDvIwcQuDwZricz7SA/w:720/sm:1/enc/U6kf10Pt4_ltOyuy/6WVqe0mGM1T_WG3O/E6xM2mriyWQCETf9/Fj2NyQUbDkwjtrsd/H2QJFsz0p_eLxNHG/hEbRtpdUAyPiSoxO/lpt1GMe0y-ZMkbwV/pVVhq6QEkAItXDDz/ZPLWh7-raiRDk9GE/P0KuNWm7qXDOYi1D/FEm0cHpSNv0fFDS9/tyu51tFchXt3YY16/UzAsXBVuZ0O7QDNI/8P_UhA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/N_cRSSNZGlz02JPOAJXxOPEYpGrgdOrItbIeIpmiL2o/w:720/sm:1/enc/38KErcJnlNGVo4E8/bHqTbRmSYn4Y0klN/KA0a8n0RAvbBbOjL/ozMrPikSE0501omO/HFVXrjFC1mCJ4DlJ/TjscyFk01MV02qZH/bD9m0Q4uC-kZhKf8/OYMhMVD0A4sn2gTv/XD60OWR33lUBBghC/anWz4I3GX2mm0wDq/kqzjtea8me1EoagT/rvhZDk2jQyOL72SG/xCiZjdnT9x7cnjhL/c18fBg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/k-039N6ecRQC9TLTFaGWuSdLQ30ITtJhDRfgpu9QhJ0/w:720/sm:1/enc/DnAKGoYjSr9ah7ei/AaVg1WmrV4KNzxoD/y4qPIVeiMe_HpsPI/GBb_DwdWxtDNOjU2/7YL5xY6IgrVXnjFE/0PhP_hZu9JZGwPHl/A178n5mHwJimf_fC/XgWX2WptUDkLU5CJ/62-MPyjaaVNKN1uX/gn1Pv3y6av2rO0e_/T1mzdOjQDE0e-NdM/Bt5GkIc-OvnrjJrX/5g7yn7QYKSLmbQ91/ow-6lw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/hH7ipGIAMYO_AAO7NjABAjhuOlmhrU3Uu0Cth-clwXI/w:720/sm:1/enc/UGTaAlcKQAOWA7Zs/Q3lvr0mho3IOYlZd/3jmT2Nh5TFht35v1/wyFPvaheOr6StoBd/eLttdFPQ7GNtdDs_/prkUdQpVM6VsS0oT/PNSvADrSY404TL1i/L3AmeoDF4UIbGO69/oZJcTDxJ6--3P2bV/CoEfM67wn365cxLg/u73HwZokDs7GutmX/Ez8bFVgcGEl-uCWA/HYmVOhHpoGMsC6gw/VcEvSQ.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_f_23tTatSyG05g95ujmShg",
+       "size": "XS",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_4t1wl7ZySty8-1QBR6SULA",
+       "size": "S",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_8HPzS-W6SemQzUNmbxEV_Q",
+       "size": "M",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_aNyetidYR4q1QfVw-306Lg",
+       "size": "L",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_rqqpdjOGTLSu2qzl5kJLrQ",
+       "size": "XL",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_DeuYNdBiSeGZx-G-oYc7bw",
+       "size": "2XL",
+       "price": {
+        "amount": 16.2,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "True Royal",
+      "hex": "#104184"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/tOkmPtBGNRkxWP_WMc7Rp5EfAm1_81dVsTaKkCfGhxY/w:720/sm:1/enc/pPRXM9nVX--heQS1/edtsNqaFMaWqVXgW/vliRNr_SkCarxtjW/eIjo-X_DqWdQBYlE/wy8lf2neqaxsH5Xa/vss5RYuCDTOUt-qz/a-TCEmI6cOevcw8Z/G6rCqXwNXooK_d6B/yjgYW3_ivX9ZkU6g/8biulY6oO-GiURnj/-nyznDBF-pu_nNuc/ov8V4QZRR-N20GhL/FdeB-2R1SoHP8Boq/r7iWEg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/AqfVku7p6rJwmDg0WwNWJ-nVTYyoIKtak3rYhcSiGG4/w:720/sm:1/enc/k0UCth6G5q8dbisN/SCwFWqbEdO9j-vOu/s9DYlAc_pavXaRTB/-f5woCN2b8ckJeYa/xhuP2tx4FGePYeGn/apFq2fa3CbOHnx1n/ZmpwH5cQFeSE7Dkl/h8HxLX_NyR_wakTH/Z21plGA5Hk3ePYrg/jQFnWakHXbvYSDyQ/ue5SZ8J0qtE7vSds/NtXCFqNpPvdWNf8U/s5pNAl9byRHca8CG/9zCCRg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/CEfpJdmZ44NtQfgo1baTMD5rt7-3q8ppP0iVWkLeMgg/w:720/sm:1/enc/P_tOi2c7vPMJAQiZ/uRGvWB31lQXozAzL/EvtvIACUdPrbd7Ih/Ma3Qyeu2V0ojiC0e/SqHKM-URwqMl5zGX/2C9jmGxvlT7aFKLw/k5k596NSiXHl9tYU/ZsYoOJuXvwP-a6Qr/Eq6elfnZ6-7JxFVe/VyosWW4cJbVFFIYo/3tX0i6Xan87_o8u0/xT4icINjIdCTq6XF/F7QCkeHtVDYjRZRp/aWddgg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/PPJuMuFxfKTETsTNbJJ0STOEf067pmU-JxhTmtSH6lU/w:720/sm:1/enc/-EMU8roe9euShL3W/Tbg8-oCzZar92G93/ppFCtTFhF6snnMWv/IuWKGYfOCkgiQJsr/X1V6Xl4EvWo_oGKe/YMSy7hKb7U621w3H/NQhLZT9QU9pspXeD/WaxZqfaChbqcVOD7/EM94yQgz-rPuhhOK/eXjaKU2xmbtFETsJ/R178kViXIhl7Ju93/Ci4hkHvPCIkbFQL4/bIH6ORdDGLRjWTPD/liXonw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/dzBf8JR9nS8F0OM6osALlXy4Xkn8ZYmOEbm48Tw1LVw/w:720/sm:1/enc/LcmXyNMHmvIfEaoj/M0DBttbJZuHBUj9Z/Ez5YWjNc9hCjhYAc/tvllhTw1V_wutMxn/k55VAytXEt71il_5/5jc4Ak44AnTu8RA4/wnaXbix1766eNjZ7/eR3CnPFg_aIvrvdm/rHoZpj5UZjMebmtx/wbPhpbCf_Svut4bg/O5o36IPZ7_8t7kjE/mEYrbX4R3XvGsOdH/CS-q8N4GNXBb9m55/6OnqTA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/4Zlpe3ybrPEkkubC_VrBZhSw3oiw2agahT35mj-08l8/w:720/sm:1/enc/V-eIx-2A_2fWfqHf/zzcOwmDsZGPQcSDQ/nPHt--G8J6-ggvSH/gx1dzY5ry6MkBbgj/mDq62mnlYOoiSMA_/eKmiOEkuffl_Vxj-/8_U1ZtO3DE4jhi1G/mXZJs6XnRgmrXRA-/IoOH-KqWypc5DOyx/bUi2inyfOyRFdRgj/Ly-mW5DgF0Df7X1D/hQawbcRPyqSXu2p0/4TKEa0_tzRBQxTMV/eUQrnw.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_YEzo9LOTQ0m8dimOs0HOKA",
+       "size": "XS",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_CDKvWfXFRVyF4KzDqck25g",
+       "size": "S",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_WwaMc9zCQ9uJQ_4W1Qyfgg",
+       "size": "M",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_-1QhN65nRF6WuTOXQhwzbg",
+       "size": "L",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_3JPcVLn9Shuy28KJARifIw",
+       "size": "XL",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_PmtPRJ_tRPOI72881DzgqQ",
+       "size": "2XL",
+       "price": {
+        "amount": 16.2,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Red",
+      "hex": "#a22432"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/TK9M7_tkmSES2vWGVmspRMizdt_VyIkDVsZZy2mLxRE/w:720/sm:1/enc/KtRUxgmuNmH1NNA2/wiz2A-HfuWhIAULI/YVW7K-pu705Dn1lx/NlB0pp9vGAXB259f/ZVFdPMTs8yZNV-fL/TcYfSl_Fpi41vS-x/4-hQgoYquEtf2toH/Q4E5HI2w010aYGkf/_Qsc-uZgcSi4PFd8/c1Y5MOMGYatMFU-e/8a3WcjBrqzQK0oMu/ImZ87bn4d4NPYpq2/moweE8E8pVkYUgeX/xxr2vw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/Fm6mLGxRaUi7slsWhQb5oxsJe29-_0rZMbaQW8Rw13g/w:720/sm:1/enc/XCOnHZyCDkOXiqvu/YlFW7YJJLjthpDTy/WtOTDOFnEvM4ZRRn/CuZCtL2so_JCQpRh/JLVBKj9Qe9ao6EVq/wD3XYQ70soL5QLUv/n-YN85FQkiow0LTQ/y4hXZJTET0fd8wXd/aCtdnPbbRyxYowdW/uFCrPWG12vJtMvpo/Lx1rhyzWciTTgTda/dRJ-Owc56NJxzZC0/35OsN66peH3cNVYd/oGhdzA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/b6Y1HZaTX6b5URbo4lEWj2Kp5QO1xedHQ-9QDibgeOE/w:720/sm:1/enc/bTKyUI2v9xE9Ln1R/Y0bGXTCimnTlj83n/fQCf2T8aiOjzdz8b/2O6kZn9dk1g2brsg/kjmQcKj6LmM1TLvj/a7UVxFsk6aU60qGt/klr26tng1KRjE1k2/NNQlAhTpO7BJoZQA/FrZpNxSGT_aDHGrT/ybZ38jsOJQMdmb2z/nZoYlfxtx3nfi7VX/cp0akUP2Mz_WvKYm/r-qDka14M-0AJsD5/TZcLqw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/BsZZIdoxVIfiVFeTcm39PU-GGZNUhjZ32XEG2ZOCqLA/w:720/sm:1/enc/ShdOm0U3j6NRyAGa/-4fpmc7EUF1oVMil/2RG-zV3hPzU4IicZ/OUfpoiIqTlmos9XL/UAgajpkQGw75NFYc/Kt012VPk6lmUqX7x/9l5GPfWmS5NNqj0W/WX7YYqJnuFNI9X_b/PASCxEQCFoQkNlvD/xuW2Tt089uFegmj_/YZBOqQWI4bbkBa7U/6d21UGDhJsxZXYHm/cu2iT5BwmGOYb6W2/KJVOsQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/FgEq5z1tkX2l5g_tIukHzDxlfRcKt5oEgJFHHL8T-mM/w:720/sm:1/enc/Bt8QoWPBpV0fh4vz/kBKOqvqUrWGhUmmR/SLRNi2MAjWrPFbMQ/9HF-1mhlDQc2vHiB/Hz8NROwWMMExj6Mb/NPF55QQGxE1JAmJE/2wdhxLUGkhifuQwl/Lb3MXxNV1HX8Wmks/KNvfgT6lmEluwnwd/UKFlYy3v4hhw47ve/O1K0UWpmx8ibfYdG/1B4BjHihomFGm8xy/iu-OC0LnuF3gAL2S/Cw8fOw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/I0S4bf82TAy7h_G0y5C4YNTRVF6F7oDjPD9rxoh01lI/w:720/sm:1/enc/2gL8zQQugpKqJ3cE/Qs7EnpC6ZEijFyjm/xb1tzqtAdxCAhmzB/bCA-NcO03Ma5saOg/oeG-ULaqiNmoojEG/iU2aGnXtRl7YbFx7/4LYiyZ3smj9friko/nFBl7a4SGaXS9qic/T2Ae83wfEIhhUulL/XkXEY1vLDmapchbA/KHv0BxrHFqw1eTCj/mXom4TtQfP1aqHuF/ViStEJ7u51RIpVZG/vBXkGA.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_BaulBnTJRKyCcXJjlHltSA",
+       "size": "XS",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_QHmQQxBtR8i_r9oLq9jKiw",
+       "size": "S",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_YG_F7wbET9-HogesHqnFqw",
+       "size": "M",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_bQLVVfRUQ7eraPDH7XC2BA",
+       "size": "L",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_5pfwt50_QvuNbYUTNwvK4w",
+       "size": "XL",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_KJDXaV6VR-aUb0_QvfqwzQ",
+       "size": "2XL",
+       "price": {
+        "amount": 16.2,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "White",
+      "hex": "#ffffff"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/kY1iLxr7X-lKvumuqCrHr4jIHOp5vrvsZld1yIdPcdo/w:720/sm:1/enc/r6c2IABsUl2Lwwjn/2q6Abrz-v4GOz8im/NJtb7RLBxlKt-M_i/Xogw1NE3FaVbpe4z/2GZ-NZp_AmdXosi4/WngR9c8OG39bjOmg/1qZYmHFYXHXtPDMP/-igpaMEr9mXJaOGM/GvBgcU-NhwZw5Bhx/hFmewyBZ_8_-wXU1/E0Q7bF0uL7S89NA1/OJOrSLilQRpymiI5/sKk-6aV9ryxuvAvA/KRP_OA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/VNGUbYPiBfWr-mCi8-bWPqOoP0KUtWrJ18cGsuPC3B0/w:720/sm:1/enc/v5Wow-b_PsvKJvas/Wj8toO7ScDX-vwBl/T9WTSaXxJujPKe44/MMj7cJZtJbjBc79e/YKhfU2dx8Eylu21M/VdqC07uIL12FPxAo/jPY2v_Mr-BtV2muC/DxOQf5b13wnfXNbE/8aN-HITMtPPmseTA/WKwIanYKMK1GoaYl/exBjpMDZe-FYNVda/Rf84iE_SURMxJUUg/yhtCNINLUvwpAFQN/aFKWpQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/WldlQPIPNq1Wjpif78c3LrCtqmHnlrj2cUzTOUXkpcU/w:720/sm:1/enc/jWH6vVlO3KkOBeJG/rgMr11LZTUbvovGg/dNHhKlfwPPfLRPIs/TiL_1PXscvw8ElaC/irp97iKYdmGR-w79/gkcszb6A2iviQ7Uh/KCbXrjbD0ZgSbXTA/sD7IASF8iyZpCFDB/K9LXYp5cz0I9ApN_/5_MLyk_mgquKL8bL/9jgehJ1YoGHRYX_-/7sNBi2Z4QayoV-gJ/z6SVXZ_4ME3Lg5zb/wna-Kg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/iAkj7aM_2zhYlDTmTKuFaBxDSSq_rCMqaSlfmcPHYNc/w:720/sm:1/enc/4wKla_lt8qtDNcCy/fXomgVrFCN3WAOY1/khqrRrMDozXZF0kU/3WXdwqwqab-pMsqJ/K4F90hBl1W9dQa4x/XG4GBfVVEZQPvrhh/gPa9RgAbfexU0yS0/HZB6x0ljsaP8B3Bf/N_PJpM95-xdNRKzD/yUf0RMhBh1qaHWKL/mndMhAdrLNFf_3X_/zr3ix_Os-Wi3Mn70/SOLhgi6s86YNRMqW/L1IQKQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/-HdpkPOr0qVPCybvvfK_i-LRHGVw0fY8_mZ-5iqQbkk/w:720/sm:1/enc/ZvhbVRtYYftowdtT/YfJa_Bt508_To43v/OP1KyIT5_4B7ABkg/0FWuoHb50bJI2ssD/pJDp7QAkoL0xu0o6/1Dmv-AOoXyJV3ij3/VfU4Xzkj7ttAXecQ/Tl7hf94YVs-DCxfl/1mgfc9IidjrL7uAU/O52uio4Ya0lg8og8/61qke-78q3Ey1PlL/sCc-o7c7iS76haXk/vSuABEgON7Pxc7Z9/tRDNFA.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/QjzhTfrKN2FypU4x7ohiBjJBkVsvfzgK1xJAoXYxyc0/w:720/sm:1/enc/WUlnVCIra64d76el/tCShqO8mwuS2RKWc/xEmfBQe2OR72Zy7x/3GdK-UYU6WgRMTED/I3pWDMtjYqnID7et/mY_SgV-02XXX4zui/IxmOSgkKnicz9YNy/9UnAqyF9nZ8L7bzS/qyGaQxwU0TCU04VI/1EdKxErA9hegjGxU/Q7mmHZgTHDM2ZD3T/vLWZvkqidhYrKGoo/nBbEuzvO9snX0vDd/is6NwA.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_z_YLG0HjTF2e2tU9L_yZWQ",
+       "size": "XS",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_zeuEWTi8TyuymULpTeU3fQ",
+       "size": "S",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_6EpUQOWDT8G0p8FOpqajOQ",
+       "size": "M",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_G7SsToKVSKCk50T5vDy0LA",
+       "size": "L",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": false
+      },
+      {
+       "variantId": "prv_aJP1pyj_TCKDwZaX0Hbbyg",
+       "size": "XL",
+       "price": {
+        "amount": 14.2,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_K9mQaV2JSMi2gJjXIjOSLQ",
+       "size": "2XL",
+       "price": {
+        "amount": 16.2,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "PARTIALLY_OUT_OF_STOCK",
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "back",
+     "name": "Back",
+     "type": "back",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1800,
+      "pixelsHeight": 2400,
+      "inchesWidth": 12,
+      "inchesHeight": 16
+     },
+     "placements": []
+    },
+    {
+     "regionId": "front",
+     "name": "Front",
+     "type": "front",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1800,
+      "pixelsHeight": 2400,
+      "inchesWidth": 12,
+      "inchesHeight": 16
+     },
+     "placements": [
+      {
+       "id": "largeCenter",
+       "name": "Large Center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left Chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center Chest"
+      }
+     ]
+    },
+    {
+     "regionId": "label_inside",
+     "name": "Inside Label",
+     "type": "label_inside",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    },
+    {
+     "regionId": "label_outside",
+     "name": "Outside Label",
+     "type": "label_outside",
+     "available": false,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    }
+   ],
+   "supportsBackendRendering": true
+  },
+  "youth": {
+   "productId": "pro_ODh_gv0ESl6jIcRfvSww0w",
+   "slug": "gildan-youth-classic-tee-dtg",
+   "name": "Gildan Youth Classic Tee",
+   "description": "<p>The Youth Classic Tee stands out for its thick, durable fabric. Designed to keep up with the endless energy of kids, ",
+   "category": "Apparel/Kids Clothing",
+   "brand": "Gildan",
+   "productionMethod": "DTG",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 9.69,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 9.69,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "Black",
+      "hex": "#272727"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/xHw0YZVJEFcQVz65YDCu0tGzM5Z2aj4phkjMxw4-2Dg/w:720/sm:1/enc/yN9sJWLHX63Dz4jj/dtH9iKTpnxrM0Ej8/PErwNy42Ep2sRZBO/8HIP6U7ywidAbz_W/JV6L-FzpzbaWHBF9/ZmdqWIN1_16nbELI/jxh4XkqTfJ-uetxk/X_vLeB0NPvSqH5r_/gRjDtcxXAhveJIkC/9E06Cd-eURLI2V2N/u_6a_bvPNbIhCo-F/4if8GeRqNzrAxcVj/ZkdIrpP01aujGyO7/0oPDGw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/X_0uGQ-02vleaezEqTOpG3-OxiOUQGIits25KNtRxFk/w:720/sm:1/enc/c80zLdG4n42a_Ewi/rmSMWngU8t6bPHhu/8Sj5NQbAGW5IPj8i/W4G3dR3APaeiV9Ig/GtkI7ih4sAGV0Fm9/zrhYoNxZh5xJzevD/XuMWFdZSGzz-EP1s/de7mH43FahTSceH_/IuoBdnR0zbdlmw5t/M7_Iws8M6nTgwEgQ/WTB3mYNSv8p0arcQ/pRgwanZ0Sll2VaXT/k9iJLXeNw_tHONvv/4YKw2Q.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_QCXNEx8KTg--zw-4Tjq4rA",
+       "size": "XS",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_syv9ZeY-Rz6YSpMHEZDArg",
+       "size": "S",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_c5UepZ4hQOS5SF3NQ3aFIA",
+       "size": "M",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_2w2cLcqhRlOib_R0wdk38A",
+       "size": "L",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_l_LXEgzIS6eHBdN0hdNq2A",
+       "size": "XL",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Navy",
+      "hex": "#2c2f40"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/7fMpdILZcvQBJ28pbIbycOiXjTo6J-TnUJEaPx2hjn8/w:720/sm:1/enc/7N1qriPPsO_dQ2qS/6HxM_et_CHXy81uc/Rp-t0tK5B3njK-Qx/tNNtytAI4l6T5cra/Poh9ykcnjpecvB1k/sCxtUxqs4NMMEoFQ/bwA1mKfsywyV359r/PfySW6FGjkm0eqYX/6BkQn03lX7w2hZ3W/gJ0ZemT3RVf3m65n/wrBWz1dD3qRdFvCf/XL2a5Mi_wjFZAjYd/6Gsy2h17-oGrUVib/T_JHCQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/xILb_pkukkHavA7o1GoaHPIgv8csiP2rSkIaIXJ1nF8/w:720/sm:1/enc/e2KDtnmd18-DvlhH/cEtYX8reNZuDkDwe/OX80twf3MZhVFGhL/4MPkyOZyBeVJPT4q/NZ_WhOUW7OcbCIJQ/vh5tlU8yb4oR7I62/Y4CJuXBPfyBXhy4R/1GyRDJVSJf8kQG5P/YL5hqoMMCesIF3l_/PuMi6lQJn_WzUO-J/Fw44u97NGDgR7-yR/Yw7Lpp9YpDHcLacT/MEuYe7e8dJ49Jhhc/aEbXHA.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_sfmQf3OJTdezhFvgLkgN-g",
+       "size": "XS",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_F9uGLd76RvW4rD0SpvL8xA",
+       "size": "S",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_ldu7d4ZSQsWIlOLfmFuIEg",
+       "size": "M",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_Up9NYC5JRomwaseUFWIyGw",
+       "size": "L",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_oeBuSSOuQ7Wjpa5oT-teQw",
+       "size": "XL",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Royal",
+      "hex": "#224d8f"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/rfzQQcoM6Z6Hxx8DtjUcRHJJ4YNRz56P8UKMNtSj8ZQ/w:720/sm:1/enc/iUiWu2J2eQytBHz6/lYFA6HgxJCSj9czn/gzuF1Gxa8BnTvW4O/y8wY9YNECusDz_B4/yN8MKXXG03H5M4ex/I_micHB6XiM5qj3p/Q769b5CEveVGdYuy/vBkzfEvFZDSVuUxX/X5y5-109jGTQzVUs/vq4FnvSR7lcbTHg8/QdK6Q65zluwmYNU-/5_1MG63bPbKMTJxS/PRlY24oFcHoScSdV/nR3FBg.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/X3M6PxRWG-pfCRMuzF4slU1hJCX7Pxq2iV41SXG8uTs/w:720/sm:1/enc/M6Wotf8boiUMFJW5/LOoIURAuvp7P7cCE/osApwpmVfux13gf4/im6ejn5fCif_4BPQ/wgh-N1lWoDvpbMCF/rvbKLHWFMGbzzYA-/7vwre0GSNsaZGjKY/jalPBP7GMaWQPNYJ/OV_183MyV_x8JdMe/ZohHOSITDHLtxM06/3IuCTsuIguUpaxvo/HsmjdQAeITg3_mvv/qFIHSPG_apUTR5nf/aNe3oA.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_HRdaIjPwSDq0C5tu3PCO5Q",
+       "size": "XS",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_c8-ABJupSEa0r4SM33aD7Q",
+       "size": "S",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_j4Thd0VjSMy47CqqMEX6sw",
+       "size": "M",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_pOlvsgUPR7iFOH-ZQofYLg",
+       "size": "L",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_qm1qxGL-T1q_2o9YpUyCkg",
+       "size": "XL",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Red",
+      "hex": "#da0a1a"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/LI9WzoiWNCidGXvoR8eh3neg7ly-3rPsNRMuhdptIGU/w:720/sm:1/enc/xc4_QjD2MbUc87hg/zWBvWTmWvGAjaKDb/vOIa_CTmbXIUTsJP/1a2G7Ji8urqA42TH/K3kDRBvcyj5HUw-U/MNJiQPc2w4HvLINH/4BVrJb8PECa_cta3/zTe14nbKT4DU-hdp/E38sjeerRwyVGSFN/jUG9S7ep-GoARmxY/z_hoI2WYLYJ406VS/ZR2xNqdE_v2lW_pp/3N7v1Xh1wXsT0Vx4/AQbPeQ.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/6SqR9Ow_COnPFligvixNBfVeJCKtHvCRb36ItUr6ywI/w:720/sm:1/enc/DNcOsM-Tgmd1acQx/8KhbT4t-RX5RPtag/OqLQOXKEr7GxBef0/ngFBb0Ab1KCB1pNO/phuoOEubVY8qJmZf/K-4hvPaCTmNEcJW3/2Dlsjuu4erWWr_Ve/CLbX4-3x9pqRz3_U/h-U5nsgG7DtagSwt/TaKG7yVPyatZ_Tuv/Uwjpo5XkzGocbedI/Va0exDn3B4e-rphT/VwSZgUec4p8nV_Kf/-gGmTQ.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_VaqZAHO_RpOxVxrKF5b0yQ",
+       "size": "XS",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_pcltmrUiRIiIxZT2MYwRGg",
+       "size": "S",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_YIZ7saovS7S6LoTmVkC1UQ",
+       "size": "M",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_L4cp8j4aTVyBGj786uhqyQ",
+       "size": "L",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_WO6ccUAcQx6faQl0PvAfmg",
+       "size": "XL",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "White",
+      "hex": "#e4e4e4"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/Mwx6tO5269uacK7VDQt5c9W3UzmY40rvCsOMyEsIjGs/w:720/sm:1/enc/1Mi_Kgt1mwcm5iXw/5R79hOgiR6rmad1r/wJZDrouOeuJ9UuXo/bHPe-yJJ4PNhCvr2/Gb45vUkzF-VqtGiS/Sw-ViQVyEjLwfqUB/biInto7RwE11q5mM/mDGr8suClfbybaVk/RN7oV_bBsSWZXfzD/F8ToUKQqVOQ62sau/_Qr02qAkmOH-8ISZ/slj26fFKLMUjg8iJ/S2Cgk_9LVTeGw4WI/DbHpRw.jpg",
+       "designOverlay": null
+      },
+      {
+       "url": "https://imgproxy.fourthwall.dev/78OIXAtRGLNeurV8LEQeChKQ3rR1XnmRFq9O0T36nFY/w:720/sm:1/enc/XEnfvWHSIcMscWC6/X5Igz0-e2vWkgPeK/mbVwDdROLZpBPIT0/cIJRZ_oYvDWuWYoB/dgutvIr6FCX8H-Sw/DOyh-K3alAA3ItZx/UgWJi6nB8xR-N7Ii/xUJmELeN8Bd1BTQo/y2IPwDn95gufpc3e/hWuAb1k2dMR0t3XX/WjnZEZbd6WQuFFnp/Uj3DViz-6DLz5Tsx/-7eNXoB65RYpMa6Z/yD50ww.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_zSdByAGtTAa8EhiQbTtQxg",
+       "size": "XS",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_SssuaR6BSdag2YZIw5n0pA",
+       "size": "S",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_ZY0wzcFkSDS1qJujmrNwxQ",
+       "size": "M",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_M_ICmaroQp-ZW6P9ZyUyCw",
+       "size": "L",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      },
+      {
+       "variantId": "prv_6LwjJLjzTgq07DCqZbQxWg",
+       "size": "XL",
+       "price": {
+        "amount": 9.69,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "back",
+     "name": "Back",
+     "type": "back",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1500,
+      "pixelsHeight": 1800,
+      "inchesWidth": 10,
+      "inchesHeight": 12
+     },
+     "placements": []
+    },
+    {
+     "regionId": "front",
+     "name": "Front",
+     "type": "front",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1500,
+      "pixelsHeight": 1800,
+      "inchesWidth": 10,
+      "inchesHeight": 12
+     },
+     "placements": [
+      {
+       "id": "largeCenter",
+       "name": "Large Center"
+      },
+      {
+       "id": "leftChest",
+       "name": "Left Chest"
+      },
+      {
+       "id": "centerChest",
+       "name": "Center Chest"
+      }
+     ]
+    },
+    {
+     "regionId": "label_inside",
+     "name": "Inside Label",
+     "type": "label_inside",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": false,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 450,
+      "pixelsHeight": 450,
+      "inchesWidth": 3,
+      "inchesHeight": 3
+     },
+     "placements": []
+    }
+   ],
+   "supportsBackendRendering": true
+  },
+  "tote": {
+   "productId": "pro_367",
+   "slug": "econscious-eco-friendly-tote-bag",
+   "name": "Econscious Eco-Friendly Tote Bag",
+   "description": "<p>Make a statement with this eco-friendly organic cotton twill tote bag, perfect for showcasing your own unique design!",
+   "category": "Accessories/Bags",
+   "brand": "Econscious",
+   "productionMethod": "DTG",
+   "minimumOrdersNumber": 0,
+   "priceFrom": {
+    "amount": 15.56,
+    "currency": "USD"
+   },
+   "priceTo": {
+    "amount": 15.56,
+    "currency": "USD"
+   },
+   "colorVariants": [
+    {
+     "color": {
+      "name": "Black",
+      "hex": "#060606"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/l2zgcyyYjyzs9LnT2JGpi3xZLyf2GEqQYgSzMufp0O0/w:720/sm:1/enc/bCMBz5dMbomqkd_5/oeTxdCEELS4m4PCZ/ALvMJx4zmNRXOXU8/KLsJRlCqd7MZt0j4/wcaFogi57r5qXnYq/p0s-m9wzqAiFjqfA/kU_wcihJGdEQaQum/uljJAS5u1s5i04Yt/rClOEiad-F5E-o-e/_v7_Mx5ZkOvC4NjB/dtCJ3oPD1K0.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_bAc98TzxRM-W7oKcIRMg4g",
+       "size": "One size",
+       "price": {
+        "amount": 15.56,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    },
+    {
+     "color": {
+      "name": "Oyster",
+      "hex": "#f6ebcd"
+     },
+     "photos": [
+      {
+       "url": "https://imgproxy.fourthwall.dev/yde93PfhzUHi3l54zuGSHSB4_MGSXGuLr_kMEmf5SqE/w:720/sm:1/enc/q1GQkXQk4WLatvtD/iZyBQ2Mx30aoqxgr/0WLXF_y1QJLyqZD6/TH_6uPkAjpkiVvAp/om0eg_zdo4i31mLj/kkyDb8twU2uyjNIT/hjtewo2IEYMWDjgT/VRmOHtL7tWKAu03v/2io0JPB_-cDo39fF/2q2z0YWdeXzIUNEm/MUF3Z94IEgM.jpg",
+       "designOverlay": null
+      }
+     ],
+     "sizeVariants": [
+      {
+       "variantId": "prv_dHayPvd6RyyJluOE1LJSww",
+       "size": "One size",
+       "price": {
+        "amount": 15.56,
+        "currency": "USD"
+       },
+       "available": true
+      }
+     ],
+     "status": "AVAILABLE",
+     "available": true
+    }
+   ],
+   "customizableAreas": [
+    {
+     "regionId": "back",
+     "name": "Back",
+     "type": "back",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1500,
+      "pixelsHeight": 1500,
+      "inchesWidth": 10,
+      "inchesHeight": 10
+     },
+     "placements": []
+    },
+    {
+     "regionId": "front",
+     "name": "Front",
+     "type": "front",
+     "available": true,
+     "productionMethod": "DTG",
+     "supportsBackendRendering": true,
+     "dimensions": {
+      "dpi": 150,
+      "pixelsWidth": 1500,
+      "pixelsHeight": 1500,
+      "inchesWidth": 10,
+      "inchesHeight": 10
+     },
+     "placements": []
+    }
+   ],
    "supportsBackendRendering": true
   }
  }

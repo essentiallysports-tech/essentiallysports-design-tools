@@ -4,7 +4,8 @@
 //   Rights      one policy for the whole feature (RIGHTS_POLICY), the scan that
 //               turns a design's words into blocked items and warnings, and
 //               the acknowledgement a pusher ticks (who / when / what).
-//   Blanks      the curated product kinds (tee, hoodie, poster, sticker, mug)
+//   Blanks      the curated product kinds (tee, hoodie, poster, sticker, mug; merch7: longsleeve,
+//               crewneck, tank, youth, tote)
 //               and which Fourthwall templates qualify.
 //   Pricing     retail price -> profitMargin (Fourthwall adds it to the base).
 //   Shapes      Fourthwall template / product -> the small shapes the page uses.
@@ -70,6 +71,14 @@
     poster: { label: 'Poster', q: ['poster'], apparel: false, minDpi: 300, margin: 10, retail: 17.99 },
     sticker: { label: 'Sticker', q: ['sticker'], apparel: false, minDpi: 300, margin: 4, retail: 5.99 },
     mug: { label: 'Mug', q: ['mug'], apparel: false, minDpi: 300, margin: 10, retail: 17.99 },
+    // merch7 (2026-11-26). Retail = suggested starting prices on the curated bases (Gildan LS
+    // $14.79, Gildan crewneck $18.79, Bella+Canvas tank $14.20, Gildan youth $9.69, Econscious
+    // tote $15.56); the person can change the price. Tote prints at 150 dpi (Fourthwall's area).
+    longsleeve: { label: 'Long sleeve tee', q: ['long sleeve tee', 'long sleeve'], apparel: true, minDpi: 150, margin: 14, retail: 34.99 },
+    crewneck: { label: 'Crewneck sweatshirt', q: ['crewneck sweatshirt', 'crewneck'], apparel: true, minDpi: 150, margin: 18, retail: 44.99 },
+    tank: { label: 'Tank top', q: ['tank'], apparel: true, minDpi: 150, margin: 12, retail: 27.99 },
+    youth: { label: 'Youth tee', q: ['youth tee'], apparel: true, minDpi: 150, margin: 10, retail: 22.99 },
+    tote: { label: 'Tote bag', q: ['tote'], apparel: false, minDpi: 150, margin: 8, retail: 24.99 },
   };
   const BLANK_IDS = Object.keys(BLANKS);
   function pinnedTemplates(env = {}) {
@@ -268,6 +277,21 @@
     return target - b >= MIN_MARGIN ? Math.max(round2(target), byMargin) : byMargin;
   }
 
+  // Several colours in one product (merch7): Fourthwall takes ONE profitMargin per
+  // product and adds it to each variant's own cost, so the base FrameUp prices on
+  // is the dearest chosen colour (per-size differences are Fourthwall's). colors:
+  // the template's [{ name, base? }]; names: the chosen colour names.
+  const MAX_COLORS = 12;
+  function baseForColors(colors, names, fallback) {
+    const want = new Set((Array.isArray(names) ? names : [names]).map(n => String(n || '').trim().toLowerCase()).filter(Boolean));
+    const bases = (Array.isArray(colors) ? colors : []).filter(c => want.has(String(c?.name || '').toLowerCase())).map(c => Number(c.base)).filter(n => Number.isFinite(n) && n > 0);
+    return bases.length ? round2(Math.max(...bases)) : (Number.isFinite(Number(fallback)) && fallback !== null ? round2(fallback) : null);
+  }
+  function priceForColors(retail, colors, names, fallback) {
+    const base = baseForColors(colors, names, fallback);
+    return base == null ? { ok: false, error: 'The blank price is missing. Reload the blanks and try again.' } : marginFor(retail, base);
+  }
+
   // ─── Fourthwall shapes ────────────────────────────────────────────────
   const money = m => (m && Number.isFinite(Number(m.amount ?? m.value)) ? { amount: round2(m.amount ?? m.value), currency: String(m.currency || 'USD') } : null);
   const EMBROIDERY = /embroider/i;
@@ -342,7 +366,7 @@
     VERSION, RIGHTS_POLICY, POLICIES, policyFrom, COLLECTIONS, COLLECTION_IDS, COLOR_KEYS, isRowColor, rowColor, RIGHTS_KINDS, CORE_LINES, ES_PALETTE,
     BLANKS, BLANK_IDS, pinnedTemplates, clip, fold, bannedIn, inventedNumbers, quoteInSource,
     LEAGUE_MARKS, buildRightsIndex, teamsIn, leagueMarksIn, peopleIn, scanRights, conceptLines, scanConcept, ACK_STATEMENT, ackFor, ackCovers,
-    MIN_MARGIN, MAX_PRICE, marginFor, suggestedPrice, round2,
+    MIN_MARGIN, MAX_PRICE, marginFor, suggestedPrice, round2, MAX_COLORS, baseForColors, priceForColors,
     normalizeTemplate, templateEligible, printAreas, normalizeProduct, productUrl, PROD_HOSTS, isSampleMode,
   };
 }));

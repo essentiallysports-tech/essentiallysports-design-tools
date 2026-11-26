@@ -7,6 +7,9 @@
 // v2 (2026-11-26): five blanks (tee, hoodie, poster, sticker, mug), history in
 // Supabase (_merch-store.js; memory until the migration runs), archive, list,
 // collections, sales (webhook + daily sync), upload relay and product refresh.
+// merch7 (2026-11-26): five more blanks (longsleeve, crewneck, tank, youth, tote), every blank
+// photo per colour labelled by angle, and one product with several colours (create / preview
+// `colors`).
 //
 // One endpoint, POST { mode, ... } (signed-in ES users only):
 //   status      -> { configured, shop: { name, publicDomain, status } | null, canPush,
@@ -14,9 +17,13 @@
 //   templates   { blank? } -> { templates: [{ blank, kind, label, templateId, printSpec: { ..., kind, minDpi,
 //               wrap }, areas: [{ regionId, pixelsWidth, pixelsHeight, dpi, renderable, suitsLogo,
 //               suitsDesign }], colors, sizes, basePrice, apparel, minDpi, wrap, logo: 'area'|'inside',
-//               pricing: { suggested, margin, base } }] } (colors[].photos: up to 4 blank photos per colour,
-//               merch4; no blank = all five; public Fourthwall
-//               reads, cached 24 h). upload-url + register run once per image.
+//               pricing: { suggested, margin, base }, multiColor }] } (no blank = all ten; public
+//               Fourthwall reads, cached 24 h). upload-url + register run once per image.
+//               merch7: colors[] = { name, hex, base, photos: [{ url, angle: 'front'|'side'|'back'|
+//               'lifestyle'|'flat'|'detail'|'unknown', index, view?, sampleArt? }] } (every photo
+//               Fourthwall has for the colour, up to 8, in its order; angles from
+//               _merch-templates.js PHOTO_ANGLES). base = the colour's cheapest available size.
+//               multiColor: true when the blank has more than one colour.
 //   concepts    { content, trend?, collection?, count?, team?, designMode: 'basic'|'pro' }
 //               -> { concepts: Concept[], plan: { idea, angle } | null, designMode, fellBack?, note? }
 //               Basic: main tier (Haiku), 4 concepts, pills only. Pro: best tier (Sonnet), 6 concepts,
@@ -37,11 +44,17 @@
 //   upload-url  { fileName, size, contentType:'image/png' } -> { uploadUrl, fileUrl, expiresAt }   [push]
 //               (the browser PUTs the PNG straight to uploadUrl)
 //   register    { fileUrl, width, height, blank?, region? } -> { imageId, preview, thumbnail }             [push]
-//   preview     { blank, imageId, region?, logo?: { region, imageId }, color? } -> { customizationId, images } [push]
-//   create      { concept, content, blank, imageId, region?, logo?, title, description, retail, color?, ack } [push]
+//   preview     { blank, imageId, region?, logo?: { region, imageId }, color? | colors?: [name] }
+//               -> { customizationId, images (each with its colour), color, colors }                [push]
+//   create      { concept, content, blank, imageId, region?, logo?, title, description, retail,
+//               color? | colors?: [name, ...] (1-12, each must be one of the template's colours),
+//               sizes?: [size] (optional, checked against the template; omitted = Fourthwall's
+//               default, every size), ack }                                                       [push]
+//               ONE product with every chosen colour. Price: profitMargin = retail - base, base =
+//               the dearest chosen colour's base (Fourthwall adds per-size extras itself).
 //               region = the design's print area (default: the front area); logo = the ES logo
 //               in its own small area the person picks (templates -> areas[].suitsLogo).
-//               -> { productId, state: 'HIDDEN', images, price: { retail, base, margin }, ack, productUrl }
+//               -> { productId, state: 'HIDDEN', colors, images, price: { retail, base, margin }, ack, productUrl }
 //   publish / hide { productId } -> { product }                                                  [push]
 //   product     { productId, refresh? } -> { product } (with its shop URL; refresh also updates the
 //               stored mockups, variants, prices and state)
@@ -72,7 +85,7 @@ const {
   freeModeGate, inFreeMode, freeModeReason, withAiMode, logUsage,
 } = require('./_ai-gateway.js');
 const fourthwall = require('./_fourthwall.js');
-const { BLANKS } = require('./_merch-templates.js');
+const { BLANKS, labelPhotos } = require('./_merch-templates.js');
 const store = require('./_merch-store.js');
 const { normalizeTrend, trendResearch } = require('./_trend-context.js');
 // The ES merch design guidelines the AI follows (shared with the page).
@@ -96,7 +109,7 @@ const COLOR_KEYS = ['a', 'b', 'ink', 'white', 'black'];
 const rowColor = v => (COLOR_KEYS.includes(v) ? v : /^#[0-9a-f]{6}$/i.test(String(v || '')) ? String(v).toUpperCase() : '');
 const PALETTE_FROM_KINDS = ['team', 'es', 'custom'];
 const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
-const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 18, momentsBatch: 6, uploadBytes: 25 * 1024 * 1024 });
+const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 18, momentsBatch: 6, uploadBytes: 25 * 1024 * 1024, colors: 12, photos: 8 });
 const CAPS = Object.freeze({ person: 10, team: 30 });
 const TEMPLATE_TTL_MS = 24 * 60 * 60 * 1000;
 const SHOP_TTL_MS = 10 * 60 * 1000;
@@ -301,6 +314,7 @@ function qualifies(template, blank) {
   if (!template || template.supportsBackendRendering !== true) return false;
   if (Number(template.minimumOrdersNumber) > 0) return false;
   if (/EMBROIDERY/i.test(String(template.productionMethod || ''))) return false;
+  if (blank.methods && !blank.methods.includes(String(template.productionMethod || '').toUpperCase())) return false;
   return Boolean(pickArea(template, blank.regionPrefer));
 }
 // What every template reply carries per blank: print kind and checks for the
@@ -315,9 +329,19 @@ function blankInfo(kind, base) {
   };
 }
 // The blank's own photos for one colour (Fourthwall colorVariants[].photos[].url),
-// for FrameUp's photo mockup when there is no live Fourthwall mockup.
+// for FrameUp's photo mockups and the model / angle switcher. Every photo, in
+// Fourthwall's order (the index is what the angle labels key on), labelled.
 const httpsPhoto = u => /^https:\/\/[^\s"'<>]{8,1500}$/.test(String(u || ''));
-const photosOf = variant => [...new Set((Array.isArray(variant?.photos) ? variant.photos : []).map(p => String(p?.url || '')).filter(httpsPhoto))].slice(0, 4);
+function photosOf(list, templateId) {
+  const urls = (Array.isArray(list) ? list : []).map(p => String(typeof p === 'string' ? p : p?.url || ''));
+  const seen = new Set();
+  return labelPhotos(templateId, urls).filter(p => httpsPhoto(p.url) && !seen.has(p.url) && seen.add(p.url)).slice(0, LIMITS.photos);
+}
+// A colour's base: its cheapest available size (Fourthwall prices per colour + size).
+function colorBase(variant) {
+  const prices = (variant.sizeVariants || []).filter(s => s && s.available !== false).map(s => Number(s?.price?.amount)).filter(n => Number.isFinite(n) && n > 0);
+  return prices.length ? round2(Math.min(...prices)) : null;
+}
 function normalizeTemplate(kind, t, source) {
   const blank = BLANKS[kind];
   const area = pickArea(t, blank.regionPrefer);
@@ -339,8 +363,8 @@ function normalizeTemplate(kind, t, source) {
       garmentColor: '#ffffff', kind, minDpi: blank.minDpi, wrap: blank.wrap,
     },
     areas: listAreas(t, area.regionId),
-    colors: variants.map(c => ({ name: clip(c.color.name, 60), hex: String(c.color.hex).toLowerCase(), photos: photosOf(c) })),
-    defaultColor: blank.defaultColor, sizes,
+    colors: variants.map(c => ({ name: clip(c.color.name, 60), hex: String(c.color.hex).toLowerCase(), base: colorBase(c) ?? (base == null ? null : round2(base)), photos: photosOf(c.photos, t.productId) })),
+    defaultColor: blank.defaultColor, sizes, multiColor: variants.length > 1,
   };
 }
 function snapshotTemplate(kind) {
@@ -354,7 +378,8 @@ function snapshotTemplate(kind) {
       garmentColor: '#ffffff', kind, minDpi: b.minDpi, wrap: b.wrap,
     },
     areas: s.areas.map(a => ({ ...a, placements: [] })),
-    colors: s.colors.map(c => ({ name: c.name, hex: c.hex, photos: (Array.isArray(c.photos) ? c.photos : []).filter(httpsPhoto).slice(0, 4) })), defaultColor: b.defaultColor, sizes: s.sizes.slice(),
+    colors: s.colors.map(c => ({ name: c.name, hex: c.hex, base: c.base ?? s.basePrice, photos: photosOf(c.photos, s.templateId) })), defaultColor: b.defaultColor, sizes: s.sizes.slice(),
+    multiColor: s.colors.length > 1,
   };
 }
 const TEMPLATES = new Map(); // kind -> { at, data }
@@ -376,7 +401,8 @@ async function templateFor(kind, env = process.env) {
   try {
     const list = await fw.searchTemplates(blank.search);
     reached = true;
-    const candidates = (list?.results || []).filter(r => r.supportsBackendRendering && String(r.category || '').startsWith(blank.category) && !/EMBROIDERY/i.test(r.productionMethod)).slice(0, 4);
+    const candidates = (list?.results || []).filter(r => r.supportsBackendRendering && String(r.category || '').startsWith(blank.category) && !/EMBROIDERY/i.test(r.productionMethod)
+      && (!blank.methods || blank.methods.includes(String(r.productionMethod || '').toUpperCase())) && !(blank.exclude && blank.exclude.test(String(r.name || '')))).slice(0, 4);
     for (const c of candidates) {
       const t = await fw.template(c.productId).catch(() => null);
       if (qualifies(t, blank)) { const data = normalizeTemplate(kind, t, 'search'); TEMPLATES.set(kind, { at: Date.now(), data }); return data; }
@@ -969,7 +995,7 @@ async function momentsMode(body, track) {
 function suggestedRetail(kind, base) {
   if (MerchRules?.suggestedPrice) { const v = Number(MerchRules.suggestedPrice(kind, base)); if (v > 0) return round2(v); }
   const b = Number(base) || 0;
-  const margin = { tee: 14, hoodie: 18, poster: 10, sticker: 4, mug: 10 }[kind] || 12;
+  const margin = { tee: 14, hoodie: 18, poster: 10, sticker: 4, mug: 10, longsleeve: 14, crewneck: 18, tank: 12, youth: 10, tote: 8 }[kind] || 12;
   return round2(Math.ceil(b + margin) - 0.01);
 }
 function codeCopy(concept, template) {
@@ -985,9 +1011,12 @@ async function copyMode(body, track) {
   if (!shaped.concept) return json(400, { ok: false, reason: 'concept', error: "This design can't be used as it is. Pick or make another design." });
   const concept = shaped.concept;
   const template = await templateFor(kind);
-  const retail = suggestedRetail(kind, template.basePrice);
-  const price = rules().marginFor(retail, template.basePrice);
-  const reply = (copy, extra = {}) => json(200, { ok: true, copy: { ...copy, retail, base: template.basePrice, margin: price.ok ? price.margin : null, currency: template.currency }, ...extra });
+  // merch7: with several colours the suggestion is made on the dearest one's base.
+  const picked = Array.isArray(body.colors) ? colorsFor(template, body) : null;
+  const base = picked?.colors ? baseFor(template, picked.colors) : template.basePrice;
+  const retail = suggestedRetail(kind, base);
+  const price = rules().marginFor(retail, base);
+  const reply = (copy, extra = {}) => json(200, { ok: true, copy: { ...copy, retail, base, margin: price.ok ? price.margin : null, currency: template.currency }, ...extra });
   const gate = await aiGate(FEATURES.copy, track);
   if (gate?.free) return reply(codeCopy(concept, template), { free: true, ai: false, cost: { usd: 0, cached: false } });
   if (gate?.reply) return gate.reply;
@@ -1094,6 +1123,39 @@ function colorFor(template, name) {
   const hit = template.colors.find(c => c.name.toLowerCase() === want);
   return hit ? hit.name : (template.colors.find(c => c.name === template.defaultColor)?.name || template.colors[0]?.name);
 }
+// merch7: the colours of one product. `colors: [name…]` (1-12) must all be colours
+// of the template (exact name, any case; a typo is an error, not a silent swap).
+// Without `colors`, the single `color` (or the fallback) as before.
+function colorsFor(template, body, fallbackName = '') {
+  if (body.colors == null) { const one = colorFor(template, body.color || fallbackName); return { colors: one ? [one] : [] }; }
+  if (!Array.isArray(body.colors) || !body.colors.length) return { error: 'Pick at least one colour.' };
+  if (body.colors.length > LIMITS.colors) return { error: `Pick up to ${LIMITS.colors} colours for one product.` };
+  const out = [];
+  for (const raw of body.colors) {
+    const want = clip(raw, 60).toLowerCase();
+    const hit = template.colors.find(c => c.name.toLowerCase() === want);
+    if (!hit) return { error: `The ${template.label.toLowerCase()} doesn't come in "${clip(raw, 40)}". Pick its colours from the list.` };
+    if (!out.includes(hit.name)) out.push(hit.name);
+  }
+  return { colors: out };
+}
+// Price base for the chosen colours: the dearest colour's base (one profitMargin per product).
+function baseFor(template, names) {
+  const bases = template.colors.filter(c => names.includes(c.name)).map(c => Number(c.base)).filter(n => Number.isFinite(n) && n > 0);
+  return bases.length ? round2(Math.max(...bases)) : template.basePrice;
+}
+// Optional sizes: checked against the template; none = Fourthwall's default.
+function sizesFor(template, body) {
+  if (body.sizes == null) return { sizes: undefined };
+  if (!Array.isArray(body.sizes) || !body.sizes.length || body.sizes.length > 20) return { error: 'Pick the sizes again.' };
+  const out = [];
+  for (const raw of body.sizes) {
+    const hit = template.sizes.find(sz => sz.toLowerCase() === clip(raw, 20).toLowerCase());
+    if (!hit) return { error: `The ${template.label.toLowerCase()} doesn't come in size "${clip(raw, 20)}".` };
+    if (!out.includes(hit)) out.push(hit);
+  }
+  return { sizes: out };
+}
 // The design region (front by default, or a chosen area) plus an optional
 // logo region with its own image. Both must be renderable areas of the template.
 function regionsFor(template, body) {
@@ -1120,9 +1182,11 @@ async function previewMode(body) {
   const t = await templateFor(kind);
   const reg = regionsFor(t, body);
   if (reg.error) return json(400, { ok: false, reason: 'input', error: reg.error });
-  const color = colorFor(t, body.color);
-  const r = await client().customize({ productTemplateId: t.templateId, regions: reg.regions, colors: color ? [color] : undefined });
-  return json(200, { ok: true, customizationId: r.customizationId, images: pipelineImages(r.images), color, templateId: t.templateId, regions: reg.regions.map(x => x.region) });
+  const picked = colorsFor(t, body);
+  if (picked.error) return json(400, { ok: false, reason: 'colors', error: picked.error });
+  const colors = picked.colors;
+  const r = await client().customize({ productTemplateId: t.templateId, regions: reg.regions, colors: colors.length ? colors : undefined });
+  return json(200, { ok: true, customizationId: r.customizationId, images: pipelineImages(r.images), color: colors[0], colors, templateId: t.templateId, regions: reg.regions.map(x => x.region) });
 }
 
 async function createMode(body, track) {
@@ -1143,19 +1207,25 @@ async function createMode(body, track) {
   const template = await templateFor(kind);
   const reg = regionsFor(template, body);
   if (reg.error) return json(400, { ok: false, reason: 'input', error: reg.error });
-  const price = R.marginFor(body.retail, template.basePrice);
+  const picked = colorsFor(template, body, concept.garment.name);
+  if (picked.error) return json(400, { ok: false, reason: 'colors', error: picked.error });
+  const colors = picked.colors;
+  const sized = sizesFor(template, body);
+  if (sized.error) return json(400, { ok: false, reason: 'sizes', error: sized.error });
+  const price = R.marginFor(body.retail, baseFor(template, colors));
   if (!price.ok) return json(400, { ok: false, reason: 'price', error: price.error });
   const c = await capsFor(track.email);
   if (c.person.left <= 0) return json(429, { ok: false, reason: 'daily-cap', error: `You've sent ${CAPS.person} products to the shop today, the daily limit. More tomorrow.`, caps: c });
   if (c.team.left <= 0) return json(429, { ok: false, reason: 'daily-cap', error: `The team has sent ${CAPS.team} products to the shop today, the daily limit. More tomorrow.`, caps: c });
-  const color = colorFor(template, body.color || concept.garment.name);
+  const color = colors.join(', ');
   const started = Date.now();
   const r = await client().createProduct({
     productTemplateId: template.templateId,
     name: title,
     description,
     regions: reg.regions,
-    colors: color ? [color] : undefined,
+    colors: colors.length ? colors : undefined,
+    ...(sized.sizes ? { sizes: sized.sizes } : {}),
     profitMargin: price.margin,
   });
   countCreate(track.email);
@@ -1168,14 +1238,14 @@ async function createMode(body, track) {
     productUrl = fourthwall.productUrl(shop.publicDomain, slug);
   } catch { /* the product link fills in on the next read */ }
   const images = pipelineImages(r.images);
-  const record = { productId: r.productId, conceptId: concept.id, title, blank: kind, templateId: template.templateId, color, regions: reg.regions.map(x => x.region), state: 'HIDDEN', price: { retail: price.retail, base: price.base, margin: price.margin }, ack, by: track.email, at: ack.at, productUrl, slug, thumb: images[0]?.url || '' };
+  const record = { productId: r.productId, conceptId: concept.id, title, blank: kind, templateId: template.templateId, color, colors, regions: reg.regions.map(x => x.region), state: 'HIDDEN', price: { retail: price.retail, base: price.base, margin: price.margin }, ack, by: track.email, at: ack.at, productUrl, slug, thumb: images[0]?.url || '' };
   HISTORY.unshift(record); HISTORY.length = Math.min(HISTORY.length, 100);
   const history = await recordCreate(record, concept, images, body);
   await logUsage({ ...track, feature: 'merch-create', task: 'fourthwall-create' }, { model: 'fourthwall/open-api', ok: true, input_tokens: 0, output_tokens: 0, cost_usd: 0, duration_ms: Date.now() - started });
   // `description` is an optional field of CreateDesignProductRequestV1 in both
   // Fourthwall specs (2026-11), so it is sent; it is echoed back so the UI can
   // offer "Copy description" if the live shop shows it empty.
-  return json(200, { ok: true, productId: r.productId, state: 'HIDDEN', title, description, images, price: record.price, ack, productUrl, slug, caps: await capsFor(track.email), history });
+  return json(200, { ok: true, productId: r.productId, state: 'HIDDEN', title, description, colors, images, price: record.price, ack, productUrl, slug, caps: await capsFor(track.email), history });
 }
 
 async function stateMode(body, state, track) {
@@ -1449,7 +1519,7 @@ exports.handler = withAiMode(async function handler(event) {
 
 exports._test = {
   FEATURES, CAPS, LIMITS, COLLECTIONS, BLANKS, NOT_SET_UP, NO_PUSH, InlineRules, rules, usingDesignRules: () => Boolean(MerchRules),
-  shapeConcept, pickArea, listAreas, regionsFor, qualifies, normalizeTemplate, snapshotTemplate, templateFor, suggestedRetail, codeCopy, caps, capsFor, countCreate, pushers, HISTORY,
+  shapeConcept, pickArea, listAreas, regionsFor, qualifies, normalizeTemplate, snapshotTemplate, templateFor, suggestedRetail, colorsFor, baseFor, sizesFor, photosOf, codeCopy, caps, capsFor, countCreate, pushers, HISTORY,
   uploadHostOk, refreshPatch,
   contentOf, trendOf, sourceFor, designModeOf, shapeElements, shapeFit, codeIntent, applyIntent, heuristicMoment, lineFromHeadline, headlineLine, MOMENT_SCORES, G,
   setClientFactory(fn) { clientFactory = fn; },

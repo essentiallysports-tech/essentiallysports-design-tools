@@ -453,15 +453,15 @@ await test('publish / hide / product', async () => {
   assert.equal((await call({ mode: 'publish', productId: '../x' })).status, 400);
 });
 // ─── v2: all five blanks ───────────────────────────────────────────────────
-const LIVE_IDS = { tee: 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', hoodie: 'pro_380', poster: 'pro_15bc29bc8a324d449d', sticker: 'pro_358', mug: 'pro_4v5OfYhyRx62KW5b7Oj6Uw' };
+const LIVE_IDS = { tee: 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', hoodie: 'pro_380', poster: 'pro_15bc29bc8a324d449d', sticker: 'pro_358', mug: 'pro_4v5OfYhyRx62KW5b7Oj6Uw', longsleeve: 'pro_6ae602fcb22447bfbc', crewneck: 'pro_14kNy0EJQkqopY-Z9Pm41A', tank: 'pro_xPL7YjOBRQWVL50Im8eKAA', youth: 'pro_ODh_gv0ESl6jIcRfvSww0w', tote: 'pro_367' };
 const liveTemplates = () => Object.entries(LIVE_IDS).forEach(([k, id]) => { fw[`GET /product-templates/${id}`] = () => reply(200, LIVE[k]); });
 const serviceOn = (on = true) => { if (on) process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key-test'; else delete process.env.SUPABASE_SERVICE_ROLE_KEY; };
-await test('templates: all five blanks with per-blank print spec, logo rule and price', async () => {
+await test('templates: all ten blanks with per-blank print spec, logo rule and price', async () => {
   M.reset(); resetFw(); liveTemplates();
   const r = await call({ mode: 'templates' });
   assert.equal(r.status, 200);
   const by = Object.fromEntries(r.body.templates.map(t => [t.blank, t]));
-  assert.deepEqual(Object.keys(by), ['tee', 'hoodie', 'poster', 'sticker', 'mug']);
+  assert.deepEqual(Object.keys(by), ['tee', 'hoodie', 'poster', 'sticker', 'mug', 'longsleeve', 'crewneck', 'tank', 'youth', 'tote']);
   for (const t of r.body.templates) { assert.equal(t.kind, t.blank); assert.equal(t.printSpec.kind, t.blank); assert.equal(t.source, 'curated'); }
   // tee: the owner-verified Stanley/Stella blank, $29.99 on a $15.85 base.
   assert.equal(by.tee.templateId, LIVE_IDS.tee);

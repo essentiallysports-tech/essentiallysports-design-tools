@@ -468,16 +468,17 @@ await test('moments: lines use only the headline\'s words', () => {
 });
 
 // ─── templates: photos per colour ─────────────────────────────────────────
-await test('templates: live colours carry up to 4 photos; snapshot has a real photo', () => {
-  const t = M.normalizeTemplate('tee', { ...TEE, colorVariants: TEE.colorVariants.map((c, i) => (i ? c : { ...c, photos: [...c.photos, ...c.photos.map((p, n) => ({ url: `${p.url}?n=${n}` })), { url: 'http://insecure.example/x.jpg' }, { url: 'https://a.example/1.jpg' }, { url: 'https://a.example/2.jpg' }, { url: 'https://a.example/3.jpg' }] })) }, 'curated');
-  assert.ok(t.colors.every(c => Array.isArray(c.photos) && c.photos.length <= 4));
-  assert.equal(t.colors[0].photos.length, 4);
-  assert.ok(t.colors[0].photos.every(u => u.startsWith('https://')));
-  assert.ok(t.colors[1].photos[0].startsWith('https://imgproxy.fourthwall.dev/'));
+await test('templates: live colours carry every photo (up to 8, labelled); snapshot has real photos', () => {
+  // merch7: photos are { url, angle, index } (was up to 4 url strings).
+  const t = M.normalizeTemplate('tee', { ...TEE, colorVariants: TEE.colorVariants.map((c, i) => (i ? c : { ...c, photos: [...c.photos, ...c.photos.map((p, n) => ({ url: `${p.url}?n=${n}` })), { url: 'http://insecure.example/x.jpg' }, { url: 'https://a.example/1.jpg' }, { url: 'https://a.example/2.jpg' }, { url: 'https://a.example/3.jpg' }, { url: 'https://a.example/4.jpg' }, { url: 'https://a.example/5.jpg' }, { url: 'https://a.example/6.jpg' }, { url: 'https://a.example/7.jpg' }] })) }, 'curated');
+  assert.ok(t.colors.every(c => Array.isArray(c.photos) && c.photos.length <= 8));
+  assert.equal(t.colors[0].photos.length, 8);
+  assert.ok(t.colors[0].photos.every(p => p.url.startsWith('https://') && typeof p.angle === 'string' && Number.isInteger(p.index)));
+  assert.ok(t.colors[1].photos[0].url.startsWith('https://imgproxy.fourthwall.dev/'));
   for (const kind of ['tee', 'hoodie', 'poster', 'sticker', 'mug']) {
     const s = M.snapshotTemplate(kind);
     assert.ok(s.colors.every(c => Array.isArray(c.photos)), kind);
-    assert.ok(s.colors.some(c => c.photos.length === 1 && c.photos[0].startsWith('https://imgproxy.fourthwall.dev/')), kind);
+    assert.ok(s.colors.every(c => c.photos.length >= 1 && c.photos.every(p => p.url.startsWith('https://imgproxy.fourthwall.dev/'))), kind);
   }
 });
 
