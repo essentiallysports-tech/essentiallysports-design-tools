@@ -4,6 +4,12 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-26 — Suhail (Claude): Merch studio (merch5) pushed (release/merch5 → main 2efe632)
+- Status: pushed and live (merch.js?v=20261126-merch5, merch-print VERSION 2026-11-26-merch5). The ENGINE, UI-STRUCTURE and UI-LOGIC merch5 entries below are in this release; their "not pushed" lines are superseded.
+- Integration fix: Design shortcuts listen on window in the capture phase so "/" focuses Ask AI instead of app-shell's search.
+- check-merch-ui 276/276; full suite 146 files, only the 3 accepted failures. Live: merch assets 200 (incl. new merch-palette.js), api/merch 401 unsigned.
+- Unverified live: real Fourthwall photos at the new stage size, custom-colour pills through a real create, 1024 with a collapsed sidebar.
+
 ## 2026-11-26 — Suhail (Claude, Agent ENGINE): Merch5 engine: ES pill spacing, black + hex pill colours (branch feature/merch5-engine)
 - Status: committed on feature/merch5-engine (base origin/main 2e0ccf4), not pushed. Pairs with feature/merch5-ui-structure and feature/merch5-ui-logic; integration on release/merch5. Contract: merch5-contract.md (scratchpad), plan can-we-plan-on-witty-spark.md.
 - ES pill spacing (`merch-print.js` stackRows): a row with the same box colour and knockout as the row above advances by that row's `FrameUpRules.pillMetrics().step` (overlap = h − step, whole pixels; ~39 px for a big pill on a 150 DPI tee); a different colour advances by h (touching, 0 gap). The fit searches the biggest size whose real stack height fits (step's 1px gaps scale with the canvas, not the type). Rows draw in order. A Pro "between" rule now moves a same-colour second row down by the overlap too. Saved fits get slightly shorter stacks (expected).
