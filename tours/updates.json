@@ -3,6 +3,23 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-26-editor-drag-replies",
+      "date": "2026-11-26",
+      "title": "Editor: drag cover text again, cleaner reply tweets",
+      "items": [
+        {
+          "title": "Drag the cover text",
+          "text": "On the Cover slide, drag the headline pills to place them, even with a background photo loaded. Press elsewhere to move the photo.",
+          "page": "index.html"
+        },
+        {
+          "title": "Hide reply @mentions",
+          "text": "Multiple Tweets hides the @handles at the start of replies, so cards read cleanly. Turn it off under the tweet inputs.",
+          "page": "index.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-26-merch-moments-v2",
       "date": "2026-11-26",
       "title": "Merch Designs: what to print, and bigger designs",
