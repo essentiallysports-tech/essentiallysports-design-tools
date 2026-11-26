@@ -507,6 +507,32 @@ await test('templates: live colours carry every photo (up to 8, labelled); snaps
     assert.ok(s.colors.every(c => c.photos.length >= 1 && c.photos.every(p => p.url.startsWith('https://imgproxy.fourthwall.dev/'))), kind);
   }
 });
+await test('moments: NBA, WNBA and NASCAR are their own sports (labels, chips, sport filter)', async () => {
+  for (const [id, label] of [['nba', 'NBA'], ['wnba', 'WNBA'], ['nascar', 'NASCAR']]) assert.equal(M.SPORT_LABEL[id], label, `SPORT_LABEL.${id}`);
+  fresh();
+  weeklySpend = 999; // free mode: heuristic scores, no AI
+  messagesHandler = () => { throw new Error('no AI in free mode'); };
+  const at = '2026-11-26T13:00:00.000Z';
+  M.setTrendsSource(async () => ({ updatedAt: at, items: [
+    { id: 'n1', category: 'nba', type: 'news', title: 'LeBron James nets first triple-double with 76ers in win over Heat', source: 'NBA.com', url: 'https://www.nba.com/a', publishedAt: at, coverage: 3, rank: 9, team: { name: 'Philadelphia 76ers', short: '76ers', logo: 'assets/logos/nba/phi.webp' }, related: [] },
+    { id: 'w1', category: 'wnba', type: 'news', title: 'Caitlin Clark has a strong message for Indiana Fever teammate', source: 'Yahoo Sports', url: 'https://sports.yahoo.com/b', publishedAt: at, coverage: 2, rank: 7, team: { name: 'Indiana Fever', short: 'Fever', logo: 'assets/logos/wnba/ind.webp' }, related: [] },
+    { id: 'c1', category: 'nascar', type: 'news', title: 'Bowman to change number for Daytona 500 so Jimmie Johnson can run No. 48', source: 'NASCAR.com', url: 'https://www.nascar.com/c', publishedAt: at, coverage: 1, rank: 6, related: [] },
+  ] }));
+  const r = await call({ mode: 'moments' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  const bySport = Object.fromEntries(r.body.moments.map(m => [m.sport, m]));
+  assert.equal(bySport.nba?.sportLabel, 'NBA');
+  assert.equal(bySport.wnba?.sportLabel, 'WNBA');
+  assert.equal(bySport.nascar?.sportLabel, 'NASCAR');
+  assert.deepEqual(bySport.nba.team, { name: 'Philadelphia 76ers', short: '76ers' });
+  // The page builds its sport chips from sportLabel: three distinct chips.
+  assert.equal(new Set(r.body.moments.map(m => m.sportLabel)).size, 3);
+  const only = await call({ mode: 'moments', sport: 'nascar' });
+  assert.deepEqual(only.body.moments.map(m => m.id), ['c1'], 'the sport filter knows NASCAR');
+  const wnba = await call({ mode: 'moments', sport: 'wnba' });
+  assert.deepEqual(wnba.body.moments.map(m => m.id), ['w1'], 'the sport filter knows WNBA');
+  assert.equal(aiCalls.length, 0);
+});
 
 assert.ok(!logs.some(l => /test-gateway-key/.test(l)), 'gateway key never logged');
 process.stdout.write(`test-merch-ai: ${passed} tests passed\n`);

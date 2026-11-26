@@ -69,8 +69,20 @@ const cases = [
   ['Yankees eye Juan Soto reunion', 'mlb'],
   ['Jeremiah Smith Ohio State Football News', 'cfb'],
   ['College Football Playoff rankings: Tennessee climbs', 'cfb'],
-  ['Stephen Curry injured versus Rockets', 'others'],
-  ['Lakers win 7th straight', 'others'],
+  // NBA, WNBA and NASCAR are their own sports (they used to be Others).
+  ['Stephen Curry injured versus Rockets', 'nba'],
+  ['Lakers win 7th straight', 'nba'],
+  ['Mavericks reach NBA Cup knockout round with Phoenix loss at Houston', 'nba'],
+  ['LeBron James nets first triple-double with 76ers in win over Heat', 'nba'],
+  ['Search for new WNBA commissioner picks up steam, sources say', 'wnba'],
+  ['Sophie Cunningham, Caitlin Clark Have Strong Message for Indiana Fever Teammate', 'wnba'],
+  ["A'ja Wilson wins fourth MVP", 'wnba'],
+  ['NASCAR Hall of Famer delivers verdict on Spire Motorsports', 'nascar'],
+  ['Bowman to change number for Daytona 500 so Jimmie Johnson can run No. 48', 'nascar'],
+  ['Kyle Larson clinches the Cup Series title at Phoenix', 'nascar'],
+  // Everyday words and other leagues stay out of NBA.
+  ['Spurs beat Arsenal in Premier League', 'others'],
+  ['Kings beat Oilers in overtime', 'others'],
   // A college name with another sport is not college football.
   ['Notre Dame Basketball', 'others'],
   ['Michigan hockey sweeps Wisconsin', 'others'],
@@ -80,7 +92,7 @@ const cases = [
 for (const [text, expected] of cases) assert.equal(classify(text).category, expected, `${text} → ${expected}`);
 // Strong enough that a College Football search hint (score < 6) can't pull it back.
 assert.ok(classify('Notre Dame basketball tops Purdue').score >= 6);
-for (const text of ['Game Of Thrones', 'Cathay Pacific', 'Kylie Jenner lawsuit', 'PS6 release date']) {
+for (const text of ['Game Of Thrones', 'Cathay Pacific', 'Kylie Jenner lawsuit', 'PS6 release date', 'Iran fires rockets', 'Heat wave warning', 'Villanova basketball beats Kansas']) {
   assert.equal(classify(text).category, null, `${text} should not be a sport`);
 }
 
@@ -344,4 +356,78 @@ feeds = {
   assert.deepEqual(parsed['t-a'].titles, ['Short one here']);
 }
 
-console.log(`trend-design: ${cases.length + 4} classifier cases, parsing, freshness, dedupe, ranking, cache and AI enrichment passed`);
+// ── 7. NBA, WNBA and NASCAR: first-class sports ──────────────────────────────
+{
+  const L = require(path.resolve('trends-logic.js'));
+  const Logos = require(path.resolve('league-logos.js'));
+  const NEW = [['nba', 'NBA'], ['wnba', 'WNBA'], ['nascar', 'NASCAR']];
+  // Categories, labels, core ranking, the page's short labels and league tiles.
+  for (const [id, label] of NEW) {
+    assert.equal(T.CATEGORIES.find(c => c.id === id)?.label, label, `${id} is a category`);
+    assert.ok(T.CORE_SPORTS.has(id), `${id} ranks as a core sport`);
+    assert.equal(L.SHORT[id], label, `TrendsLogic.SHORT.${id}`);
+    assert.equal(Logos.idFor(id), id, `LeagueLogos knows ${id}`);
+    assert.equal(Logos.logoFor(id).label, label);
+    // Own Google News searches, 1 day (Trends) and 2 days (Video Ads / Reels).
+    const q1 = T.SOURCES.find(s => s.id === id);
+    const q2 = T.SOURCES_2D.find(s => s.id === id);
+    assert.equal(q1?.category, id); assert.equal(q2?.category, id);
+    assert.match(new URL(q1.url).searchParams.get('q'), / when:1d$/);
+    assert.match(new URL(q2.url).searchParams.get('q'), / when:2d$/);
+    assert.ok(!T.RULES.others.some(([word]) => word === id), `"${id}" is not an Others word any more`);
+  }
+  assert.equal(T.CATEGORIES.at(-1).id, 'others', 'Others stays last');
+  assert.match(new URL(T.SOURCES.find(s => s.id === 'nascar').url).searchParams.get('q'), /Cup Series.*Xfinity.*Truck Series.*Daytona 500/);
+  const at = h => new Date(NOW - h * 3600e3).toISOString();
+  assert.equal(T.rankScore({ category: 'nba', type: 'news', publishedAt: at(2), score: 12 }, NOW), T.rankScore({ category: 'nfl', type: 'news', publishedAt: at(2), score: 12 }, NOW), 'NBA ranks like NFL');
+  assert.equal(T.esFit({ category: 'nascar', score: 6 }).score, T.esFit({ category: 'golf', score: 6 }).score, 'NASCAR fits like golf (core, no newsletter)');
+
+  // Build with fixtures for the three new searches plus an NBA story that only
+  // the general Sports feed carries (no search hint).
+  const qOf = id => new URL(T.SOURCES.find(s => s.id === id).url).searchParams.get('q');
+  feeds = {
+    sports: `<rss><channel>${item('Thunder star Shai Gilgeous-Alexander drops 45 in NBA Cup win', 1, 'ESPN', 'espn.com')}${item('Kings beat Oilers in overtime', 2, 'NHL.com', 'nhl.com')}</channel></rss>`,
+    'NFL when:1d': `<rss><channel>${item('Steelers fire coordinator after NFL loss', 1, 'NFL.com', 'nfl.com')}</channel></rss>`,
+    [qOf('nba')]: `<rss><channel>${item('Lakers rally past Celtics as LeBron James scores 30', 2, 'ESPN', 'espn.com')}${item('Knicks hold off Cavaliers in NBA Cup group finale', 3, 'NBA.com', 'nba.com')}${item('Warriors beat Kings in NBA Cup', 4, 'NBC Sports', 'nbcsports.com')}</channel></rss>`,
+    [qOf('wnba')]: `<rss><channel>${item('Caitlin Clark and the Indiana Fever add a veteran guard', 2, 'Yahoo Sports', 'sports.yahoo.com')}${item('Search for new WNBA commissioner picks up steam, sources say', 3, 'ESPN', 'espn.com')}</channel></rss>`,
+    [qOf('nascar')]: `<rss><channel>${item('Kyle Larson and Hendrick Motorsports plan for the Daytona 500', 2, 'NASCAR.com', 'nascar.com')}${item('Cup Series schedule adds a street race', 3, 'Autoweek', 'autoweek.com')}</channel></rss>`,
+  };
+  T.reset();
+  const data = await getTrends(false);
+  const cat = title => data.items.find(i => i.title.startsWith(title));
+  const lakers = cat('Lakers rally');
+  assert.equal(lakers?.category, 'nba');
+  assert.deepEqual(lakers.team, { name: 'Los Angeles Lakers', short: 'Lakers', logo: 'assets/logos/nba/lal.webp' }, 'NBA team and its library logo');
+  assert.equal(cat('Thunder star')?.category, 'nba', 'an NBA story from the general Sports feed is NBA, not Others');
+  assert.equal(cat('Thunder star').team?.name, 'Oklahoma City Thunder');
+  const fever = cat('Caitlin Clark');
+  assert.equal(fever?.category, 'wnba');
+  assert.deepEqual(fever.team, { name: 'Indiana Fever', short: 'Fever', logo: 'assets/logos/wnba/ind.webp' }, 'WNBA team from its full name');
+  assert.equal(cat('Search for new WNBA')?.category, 'wnba');
+  const larson = cat('Kyle Larson');
+  assert.equal(larson?.category, 'nascar');
+  assert.equal(larson.team, undefined, 'NASCAR has no team list: keywords only');
+  assert.equal(cat('Cup Series schedule')?.category, 'nascar');
+  assert.equal(cat('Kings beat Oilers')?.category, 'others', 'NHL Kings stay in Others');
+  const others = data.items.filter(i => i.category === 'others');
+  assert.ok(!others.some(i => /\b(?:NBA|WNBA|NASCAR|Lakers|Celtics|Caitlin Clark|Daytona)\b/.test(i.title)), 'no NBA, WNBA or NASCAR story is left in Others');
+  // The sport filter (chips come from data.categories) lists them with counts.
+  for (const [id, label] of NEW) {
+    const c = data.categories.find(x => x.id === id);
+    assert.equal(c?.label, label);
+    assert.ok(c.count >= 2, `${id} has stories`);
+    assert.ok(data.items.filter(i => i.category === id).every(i => i.fit?.score >= 50), `${id} items get core ES fit`);
+  }
+  // Post-now picks keep each sport's share fair.
+  const picks = L.topPicks(data.items, { n: 6, maxPerSport: 2 });
+  const per = {};
+  picks.forEach(p => { per[p.category] = (per[p.category] || 0) + 1; });
+  assert.ok(Object.values(per).every(n => n <= 2), `maxPerSport holds: ${JSON.stringify(per)}`);
+  assert.ok(['nba', 'wnba', 'nascar'].some(id => per[id]), 'new sports can make the picks');
+  // Video Ads (2 days) also fetches the three searches; it still keeps only its own sports.
+  rssCalls = 0;
+  await getTrends(false, { window: '2d' });
+  assert.equal(rssCalls, T.SOURCES_2D.length, 'one fetch per 2-day source, in parallel');
+}
+
+console.log(`trend-design: ${cases.length + 4} classifier cases, parsing, freshness, dedupe, ranking, cache, AI enrichment and NBA/WNBA/NASCAR feeds passed`);
