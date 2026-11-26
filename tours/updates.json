@@ -3,6 +3,28 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-27-merch-ads-products",
+      "date": "2026-11-27",
+      "title": "Merch: make ads, more products, several colours, realer mockups",
+      "items": [
+        {
+          "title": "Make an ad",
+          "text": "Turn any merch product into ES social ads: feed post, story or carousel, with the mockups, a short line, price and a Shop now link or QR. Download PNGs or a zip.",
+          "page": "merch.html"
+        },
+        {
+          "title": "More products, several colours",
+          "text": "Long sleeves, crewnecks, tanks, youth tees and totes join tees, hoodies, posters, stickers and mugs. Pick several colours and publish them as one product.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Realer mockups, more models",
+          "text": "Switch between Fourthwall's model photos and angles; the print follows the fabric's folds and shading. Admins can Quick publish a tee in one step.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-27-merch-brainstorm",
       "date": "2026-11-27",
       "title": "Merch Brainstorm: work a trend with AI, as a team",

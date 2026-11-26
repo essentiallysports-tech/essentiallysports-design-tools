@@ -1020,14 +1020,14 @@ async function copyMode(body, track) {
   const gate = await aiGate(FEATURES.copy, track);
   if (gate?.free) return reply(codeCopy(concept, template), { free: true, ai: false, cost: { usd: 0, cached: false } });
   if (gate?.reply) return gate.reply;
-  const key = `p|${hash(`${kind}|${JSON.stringify(concept.stack)}|${concept.title}|${source}`)}`;
+  const key = `p2|${hash(`${kind}|${JSON.stringify(concept.stack)}|${concept.title}|${source}`)}`;
   const hit = cacheGet(key);
   if (hit) return reply(hit, { ai: true, cost: { usd: 0, cached: true } });
   let result;
   try {
     result = await aiText({
-      tier: AI_TIER, json: true, maxTokens: 500, timeoutMs: 25000, track: { ...track, feature: FEATURES.copy },
-      system: `You write shop copy for EssentiallySports fan merch. JSON only: {"title":"...","description":"..."}. Title: at most 60 characters, names the design and the product. Description: 2 or 3 short sentences for fans. Never invent numbers, facts or quotes; never call it official or licensed.\n${VOICE}`,
+      tier: AI_TIER, json: true, maxTokens: 700, timeoutMs: 25000, track: { ...track, feature: FEATURES.copy },
+      system: `You write shop copy for EssentiallySports fan merch. JSON only: {"title":"...","description":"...","adLine":"..."}. Title: at most 60 characters, names the design and the product. Description: 2 or 3 short sentences for fans. adLine: a social ad headline for this product, at most 48 characters, fan voice, no hashtags or emojis. Never invent numbers, facts or quotes; never call it official or licensed.\n${VOICE}`,
       messages: [{ role: 'user', content: `Product: ${template.label} (${template.name}).\nDesign rows: ${concept.stack.map(r => r.text).join(' / ')}\nDesign idea: ${concept.title}. ${concept.why}\nSource: """${source}"""` }],
     });
   } catch (error) {
@@ -1039,6 +1039,10 @@ async function copyMode(body, track) {
   const p = parseJson(result.text) || {};
   const copy = { title: clip(p.title, 70), description: clip(p.description, 500) };
   const allText = `${copy.title} ${copy.description}`;
+  // The ad headline rides the same call (no extra cost); dropped if it breaks a rule.
+  const ad = clip(String(p.adLine || '').replace(/[#]\S+/g, '').trim(), 48);
+  if (ad && !OFFICIAL_RE.test(ad) && !((FrameUpRules?.BANNED) || []).some(b => b.re.test(ad))
+    && !(ad.match(NUMBER_RE) || []).some(n => !fold(`${source} ${concept.stack.map(r => r.text).join(' ')}`).includes(fold(n)))) copy.adLine = ad;
   const bad = !copy.title || !copy.description || OFFICIAL_RE.test(allText)
     || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(allText))
     || (allText.match(NUMBER_RE) || []).some(n => !fold(`${source} ${concept.stack.map(r => r.text).join(' ')}`).includes(fold(n)));
