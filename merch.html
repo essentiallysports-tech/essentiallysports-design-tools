@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="merch.css?v=20261126-merch4">
+  <link rel="stylesheet" href="merch.css?v=20261126-merch5">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -54,166 +54,250 @@
     </div>
   </nav>
 
-  <main class="mx-page" id="main">
-    <header class="mx-head">
-      <div class="mx-head__top">
-        <div class="mx-head__title">
-          <h1 class="mx-title" id="mx-title">Merch Designs</h1>
-          <span class="mx-conn" id="mx-conn" role="status" aria-live="polite"></span>
-        </div>
-        <div class="mx-mode" id="mx-mode-box">
-          <div class="es-segmented es-segmented--sm mx-mode__switch" id="mx-mode" role="radiogroup" aria-label="AI mode" aria-describedby="mx-mode-note">
-            <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-ai="basic">Basic</button>
-            <button class="es-segmented__item" type="button" role="radio" aria-checked="false" tabindex="-1" data-ai="pro">Pro</button>
-          </div>
-          <p class="mx-mode__note" id="mx-mode-note"></p>
-        </div>
+  <!-- Icons, once. Use with <svg class="mx-i"><use href="#mx-i-undo"/></svg>. -->
+  <svg class="mx-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="mx-i-sparkle" viewBox="0 0 24 24"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></symbol>
+    <symbol id="mx-i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="mx-i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+    <symbol id="mx-i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="mx-i-warn" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="mx-i-close" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="mx-i-drag" viewBox="0 0 24 24"><circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/></symbol>
+    <symbol id="mx-i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+    <symbol id="mx-i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="mx-i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="mx-i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+    <symbol id="mx-i-back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+    <symbol id="mx-i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="mx-i-shirt" viewBox="0 0 24 24"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></symbol>
+    <symbol id="mx-i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="mx-i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="mx-i-bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+    <symbol id="mx-i-stop" viewBox="0 0 24 24"><rect width="12" height="12" x="6" y="6" rx="2"/></symbol>
+  </svg>
+
+  <main class="mx-page ais-page" id="main">
+    <!-- One bar: title + status | 3 steps | Your merch -->
+    <header class="mx-bar">
+      <div class="mx-bar__title">
+        <h1 class="mx-title" id="mx-title">Merch Designs</h1>
+        <span class="mx-conn" id="mx-conn" role="status" aria-live="polite"></span>
       </div>
-      <div class="mx-head__nav">
-        <div class="es-tabs mx-tabs" role="tablist" aria-label="Merch">
-          <button class="es-tab" type="button" role="tab" id="mx-tab-make" aria-selected="true" aria-controls="main" data-tab="make">Create merch</button>
-          <button class="es-tab" type="button" role="tab" id="mx-tab-list" aria-selected="false" aria-controls="mx-view-list" tabindex="-1" data-tab="list">Your merch</button>
-        </div>
-        <nav class="mx-steps" id="mx-steps-nav" aria-label="Merch steps">
-          <ol id="mx-steps">
-            <li><button class="mx-step" type="button" data-step="content"><span class="mx-step__num" aria-hidden="true">1</span><span>Content</span></button></li>
-            <li><button class="mx-step" type="button" data-step="designs"><span class="mx-step__num" aria-hidden="true">2</span><span>Design</span></button></li>
-            <li><button class="mx-step" type="button" data-step="setup"><span class="mx-step__num" aria-hidden="true">3</span><span>Product</span></button></li>
-            <li><button class="mx-step" type="button" data-step="live"><span class="mx-step__num" aria-hidden="true">4</span><span>Push &amp; live</span></button></li>
+      <div class="mx-bar__nav" id="mx-steps-nav">
+        <nav class="mx-steps" id="mx-steps" aria-label="Merch steps">
+          <ol>
+            <li><button class="mx-step" type="button" data-step="content" aria-current="step"><span class="mx-step__num" aria-hidden="true"><span>1</span><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-check"/></svg></span><span class="mx-step__label">Create</span></button></li>
+            <li><button class="mx-step" type="button" data-step="designs" disabled><span class="mx-step__num" aria-hidden="true"><span>2</span><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-check"/></svg></span><span class="mx-step__label">Design</span></button></li>
+            <li><button class="mx-step" type="button" data-step="publish" disabled><span class="mx-step__num" aria-hidden="true"><span>3</span><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-check"/></svg></span><span class="mx-step__label">Publish</span></button></li>
           </ol>
         </nav>
+      </div>
+      <div class="mx-bar__end">
+        <button class="es-btn es-btn--ghost mx-listbtn" type="button" id="mx-tab-list" data-tab="list" aria-pressed="false">
+          <svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-bag"/></svg><span>Your merch</span><span class="es-badge mx-listbtn__count" id="mx-list-count" hidden></span>
+        </button>
       </div>
     </header>
 
     <div class="mx-banner" id="mx-banner" role="status" aria-live="polite" hidden></div>
 
-    <!-- 1 Content -->
-    <section class="mx-view" id="mx-view-content" data-view="content" aria-labelledby="mx-h-content">
-      <div class="mx-content-grid">
-        <div class="mx-card mx-brief">
-          <div>
-            <h2 class="mx-h2" id="mx-h-content">What should the merch say?</h2>
-            <p class="mx-sub">A line, an exact quote or a stat, plus an ES story link if you have one. Or start from a moment on the right.</p>
+    <!-- 1 Create -->
+    <section class="mx-view mx-create" id="mx-view-content" data-view="content" aria-labelledby="mx-h-content">
+      <div class="ais-wrap mx-create__wrap">
+        <div class="mx-hero">
+          <h2 class="mx-hero__title" id="mx-h-content" tabindex="-1">Make fan merch with <span class="ais-gradient-text ais-gradient-text--on-light">AI</span></h2>
+          <p class="mx-hero__sub">A line, a quote or a moment in. Print-ready ES designs out.</p>
+        </div>
+
+        <div class="mx-prompt ais-surface" id="mx-prompt">
+          <div class="mx-prompt__body">
+            <label class="es-sr-only" for="mx-text">Your line, quote or stat</label>
+            <textarea class="mx-prompt__text" id="mx-text" rows="3" maxlength="400" placeholder="Type a line, quote or stat… e.g. Ball don’t lie" aria-describedby="mx-text-hint"></textarea>
+            <div class="mx-prompt__chips">
+              <span class="mx-moment-chip" id="mx-moment-chip" hidden>
+                <svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-sparkle"/></svg>
+                <span class="mx-moment-chip__text" id="mx-moment-chip-text">Moment</span>
+                <button class="mx-moment-chip__x" type="button" id="mx-moment-chip-clear" data-chip-clear aria-label="Don’t use this moment" title="Don’t use this moment"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-close"/></svg></button>
+              </span>
+            </div>
+            <div class="mx-prompt__row">
+              <button class="mx-quiet" type="button" id="mx-url-toggle" aria-expanded="false" aria-controls="mx-url-box"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-plus"/></svg>ES story link</button>
+              <label class="mx-prompt__style">
+                <span class="mx-prompt__style-label">Style</span>
+                <select class="es-select es-select--sm" id="mx-collection" aria-describedby="mx-coll-blurb">
+                  <option value="auto">Auto</option>
+                  <option value="replay">Replay</option>
+                  <option value="nickname">Nickname</option>
+                  <option value="quote">Quote</option>
+                  <option value="core">Core</option>
+                  <option value="current">Current</option>
+                </select>
+              </label>
+              <span class="mx-prompt__blurb" id="mx-coll-blurb"></span>
+            </div>
+            <div class="mx-prompt__url" id="mx-url-box" hidden>
+              <svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-link"/></svg>
+              <label class="es-sr-only" for="mx-url">ES story link</label>
+              <input class="mx-input" id="mx-url" type="url" inputmode="url" autocomplete="off" placeholder="https://www.essentiallysports.com/…">
+            </div>
           </div>
-          <label class="es-field">
-            <span class="es-field__label">Your line, quote or stat</span>
-            <textarea class="mx-input mx-textarea" id="mx-text" rows="4" placeholder="e.g. Ball don’t lie" aria-describedby="mx-text-hint"></textarea>
-            <span class="es-field__hint" id="mx-text-hint">Exact quotes are printed exactly. Names and quotes get a rights check before the shop.</span>
-          </label>
-          <label class="es-field">
-            <span class="es-field__label">ES story link <span class="mx-opt">optional</span></span>
-            <input class="mx-input" id="mx-url" type="url" inputmode="url" autocomplete="off" placeholder="https://www.essentiallysports.com/…">
-          </label>
-          <div class="mx-using" id="mx-using" hidden>
-            <span class="mx-using__text">Using the moment <strong id="mx-using-title"></strong></span>
-            <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-using-clear">Don’t use it</button>
-          </div>
-          <fieldset class="mx-fieldset">
-            <legend class="mx-label">Collection</legend>
-            <div class="mx-chips" id="mx-collections" role="radiogroup" aria-label="Collection" aria-describedby="mx-coll-blurb"></div>
-            <p class="mx-meta" id="mx-coll-blurb"></p>
-          </fieldset>
-          <details class="mx-rules" id="mx-rules" hidden>
-            <summary>The AI follows ES merch rules</summary>
-            <ul class="mx-rules__list" id="mx-rules-list"></ul>
-          </details>
-          <div class="mx-actions mx-actions--create">
-            <span class="mx-meta" id="mx-content-meta"></span>
-            <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-create">Create with AI</button>
+          <div class="mx-prompt__foot">
+            <div class="mx-prompt__mode" id="mx-mode-box">
+              <div class="es-segmented es-segmented--sm mx-mode" id="mx-mode" role="radiogroup" aria-label="AI mode" aria-describedby="mx-mode-hint">
+                <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-mode="basic">Basic</button>
+                <button class="es-segmented__item" type="button" role="radio" aria-checked="false" tabindex="-1" data-mode="pro">Pro</button>
+              </div>
+              <p class="mx-prompt__hint" id="mx-mode-hint">4 designs · ES pills · about 15 s</p>
+            </div>
+            <button class="es-btn es-btn--primary es-btn--lg ais-btn mx-create-btn" type="button" id="mx-create" aria-keyshortcuts="Control+Enter Meta+Enter" disabled><span class="es-ai-mark" aria-hidden="true"></span><span class="mx-create__label">Create designs</span><kbd class="mx-kbd" id="mx-create-kbd" aria-hidden="true">⌘ ↵</kbd></button>
           </div>
         </div>
-        <aside class="mx-card mx-moments" aria-labelledby="mx-h-moments">
-          <div class="mx-row mx-row--between mx-row--top">
+        <p class="mx-prompt__note" id="mx-text-hint">Exact quotes print word for word. Names and quotes get a rights check before the shop.</p>
+        <p class="mx-prompt__note mx-prompt__note--status" id="mx-content-meta" role="status" aria-live="polite"></p>
+
+        <details class="mx-rules" id="mx-rules">
+          <summary><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-sparkle"/></svg>How the AI designs</summary>
+          <ul class="mx-rules__list" id="mx-rules-list"></ul>
+        </details>
+
+        <section class="mx-moments" id="mx-moments-wrap" aria-labelledby="mx-h-moments">
+          <div class="mx-sechead">
             <div>
-              <h2 class="mx-h3" id="mx-h-moments">Merch-worthy moments</h2>
+              <h2 class="mx-h2" id="mx-h-moments">Or start from a trending moment</h2>
               <p class="mx-meta" id="mx-moments-meta">Today’s trends, scored for merch.</p>
             </div>
-            <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-moments-refresh">Refresh</button>
+            <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-moments-refresh"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-refresh"/></svg>Refresh</button>
           </div>
-          <div class="mx-chips mx-chips--tight" id="mx-moments-sports" role="group" aria-label="Filter moments by sport" hidden></div>
-          <div class="mx-moments__list" id="mx-moments" aria-live="polite" aria-busy="false"></div>
-        </aside>
+          <div class="mx-chips" id="mx-moments-sports" role="group" aria-label="Filter moments by sport" hidden></div>
+          <div class="mx-moments__grid" id="mx-moments" aria-live="polite" aria-busy="true">
+            <div class="mx-moment mx-moment--skel" aria-hidden="true"><span class="es-skeleton mx-skel mx-skel--tag"></span><span class="es-skeleton mx-skel mx-skel--title"></span><span class="es-skeleton mx-skel mx-skel--line"></span><span class="es-skeleton mx-skel mx-skel--short"></span></div>
+            <div class="mx-moment mx-moment--skel" aria-hidden="true"><span class="es-skeleton mx-skel mx-skel--tag"></span><span class="es-skeleton mx-skel mx-skel--title"></span><span class="es-skeleton mx-skel mx-skel--line"></span><span class="es-skeleton mx-skel mx-skel--short"></span></div>
+            <div class="mx-moment mx-moment--skel" aria-hidden="true"><span class="es-skeleton mx-skel mx-skel--tag"></span><span class="es-skeleton mx-skel mx-skel--title"></span><span class="es-skeleton mx-skel mx-skel--line"></span><span class="es-skeleton mx-skel mx-skel--short"></span></div>
+          </div>
+        </section>
       </div>
     </section>
 
     <!-- 2 Design studio -->
-    <section class="mx-view" id="mx-view-designs" data-view="designs" aria-labelledby="mx-h-designs" hidden>
-      <div class="mx-row mx-row--between mx-row--top">
-        <div>
-          <h2 class="mx-h2" id="mx-h-designs">Design studio</h2>
-          <p class="mx-sub" id="mx-designs-sub">Pick a design, then edit it by hand or tell the AI what to change.</p>
-        </div>
-        <div class="mx-row">
-          <span class="es-badge" id="mx-made-mode" hidden></span>
-          <button class="es-btn es-btn--ghost" type="button" id="mx-again">New designs</button>
-        </div>
-      </div>
-      <p class="mx-note" id="mx-fell" role="status" hidden></p>
-      <div class="mx-studio">
-        <div class="mx-studio__main">
-          <div class="mx-card mx-stage">
-            <div class="mx-stage__bar">
-              <div class="es-segmented es-segmented--sm" role="group" aria-label="Stage view">
-                <button class="es-segmented__item" type="button" data-stage="tee" aria-pressed="true">On a tee</button>
-                <button class="es-segmented__item" type="button" data-stage="closeup" aria-pressed="false">Close-up</button>
+    <section class="mx-view mx-design" id="mx-view-designs" data-view="designs" aria-labelledby="mx-h-designs" hidden>
+      <h2 class="es-sr-only" id="mx-h-designs" tabindex="-1">Design studio</h2>
+      <div class="mx-work" id="mx-work">
+        <section class="mx-stage" aria-label="Design preview">
+          <div class="mx-stage__bar">
+            <div class="es-segmented es-segmented--sm mx-stage__views" id="mx-view-toggle" role="radiogroup" aria-label="Stage view">
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-view="tee"><span class="mx-view__label">On a tee</span></button>
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="false" tabindex="-1" data-view="closeup">Close-up</button>
+            </div>
+            <div class="mx-stage__tools">
+              <button class="es-icon-btn mx-tool" type="button" id="mx-undo" aria-label="Undo" title="Undo (⌘Z)" aria-keyshortcuts="Meta+Z Control+Z" disabled><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-undo"/></svg></button>
+              <button class="es-icon-btn mx-tool" type="button" id="mx-redo" aria-label="Redo" title="Redo (⇧⌘Z)" aria-keyshortcuts="Meta+Shift+Z Control+Shift+Z" disabled><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-redo"/></svg></button>
+              <button class="es-badge es-badge--good mx-stage__badge" type="button" id="mx-stage-badge" aria-controls="mx-fold-checks" hidden>Print-ready</button>
+            </div>
+          </div>
+          <div class="mx-stage__view">
+            <canvas class="mx-stage__canvas" id="mx-stage-canvas" width="720" height="840" role="img" aria-label="Design preview"></canvas>
+
+            <div class="mx-makingcard" aria-label="Making your designs">
+              <div class="mx-makingcard__head">
+                <span class="mx-makingcard__title"><span class="mx-makingcard__orb" aria-hidden="true"></span>The AI is making your designs</span>
+                <span class="mx-makingcard__time" id="mx-making-time" aria-hidden="true">0 s</span>
               </div>
-              <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-undo" disabled>Undo</button>
+              <ol class="mx-making" id="mx-making" aria-label="Progress" aria-live="polite" hidden>
+                <li class="mx-making__step is-active" data-making-step="read"><span class="mx-making__mark" aria-hidden="true"></span><span class="mx-making__label">Reading your line</span></li>
+                <li class="mx-making__step" data-making-step="rules"><span class="mx-making__mark" aria-hidden="true"></span><span class="mx-making__label">Checking ES merch rules</span></li>
+                <li class="mx-making__step" data-making-step="plan" data-pro><span class="mx-making__mark" aria-hidden="true"></span><span class="mx-making__label">Planning the idea</span></li>
+                <li class="mx-making__step" data-making-step="draw"><span class="mx-making__mark" aria-hidden="true"></span><span class="mx-making__label" id="mx-making-draw">Drawing 4 designs</span></li>
+                <li class="mx-making__step" data-making-step="check"><span class="mx-making__mark" aria-hidden="true"></span><span class="mx-making__label">Print-checking</span></li>
+              </ol>
+              <button class="es-btn es-btn--ghost es-btn--sm mx-makingcard__stop" type="button" id="mx-stop"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-stop"/></svg>Stop</button>
             </div>
-            <div class="mx-stage__view">
-              <canvas class="mx-stage__canvas" id="mx-stage-canvas" width="720" height="840" role="img" aria-label="Design preview"></canvas>
+
+            <div class="mx-empty-stage" id="mx-empty-stage">
+              <span class="mx-empty-stage__art" aria-hidden="true"><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-shirt"/></svg></span>
+              <p class="mx-empty-stage__title">No designs yet</p>
+              <p class="mx-empty-stage__copy">Write a line on Create and the AI makes 4 to 6.</p>
+              <button class="es-btn es-btn--sm" type="button" data-go="content">Go to Create</button>
             </div>
-            <p class="mx-meta mx-stage__cap" id="mx-stage-cap"></p>
           </div>
-          <div class="mx-card mx-checkcard" id="mx-studio-checks-card">
-            <span class="mx-label" id="mx-studio-checks-label">Print check</span>
-            <ul class="mx-checks" id="mx-studio-checks" aria-labelledby="mx-studio-checks-label" aria-live="polite"></ul>
+          <p class="mx-stage__cap" id="mx-stage-cap" aria-live="polite"></p>
+        </section>
+
+        <section class="mx-filmarea" aria-labelledby="mx-strip-label">
+          <div class="mx-idea" id="mx-idea" hidden>
+            <span class="mx-idea__tag"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-sparkle"/></svg>The idea</span>
+            <p class="mx-idea__text"><span id="mx-idea-text"></span> <span class="mx-idea__angle" id="mx-idea-angle"></span></p>
           </div>
-        </div>
-        <div class="mx-studio__side">
-          <section class="mx-card mx-idea" id="mx-idea" aria-labelledby="mx-idea-h" hidden>
-            <h3 class="mx-eyebrow" id="mx-idea-h">The idea</h3>
-            <p class="mx-idea__text" id="mx-idea-text"></p>
-            <p class="mx-meta" id="mx-idea-angle"></p>
-          </section>
-          <section class="mx-card mx-filmcard" aria-labelledby="mx-strip-label">
-            <div class="mx-row mx-row--between">
-              <h3 class="mx-label" id="mx-strip-label">Designs</h3>
-              <span class="mx-meta" id="mx-strip-count"></span>
-            </div>
+          <p class="mx-note" id="mx-fell" role="status" hidden></p>
+          <div class="mx-filmarea__head">
+            <h3 class="mx-label" id="mx-strip-label">Designs <span class="mx-meta" id="mx-strip-count"></span></h3>
+            <span class="es-badge mx-made" id="mx-made-mode" hidden></span>
+            <button class="mx-link" type="button" data-go="content">Edit brief</button>
+          </div>
+          <div class="mx-filmrow">
             <div class="mx-strip" id="mx-strip" role="radiogroup" aria-labelledby="mx-strip-label"></div>
+            <button class="mx-strip-new" type="button" id="mx-strip-new"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-refresh"/></svg><span>New set</span></button>
+          </div>
+        </section>
+
+        <aside class="mx-rail" id="mx-rail" aria-label="Edit the design">
+          <section class="mx-ask ais-surface" id="mx-ask" aria-labelledby="mx-ask-h">
+            <h3 class="mx-ask__title" id="mx-ask-h"><span class="es-ai-mark" aria-hidden="true"></span>Ask AI</h3>
+            <div class="mx-ask__row">
+              <label class="es-sr-only" for="mx-chat-input">Tell the AI what to change</label>
+              <input class="mx-input" id="mx-chat-input" type="text" maxlength="300" autocomplete="off" placeholder="e.g. Lakers colours, bolder" aria-describedby="mx-chat-note" aria-keyshortcuts="/">
+              <button class="es-btn" type="button" id="mx-chat-send">Change it</button>
+            </div>
+            <div class="mx-chips mx-chips--tight" id="mx-chat-chips" role="group" aria-label="Suggestions"></div>
+            <p class="mx-chat__note" id="mx-chat-note" role="status" aria-live="polite"></p>
           </section>
-          <section class="mx-card mx-editor" id="mx-editor" aria-labelledby="mx-ed-title">
-            <div class="mx-ed-head">
-              <div class="mx-design__tags" id="mx-ed-tags"></div>
-              <h3 class="mx-ed-title" id="mx-ed-title"></h3>
-              <p class="mx-meta" id="mx-ed-why"></p>
-              <div class="mx-design__rights" id="mx-ed-rights" aria-label="Rights to check"></div>
-            </div>
 
-            <div class="mx-chat" id="mx-chat">
-              <label class="mx-label" for="mx-chat-input">Tell the AI what to change</label>
-              <div class="mx-chat__row">
-                <input class="mx-input" id="mx-chat-input" type="text" maxlength="300" autocomplete="off" placeholder="e.g. use Lakers colours, add the nickname under it" aria-describedby="mx-chat-note">
-                <button class="es-btn" type="button" id="mx-chat-send">Change it</button>
+          <details class="mx-fold" id="mx-fold-text" open>
+            <summary><span class="mx-fold__title">Text &amp; pills</span><span class="mx-fold__meta" id="mx-fold-text-meta"></span></summary>
+            <div class="mx-fold__body">
+              <div class="mx-pills" id="mx-pills" role="group" aria-label="Pills"></div>
+              <button class="es-btn es-btn--sm mx-pill-add" type="button" id="mx-pill-add"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-plus"/></svg>Add a pill</button>
+            </div>
+          </details>
+
+          <details class="mx-fold" id="mx-fold-colors" open>
+            <summary><span class="mx-fold__title">Colours</span><span class="mx-fold__meta" id="mx-fold-colors-meta"></span></summary>
+            <div class="mx-fold__body">
+              <div class="mx-sec">
+                <div class="mx-sec__head">
+                  <span class="mx-sublabel" id="mx-tee-colors-label">Tee colour</span>
+                  <span class="mx-meta" id="mx-tee-colors-note"></span>
+                </div>
+                <div class="mx-swatches" id="mx-tee-colors" role="radiogroup" aria-labelledby="mx-tee-colors-label"></div>
               </div>
-              <div class="mx-chips mx-chips--tight" id="mx-chat-chips" role="group" aria-label="Suggestions"></div>
-              <p class="mx-chat__note" id="mx-chat-note" role="status" aria-live="polite"></p>
-            </div>
-
-            <div class="mx-ed-sec">
-              <div class="mx-row mx-row--between">
-                <h4 class="mx-label" id="mx-pills-label">Pills</h4>
-                <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-vary" title="The same words in other ES pill layouts">Variations</button>
+              <div class="mx-sec mx-pal" aria-labelledby="mx-pal-label" role="group">
+                <span class="mx-sublabel" id="mx-pal-label">Pill colours</span>
+                <div class="mx-pal__selects">
+                  <label class="mx-pal__field"><span class="mx-pal__key">Sport</span><select class="es-select es-select--sm" id="mx-pal-sport"></select></label>
+                  <label class="mx-pal__field"><span class="mx-pal__key">Team</span><select class="es-select es-select--sm" id="mx-pal-team"></select></label>
+                </div>
+                <div class="mx-palset" id="mx-pal-swatches" role="radiogroup" aria-label="Team colours"></div>
+                <div class="mx-pal__line">
+                  <span class="mx-pal__key" id="mx-pal-es-label">ES</span>
+                  <div class="mx-palset" id="mx-pal-es" role="radiogroup" aria-labelledby="mx-pal-es-label"></div>
+                </div>
+                <div class="mx-pal__line">
+                  <span class="mx-pal__key" id="mx-pal-custom-label">Custom</span>
+                  <div class="mx-custom">
+                    <input class="mx-custom__color" type="color" id="mx-pal-custom" value="#0a7dfa" aria-label="Custom pill colour">
+                    <input class="mx-input mx-input--sm mx-custom__hex" type="text" id="mx-pal-hex" maxlength="7" spellcheck="false" autocomplete="off" placeholder="#RRGGBB" aria-label="Custom colour hex code" aria-describedby="mx-pal-warn">
+                  </div>
+                </div>
+                <p class="mx-warn" id="mx-pal-warn" role="status" aria-live="polite" hidden>Low contrast on a Black tee. The pill may not stand out.</p>
               </div>
-              <div class="mx-pills" id="mx-pills" role="group" aria-labelledby="mx-pills-label"></div>
-              <button class="es-btn es-btn--sm mx-pill-add" type="button" id="mx-pill-add">Add a pill</button>
             </div>
+          </details>
 
-            <fieldset class="mx-ed-sec mx-fit" id="mx-fit">
-              <legend class="mx-label">Size and layout</legend>
+          <details class="mx-fold" id="mx-fold-layout">
+            <summary><span class="mx-fold__title">Layout &amp; size</span><span class="mx-fold__meta" id="mx-fold-layout-meta"></span></summary>
+            <div class="mx-fold__body">
               <div class="mx-fit__opts">
-                <label class="es-field mx-grow"><span class="es-field__label">Words per pill</span>
-                  <select class="mx-input mx-input--sm" id="mx-fit-split">
+                <label class="mx-pal__field mx-grow"><span class="mx-pal__key">Words per pill</span>
+                  <select class="es-select es-select--sm" id="mx-fit-split">
                     <option value="">As designed</option>
                     <option value="word">One word</option>
                     <option value="pair">Two words</option>
@@ -221,8 +305,8 @@
                     <option value="line">Long lines</option>
                   </select>
                 </label>
-                <div class="mx-fit__align">
-                  <span class="es-field__label" id="mx-align-label">Alignment</span>
+                <div class="mx-pal__field">
+                  <span class="mx-pal__key" id="mx-align-label">Align</span>
                   <div class="es-segmented es-segmented--sm" role="group" aria-labelledby="mx-align-label">
                     <button class="es-segmented__item" type="button" data-fit-align="left" aria-pressed="true">Left</button>
                     <button class="es-segmented__item" type="button" data-fit-align="center" aria-pressed="false">Centre</button>
@@ -231,149 +315,196 @@
               </div>
               <label class="mx-fit__row" for="mx-fit-scale"><span>Size</span><input type="range" id="mx-fit-scale" min="60" max="160" step="5" value="100" aria-describedby="mx-fit-read"><output id="mx-fit-scale-out" for="mx-fit-scale">100%</output></label>
               <label class="mx-fit__row" id="mx-fit-top-row" for="mx-fit-top"><span>From the top</span><input type="range" id="mx-fit-top" min="0.5" max="8" step="0.25" value="1.75" aria-describedby="mx-fit-read"><output id="mx-fit-top-out" for="mx-fit-top">1.75 in</output></label>
+              <p class="mx-meta" id="mx-fit-read" aria-live="polite"></p>
               <div class="mx-row mx-row--between">
-                <p class="mx-meta" id="mx-fit-read" aria-live="polite"></p>
+                <button class="es-btn es-btn--sm" type="button" id="mx-vary" title="The same words in other ES pill layouts. No AI cost."><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-sparkle"/></svg>Try other layouts</button>
                 <button class="es-btn es-btn--ghost es-btn--sm" type="button" id="mx-fit-reset">Reset layout</button>
               </div>
-            </fieldset>
-
-            <div class="mx-ed-sec">
-              <h4 class="mx-label" id="mx-tee-colors-label">Tee colour</h4>
-              <div class="mx-swatches" id="mx-tee-colors" role="radiogroup" aria-labelledby="mx-tee-colors-label"></div>
-              <p class="mx-meta" id="mx-tee-colors-note"></p>
             </div>
+          </details>
 
-            <div class="mx-ed-sec" id="mx-elements-sec" hidden>
-              <div class="mx-row mx-row--between">
-                <h4 class="mx-label" id="mx-elements-label">Extras <span class="es-badge es-badge--brand">Pro</span></h4>
-                <span class="mx-meta" id="mx-elements-count"></span>
+          <details class="mx-fold" id="mx-fold-extras">
+            <summary><span class="mx-fold__title">Extras</span><span class="mx-pro"><span class="ais-gradient-text ais-gradient-text--on-light">Pro</span></span><span class="mx-fold__meta" id="mx-fold-extras-meta"></span></summary>
+            <div class="mx-fold__body">
+              <div class="mx-sec" id="mx-elements-sec" hidden>
+                <div class="mx-sec__head">
+                  <p class="mx-meta">Simple shapes beside the pills, in solid ink. Up to 3.</p>
+                  <span class="mx-meta" id="mx-elements-count"></span>
+                </div>
+                <div class="mx-elements" id="mx-elements" role="group" aria-label="Extras"></div>
+                <div class="mx-el-add" id="mx-el-add" role="group" aria-label="Add an extra">
+                  <button class="es-btn es-btn--sm" type="button" data-el-add="number">Number</button>
+                  <button class="es-btn es-btn--sm" type="button" data-el-add="rule">Rule</button>
+                  <button class="es-btn es-btn--sm" type="button" data-el-add="block">Block</button>
+                  <button class="es-btn es-btn--sm" type="button" data-el-add="icon">Icon</button>
+                </div>
               </div>
-              <p class="mx-meta">Simple shapes beside the pills, printed in solid ink. Up to 3.</p>
-              <div class="mx-elements" id="mx-elements" role="group" aria-labelledby="mx-elements-label"></div>
-              <div class="mx-row mx-row--wrap mx-el-add" id="mx-el-add" role="group" aria-label="Add an extra">
-                <button class="es-btn es-btn--sm" type="button" data-el-add="number">Number</button>
-                <button class="es-btn es-btn--sm" type="button" data-el-add="rule">Rule</button>
-                <button class="es-btn es-btn--sm" type="button" data-el-add="block">Block</button>
-                <button class="es-btn es-btn--sm" type="button" data-el-add="icon">Icon</button>
+              <div class="mx-locked" id="mx-extras-locked">
+                <span class="mx-locked__icon" aria-hidden="true"><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-lock"/></svg></span>
+                <div class="mx-locked__text">
+                  <p class="mx-locked__title">Extras come with Pro</p>
+                  <p class="mx-meta">Numbers, rules, blocks and icons beside the pills. Pro makes 6 designs with an AI art director.</p>
+                </div>
+                <button class="es-btn es-btn--sm" type="button" id="mx-go-pro">Switch to Pro</button>
               </div>
             </div>
-          </section>
-        </div>
+          </details>
+
+          <details class="mx-fold" id="mx-fold-checks">
+            <summary><span class="mx-fold__title">Print checks</span><span class="mx-fold__meta" id="mx-fold-checks-meta"></span></summary>
+            <div class="mx-fold__body">
+              <ul class="mx-checks" id="mx-studio-checks" aria-label="Print checks" aria-live="polite"></ul>
+            </div>
+          </details>
+
+          <!-- Per-pill colour popover (positioned by merch.js) -->
+          <div class="es-menu mx-pop" id="mx-pill-pop" role="dialog" aria-labelledby="mx-pill-pop-title" hidden>
+            <div class="mx-pop__head">
+              <p class="mx-pop__title" id="mx-pill-pop-title" data-pop-title>Pill colour</p>
+              <button class="es-icon-btn es-icon-btn--plain mx-pop__x" type="button" data-pop-close aria-label="Close"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-close"/></svg></button>
+            </div>
+            <div class="mx-pop__body" data-pop-body>
+              <span class="mx-pal__key" id="mx-pop-team-label">Team</span>
+              <div class="mx-palset mx-palset--sm" id="mx-pop-swatches" data-pal="swatches" role="radiogroup" aria-labelledby="mx-pop-team-label"></div>
+              <span class="mx-pal__key" id="mx-pop-es-label">ES</span>
+              <div class="mx-palset mx-palset--sm" id="mx-pop-es" data-pal="es" role="radiogroup" aria-labelledby="mx-pop-es-label"></div>
+              <span class="mx-pal__key">Custom</span>
+              <div class="mx-custom">
+                <input class="mx-custom__color" type="color" id="mx-pop-custom" data-pal="custom" value="#0a7dfa" aria-label="Custom colour for this pill">
+                <input class="mx-input mx-input--sm mx-custom__hex" type="text" id="mx-pop-hex" data-pal="hex" maxlength="7" spellcheck="false" autocomplete="off" placeholder="#RRGGBB" aria-label="Hex code for this pill" aria-describedby="mx-pop-warn">
+              </div>
+              <p class="mx-warn" id="mx-pop-warn" data-pal="warn" role="status" aria-live="polite" hidden></p>
+            </div>
+            <button class="es-btn es-btn--ghost es-btn--sm mx-pop__reset" type="button" data-pill-reset>Use design colours</button>
+          </div>
+
+          <!-- The one primary action: sticky at the foot of the rail -->
+          <div class="mx-actions mx-actions--bar mx-actions--rail" id="mx-designs-bar">
+            <span class="mx-meta" id="mx-designs-meta"></span>
+            <button class="mx-blocker" type="button" id="mx-design-blocker" aria-controls="mx-fold-checks" hidden>Fix 2 print checks first</button>
+            <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-setup" aria-keyshortcuts="Control+Enter Meta+Enter" disabled><span>Continue to Publish</span><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-arrow"/></svg></button>
+          </div>
+        </aside>
       </div>
-      <div class="mx-actions mx-actions--bar">
-        <span class="mx-meta" id="mx-designs-meta"></span>
-        <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-setup">Use this design</button>
-      </div>
+
     </section>
 
-    <!-- 3 Product -->
-    <section class="mx-view" id="mx-view-setup" data-view="setup" aria-labelledby="mx-h-setup" hidden>
+    <!-- 3 Publish -->
+    <section class="mx-view mx-publish" id="mx-view-publish" data-view="publish" aria-labelledby="mx-h-publish" hidden>
       <div class="mx-split">
-        <aside class="mx-card mx-pstage" aria-label="Mockups">
-          <div class="mx-row mx-row--between mx-row--top">
-            <div>
-              <h3 class="mx-label" id="mx-pstage-title">Mockup</h3>
-              <p class="mx-meta" id="mx-pstage-kind"></p>
-            </div>
-            <button class="es-btn es-btn--sm" type="button" id="mx-preview">Get live mockups</button>
+        <section class="mx-pstage" aria-labelledby="mx-pstage-title">
+          <div class="mx-pstage__head">
+            <h3 class="mx-label" id="mx-pstage-title">Mockup</h3>
+            <span class="mx-meta" id="mx-pstage-kind"></span>
           </div>
-          <div class="mx-pstage__main" id="mx-pstage-main">
+          <div class="mx-pstage__main" id="mx-pstage">
             <canvas class="mx-pstage__canvas" id="mx-pstage-canvas" width="720" height="840" role="img" aria-label="Product preview"></canvas>
           </div>
-          <p class="mx-meta" id="mx-mockup-status" role="status" aria-live="polite"></p>
+          <div class="mx-mockstat">
+            <p class="mx-meta" id="mx-mockup-status" role="status" aria-live="polite"></p>
+            <button class="es-btn es-btn--sm" type="button" id="mx-preview" hidden><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-refresh"/></svg>Update</button>
+          </div>
           <div class="mx-mockups" id="mx-mockups" aria-live="polite"></div>
-        </aside>
-        <div class="mx-card mx-setup">
-          <h2 class="mx-h2" id="mx-h-setup">Set up the product</h2>
-          <div class="mx-psec">
-            <h3 class="mx-eyebrow">Product</h3>
-            <div class="mx-block">
-              <span class="mx-label es-sr-only" id="mx-blank-label">Product</span>
-              <div class="mx-blanks" id="mx-blanks" role="radiogroup" aria-labelledby="mx-blank-label" aria-describedby="mx-blank-detail"></div>
-              <p class="mx-meta" id="mx-blank-detail"></p>
-            </div>
-            <div class="mx-block" id="mx-colors-block">
-              <span class="mx-label" id="mx-colors-label">Tee colour</span>
-              <div class="mx-chips" id="mx-colors" role="radiogroup" aria-labelledby="mx-colors-label"></div>
-            </div>
-            <div class="mx-row mx-row--wrap">
-              <label class="es-field mx-grow">
-                <span class="es-field__label">Print area</span>
-                <select class="mx-input" id="mx-side"></select>
-              </label>
-              <label class="es-field mx-grow">
-                <span class="es-field__label">ES logo</span>
-                <select class="mx-input" id="mx-logo" aria-describedby="mx-logo-hint"></select>
-              </label>
-            </div>
-            <p class="mx-meta" id="mx-logo-hint"></p>
-          </div>
-          <div class="mx-psec">
-            <h3 class="mx-eyebrow">Listing</h3>
-            <label class="es-field">
-              <span class="es-field__label">Title</span>
-              <input class="mx-input" id="mx-title-input" type="text" maxlength="120" autocomplete="off">
-            </label>
-            <label class="es-field">
-              <span class="es-field__label">Description</span>
-              <textarea class="mx-input mx-textarea" id="mx-desc" rows="3"></textarea>
-            </label>
-            <div class="mx-row mx-row--wrap">
-              <label class="es-field mx-price">
-                <span class="es-field__label">Price (USD)</span>
-                <input class="mx-input" id="mx-price" type="number" min="1" step="0.01" inputmode="decimal" aria-describedby="mx-earn">
-              </label>
-              <p class="mx-earn" id="mx-earn"></p>
-            </div>
-            <p class="mx-meta" id="mx-setup-meta" role="status" aria-live="polite"></p>
-          </div>
-          <div class="mx-psec" id="mx-checks-block">
-            <h3 class="mx-eyebrow" id="mx-checks-label">Print check</h3>
-            <ul class="mx-checks" id="mx-checks" aria-labelledby="mx-checks-label" aria-live="polite"></ul>
-          </div>
-          <fieldset class="mx-fieldset mx-psec mx-shopcolls" id="mx-shopcolls-setup">
-            <legend class="mx-eyebrow">Shop collections</legend>
-            <p class="mx-meta">Fourthwall has no tags, so collections are how products are grouped in the shop. Pick any.</p>
-            <div class="mx-shopcolls__body" data-colls="setup"></div>
-          </fieldset>
-          <div class="mx-rights" id="mx-rights">
-            <strong>Rights check</strong>
-            <ul class="mx-rights__list" id="mx-rights-list"></ul>
-            <p class="mx-rights__note">Names, nicknames, exact quotes and team colours are allowed, but a person can object to their name or likeness being sold, and team colours must never look like an official team product. Team logos and league marks are not allowed. Legal should review the first collection.</p>
-            <label class="mx-check"><input type="checkbox" id="mx-ack"><span>I’ve checked this design: no logos or official marks, quotes are exact, and I accept the likeness and trademark risk.</span></label>
-          </div>
-          <div class="mx-actions">
-            <button class="es-btn es-btn--ghost" type="button" id="mx-back-studio">Back to the studio</button>
-            <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-live">Continue</button>
-          </div>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <!-- 4 Push & live -->
-    <section class="mx-view" id="mx-view-live" data-view="live" aria-labelledby="mx-h-live" hidden>
-      <div class="mx-card mx-push" id="mx-push">
-        <h2 class="mx-h2" id="mx-h-live">Create on Fourthwall</h2>
-        <p class="mx-sub">The product is created hidden. Check the mockups, then publish.</p>
-        <div class="mx-progress" id="mx-progress" hidden><span id="mx-progress-bar"></span></div>
-        <p class="mx-meta" id="mx-push-status" role="status" aria-live="polite"></p>
-        <div class="mx-actions">
-          <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-create-fw">Create on Fourthwall (hidden)</button>
+        <div class="mx-pubcol">
+          <div class="mx-card mx-form mx-pub-form" id="mx-pub-form">
+            <div class="mx-form__head">
+              <h2 class="mx-h2" id="mx-h-publish" tabindex="-1">Put it in the shop</h2>
+              <p class="mx-meta">Pick the product, write the listing, check the rights. It goes to Fourthwall hidden.</p>
+            </div>
+
+            <div class="mx-psec" aria-labelledby="mx-blank-label" role="group">
+              <h3 class="mx-eyebrow" id="mx-blank-label">Product</h3>
+              <div class="mx-blanks" id="mx-blanks" role="radiogroup" aria-labelledby="mx-blank-label" aria-describedby="mx-blank-detail">
+                <span class="es-skeleton mx-blank mx-blank--skel" aria-hidden="true"></span><span class="es-skeleton mx-blank mx-blank--skel" aria-hidden="true"></span><span class="es-skeleton mx-blank mx-blank--skel" aria-hidden="true"></span><span class="es-skeleton mx-blank mx-blank--skel" aria-hidden="true"></span><span class="es-skeleton mx-blank mx-blank--skel" aria-hidden="true"></span>
+              </div>
+              <p class="mx-meta" id="mx-blank-detail"></p>
+              <div class="mx-pubcolor"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-shirt"/></svg><span class="mx-pubcolor__text" id="mx-pub-color">Black tee</span><span class="mx-pubcolor__sep" aria-hidden="true">·</span><button class="mx-link" type="button" id="mx-pub-color-change">Change</button></div>
+              <p class="mx-meta" id="mx-pub-color-note" hidden></p>
+              <div class="mx-row mx-row--wrap">
+                <label class="mx-pal__field mx-grow">
+                  <span class="mx-pal__key">Print area</span>
+                  <select class="es-select es-select--sm" id="mx-side"></select>
+                </label>
+                <label class="mx-pal__field mx-grow">
+                  <span class="mx-pal__key">ES logo</span>
+                  <select class="es-select es-select--sm" id="mx-logo" aria-describedby="mx-logo-hint"></select>
+                </label>
+              </div>
+              <p class="mx-meta" id="mx-logo-hint"></p>
+            </div>
+
+            <div class="mx-psec" role="group" aria-labelledby="mx-listing-label">
+              <h3 class="mx-eyebrow" id="mx-listing-label">Listing</h3>
+              <label class="mx-pal__field">
+                <span class="mx-pal__key">Title</span>
+                <input class="mx-input" id="mx-title-input" type="text" maxlength="120" autocomplete="off">
+              </label>
+              <label class="mx-pal__field">
+                <span class="mx-pal__key">Description</span>
+                <textarea class="mx-input mx-textarea" id="mx-desc" rows="3"></textarea>
+              </label>
+              <div class="mx-row mx-row--wrap mx-row--end">
+                <label class="mx-pal__field mx-price">
+                  <span class="mx-pal__key">Price (USD)</span>
+                  <input class="mx-input" id="mx-price" type="number" min="1" step="0.01" inputmode="decimal" aria-describedby="mx-earn">
+                </label>
+                <p class="mx-earn" id="mx-earn"></p>
+              </div>
+            </div>
+
+            <fieldset class="mx-fieldset mx-psec mx-shopcolls" id="mx-shopcolls-setup">
+              <legend class="mx-eyebrow">Shop collections</legend>
+              <p class="mx-meta">Fourthwall has no tags, so collections group products in the shop. Pick any.</p>
+              <div class="mx-shopcolls__body" data-colls="setup"></div>
+            </fieldset>
+
+            <div class="mx-psec mx-rights" id="mx-rights" role="group" aria-labelledby="mx-rights-label">
+              <h3 class="mx-eyebrow" id="mx-rights-label">Rights</h3>
+              <ul class="mx-rights__list" id="mx-rights-list"></ul>
+              <p class="mx-rights__note">Names, nicknames, exact quotes and team colours are allowed. A person can still object to their name or likeness being sold, and team colours must never look like an official team product. No team logos or league marks.</p>
+              <label class="mx-check"><input type="checkbox" id="mx-ack" required><span>I’ve checked this design: no logos or official marks, quotes are exact, and I accept the likeness and trademark risk.</span></label>
+            </div>
+
+            <div class="mx-progress" id="mx-progress" hidden>
+              <ol class="mx-progress__steps" id="mx-progress-steps" data-prog-steps aria-label="Creating on Fourthwall">
+                <li class="mx-progress__step" data-prog="upload">Uploading the art</li>
+                <li class="mx-progress__step" data-prog="create">Creating the product</li>
+                <li class="mx-progress__step" data-prog="mockups">Getting mockups</li>
+                <li class="mx-progress__step" data-prog="colls">Adding to collections</li>
+              </ol>
+              <div class="mx-progress__track"><span id="mx-progress-bar"></span></div>
+            </div>
+            <p class="mx-pushstat" id="mx-push-status" role="status" aria-live="polite"></p>
+
+            <div class="mx-actions mx-actions--bar mx-actions--pub" id="mx-push">
+              <button class="es-btn es-btn--ghost" type="button" id="mx-back-studio" data-go="designs"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-back"/></svg>Back to Design</button>
+              <div class="mx-actions__main">
+                <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-create-fw" disabled>Create on Fourthwall</button>
+                <p class="mx-actions__help">Created hidden. Only admins can publish it.</p>
+              </div>
+              <p class="mx-blocker mx-blocker--line" id="mx-pub-blocker" role="status" hidden></p>
+              <p class="mx-meta mx-actions__meta" id="mx-setup-meta" role="status" aria-live="polite"></p>
+            </div>
+          </div>
+
+          <div class="mx-card mx-live" id="mx-live" hidden></div>
         </div>
       </div>
-      <div class="mx-card mx-live" id="mx-live" hidden></div>
     </section>
 
     <!-- Your merch -->
-    <section class="mx-view" id="mx-view-list" data-view="list" role="tabpanel" aria-labelledby="mx-h-list" hidden>
-      <div class="mx-row mx-row--between">
+    <section class="mx-view mx-listview" id="mx-view-list" data-view="list" aria-labelledby="mx-h-list" hidden>
+      <button class="mx-link mx-back" type="button" data-go="content"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-back"/></svg>Back to create</button>
+      <div class="mx-sechead">
         <div>
-          <h2 class="mx-h2" id="mx-h-list">Your merch</h2>
-          <p class="mx-sub">Everything FrameUp has put on Fourthwall. Units and revenue are for the last 30 days.</p>
+          <h2 class="mx-h2" id="mx-h-list" tabindex="-1">Your merch</h2>
+          <p class="mx-meta">Everything FrameUp has put on Fourthwall. Units and revenue are for the last 30 days.</p>
         </div>
         <div class="mx-row">
           <span class="mx-meta" id="mx-list-updated" role="status" aria-live="polite"></span>
-          <button class="es-btn" type="button" id="mx-list-refresh">Refresh</button>
+          <button class="es-btn es-btn--sm" type="button" id="mx-list-refresh"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-refresh"/></svg>Refresh</button>
         </div>
       </div>
       <p class="mx-banner mx-banner--setup" id="mx-list-source" hidden></p>
@@ -416,9 +547,10 @@
   <script src="frameup-rules.js?v=20261125-pills"></script>
   <script src="brand-kit.js?v=20261111-tennis1"></script>
   <script src="video-ads-teams.js?v=20261122-rel"></script>
-  <script src="merch-rules.js?v=20261125-merch"></script>
-  <script src="merch-guidelines.js?v=20261126-merch4"></script>
-  <script src="merch-print.js?v=20261126-merch4"></script>
-  <script src="merch.js?v=20261126-merch4"></script>
+  <script src="merch-rules.js?v=20261126-merch5"></script>
+  <script src="merch-guidelines.js?v=20261126-merch5"></script>
+  <script src="merch-print.js?v=20261126-merch5"></script>
+  <script src="merch-palette.js?v=20261126-merch5"></script>
+  <script src="merch.js?v=20261126-merch5"></script>
 </body>
 </html>
