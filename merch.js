@@ -915,9 +915,11 @@
       const withPhotos = (list || []).filter(x => normHex(x.hex) && (x.photos || []).some(photoUrl));
       return withPhotos.sort((x, y) => colorDist(x.hex, g) - colorDist(y.hex, g))[0] || null;
     }
+    // Apparel, plus any blank whose Fourthwall photo is calibrated (the tote).
+    const photoKind = t => Boolean(t && (BLANK_INFO[kindOf(t)]?.apparel || (typeof MP().photoCal === 'function' && (() => { try { return Boolean(MP().photoCal(t.templateId, { photoIndex: 0 })); } catch { return false; } })())));
     function photosOf(garment) {
       const t = template() || defaultTemplate();
-      if (!t || !BLANK_INFO[kindOf(t)].apparel) return [];
+      if (!t || !photoKind(t)) return [];
       const col = nearestColor(t.colors, garment || WHITE);
       if (!col) return [];
       const meta = { hex: col.hex, name: col.name || '' };
@@ -971,7 +973,7 @@
           await MP().closeup(c, g, off, { kind: k, spec, pad: 0.14 });
           caption = 'Close-up of the print on the shirt colour.';
         } else {
-          const ph = BLANK_INFO[k].apparel ? photoChoice(g, { pick: photoPick }) : null;
+          const ph = BLANK_INFO[k].apparel || photoKind(template() || defaultTemplate()) ? photoChoice(g, { pick: photoPick }) : null;
           let done = null;
           if (ph && !ph.calibrated) {
             // No measured print area on this photo: never draw on it; show the
@@ -3944,7 +3946,7 @@
           return {
             view: state.view, kind: kind(), spec: thumbSpec(), pad: 0.14,
             templateId: state.templateId || '', photoIndex: ph?.index,
-            calibrated: state.view === 'tee' && state.stagePic === 'photo' && Boolean(ph?.calibrated),
+            calibrated: state.view === 'tee' && state.stagePic === 'photo' && Boolean(ph?.calibrated) && Boolean(BLANK_INFO[kind()]?.apparel),
           };
         },
         onChange: (fit, { final, source }) => {
