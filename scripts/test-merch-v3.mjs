@@ -107,18 +107,106 @@ ok('photoFor picks the nearest template colour with photos', () => {
 console.log(`merch v3 + merch4 engine: ${n} checks passed`);
 
 // ─── Logo placement guards (owner: the sleeve logo landed on the body) ───
-ok('photo mockup: sleeve logo sits inside the measured wearer-left sleeve', () => {
-  const cal = P.PHOTO_AREAS.tee;
-  const s = cal.logo.sleeve;
-  const ratio = 960 / 720;
-  const h = s.w * 31 / 258 * ratio; // wordmark height as a fraction of the photo height
-  const corners = [[s.x, s.y], [s.x + s.w, s.y], [s.x, s.y + h], [s.x + s.w, s.y + h]];
-  corners.forEach(([x, y]) => assert.ok(P.pointInPoly(x, y, cal.sleeveLeft), `corner ${x.toFixed(3)},${y.toFixed(3)} outside the sleeve`));
-  assert.ok(s.x > 0.5, 'wearer-left sleeve is on the viewer\'s right');
-  assert.ok(!cal.logo.neck && !cal.logo['back-neck'] && !cal.logo.label, 'unmeasured spots are not drawn on the photo');
-  assert.ok(cal.templates.includes('pro_Vv1XdaPMSdm6jZ5pj24NCQ'), 'calibration names its template');
+// merch7: every calibrated photo of every template (PHOTO_AREAS[templateId][photoIndex]).
+const CALS = Object.entries(P.PHOTO_AREAS).flatMap(([tid, set]) => Object.entries(set).map(([i, cal]) => [tid, Number(i), cal]));
+ok('photo calibrations: the tee and the hoodie, several photos each', () => {
+  assert.deepEqual(Object.keys(P.PHOTO_AREAS).sort(), ['pro_14kNy0EJQkqopY-Z9Pm41A', 'pro_380', 'pro_6ae602fcb22447bfbc', 'pro_ODh_gv0ESl6jIcRfvSww0w', 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', 'pro_xPL7YjOBRQWVL50Im8eKAA']);
+  assert.deepEqual(Object.keys(P.PHOTO_AREAS.pro_Vv1XdaPMSdm6jZ5pj24NCQ), ['0', '1', '3']);
+  assert.deepEqual(Object.keys(P.PHOTO_AREAS.pro_380), ['0', '1', '2']);
+  CALS.forEach(([tid, i, c]) => {
+    assert.ok(['front', 'back'].includes(c.side) && c.angle, `${tid}/${i}`);
+    ['x', 'y', 'w', 'h', 'ppi', 'top'].forEach(k => assert.ok(c[k] > 0 && c[k] < 1, `${tid}/${i} ${k}`));
+    assert.ok(c.body.r > 0 && Math.abs(c.body.yaw) < 30, `${tid}/${i} body`);
+  });
+});
+ok('photo calibrations: every sleeve logo sits inside its measured wearer-left sleeve', () => {
+  let n = 0;
+  CALS.forEach(([tid, i, cal]) => {
+    const s = cal.logo?.sleeve;
+    if (cal.side === 'back') { assert.ok(!cal.logo, `${tid}/${i}: no logo drawn on a back photo`); return; }
+    const SLEEVELESS = ['pro_xPL7YjOBRQWVL50Im8eKAA', 'pro_ODh_gv0ESl6jIcRfvSww0w']; // tank, youth tee: no sleeve print areas
+    if (SLEEVELESS.includes(tid)) { assert.ok(!cal.logo, `${tid}/${i}: no sleeve spot on a blank without sleeve areas`); return; }
+    assert.ok(s && cal.sleeveLeft, `${tid}/${i}: front photos measure the sleeve spot`);
+    P.logoCorners(s).forEach(([x, y]) => assert.ok(P.pointInPoly(x, y, cal.sleeveLeft), `${tid}/${i}: corner ${x.toFixed(3)},${y.toFixed(3)} outside the sleeve`));
+    assert.ok(s.x > cal.body.cx, `${tid}/${i}: wearer-left sleeve is on the viewer's right`);
+    assert.ok(cal.sleeveLeft.every(([x]) => x > cal.body.cx), `${tid}/${i}: sleeve outline on the viewer's right`);
+    assert.ok(!cal.logo.neck && !cal.logo['back-neck'] && !cal.logo.label, `${tid}/${i}: unmeasured spots are not drawn`);
+    n += 1;
+  });
+  assert.ok(n >= 4);
+});
+ok('photo calibrations: the print area sits on the torso (top corners inside, >= 90% covered)', () => {
+  CALS.forEach(([tid, i, cal]) => {
+    const r = cal;
+    const inTorso = (x, y) => P.pointInPoly(x, y, cal.torso);
+    // an arm in front of the chest (occluded) may hide one side; the rest must hold
+    if (!cal.occluded) assert.ok(inTorso(r.x + 0.002, r.y + 0.002) && inTorso(r.x + r.w - 0.002, r.y + 0.002), `${tid}/${i}: top corners`);
+    else assert.ok(inTorso(r.x + r.w / 2, r.y + 0.002) && inTorso(r.x + r.w / 2, r.y + r.h / 2), `${tid}/${i}: top centre and centre`);
+    let inside = 0, all = 0;
+    for (let a = 0; a <= 20; a++) for (let b = 0; b <= 20; b++) { all += 1; if (P.pointInPoly(r.x + r.w * a / 20, r.y + r.h * b / 20, cal.torso)) inside += 1; }
+    assert.ok(inside / all >= (cal.occluded ? 0.7 : 0.9), `${tid}/${i}: ${(100 * inside / all).toFixed(0)}% of the print on the torso`);
+    if (cal.occluded) assert.notEqual(P.PHOTO_HERO[tid], i, `${tid}/${i}: an occluded photo is not the one to open on`);
+    assert.ok(cal.torso.every(([x, y]) => x > 0 && x < 1 && y > 0 && y < 1));
+    // the print is drawn at its real size: the main area's height = ppi x inches
+    assert.ok(Math.abs(r.h - cal.ppi * ({ pro_xPL7YjOBRQWVL50Im8eKAA: 16, pro_ODh_gv0ESl6jIcRfvSww0w: 12 }[tid] || (tid === 'pro_380' && cal.side === 'front' ? 11 : 18)) * 720 / 960) < 1e-9, `${tid}/${i}: height`);
+  });
+});
+ok('photo calibrations: the wrap foreshortens the edges, never mirrors them', () => {
+  CALS.forEach(([tid, i, cal]) => {
+    const r = P.photoRect(cal, 15, 18);
+    const half = P.photoRect(cal, 7.5, 18);
+    assert.ok(r.w > half.w && r.w < 2 * half.w + 1e-9, `${tid}/${i}`);
+  });
+});
+ok('photosFor: every photo of the nearest colour, calibrated only where measured for the side', () => {
+  const cols = [{ name: 'White', hex: '#ffffff', photos: ['w0', 'w1', 'w2', 'w3'] }, { name: 'Black', hex: '#080808', photos: [{ url: 'k0', angle: 'front', index: 0 }, { url: 'k1', angle: 'back', index: 1 }, { url: 'k2', angle: 'front', index: 2 }, { url: 'k3', angle: 'side', index: 3 }] }];
+  const tee = P.photosFor(cols, '#FFFFFF', 'pro_Vv1XdaPMSdm6jZ5pj24NCQ');
+  assert.deepEqual(tee.map(p => [p.url, p.angle, p.index, p.calibrated]), [['w0', 'front', 0, true], ['w1', 'side', 1, true], ['w2', 'side', 2, false], ['w3', 'back', 3, false]]);
+  assert.equal(tee.find(p => p.primary).index, 0);
+  const back = P.photosFor(cols, '#FFFFFF', 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', { region: 'back_large' });
+  assert.deepEqual(back.filter(p => p.calibrated).map(p => p.index), [3], 'front photos are not calibrated for a back print');
+  assert.equal(back.find(p => p.primary).index, 3);
+  const hood = P.photosFor(cols, '#000000', 'pro_380');
+  assert.deepEqual(hood.map(p => [p.url, p.angle, p.calibrated]), [['k0', 'front', true], ['k1', 'back', false], ['k2', 'front', true], ['k3', 'side', false]]);
+  assert.equal(hood.find(p => p.primary).index, 2, 'the hoodie opens on the photo with nothing in front of the chest');
+  assert.ok(P.photosFor(cols, '#FFFFFF', 'pro_unknown').every(p => !p.calibrated && !p.primary), 'unknown template: nothing calibrated');
+  assert.deepEqual(P.photosFor([], '#FFFFFF', 'pro_380'), []);
+  const art = P.photosFor([{ name: 'W', hex: '#ffffff', photos: [{ url: 's0', angle: 'front', index: 0, sampleArt: true }, { url: 's1', angle: 'side', index: 1, view: 'front' }] }], '#FFFFFF', 'pro_Vv1XdaPMSdm6jZ5pj24NCQ');
+  assert.equal(art[0].calibrated, false, 'never drawn over Fourthwall sample art');
+  assert.equal(art[0].sampleArt, true);
+  assert.equal(art.find(p => p.primary).index, 1);
+  // PROD order: photos filtered out keep their Fourthwall index
+  const gap = P.photosFor([{ name: 'W', hex: '#ffffff', photos: [{ url: 'b3', angle: 'back', index: 3, view: 'back' }] }], '#FFFFFF', 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', { region: 'back' });
+  assert.deepEqual([gap[0].index, gap[0].calibrated], [3, true]);
+  assert.equal(P.photoFor([{ name: 'B', hex: '#000000', photos: [{ url: 'o0', index: 0 }] }], '#000000').url, 'o0', 'photoFor reads object photos');
+});
+ok('photoCal: by index, by angle, else photo 0; no calibration -> null', () => {
+  const T = 'pro_Vv1XdaPMSdm6jZ5pj24NCQ';
+  assert.equal(P.photoCal(T, { photoIndex: 1 }), P.PHOTO_AREAS[T][1]);
+  assert.equal(P.photoCal(T, { photoIndex: 2 }), null);
+  assert.equal(P.photoCal(T, { angle: 'back' }), P.PHOTO_AREAS[T][3]);
+  assert.equal(P.photoCal(T, {}), P.PHOTO_AREAS[T][0]);
+  assert.equal(P.photoCal('pro_x', {}), null);
+  assert.equal(P.TEMPLATE_KIND.tee, T);
 });
 ok('flat preview: sleeve logo on the wearer-left sleeve (viewer right)', () => {
   assert.ok(P.LOGO_SPOTS.sleeve.x > 772, `x ${P.LOGO_SPOTS.sleeve.x}`);
 });
 console.log(`logo guards: ${n} checks passed`);
+
+// photoMock never draws on an uncalibrated photo (resolves null before touching the canvas).
+{
+  const T = 'pro_Vv1XdaPMSdm6jZ5pj24NCQ';
+  const c = P.yourWords(line);
+  const canvas = { width: 720, getContext() { throw new Error('drew on an uncalibrated photo'); } };
+  const front = { regionId: 'front_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150 };
+  const back = { regionId: 'back_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150 };
+  assert.equal(await P.photoMock(c, canvas, { photo: 'x.jpg', templateId: T, photoIndex: 2, spec: front }), null, 'side photo (no calibration)');
+  assert.equal(await P.photoMock(c, canvas, { photo: 'x.jpg', templateId: T, photoIndex: 3, spec: front }), null, 'front design on the back photo');
+  assert.equal(await P.photoMock(c, canvas, { photo: 'x.jpg', templateId: T, photoIndex: 0, spec: back }), null, 'back design on a front photo');
+  assert.equal(await P.photoMock(c, canvas, { photo: 'x.jpg', templateId: 'pro_other', spec: front }), null, 'another template');
+  assert.equal(await P.photoMock(c, canvas, { photo: 'x.jpg', kind: 'poster', spec: front }), null, 'no calibration for the kind');
+  assert.equal(await P.photoMock(c, canvas, { templateId: T, photoIndex: 0, spec: front }), null, 'no photo');
+  n += 1; console.log('ok photoMock: uncalibrated photos and wrong sides are never drawn on');
+}
+console.log(`merch7 photos: ${n} checks passed`);
