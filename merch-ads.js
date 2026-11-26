@@ -437,6 +437,8 @@
   }
   function save(blob, name) {
     MerchAds.last = { name, type: blob.type, size: blob.size, blob };
+    // A downloaded ad is a take: count it like every other export.
+    try { root.FrameUpTrack?.track?.('export', { tool: 'merch', action: 'ad', format: st?.format || '', kind: /\.zip$/i.test(name) ? 'zip' : 'png' }); } catch { /* tracking never blocks a download */ }
     if (root.__mxAdSave) { root.__mxAdSave(blob, name); return; }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

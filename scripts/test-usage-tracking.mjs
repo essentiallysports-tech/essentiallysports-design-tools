@@ -332,6 +332,7 @@ await test('rangeFor covers whole days; filterOptions lists tools, types and peo
 const TAKES = [
   ['dashboard-data.js', /tracker\.track\('export'/, 'editor exports (all workspaces, design-request page)'],
   ['merch.js', /track\?\.\('copy', \{ tool: 'merch', action: 'description'/, 'Merch Designs copy description'],
+  ['merch-ads.js', /FrameUpTrack\?\.track\?\.\('export', \{ tool: 'merch', action: 'ad'/, 'Merch ad PNG / ZIP download'],
   ['frameup-size-pack.js', /FrameUpTrack\?\.track\?\.\('export', \{ tool: 'social', action: 'zip'/, 'size pack ZIP'],
   ['index.html', /track\?\.\('share', \{ tool: window\.FrameUpTrack\.toolForWorkspace\(activeWorkspace\), action: 'image-link'/, 'editor image link'],
   ['index.html', /track\?\.\('copy', \{ tool: 'newsletter', action: 'widget-html'/, 'newsletter widget HTML'],

@@ -2733,7 +2733,7 @@
     async function openAd(from) {
       const c = selectedConcept();
       if (!c) return;
-      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261127-m7');
+      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261127-m7b');
       if (!window.MerchAds) return;
       const p = liveShown() ? state.product : null;
       const { line, source } = adLineFor(c);
@@ -2750,7 +2750,7 @@
     }
     // An ad for a product in Your merch: its Fourthwall mockups and link (no design to redraw).
     async function openRowAd(row, btn) {
-      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261127-m7');
+      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261127-m7b');
       if (!window.MerchAds) return;
       btn?.setAttribute('aria-busy', 'true');
       if (!row.imagesLoaded) { try { const data = await api({ mode: 'product', productId: row.productId }); row.images = data.product?.images || []; row.imagesLoaded = true; } catch { /* the thumb is enough */ } }
