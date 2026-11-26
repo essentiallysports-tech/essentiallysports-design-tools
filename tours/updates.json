@@ -3,6 +3,23 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-26-merch-moments-v2",
+      "date": "2026-11-26",
+      "title": "Merch Designs: what to print, and bigger designs",
+      "items": [
+        {
+          "title": "What to print",
+          "text": "Each trending moment now gives three shirt lines in ES pills, why it would sell, who buys it and how long it stays relevant. Press Design this on the line you like.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Bigger, bolder designs",
+          "text": "Designs start near a full chest print, and your own line uses one or two words per pill so the type prints big.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-26-merch-studio",
       "date": "2026-11-26",
       "title": "Merch Designs: a cleaner flow, pill colours and ES pill spacing",

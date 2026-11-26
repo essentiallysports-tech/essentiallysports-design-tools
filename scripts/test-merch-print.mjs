@@ -30,11 +30,12 @@ test('missing spec falls back to the blank default area', () => {
   const s = P.layout(roster(), {});
   assert.deepEqual([s.w, s.h, s.dpi], [1800, 2400, 150]);
 });
-test('design is compact mid-chest, inside the area', () => {
+test('design starts near a full chest print, inside the area', () => {
   const s = P.layout(roster(), TEE);
   const c = ids(P.checksFor(s));
   assert.equal(c.area.ok, true);
-  assert.ok(s.design.w / s.w <= 0.56 && s.design.w / s.w >= 0.3, `width ratio ${s.design.w / s.w}`);
+  assert.ok(s.design.w / s.w <= 0.8 && s.design.w / s.w >= 0.5, `width ratio ${s.design.w / s.w}`);
+  assert.ok(s.design.w / s.dpi >= 7 && s.design.w / s.dpi <= 12.5, `inches ${s.design.w / s.dpi}`);
   assert.ok(Math.abs(s.design.x + s.design.w / 2 - s.w / 2) < 2, 'centred');
   assert.ok(s.design.y > s.dpi, 'below the collar wordmark');
 });

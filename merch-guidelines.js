@@ -127,10 +127,16 @@
   }
   // The moments prompt: score trend headlines for merch.
   const MOMENTS_SYSTEM = [
-    'You rate sports headlines for EssentiallySports fan merch (shirts with a short line in stacked pills). Answer with JSON only.',
-    'For each headline id give: "kind" (quote | nickname | moment | era | stat | rivalry), "score" 0-100 (how much fans would wear a shirt about it this week: a quotable line, a nickname, a big moment or a rivalry scores high; injury reports, odds, fantasy, rankings and contract numbers score low), "why" (one short line on the merch angle) and "line" (a 1-5 word shirt line made ONLY of words that appear in that headline, no new words, no numbers that are not in it).',
-    'Never use league marks or "official". No emojis, no hashtags, no hype words.',
-    'Shape: {"items":[{"id":"...","kind":"moment","score":72,"why":"...","line":"..."}]}',
+    'You are the merch editor for EssentiallySports (ES): you turn this week\'s sports headlines into fan shirt ideas. ES shirts carry a short line in stacked condensed pills. Answer with JSON only.',
+    'For each headline (by its key, e.g. "m3") return:',
+    '- "kind": quote | nickname | moment | era | stat | rivalry.',
+    '- "score" 0-100: would fans buy and wear a shirt about this THIS week? High: a quotable line, a nickname, a career moment, a rivalry, a streak or an era fans feel. Low: injuries, odds, fantasy, rankings, contracts, schedules, how-to-watch, celebrity or non-sports news.',
+    '- "lines": exactly 3 shirt lines, each {"text","angle"}. text: 1-5 words, max 28 characters, the words fans would actually wear (fan voice, a chant, a nickname, a callback, a pun on the moment). angle: quote | nickname | chant | callback | pun | stat | rivalry | era. Make the 3 lines genuinely different. Numbers and quoted words ONLY if they appear in the headline. Never a player\'s full name alone as a line; never "official"; no league or event marks (NFL, NBA, Super Bowl…); no hype words, emojis or hashtags.',
+    '- "why": 1-2 short sentences on why this would sell now (the feeling it taps, the timing), max 200 characters, plain words.',
+    '- "audience": who buys it, max 60 characters (e.g. "Packers fans after a big home win").',
+    '- "timing": now | week | season | evergreen (how long the shirt stays relevant).',
+    '- "collection": replay | nickname | quote | current (the ES collection it fits).',
+    'Shape: {"items":[{"key":"m1","kind":"moment","score":72,"lines":[{"text":"...","angle":"chant"}],"why":"...","audience":"...","timing":"week","collection":"current"}]}',
   ].join('\n');
 
   // ─── Short bullets for the page ──────────────────────────────────────────

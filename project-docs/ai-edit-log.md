@@ -4,6 +4,12 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-26 — Suhail (Claude): Merch moments v2 + bigger default designs (branch release/merch6)
+- Moments: the live AI scores were being discarded (trend ids didn't round-trip; 24 headlines in one reply), so every card showed the heuristic. Now: short keys (m1…) per batch of 9, two batches in parallel, 2600 output tokens each, unusable answers logged. Each moment returns 3 shirt lines {text, angle} (fan wording allowed; numbers only from the headline; no league marks/"official"/banned words; deduped), why (≤220), audience, timing (now|week|season|evergreen) and collection. Cache keys 'v2:'. Guidelines MOMENTS_SYSTEM rewritten. Haiku, about $0.001–0.002 per refresh, 30-min cache.
+- Page: moment cards 2 per row: Why it works (+ timing chip, who buys it), What to print (3 lines as ES pills, each with Design this, which puts that line in the brief and sets the collection), "Quick pick, made without AI" note for heuristic cards.
+- Engine: default design width ~0.68 of the print area (~10 in on the tee; was ~0.5); box height 0.7·H; placement warning at 12.5 in. Your words uses one word per pill (two when > 6, long lines when > 8). Owner feedback: type read too small.
+- Tests: test-merch-ai moments test rewritten (long ids, keys, lines rules), test-merch-print size test, check-merch-ui 282/282. Cache keys merch.js/css/demo/guidelines → 20261126-merch6.
+
 ## 2026-11-26 — Suhail (Claude): Merch studio (merch5) pushed (release/merch5 → main 2efe632)
 - Status: pushed and live (merch.js?v=20261126-merch5, merch-print VERSION 2026-11-26-merch5). The ENGINE, UI-STRUCTURE and UI-LOGIC merch5 entries below are in this release; their "not pushed" lines are superseded.
 - Integration fix: Design shortcuts listen on window in the capture phase so "/" focuses Ask AI instead of app-shell's search.

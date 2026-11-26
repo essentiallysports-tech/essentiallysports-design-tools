@@ -129,7 +129,7 @@
     const demo = isDemo(window.location);
     const scenario = new URLSearchParams(window.location.search).get('state') || 'ok';
     await ensurePrint();
-    if (demo && !window.MerchDemo) await loadScript('merch-demo.js?v=20261126-merch5');
+    if (demo && !window.MerchDemo) await loadScript('merch-demo.js?v=20261126-merch6');
 
     const readMode = () => { try { return window.localStorage.getItem(MODE_STORE) === 'pro' ? 'pro' : 'basic'; } catch { return 'basic'; } };
     const state = {
@@ -361,6 +361,9 @@
     }
     const sportOf = m => String(m?.sportLabel || m?.sport || m?.trend?.sport || m?.trend?.category || '').trim().toUpperCase();
     const teamName = t => (t && typeof t === 'object' ? t.short || t.name || '' : String(t || ''));
+    const TIMING_LABEL = { now: 'Sell now', week: 'This week', season: 'All season', evergreen: 'Evergreen' };
+    const ANGLE_LABEL = { quote: 'Quote', nickname: 'Nickname', chant: 'Chant', callback: 'Callback', pun: 'Wordplay', stat: 'Stat', rivalry: 'Rivalry', era: 'Era' };
+    const linesOf = m => { const l = (Array.isArray(m.lines) ? m.lines : []).filter(x => x && x.text); return l.length ? l.slice(0, 3) : (m.line ? [{ text: m.line, angle: 'callback' }] : []); };
     function momentCard(m) {
       const on_ = state.trend && String(state.trend.momentId || state.trend.id) === String(m.id);
       const score = Math.max(0, Math.min(100, Math.round(Number(m.score) || 0)));
@@ -373,11 +376,23 @@
           <span class="mx-score" title="Merch score: how well this could sell as a shirt"><span class="es-sr-only">Merch score </span><span class="mx-score__bar" style="--v:${score}%" aria-hidden="true"></span><span class="mx-score__n">${score}</span></span>
         </div>
         <h3 class="mx-moment__title">${esc(m.title)}</h3>
-        ${m.why ? `<p class="mx-moment__why">${esc(m.why)}</p>` : ''}
-        <div class="mx-moment__foot">
-          ${m.line ? `<p class="mx-moment__line"><span class="es-sr-only">Suggested line: </span>${esc(m.line)}</p>` : '<span></span>'}
-          <button class="es-btn es-btn--sm${on_ ? ' is-on' : ''}" type="button" data-moment-use="${esc(m.id)}" aria-pressed="${Boolean(on_)}" aria-label="Use this: ${esc(m.title)}">${on_ ? 'In your brief' : 'Use this'}</button>
+        <div class="mx-moment__sell">
+          <p class="mx-moment__label">Why it works${m.timing && TIMING_LABEL[m.timing] ? ` <span class="mx-moment__timing">${esc(TIMING_LABEL[m.timing])}</span>` : ''}</p>
+          ${m.why ? `<p class="mx-moment__why">${esc(m.why)}</p>` : ''}
+          ${m.audience ? `<p class="mx-moment__who"><span>Who buys it</span> ${esc(m.audience)}</p>` : ''}
         </div>
+        <div class="mx-moment__print">
+          <p class="mx-moment__label">What to print</p>
+          <ul class="mx-mlines">${linesOf(m).map((l, n) => {
+            const picked = on_ && state.trend?.momentLine === n;
+            return `<li class="mx-mline${picked ? ' is-on' : ''}">
+              <span class="mx-mline__pill">${esc(l.text)}</span>
+              <span class="mx-mline__angle">${esc(ANGLE_LABEL[l.angle] || 'Idea')}</span>
+              <button class="es-btn es-btn--sm${picked ? ' is-on' : ''}" type="button" data-moment-line="${esc(m.id)}" data-line="${n}" aria-pressed="${Boolean(picked)}" aria-label="Design “${esc(l.text)}”">${picked ? 'In your brief' : 'Design this'}</button>
+            </li>`;
+          }).join('')}</ul>
+        </div>
+        ${m.ai === false ? '<p class="mx-moment__quick">Quick pick, made without AI. Refresh later for more ideas.</p>' : ''}
       </article>`;
     }
     function renderMoments() {
@@ -411,26 +426,31 @@
     on('mx-moments-sports', 'click', e => { const b = e.target.closest('[data-sport]'); if (!b) return; state.sport = b.dataset.sport; renderMoments(); $('mx-moments-sports').querySelector(`[data-sport="${CSS.escape(state.sport)}"]`)?.focus(); });
     on('mx-moments', 'click', e => {
       if (e.target.closest('[data-moments=retry]')) { loadMoments(); return; }
-      const b = e.target.closest('[data-moment-use],[data-design]');
+      const b = e.target.closest('[data-moment-line],[data-moment-use],[data-design]');
       if (!b) return;
-      const id = b.dataset.momentUse ?? b.dataset.design;
+      const id = b.dataset.momentLine ?? b.dataset.momentUse ?? b.dataset.design;
       const m = (state.moments || []).find(x => String(x.id) === id);
-      if (m) useMoment(m);
+      if (m) useMoment(m, b.dataset.line != null ? Number(b.dataset.line) : null);
     });
     // "Use this": the moment becomes the chip in the prompt card and goes with the
     // concepts call; its suggested line fills the brief only when the brief is empty.
-    function useMoment(m) {
+    // A picked line ("Design this") always goes into the brief; "Use this" (old
+    // markup) only fills an empty brief.
+    function useMoment(m, lineIndex = null) {
       const t = m.trend && typeof m.trend === 'object' ? m.trend : {};
-      state.trend = { ...t, id: t.id || m.id, title: t.title || m.title, sport: t.sport || t.category || m.sport || '', momentId: m.id, momentKind: KIND_LABEL[m.kind] ? m.kind : 'moment' };
+      const lines = linesOf(m);
+      state.trend = { ...t, id: t.id || m.id, title: t.title || m.title, sport: t.sport || t.category || m.sport || '', momentId: m.id, momentKind: KIND_LABEL[m.kind] ? m.kind : 'moment', momentLine: lineIndex };
       if (m.team && !state.trend.team) state.trend.team = m.team;
       const text = $('mx-text');
-      const filled = text && !text.value.trim();
-      if (filled) text.value = m.line || m.title;
-      if (KIND_COLLECTION[m.kind]) pickCollection(KIND_COLLECTION[m.kind]);
+      const pick = lineIndex != null ? lines[lineIndex]?.text : null;
+      const filled = Boolean(text && (pick || !text.value.trim()));
+      if (filled) text.value = pick || m.line || m.title;
+      const coll = (m.collection && m.collection !== 'core' && m.collection) || KIND_COLLECTION[m.kind];
+      if (coll) pickCollection(coll);
       renderChip();
       renderMoments();
       syncContent();
-      track('merch', { action: 'moment', kind: m.kind || '', filled });
+      track('merch', { action: 'moment', kind: m.kind || '', filled, line: lineIndex, ai: m.ai !== false });
       $('mx-prompt')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       $(filled ? 'mx-create' : 'mx-text')?.focus({ preventScroll: true });
     }

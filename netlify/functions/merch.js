@@ -24,7 +24,7 @@
 //               free mode: { free: true, concepts: null } (the browser uses MerchPrint.fallbackConcepts)
 //   refine      { concept, instruction, content?, trend?, designMode, history? } -> { concept, note, designMode }
 //               (simple instructions run in code at $0; free mode: code intents only)
-//   moments     { sport? } -> { moments: [{ id, title, sport, team, kind, score, why, line, trend }], at, cached }
+//   moments     { sport? } -> { moments: [{ id, title, sport, team, kind, score, why, audience, timing, collection, lines:[{text,angle}], line, ai, trend }], at, cached }
 //               (the Trends feed scored for merch: one main-tier call per batch, 30-min cache, heuristic in free mode)
 //   (merch4) `content` is a string or the page's { text, url, trend }; `trend` may also be top-level.
 //   copy        { concept, content?, blank? } -> { copy: { title, description, retail, base, margin } }
@@ -90,7 +90,7 @@ const COLOR_KEYS = ['a', 'b', 'ink', 'white', 'black'];
 const rowColor = v => (COLOR_KEYS.includes(v) ? v : /^#[0-9a-f]{6}$/i.test(String(v || '')) ? String(v).toUpperCase() : '');
 const PALETTE_FROM_KINDS = ['team', 'es', 'custom'];
 const RIGHTS_KINDS = ['name', 'nickname', 'quote', 'team'];
-const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 24, uploadBytes: 25 * 1024 * 1024 });
+const LIMITS = Object.freeze({ body: 60000, content: 6000, rows: 10, rowText: 60, title: 80, desc: 600, why: 240, concepts: 6, basicConcepts: 4, elements: 3, instruction: 300, history: 4, label: 40, plan: 200, moments: 12, momentsScored: 18, momentsBatch: 9, uploadBytes: 25 * 1024 * 1024 });
 const CAPS = Object.freeze({ person: 10, team: 30 });
 const TEMPLATE_TTL_MS = 24 * 60 * 60 * 1000;
 const SHOP_TTL_MS = 10 * 60 * 1000;
@@ -786,7 +786,9 @@ async function refineMode(body, track) {
 const MOMENT_KINDS = ['quote', 'nickname', 'moment', 'era', 'stat', 'rivalry'];
 const SPORT_LABEL = { nfl: 'NFL', cfb: 'College Football', mlb: 'MLB', golf: 'Golf', tennis: 'Tennis', others: 'Others' };
 const MOMENT_TTL_MS = 30 * 60 * 1000;
-const MOMENT_SCORES = new Map(); // trend id -> { at, data: { kind, score, why, line, ai } }
+const MOMENT_SCORES = new Map(); // 'v2:' + trend id -> { at, data: { kind, score, why, audience, timing, collection, lines, line, ai } }
+const MOMENT_ANGLES = ['quote', 'nickname', 'chant', 'callback', 'pun', 'stat', 'rivalry', 'era'];
+const MOMENT_TIMING = ['now', 'week', 'season', 'evergreen'];
 const MOMENT_WHY = {
   quote: 'A line fans can quote back, word for word.',
   nickname: 'A name only real fans use: almost-famous merch.',
@@ -822,7 +824,10 @@ function heuristicMoment(item, maxRank = 1) {
   const rank = Math.max(0, Number(item.rank) || 0) / (maxRank || 1);
   let score = 30 + Math.round(rank * 25) + bonus + (item.signal === 'hot' ? 12 : item.signal === 'rising' ? 6 : 0) + Math.min(8, (Number(item.coverage) || 0) * 2) + (item.team ? 4 : 0);
   if (LOW_MERCH.test(title)) score -= 35;
-  return { kind, score: Math.max(0, Math.min(100, score)), why: MOMENT_WHY[kind], line: headlineLine(title), ai: false };
+  const line = headlineLine(title);
+  const lines = [{ text: line, angle: kind === 'quote' ? 'quote' : kind === 'rivalry' ? 'rivalry' : 'callback' }];
+  const team = item.team?.name ? clip(item.team.name, 40) : '';
+  return { kind, score: Math.max(0, Math.min(100, score)), why: MOMENT_WHY[kind], audience: team ? `${team} fans` : '', timing: kind === 'era' ? 'evergreen' : 'week', collection: kind === 'quote' ? 'quote' : kind === 'nickname' ? 'nickname' : kind === 'era' ? 'replay' : 'current', lines, line, ai: false };
 }
 // The AI's line must use only the headline's words (and its numbers).
 function lineFromHeadline(line, title) {
@@ -834,19 +839,53 @@ function lineFromHeadline(line, title) {
   if (OFFICIAL_RE.test(text) || LEAGUE_MARKS.some(m => new RegExp(`(^|[^A-Za-z])${m}($|[^A-Za-z])`, 'i').test(text)) || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(text))) return '';
   return text.toUpperCase();
 }
-async function scoreMoments(items, track) {
-  const lines = items.map(i => `${i.id} | ${SPORT_LABEL[i.category] || i.category || 'Sports'} | ${clip(i.title, 200)}`).join('\n');
-  const result = await aiText({ tier: AI_TIER, system: G.MOMENTS_SYSTEM, messages: [{ role: 'user', content: `Headlines:\n${lines}` }], json: true, maxTokens: 1800, timeoutMs: 25000, cacheSystem: true, track: { ...track, feature: FEATURES.moments } });
+// An AI shirt line: fan wording is fine, but numbers and quoted words must
+// come from the headline; no league marks, "official" or banned words.
+function momentLine(raw, title) {
+  const text = clip(String(raw || '').replace(/[“”"«»]/g, '').replace(/\s+/g, ' '), 32).trim();
+  if (!text || text.split(' ').length > 6) return '';
+  const nums = new Set((String(title).match(/\d+(?:[.,]\d+)?/g) || []));
+  if ((text.match(/\d+(?:[.,]\d+)?/g) || []).some(n => !nums.has(n))) return '';
+  if (OFFICIAL_RE.test(text) || LEAGUE_MARKS.some(m => new RegExp(`(^|[^A-Za-z])${m}($|[^A-Za-z])`, 'i').test(text)) || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(text))) return '';
+  return text.toUpperCase();
+}
+const cleanText = (v, n) => { const t = clip(v, n); return t && !OFFICIAL_RE.test(t) && !((FrameUpRules?.BANNED) || []).some(b => b.re.test(t)) ? t : ''; };
+async function scoreBatch(items, track) {
+  const keys = items.map((_, n) => `m${n + 1}`);
+  const lines = items.map((i, n) => `${keys[n]} | ${SPORT_LABEL[i.category] || i.category || 'Sports'}${i.team?.name ? ` | ${clip(i.team.name, 40)}` : ''} | ${clip(i.title, 200)}`).join('\n');
+  const result = await aiText({ tier: AI_TIER, system: G.MOMENTS_SYSTEM, messages: [{ role: 'user', content: `Headlines:\n${lines}` }], json: true, maxTokens: 2600, timeoutMs: 25000, cacheSystem: true, track: { ...track, feature: FEATURES.moments } });
   const parsed = parseJson(result.text);
   const out = new Map();
+  let dropped = 0;
   (Array.isArray(parsed?.items) ? parsed.items : []).forEach(e => {
-    const item = items.find(i => i.id === String(e?.id || ''));
-    if (!item || !MOMENT_KINDS.includes(e.kind) || !Number.isFinite(Number(e.score))) return;
-    let why = clip(e.why, 120);
-    if (!why || OFFICIAL_RE.test(why) || ((FrameUpRules?.BANNED) || []).some(b => b.re.test(why))) why = MOMENT_WHY[e.kind];
-    out.set(item.id, { kind: e.kind, score: Math.max(0, Math.min(100, Math.round(Number(e.score)))), why, line: lineFromHeadline(e.line, item.title) || headlineLine(item.title), ai: true });
+    const n = keys.indexOf(String(e?.key || e?.id || '').trim().toLowerCase());
+    const item = n >= 0 ? items[n] : null;
+    const kind = MOMENT_KINDS.includes(e?.kind) ? e.kind : 'moment';
+    if (!item || !Number.isFinite(Number(e?.score))) { dropped += 1; return; }
+    const seen = new Set();
+    const ls = (Array.isArray(e.lines) ? e.lines : []).map(l => ({ text: momentLine(typeof l === 'string' ? l : l?.text, item.title), angle: MOMENT_ANGLES.includes(l?.angle) ? l.angle : 'callback' }))
+      .filter(l => l.text && !seen.has(l.text) && seen.add(l.text)).slice(0, 3);
+    if (!ls.length) ls.push({ text: headlineLine(item.title), angle: 'callback' });
+    out.set(item.id, {
+      kind, score: Math.max(0, Math.min(100, Math.round(Number(e.score)))),
+      why: cleanText(e.why, 220) || MOMENT_WHY[kind], audience: cleanText(e.audience, 60),
+      timing: MOMENT_TIMING.includes(e.timing) ? e.timing : 'week', collection: COLLECTIONS.includes(e.collection) && e.collection !== 'core' ? e.collection : 'current',
+      lines: ls, line: ls[0].text, ai: true,
+    });
   });
+  if (dropped || out.size < items.length) console.warn(`merch moments: ${items.length - out.size} of ${items.length} AI scores unusable`);
   return { scores: out, cost: Number(result.cost || 0) };
+}
+async function scoreMoments(items, track) {
+  const size = LIMITS.momentsBatch;
+  const batches = [];
+  for (let n = 0; n < items.length; n += size) batches.push(items.slice(n, n + size));
+  const results = await Promise.allSettled(batches.map(b => scoreBatch(b, track)));
+  const scores = new Map();
+  let cost = 0;
+  results.forEach(r => { if (r.status === 'fulfilled') { cost += r.value.cost; r.value.scores.forEach((v, k) => scores.set(k, v)); } else if (!inFreeMode() && !isBudgetError(r.reason)) console.error('merch moments batch failed:', r.reason?.message); });
+  if (!scores.size && results.every(r => r.status === 'rejected')) throw results[0].reason;
+  return { scores, cost };
 }
 async function momentsMode(body, track) {
   const sport = String(body.sport || '').toLowerCase();
@@ -861,7 +900,7 @@ async function momentsMode(body, track) {
     .sort((a, b) => (Number(b.rank) || 0) - (Number(a.rank) || 0))
     .slice(0, LIMITS.momentsScored);
   const now = Date.now();
-  const fresh = id => { const hit = MOMENT_SCORES.get(id); return hit && now - hit.at < MOMENT_TTL_MS ? hit.data : null; };
+  const fresh = id => { const hit = MOMENT_SCORES.get(`v2:${id}`); return hit && now - hit.at < MOMENT_TTL_MS ? hit.data : null; };
   const misses = pool.filter(i => !fresh(i.id));
   let cost = 0; let ai = pool.some(i => fresh(i.id)?.ai);
   if (misses.length) {
@@ -870,7 +909,7 @@ async function momentsMode(body, track) {
       try {
         const r = await scoreMoments(misses, track);
         cost = r.cost;
-        r.scores.forEach((data, id) => { MOMENT_SCORES.set(id, { at: now, data }); ai = true; });
+        r.scores.forEach((data, id) => { MOMENT_SCORES.set(`v2:${id}`, { at: now, data }); ai = true; });
         if (MOMENT_SCORES.size > 400) [...MOMENT_SCORES.keys()].slice(0, MOMENT_SCORES.size - 400).forEach(k => MOMENT_SCORES.delete(k));
       } catch (error) {
         if (!inFreeMode() && !isBudgetError(error)) console.error('merch moments scoring failed:', error.message);
@@ -884,7 +923,7 @@ async function momentsMode(body, track) {
     return {
       id: String(item.id), title: clip(item.title, 300), sport: item.category || '', sportLabel: SPORT_LABEL[item.category] || '',
       team: item.team?.name ? { name: clip(item.team.name, 60), short: clip(item.team.short, 20) } : null,
-      kind: s.kind, score: s.score, why: s.why, line: s.line, ai: Boolean(s.ai), trend,
+      kind: s.kind, score: s.score, why: s.why, audience: s.audience || '', timing: s.timing || 'week', collection: s.collection || 'current', lines: s.lines || [{ text: s.line, angle: 'callback' }], line: s.line, ai: Boolean(s.ai), trend,
     };
   }).sort((a, b) => b.score - a.score).slice(0, LIMITS.moments);
   return json(200, { ok: true, moments, at: feed?.updatedAt || new Date(now).toISOString(), cached: misses.length === 0, ai, cost: { usd: usd(cost), cached: cost === 0 } });

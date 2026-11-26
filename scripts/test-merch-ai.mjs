@@ -383,13 +383,16 @@ const FEED = {
     { id: 'm4', category: 'nfl', type: 'news', title: 'Folded storyline story', rank: 4, related: [], storyline: { id: 's', label: 'x', size: 2, lead: false } },
   ],
 };
-await test('moments: one scoring call, headline-only lines, 30-min cache, sport filter', async () => {
+await test('moments: keyed scoring, 3 shirt lines, why/audience/timing, 30-min cache, sport filter', async () => {
   fresh();
-  M.setTrendsSource(async () => FEED);
+  // Real feed ids are long; the AI answers by short keys (m1, m2…) in feed order.
+  const feed = { ...FEED, items: FEED.items.map(i => ({ ...i, id: `trend-${i.id}-a1b2c3d4e5f6` })) };
+  M.setTrendsSource(async () => feed);
   messagesHandler = aiJson({ items: [
-    { id: 'm1', kind: 'quote', score: 91, why: 'A line fans will quote all week.', line: 'We run this division' },
-    { id: 'm2', kind: 'stat', score: 12, why: 'Low.', line: 'Fantasy kings forever' },          // invented words: heuristic line
-    { id: 'm3', kind: 'era', score: 70, why: 'Dynasty talk.', line: 'Ohtani dynasty' },
+    { key: 'm1', kind: 'quote', score: 91, why: 'Fans will quote it all week after the sweep.', audience: 'Bengals fans after a sweep', timing: 'week', collection: 'quote',
+      lines: [{ text: 'We run this division', angle: 'quote' }, { text: 'Who Dey Run It', angle: 'chant' }, { text: 'Sweep Season 26', angle: 'stat' }, { text: 'NFL kings', angle: 'chant' }] },
+    { key: 'm2', kind: 'stat', score: 12, why: 'Low.', lines: [{ text: 'Official waiver kings', angle: 'pun' }] },
+    { key: 'm3', kind: 'era', score: 70, why: 'Dynasty talk.', timing: 'evergreen', collection: 'replay', lines: [{ text: 'Dynasty Mode', angle: 'era' }, { text: 'Dynasty Mode', angle: 'era' }] },
   ] });
   const r = await call({ mode: 'moments' });
   assert.equal(r.status, 200, JSON.stringify(r.body));
@@ -397,13 +400,19 @@ await test('moments: one scoring call, headline-only lines, 30-min cache, sport 
   assert.ok(aiCalls[0].model.includes('haiku'));
   assert.ok(r.body.moments.length === 3, 'folded storyline items skipped');
   const [top] = r.body.moments;
-  assert.equal(top.id, 'm1'); assert.equal(top.kind, 'quote'); assert.equal(top.score, 91);
+  assert.equal(top.id, 'trend-m1-a1b2c3d4e5f6'); assert.equal(top.kind, 'quote'); assert.equal(top.score, 91); assert.equal(top.ai, true);
+  assert.deepEqual(top.lines.map(l => l.text), ['WE RUN THIS DIVISION', 'WHO DEY RUN IT']); // "26" not in the headline; "NFL" is a league mark
   assert.equal(top.line, 'WE RUN THIS DIVISION');
+  assert.equal(top.audience, 'Bengals fans after a sweep'); assert.equal(top.timing, 'week'); assert.equal(top.collection, 'quote');
   assert.deepEqual(top.team, { name: 'Cincinnati Bengals', short: 'Bengals' });
   assert.equal(top.sportLabel, 'NFL');
-  assert.equal(top.trend.id, 'm1'); assert.equal(top.trend.category, 'nfl');
-  const m2 = r.body.moments.find(m => m.id === 'm2');
-  assert.ok(!/KINGS/.test(m2.line), m2.line);
+  assert.equal(top.trend.category, 'nfl');
+  const m2 = r.body.moments.find(m => m.id.includes('-m2-'));
+  assert.ok(!/OFFICIAL/.test(m2.lines.map(l => l.text).join(' ')), 'official line dropped');
+  assert.equal(m2.lines.length, 1, 'falls back to a headline line');
+  const m3 = r.body.moments.find(m => m.id.includes('-m3-'));
+  assert.deepEqual(m3.lines.map(l => l.text), ['DYNASTY MODE'], 'duplicates removed');
+  assert.equal(m3.timing, 'evergreen'); assert.equal(m3.collection, 'replay');
   assert.equal(r.body.at, FEED.updatedAt);
   assert.equal(r.body.cached, false);
   assert.ok(r.body.cost.usd > 0 && r.body.cost.usd <= 0.003, `moments cost ${r.body.cost.usd}`);
@@ -412,7 +421,7 @@ await test('moments: one scoring call, headline-only lines, 30-min cache, sport 
   assert.equal(again.body.cached, true);
   assert.equal(aiCalls.length, 1, 'cached scores: no second call');
   const mlb = await call({ mode: 'moments', sport: 'mlb' });
-  assert.deepEqual(mlb.body.moments.map(m => m.id), ['m3']);
+  assert.deepEqual(mlb.body.moments.map(m => m.id), ['trend-m3-a1b2c3d4e5f6']);
   assert.equal(aiCalls.length, 1);
 });
 await test('moments: free mode -> heuristic scores, no AI; feed down -> empty list', async () => {

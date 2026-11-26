@@ -412,13 +412,14 @@
     const bigRows = rows.filter(r => r.rel === 1);
     const single = rows.length === 1;
     const longest = Math.max(...rows.map(r => r.text.length));
-    const widthRatio = single ? (longest <= 3 ? 0.26 : longest <= 10 ? 0.46 : 0.66) : concept.collection === 'quote' ? 0.58 : 0.5;
+    // Owner feedback (2026-11-26): designs read too small; start near a full chest print (~10 in on a 15 in area).
+    const widthRatio = single ? (longest <= 3 ? 0.34 : longest <= 10 ? 0.6 : 0.78) : concept.collection === 'quote' ? 0.74 : 0.68;
     const fit = fitOf(concept);
     let box;
     if (blank.apparel) {
       const wr = Math.min(0.94, widthRatio * fit.scale);
       const top = fit.topIn !== null ? Math.min(Math.round(fit.topIn * a.dpi), H - margin - 10) : Math.round(Math.min(1.75 * a.dpi, H * 0.12));
-      box = { x: Math.round(W * (1 - wr) / 2), y: top, w: Math.round(W * wr), h: Math.max(10, Math.round(Math.min(H - top - margin, H * 0.6 * fit.scale))), valign: 'top' };
+      box = { x: Math.round(W * (1 - wr) / 2), y: top, w: Math.round(W * wr), h: Math.max(10, Math.round(Math.min(H - top - margin, H * 0.7 * fit.scale))), valign: 'top' };
     } else if (kind === 'mug') {
       // The face of the mug: the middle of the wrap, clear of the handle seam.
       const faceW = Math.round(W * MUG_FACE);
@@ -568,7 +569,7 @@
     add('dpi', dpiOk, renderScale < 1 && scene.dpi >= minDpi ? 'warn' : 'error', dpiOk ? `${scene.w} × ${scene.h} px at ${scene.dpi} DPI: full print size.` : scene.dpi < minDpi ? `This blank's print area is ${scene.dpi} DPI; ${minDpi} DPI is the minimum for a ${(MerchRules.BLANKS[scene.kind] || {}).label || 'blank'}.` : `This preview is ${eff} DPI; printing needs ${minDpi}. Create the product from a desktop.`);
     if (scene.apparel) {
       const inches = scene.design.w / scene.dpi;
-      add('placement', inches <= 9.5, 'warn', inches <= 9.5 ? `Design is ${inches.toFixed(1)} in wide: compact, mid-chest.` : `Design is ${inches.toFixed(1)} in wide, wider than a chest print. Make it smaller or use shorter words.`);
+      add('placement', inches <= 12.5, 'warn', inches <= 12.5 ? `Design is ${inches.toFixed(1)} in wide: a chest print.` : `Design is ${inches.toFixed(1)} in wide, wider than a chest print. Make it smaller or use shorter words.`);
     } else {
       // Safe edge: poster trim, sticker cut line, mug handle seam.
       const safe = Math.round((SAFE_IN[scene.kind] || 0) * scene.dpi);
@@ -969,7 +970,10 @@
     const hit = c.team ? { name: String(c.team.name || c.team) } : MerchRules.teamsIn(line, idx)[0] || MerchRules.teamsIn(String(c.text || ''), idx)[0];
     const team = hit ? { id: hashOf(hit.name), name: hit.name } : null;
     const pal = teamPalette(team?.name);
-    let rows = splitWords(line, 'auto');
+    // One word per pill for short lines, two for longer ones: fewer letters per
+    // row print much bigger (owner: the type read too small).
+    let rows = splitWords(line, 'word');
+    if (rows.length > 6) rows = splitWords(line, 'pair');
     if (rows.length > 8) rows = splitWords(line, 'line');
     if (rows.length > 9) return null;
     const inkA = contrast(pal.a, WHITE) >= 3 ? 'white' : 'ink';

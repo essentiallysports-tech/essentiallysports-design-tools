@@ -166,22 +166,24 @@ async function flow(width, theme, mode) {
   await click('#mx-url-toggle');
   ok(await ev("document.getElementById('mx-url-toggle').getAttribute('aria-expanded') === 'true'") && await ev(visible('#mx-url')), `${tag}: + ES story link reveals the link field`);
   ok(await ev("!document.getElementById('mx-rules').hidden && document.querySelectorAll('#mx-rules-list li').length >= 3"), `${tag}: How the AI designs lists the ES rules`);
-  await until("document.querySelectorAll('#mx-moments [data-moment-use]').length >= 3", `${tag} moments`);
+  await until("document.querySelectorAll('#mx-moments .mx-moment[data-mid]').length >= 3", `${tag} moments`);
   ok(calls.includes('moments'), `${tag}: moments called`);
-  ok(await ev("getComputedStyle(document.getElementById('mx-moments')).gridTemplateColumns.split(' ').length === 3"), `${tag}: moments in 3 columns`);
+  ok(await ev(`getComputedStyle(document.getElementById('mx-moments')).gridTemplateColumns.split(' ').length === ${width >= 1440 ? 2 : 1} || getComputedStyle(document.getElementById('mx-moments')).gridTemplateColumns.split(' ').length <= 2`), `${tag}: moments in big cards (≤ 2 columns)`);
+  ok(await ev("[...document.querySelectorAll('#mx-moments .mx-moment[data-mid]')].every(c => c.querySelector('.mx-moment__sell') && c.querySelectorAll('.mx-mline').length >= 1 && c.querySelectorAll('[data-moment-line]').length === c.querySelectorAll('.mx-mline').length)"), `${tag}: every moment shows why it works and what to print`);
+  ok(await ev("document.querySelectorAll('#mx-moments .mx-moment[data-mid]')[0].querySelectorAll('.mx-mline').length === 3 && !!document.querySelector('#mx-moments .mx-moment__who') && !!document.querySelector('#mx-moments .mx-moment__timing')"), `${tag}: AI moments: 3 lines, who buys it, timing`);
   if (await ev("document.querySelectorAll('#mx-moments-sports [data-sport]').length > 2")) {
     await click('#mx-moments-sports [data-sport="NFL"]');
-    ok(await ev("document.querySelectorAll('#mx-moments [data-moment-use]').length === 1"), `${tag}: sport filter`);
+    ok(await ev("document.querySelectorAll('#mx-moments .mx-moment[data-mid]').length === 1"), `${tag}: sport filter`);
     await click('#mx-moments-sports [data-sport=""]');
   }
   await audit(`${tag}-create-empty`);
-  await click('#mx-moments [data-moment-use]');
-  ok(await ev("!document.getElementById('mx-moment-chip').hidden && /^\\s*Moment: /.test(document.getElementById('mx-moment-chip').textContent) && document.getElementById('mx-text').value.length > 1"), `${tag}: Use this fills the brief and shows the moment chip`);
+  await click('#mx-moments .mx-moment[data-mid] [data-moment-line][data-line="1"]');
+  ok(await ev("!document.getElementById('mx-moment-chip').hidden && /^\\s*Moment: /.test(document.getElementById('mx-moment-chip').textContent) && document.getElementById('mx-text').value === document.querySelector('#mx-moments .mx-mline.is-on .mx-mline__pill').textContent"), `${tag}: Design this puts that line in the brief and shows the moment chip`);
   await click('#mx-moment-chip [data-chip-clear]');
   ok(await ev("document.getElementById('mx-moment-chip').hidden"), `${tag}: the chip × removes the moment`);
+  await click('#mx-moments .mx-moment[data-mid] [data-moment-line][data-line="0"]');
   await setText('#mx-text', 'Ball don’t lie');
-  await click('#mx-moments [data-moment-use]');
-  ok(await ev("document.getElementById('mx-text').value === 'Ball don’t lie' && !document.getElementById('mx-moment-chip').hidden"), `${tag}: a typed line is kept when a moment is used`);
+  ok(await ev("document.getElementById('mx-text').value === 'Ball don’t lie' && !document.getElementById('mx-moment-chip').hidden"), `${tag}: editing the picked line keeps the moment`);
   ok(!(await ev("document.getElementById('mx-create').disabled")), `${tag}: Create designs enabled`);
   await audit(`${tag}-create`);
 
