@@ -773,3 +773,8 @@ html[data-theme="dark"] .mx-page .mx-making__step:is(.is-active, .is-done) { col
 .mx-mline__angle { flex: none; padding: 2px 8px; border-radius: 999px; background: var(--mx-sunk, rgb(14 16 20 / .05)); font-size: 11px; }
 .mx-moment__empty { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 12px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--mx-line); color: var(--mx-ink-3); font-size: 13px; }
 .mx-sr { position: absolute !important; width: 1px !important; height: 1px !important; margin: -1px !important; padding: 0 !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; white-space: nowrap !important; border: 0 !important; }
+
+/* Publish button on top of the rail, sticky while the rail scrolls (owner, 2026-11-26) */
+.mx-actions--rail { position: sticky; top: 0; bottom: auto; order: -1; margin-top: 0; margin-bottom: 0; z-index: 6; }
+@container (max-width: 820px) { .mx-actions--rail { top: var(--es-space-2, 8px); bottom: auto; } }
+.mx-actions--rail .es-btn--primary { order: -1; }

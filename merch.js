@@ -569,6 +569,9 @@
       if (state.making || !hasContent()) return;
       const content = contentPayload();
       const trend = trendBody();
+      // The story these designs come from: AI edits check facts against it, not
+      // whatever is in the brief box later.
+      state.made = { content, trend };
       const asked = state.aiMode;
       const m = startMaking(asked);
       state.busy = 'concepts';
@@ -1505,8 +1508,8 @@
       state.notes[c.id] = { text: `Changing it: “${text}”…`, tone: 'busy' };
       renderChatNote();
       const history = (state.chat[c.id] || []).slice(-4);
-      const body = { mode: 'refine', concept: forServer(c), instruction: text, content: contentPayload(), [AI_KEY]: state.aiMode, history };
-      const trend = trendBody();
+      const body = { mode: 'refine', concept: forServer(c), instruction: text, content: state.made?.content || contentPayload(), [AI_KEY]: state.aiMode, history };
+      const trend = state.made ? state.made.trend : trendBody();
       if (trend) body.trend = trend;
       try {
         const data = await api(body);

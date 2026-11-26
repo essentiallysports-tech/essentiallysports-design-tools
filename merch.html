@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="merch.css?v=20261126-merch6b">
+  <link rel="stylesheet" href="merch.css?v=20261126-merch6c">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -80,7 +80,7 @@
     <!-- One bar: title + status | 3 steps | Your merch -->
     <header class="mx-bar">
       <div class="mx-bar__title">
-        <h1 class="mx-title" id="mx-title">Merch Designs</h1>
+        <h1 class="mx-title es-sr-only mx-sr" id="mx-title">Merch Designs</h1>
         <span class="mx-conn" id="mx-conn" role="status" aria-live="polite"></span>
       </div>
       <div class="mx-bar__nav" id="mx-steps-nav">
@@ -236,6 +236,12 @@
         </section>
 
         <aside class="mx-rail" id="mx-rail" aria-label="Edit the design">
+          <!-- The one primary action: sticky at the top of the rail -->
+          <div class="mx-actions mx-actions--bar mx-actions--rail" id="mx-designs-bar">
+            <span class="mx-meta" id="mx-designs-meta"></span>
+            <button class="mx-blocker" type="button" id="mx-design-blocker" aria-controls="mx-fold-checks" hidden>Fix 2 print checks first</button>
+            <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-setup" aria-keyshortcuts="Control+Enter Meta+Enter" disabled><span>Continue to Publish</span><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-arrow"/></svg></button>
+          </div>
           <section class="mx-ask ais-surface" id="mx-ask" aria-labelledby="mx-ask-h">
             <h3 class="mx-ask__title" id="mx-ask-h"><span class="es-ai-mark" aria-hidden="true"></span>Ask AI</h3>
             <div class="mx-ask__row">
@@ -374,12 +380,6 @@
             <button class="es-btn es-btn--ghost es-btn--sm mx-pop__reset" type="button" data-pill-reset>Use design colours</button>
           </div>
 
-          <!-- The one primary action: sticky at the foot of the rail -->
-          <div class="mx-actions mx-actions--bar mx-actions--rail" id="mx-designs-bar">
-            <span class="mx-meta" id="mx-designs-meta"></span>
-            <button class="mx-blocker" type="button" id="mx-design-blocker" aria-controls="mx-fold-checks" hidden>Fix 2 print checks first</button>
-            <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-setup" aria-keyshortcuts="Control+Enter Meta+Enter" disabled><span>Continue to Publish</span><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-arrow"/></svg></button>
-          </div>
         </aside>
       </div>
 
@@ -547,6 +547,6 @@
   <script src="merch-guidelines.js?v=20261126-merch6"></script>
   <script src="merch-print.js?v=20261126-merch5"></script>
   <script src="merch-palette.js?v=20261126-merch5"></script>
-  <script src="merch.js?v=20261126-merch6b"></script>
+  <script src="merch.js?v=20261126-merch6c"></script>
 </body>
 </html>

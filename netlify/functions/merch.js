@@ -593,7 +593,7 @@ async function runConcepts(designMode, { content, source, collection, count, tea
   const pro = designMode === 'pro';
   const n = pro ? LIMITS.concepts : count;
   const ask = [
-    `Source (the only facts, numbers and quotes you may use):\n"""${content}"""`,
+    `Source (the only facts, numbers and quotes you may use, plus any word or number already on the design):\n"""${content}"""`,
     research ? research.section : '',
     pro && research?.ideas ? research.ideas : '',
     collection ? `Collection: ${collection}.` : 'Mix the collections that fit the source.',
@@ -747,8 +747,14 @@ async function refineMode(body, track) {
   const instruction = clip(body.instruction, LIMITS.instruction + 1);
   if (instruction.length < 2) return json(400, { ok: false, reason: 'input', error: 'Type what to change, for example "use Lakers colours" or "shorter".' });
   if (instruction.length > LIMITS.instruction) return json(400, { ok: false, reason: 'input', error: `Keep the change under ${LIMITS.instruction} characters.` });
-  const shaped = shapeConcept(body.concept, { content: source, policy, mode: want });
-  if (!shaped.concept) return json(400, { ok: false, reason: 'concept', error: "This design can't be changed as it is (it may use a number or quote that isn't in your story). Pick or make another design." });
+  // Words and numbers already on the design are the person's (made by FrameUp
+  // or typed in the pill editor): they count as source, so only what the AI
+  // adds is checked against the story.
+  const own = (Array.isArray(body.concept?.stack) ? body.concept.stack : []).map(r => clip(r?.text, LIMITS.rowText))
+    .concat((Array.isArray(body.concept?.elements) ? body.concept.elements : []).map(e => clip(e?.text, 4))).filter(Boolean).join(' / ');
+  const sourcePlus = own ? `${source}\n${own}` : source;
+  const shaped = shapeConcept(body.concept, { content: sourcePlus, policy, mode: want });
+  if (!shaped.concept) return json(400, { ok: false, reason: 'concept', error: 'The AI can’t edit this design: it has a league mark, an “official” claim or a blocked word. Change those pills yourself, then ask again.' });
   const base = { ...shaped.concept, id: conceptId(body.concept?.id) || shaped.concept.id };
   const history = (Array.isArray(body.history) ? body.history : []).slice(-LIMITS.history).map(h => clip(h, LIMITS.instruction)).filter(Boolean);
   const reply = (concept, note, extra = {}, cost = 0, cached = false) => json(200, { ok: true, concept, note, designMode: concept.mode, mode: concept.mode, ...extra, cost: { usd: usd(cost), cached } });
@@ -763,7 +769,7 @@ async function refineMode(body, track) {
   const hit = cacheGet(key);
   if (hit) return reply({ ...hit.concept, id: base.id }, hit.note, { ai: true, ...(hit.fellBack ? { fellBack: hit.fellBack } : {}) }, 0, true);
   const research = trend ? trendResearch(trend) : null;
-  const args = { base, instruction, history, content, research, source, policy, track };
+  const args = { base, instruction, history, content, research, source: sourcePlus, policy, track };
   let run = await runRefine(want, args);
   let spent = run.cost || 0; let fellBack = '';
   if (run.error && run.error !== 'free' && run.error !== 'invalid' && want === 'pro') {

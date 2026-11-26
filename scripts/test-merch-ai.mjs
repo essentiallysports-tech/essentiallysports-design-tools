@@ -262,9 +262,15 @@ await test('refine: input validation', async () => {
   fresh();
   assert.equal((await call({ mode: 'refine', concept: good, content: SOURCE })).status, 400);
   assert.equal((await call({ mode: 'refine', concept: good, content: SOURCE, instruction: 'x'.repeat(301) })).status, 400);
-  const bad = await call({ mode: 'refine', concept: { ...good, stack: [{ text: '9 TITLES', size: 'big', fill: 'a', ink: 'white' }] }, content: SOURCE, instruction: 'use Lakers colours' });
+  // A league mark on the design itself: refused before any AI call.
+  const bad = await call({ mode: 'refine', concept: { ...good, stack: [{ text: 'NBA KINGS', size: 'big', fill: 'a', ink: 'white' }] }, content: SOURCE, instruction: 'use Lakers colours' });
   assert.equal(bad.status, 400);
   assert.equal(bad.body.reason, 'concept');
+  assert.equal(aiCalls.length, 0);
+  // A number already on the design (typed by the person) is theirs: a code edit works.
+  const own = await call({ mode: 'refine', concept: { ...good, stack: [{ text: '9 TITLES', size: 'big', fill: 'a', ink: 'white' }] }, content: SOURCE, instruction: 'centre it' });
+  assert.equal(own.status, 200, JSON.stringify(own.body));
+  assert.equal(own.body.concept.stack[0].text, '9 TITLES');
   assert.equal(aiCalls.length, 0);
 });
 await test('refine: simple instructions run in code at $0 (also with AI on)', async () => {
