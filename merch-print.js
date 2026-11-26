@@ -795,6 +795,8 @@
     poster: { rect: { x: 230, y: 90, w: 540, h: 720 }, area: { x: 230, y: 90, w: 540, h: 720 } },
     sticker: { rect: { x: 260, y: 260, w: 480, h: 480, r: 60 }, area: { x: 260, y: 260, w: 480, h: 480 } },
     mug: { rect: { x: 170, y: 300, w: 560, h: 400, r: 24 }, handle: true, area: { x: 190, y: 320, w: 520, h: 360 }, face: MUG_FACE },
+    // tote (15 x 16 in panel, 10 x 10 in area centred): the flat fallback when its photo can't load
+    tote: { rect: { x: 220, y: 250, w: 560, h: 600, r: 6 }, strap: true, area: { x: 313, y: 363, w: 374, h: 374 } },
   };
   function shade(c, k) {
     const h = hex(c) || WHITE;
@@ -810,7 +812,8 @@
     const g = canvas.getContext('2d');
     g.clearRect(0, 0, size, size);
     const u = size / 1000;
-    const shape = MOCK[kind];
+    // blanks without a drawn shape (the merch7 tops) borrow the tee's
+    const shape = MOCK[kind] || MOCK[MerchRules.BLANKS[kind].apparel ? 'tee' : 'tote'];
     g.save();
     g.scale(u, u);
     g.lineJoin = 'round';
@@ -824,6 +827,7 @@
       g.fill(new Path2D(shape.collar));
     } else {
       const r = shape.rect;
+      if (shape.strap) { g.lineWidth = 26; g.strokeStyle = shade(garment, 0.86); g.beginPath(); g.moveTo(370, 258); g.bezierCurveTo(370, 60, 630, 60, 630, 258); g.stroke(); g.lineWidth = 3; g.strokeStyle = 'rgba(14,16,20,.16)'; }
       if (shape.handle) { g.lineWidth = 46; g.strokeStyle = '#E4E7EB'; g.beginPath(); g.arc(r.x + r.w, r.y + r.h / 2, 110, -Math.PI / 2, Math.PI / 2); g.stroke(); g.lineWidth = 3; g.strokeStyle = 'rgba(14,16,20,.16)'; }
       g.beginPath();
       if (g.roundRect) g.roundRect(r.x, r.y, r.w, r.h, r.r || 0); else g.rect(r.x, r.y, r.w, r.h);
@@ -913,9 +917,10 @@
   const PHOTO_W = 720;
   const PHOTO_H = 960;
   const MOCK_MAX_W = 2000; // photoMock's biggest output (the zoom viewer)
-  // merch7 blanks (PROD lane): long sleeve, crewneck, tank, youth tee. The tote's only
-  // photo is an angled product shot, so it keeps the flat preview.
-  const TEMPLATE_KIND = { tee: 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', hoodie: 'pro_380', longsleeve: 'pro_6ae602fcb22447bfbc', crewneck: 'pro_14kNy0EJQkqopY-Z9Pm41A', tank: 'pro_xPL7YjOBRQWVL50Im8eKAA', youth: 'pro_ODh_gv0ESl6jIcRfvSww0w' };
+  // merch7 blanks (PROD lane): long sleeve, crewneck, tank, youth tee, tote. The tote's
+  // only photo is an angled product shot: its flat face is mapped in perspective
+  // (PHOTO_QUADS below), not wrapped round a body.
+  const TEMPLATE_KIND = { tee: 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', hoodie: 'pro_380', longsleeve: 'pro_6ae602fcb22447bfbc', crewneck: 'pro_14kNy0EJQkqopY-Z9Pm41A', tank: 'pro_xPL7YjOBRQWVL50Im8eKAA', youth: 'pro_ODh_gv0ESl6jIcRfvSww0w', tote: 'pro_367' };
   // The photo to open on per template (the hoodie's photo 0 has an arm across the chest).
   // What each photo index shows (all four, calibrated or not), when the reply has no angle.
   // What each photo index shows (all of them, calibrated or not), when the templates
@@ -925,11 +930,12 @@
     pro_6ae602fcb22447bfbc: ['front', 'side', 'front', 'back', 'detail', 'detail'], 'pro_14kNy0EJQkqopY-Z9Pm41A': ['front', 'back', 'side', 'side'],
     pro_xPL7YjOBRQWVL50Im8eKAA: ['front', 'back', 'front', 'back', 'detail', 'detail'], pro_ODh_gv0ESl6jIcRfvSww0w: ['flat', 'flat'], pro_367: ['front'],
   };
-  const PHOTO_HERO = { pro_Vv1XdaPMSdm6jZ5pj24NCQ: 0, pro_380: 2, pro_6ae602fcb22447bfbc: 0, 'pro_14kNy0EJQkqopY-Z9Pm41A': 0, pro_xPL7YjOBRQWVL50Im8eKAA: 0, pro_ODh_gv0ESl6jIcRfvSww0w: 0 };
+  const PHOTO_HERO = { pro_Vv1XdaPMSdm6jZ5pj24NCQ: 0, pro_380: 2, pro_6ae602fcb22447bfbc: 0, 'pro_14kNy0EJQkqopY-Z9Pm41A': 0, pro_xPL7YjOBRQWVL50Im8eKAA: 0, pro_ODh_gv0ESl6jIcRfvSww0w: 0, pro_367: 0 };
   const MAIN_INCHES = {
     pro_Vv1XdaPMSdm6jZ5pj24NCQ: { front: [15, 18], back: [15, 18] }, pro_380: { front: [11, 11], back: [15, 18] },
     pro_6ae602fcb22447bfbc: { front: [15, 18], back: [15, 18] }, 'pro_14kNy0EJQkqopY-Z9Pm41A': { front: [15, 18], back: [15, 18] },
     pro_xPL7YjOBRQWVL50Im8eKAA: { front: [12, 16], back: [12, 16] }, pro_ODh_gv0ESl6jIcRfvSww0w: { front: [10, 12], back: [10, 12] },
+    pro_367: { front: [10, 10], back: [10, 10] },
   };
   const PHOTO_PX = {
     // Stanley/Stella Creator tee (male model, ~17 px/in on the close shots).
@@ -1006,6 +1012,13 @@
   }
   // The print area's box on a photo (fractions), for an area inW x inH inches.
   function photoRect(cal, inW, inH) {
+    if (cal.face) {
+      // a flat panel in perspective: the box round the area's four corners
+      const q = quadCorners(cal, inW, inH);
+      const xs = q.map(p => p[0]), ys = q.map(p => p[1]);
+      const x = Math.min(...xs), y = Math.min(...ys);
+      return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+    }
     const left = wrapX(cal, -inW / 2, cal.ppi);
     const right = wrapX(cal, inW / 2, cal.ppi);
     return { x: left, y: cal.top, w: right - left, h: cal.ppi * inH * (PHOTO_W / PHOTO_H) };
@@ -1026,6 +1039,90 @@
       PHOTO_AREAS[tid][i] = cal;
     }
   }
+  // ─── Flat panels seen in perspective (the tote, tote-cal 2026-11-26) ────
+  // PHOTO_QUADS[templateId][photoIndex]: a flat face on a product shot. Measured by
+  // eye on the 720 x 960 photo (photo pixels), same keys as PHOTO_AREAS plus:
+  //   face    the panel's real size (in, inches) and its four corners on the photo
+  //           (TL, TR, BR, BL); a projective map (homography) of the panel is solved
+  //           from them, so the print foreshortens toward the far edge like the bag;
+  //   centre  where the print area's centre sits on the panel (inches from its TL);
+  //   torso   the panel's outline (the print is clipped to it);
+  //   cover   shapes in front of the panel (the strap), cut out of the clip, so the
+  //           strap hangs over the ink as it would over a real print.
+  // Kept apart from PHOTO_AREAS (whose entries all carry the body cylinder); photoCal,
+  // photosFor, photoGeometry and photoMock read both. A quad cal has `face` and
+  // `quad` (the main area's corners, fractions, TL TR BR BL), no `body`.
+  // Tote (pro_367, Econscious twill tote, panel taken as 15 x 16 in; Fourthwall's
+  // front area 10 x 10 in, centred on the panel). Both colours are the same shot:
+  // the near (left) edge is ~583 px tall, the far (right) one ~530 px, the panel
+  // ~30 degrees off the camera. The front strap loops down over the panel.
+  const PHOTO_QUAD_PX = {
+    pro_367: {
+      0: { angle: 'front', side: 'front',
+        face: { in: [15, 16], corners: [[152, 207], [596, 197], [575, 728], [158, 790]] }, centre: [7.5, 8],
+        torso: [[153, 208], [300, 204], [450, 201], [594, 198], [597, 300], [590, 450], [586, 560], [580, 660], [575, 705], [562, 733], [450, 760], [300, 790], [250, 797], [205, 782], [172, 760], [158, 720], [154, 500]],
+        cover: [[[262, 200], [279, 300], [286, 350], [293, 400], [301, 450], [311, 500], [322, 540], [335, 565], [360, 588], [395, 600], [430, 604], [460, 601], [490, 592], [520, 575], [545, 550], [562, 515], [572, 470], [578, 430], [590, 300], [592, 199], [556, 199], [562, 300], [556, 400], [558, 470], [553, 495], [540, 520], [520, 543], [495, 562], [470, 572], [440, 577], [410, 575], [385, 565], [368, 540], [358, 500], [350, 450], [345, 400], [338, 350], [330, 300], [318, 200]]] },
+    },
+  };
+  // Projective map of the unit square onto a quad (TL, TR, BR, BL): Heckbert's closed
+  // form. -> [a, b, c, d, e, f, g, h]: x = (a u + b v + c) / (g u + h v + 1), y likewise.
+  function squareToQuad(q) {
+    const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q;
+    const sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3;
+    if (Math.abs(sx) < 1e-12 && Math.abs(sy) < 1e-12) return [x1 - x0, x3 - x0, x0, y1 - y0, y3 - y0, y0, 0, 0];
+    const dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+    const den = dx1 * dy2 - dx2 * dy1;
+    const g = (sx * dy2 - dx2 * sy) / den, h = (dx1 * sy - sx * dy1) / den;
+    return [x1 - x0 + g * x1, x3 - x0 + h * x3, x0, y1 - y0 + g * y1, y3 - y0 + h * y3, y0, g, h];
+  }
+  const projApply = (m, u, v) => { const w = m[6] * u + m[7] * v + 1; return [(m[0] * u + m[1] * v + m[2]) / w, (m[3] * u + m[4] * v + m[5]) / w]; };
+  // The inverse map (normalised so it applies with projApply too).
+  function projInvert(m) {
+    const [a, b, c, d, e, f, g, h] = m;
+    const A = e - f * h, B = c * h - b, C = b * f - c * e;
+    const D = f * g - d, E = a - c * g, F = c * d - a * f;
+    const G = d * h - e * g, Hh = b * g - a * h, I = a * e - b * d;
+    return [A / I, B / I, C / I, D / I, E / I, F / I, G / I, Hh / I];
+  }
+  // A point of an inW x inH print area (inches from its top-left) on a quad cal's
+  // photo (fractions), and back.
+  const quadOffset = (cal, inW, inH) => [cal.centre[0] - inW / 2, cal.centre[1] - inH / 2];
+  function quadPoint(cal, xIn, yIn, inW, inH) {
+    const [ox, oy] = quadOffset(cal, inW, inH);
+    return projApply(cal.face.m, (ox + xIn) / cal.face.inW, (oy + yIn) / cal.face.inH);
+  }
+  function quadInches(cal, xf, yf, inW, inH) {
+    const [ox, oy] = quadOffset(cal, inW, inH);
+    const [u, v] = projApply(cal.face.inv, xf, yf);
+    return [u * cal.face.inW - ox, v * cal.face.inH - oy];
+  }
+  function quadCorners(cal, inW, inH) { return [[0, 0], [inW, 0], [inW, inH], [0, inH]].map(([x, y]) => quadPoint(cal, x, y, inW, inH)); }
+  const PHOTO_QUADS = {};
+  for (const [tid, photos] of Object.entries(PHOTO_QUAD_PX)) {
+    PHOTO_QUADS[tid] = {};
+    for (const [i, p] of Object.entries(photos)) {
+      const m = squareToQuad(p.face.corners.map(([x, y]) => [fx(x), fy(y)]));
+      const cal = {
+        angle: p.angle, side: p.side, occluded: '',
+        face: { inW: p.face.in[0], inH: p.face.in[1], m, inv: projInvert(m) }, centre: p.centre.slice(),
+        torso: p.torso.map(([x, y]) => [fx(x), fy(y)]),
+        cover: (p.cover || []).map(poly => poly.map(([x, y]) => [fx(x), fy(y)])),
+      };
+      const [inW, inH] = MAIN_INCHES[tid][p.side];
+      cal.quad = quadCorners(cal, inW, inH);
+      // average px per inch (a fraction of the photo width): the quad's area in
+      // photo px over the area's square inches
+      const qp = cal.quad.map(([x, y]) => [x * PHOTO_W, y * PHOTO_H]);
+      let a2 = 0;
+      qp.forEach(([x, y], k) => { const [x2, y2] = qp[(k + 1) % 4]; a2 += x * y2 - x2 * y; });
+      cal.ppi = Math.sqrt(Math.abs(a2) / 2 / (inW * inH)) / PHOTO_W;
+      Object.assign(cal, photoRect(cal, inW, inH));
+      cal.top = cal.y;
+      PHOTO_QUADS[tid][i] = cal;
+    }
+  }
+  // Every calibration of a template (body wraps or flat quads).
+  const calsOf = tid => PHOTO_AREAS[tid] || PHOTO_QUADS[tid] || null;
   // The four corners of the sleeve wordmark (fractions), rotated about its top-left.
   function logoCorners(spot, ratio = PHOTO_H / PHOTO_W) {
     const w = spot.w;
@@ -1037,7 +1134,9 @@
   // Where the print area sits on a photo rendered at canvasW x canvasH, with the same
   // calibration math photoMock uses (for a UI overlay: drag / resize on the stage).
   // -> { calibrated, side, inW, inH, ppi (canvas px per inch), area: { x, y, w, h }
-  // (canvas px, the full print area; x/w follow the body wrap), toCanvas(xIn, yIn)
+  // (canvas px, the full print area; x/w follow the body wrap; on a flat panel in
+  // perspective, the box round it, with projective: true and quad: its 4 corners
+  // TL TR BR BL), toCanvas(xIn, yIn)
   // -> [px, py], toInches(px, py) -> [xIn, yIn] } with inches from the print area's
   // top-left (as designBox). opts.inW / inH: the template's real area (default the
   // template's main area). Uncalibrated -> { calibrated: false, area: null }.
@@ -1050,6 +1149,16 @@
     const inW = Number(opts.inW) || mw;
     const inH = Number(opts.inH) || mh;
     const ppi = cal.ppi * W;
+    if (cal.face) {
+      // a flat panel in perspective (the tote): projective, so x and y both foreshorten;
+      // quad = the area's corners on the canvas (TL, TR, BR, BL); ppi is the average
+      const toCanvas = (xIn, yIn) => { const [xf, yf] = quadPoint(cal, xIn, yIn, inW, inH); return [xf * W, yf * H]; };
+      const toInches = (px, py) => quadInches(cal, px / W, py / H, inW, inH);
+      const quad = [[0, 0], [inW, 0], [inW, inH], [0, inH]].map(([x, y]) => toCanvas(x, y));
+      const xs = quad.map(p => p[0]), ys = quad.map(p => p[1]);
+      const x = Math.min(...xs), y = Math.min(...ys);
+      return { calibrated: true, projective: true, side: cal.side, inW, inH, ppi, area: { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }, quad, toCanvas, toInches };
+    }
     const top = cal.top * H;
     const toCanvas = (xIn, yIn) => [wrapX(cal, xIn - inW / 2, cal.ppi) * W, top + yIn * ppi];
     const toInches = (px, py) => {
@@ -1065,7 +1174,7 @@
   const templateOf = (templateId, kind) => templateId || TEMPLATE_KIND[kind] || '';
   // The calibration for one photo: by index, else the first calibrated photo with that angle.
   function photoCal(templateId, { photoIndex, angle } = {}) {
-    const set = PHOTO_AREAS[templateId];
+    const set = calsOf(templateId);
     if (!set) return null;
     if (photoIndex !== undefined && photoIndex !== null && photoIndex !== '') return set[Number(photoIndex)] || null;
     if (angle) return Object.values(set).find(c => c.angle === angle) || null;
@@ -1100,7 +1209,7 @@
     const best = nearestColor(colors, garment);
     if (!best) return [];
     const side = sideOf({ region: opts.region || opts.regionId || 'front' });
-    const set = PHOTO_AREAS[templateId] || {};
+    const set = calsOf(templateId) || {};
     const list = best.photos.map((p, i) => {
       const url = photoUrl(p);
       if (!url) return null;
@@ -1295,6 +1404,45 @@
     g.fillRect(0, 0, W, H);
     g.restore();
   }
+  // The flat print (src canvas) drawn onto the canvas quad Q (TL, TR, BR, BL, canvas
+  // px) in perspective: every pixel of the quad's box is mapped back into the print
+  // (inverse homography) and sampled bilinearly (premultiplied, so no dark fringes).
+  // -> a canvas the size of the photo (W x H) with the warped ink.
+  function warpQuad(src, Q, W, H) {
+    const out = document.createElement('canvas');
+    out.width = W;
+    out.height = H;
+    const sw = src.width, sh = src.height;
+    const x0 = Math.max(0, Math.floor(Math.min(...Q.map(p => p[0])))), x1 = Math.min(W, Math.ceil(Math.max(...Q.map(p => p[0]))));
+    const y0 = Math.max(0, Math.floor(Math.min(...Q.map(p => p[1])))), y1 = Math.min(H, Math.ceil(Math.max(...Q.map(p => p[1]))));
+    const bw = x1 - x0, bh = y1 - y0;
+    if (bw <= 0 || bh <= 0) return out;
+    const sd = src.getContext('2d').getImageData(0, 0, sw, sh).data;
+    const og = out.getContext('2d');
+    const img = og.createImageData(bw, bh);
+    const d = img.data;
+    const inv = projInvert(squareToQuad(Q));
+    for (let y = 0; y < bh; y++) {
+      for (let x = 0; x < bw; x++) {
+        const [u, v] = projApply(inv, x0 + x + 0.5, y0 + y + 0.5);
+        if (u < 0 || u > 1 || v < 0 || v > 1) continue;
+        const fx = Math.min(sw - 1.001, Math.max(0, u * sw - 0.5));
+        const fy = Math.min(sh - 1.001, Math.max(0, v * sh - 0.5));
+        const ix = fx | 0, iy = fy | 0, tx = fx - ix, ty = fy - iy;
+        const q00 = (iy * sw + ix) * 4, q10 = q00 + 4, q01 = q00 + sw * 4, q11 = q01 + 4;
+        const w00 = (1 - tx) * (1 - ty) * sd[q00 + 3], w10 = tx * (1 - ty) * sd[q10 + 3], w01 = (1 - tx) * ty * sd[q01 + 3], w11 = tx * ty * sd[q11 + 3];
+        const a = w00 + w10 + w01 + w11;
+        if (a < 0.5) continue;
+        const o = (y * bw + x) * 4;
+        d[o] = (sd[q00] * w00 + sd[q10] * w10 + sd[q01] * w01 + sd[q11] * w11) / a;
+        d[o + 1] = (sd[q00 + 1] * w00 + sd[q10 + 1] * w10 + sd[q01 + 1] * w01 + sd[q11 + 1] * w11) / a;
+        d[o + 2] = (sd[q00 + 2] * w00 + sd[q10 + 2] * w10 + sd[q01 + 2] * w01 + sd[q11 + 2] * w11) / a;
+        d[o + 3] = a;
+      }
+    }
+    og.putImageData(img, x0, y0);
+    return out;
+  }
   // opts: { photo: url, kind, garmentColor, spec, logoSpot: 'sleeve'|'neck'|'none',
   //         templateId, photoIndex, angle, sampleArt, realism (default true), plain,
   //         width (output px, default the canvas width, max 2000: the zoom viewer) }.
@@ -1332,7 +1480,10 @@
     if (!cal) return { width: W, height: H, scene: null, logoNote: '', drawn: false, caption: 'Design shown in Fourthwall’s mockups', side };
     const scene = layout(concept, spec);
     // The print, flat, at its real size on this photo (ppi), then wrapped round the body.
-    const ppiPx = cal.ppi * W;
+    // A flat panel in perspective (quad) is rastered a little finer than its nearest
+    // edge, then resampled per pixel through the inverse projective map.
+    const Q = cal.face ? quadCorners(cal, scene.inW, scene.inH).map(([x, y]) => [x * W, y * H]) : null;
+    const ppiPx = Q ? 1.25 * Math.max(...Q.map((p, i) => Math.hypot(Q[(i + 1) % 4][0] - p[0], Q[(i + 1) % 4][1] - p[1]) / (i % 2 ? scene.inH : scene.inW))) : cal.ppi * W;
     const k = ppiPx / scene.dpi;
     const off = document.createElement('canvas');
     off.width = Math.max(1, Math.round(scene.w * k));
@@ -1351,16 +1502,27 @@
     lg.save();
     polyPath(lg, cal.torso, W, H);
     lg.clip();
-    const top = cal.top * H;
-    const strips = 48;
-    const sw = off.width / strips;
-    for (let i = 0; i < strips; i++) {
-      const d0 = (i / strips - 0.5) * scene.inW;
-      const d1 = ((i + 1) / strips - 0.5) * scene.inW;
-      const x0 = wrapX(cal, d0, cal.ppi) * W;
-      const x1 = wrapX(cal, d1, cal.ppi) * W;
-      if (x1 - x0 < 0.05) continue;
-      lg.drawImage(off, i * sw, 0, sw, off.height, x0, top, x1 - x0 + 0.6, off.height);
+    if (cal.cover?.length) {
+      // what hangs in front of the panel (the tote's strap) covers the ink
+      lg.beginPath();
+      lg.rect(0, 0, W, H);
+      cal.cover.forEach(poly => poly.forEach(([x, y], i) => (i ? lg.lineTo(x * W, y * H) : lg.moveTo(x * W, y * H))));
+      lg.clip('evenodd');
+    }
+    if (Q) {
+      lg.drawImage(warpQuad(off, Q, W, H), 0, 0);
+    } else {
+      const top = cal.top * H;
+      const strips = 48;
+      const sw = off.width / strips;
+      for (let i = 0; i < strips; i++) {
+        const d0 = (i / strips - 0.5) * scene.inW;
+        const d1 = ((i + 1) / strips - 0.5) * scene.inW;
+        const x0 = wrapX(cal, d0, cal.ppi) * W;
+        const x1 = wrapX(cal, d1, cal.ppi) * W;
+        if (x1 - x0 < 0.05) continue;
+        lg.drawImage(off, i * sw, 0, sw, off.height, x0, top, x1 - x0 + 0.6, off.height);
+      }
     }
     lg.restore();
     // Only spots measured on this photo are drawn (the front photo can't show a
@@ -1399,7 +1561,8 @@
     box.w = Math.min(W, Math.ceil(Math.max(...xs)) + 2) - box.x;
     box.h = Math.min(H, Math.ceil(Math.max(...ys)) + 2) - box.y;
     const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
-    const shaded = realism && box.w > 0 && box.h > 0 && inkIntoFabric(g, layer, box, { light, s: up, cx: cal.body.cx * W, r: cal.body.r * W });
+    // a flat panel has no cylinder sides: the fold displacement stays even across it
+    const shaded = realism && box.w > 0 && box.h > 0 && inkIntoFabric(g, layer, box, cal.body ? { light, s: up, cx: cal.body.cx * W, r: cal.body.r * W } : { light, s: up, r: 1e9 });
     if (!shaded) {
       // Plain (photo not readable): multiply only on near-white shirts (keeps the
       // folds; white ink would vanish into any coloured shirt), straight otherwise.
@@ -1411,7 +1574,8 @@
     }
     if (realism && up > 1.2) grain(g, W, H, Math.min(0.06, 0.025 * up));
     const ms = typeof performance !== 'undefined' ? Math.round(performance.now() - t0) : 0;
-    const index = Number(Object.keys(PHOTO_AREAS[templateId]).find(i => PHOTO_AREAS[templateId][i] === cal));
+    const set = calsOf(templateId);
+    const index = Number(Object.keys(set).find(i => set[i] === cal));
     return { width: W, height: H, scene, logoNote, photoIndex: index, angle: cal.angle, side, drawn: true, realism: !!shaded, shadeMs: ms };
   }
   const pointInPoly = (x, y, poly) => { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i]; const [xj, yj] = poly[j]; if (((yi > y) !== (yj > y)) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside; } return inside; };
@@ -1595,7 +1759,7 @@
 
   return {
     VERSION: '2026-11-26-merch5', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, ICONS, ICON_SHAPES, ELEMENT_TYPES, elementsOf, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
-    render, renderLogo, checks, preview, closeup, photoMock, photoGeometry, designBox, MID_CHEST, photoFor, photosFor, photoRect, photoCal, logoCorners, PHOTO_AREAS, PHOTO_PX, PHOTO_HERO, TEMPLATE_KIND, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
+    render, renderLogo, checks, preview, closeup, photoMock, photoGeometry, designBox, MID_CHEST, photoFor, photosFor, photoRect, photoCal, logoCorners, PHOTO_AREAS, PHOTO_QUADS, PHOTO_PX, PHOTO_HERO, TEMPLATE_KIND, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     kitSports, kitTeams, kitSwatches, paletteFromKit, pillInk, ES_SWATCHES, boxContrast, resolve,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,

@@ -211,6 +211,95 @@ console.log(`logo guards: ${n} checks passed`);
 }
 console.log(`merch7 photos: ${n} checks passed`);
 
+// ─── tote-cal: the tote's flat panel in perspective (PHOTO_QUADS) ───
+{
+  const TOTE = 'pro_367';
+  const cal = P.PHOTO_QUADS[TOTE]?.[0];
+  let m = 0; const ok3 = (name, fn) => { fn(); m += 1; console.log('ok', name); };
+  const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  ok3('tote: photo 0 is calibrated as a flat quad (front, 10 x 10 in area), body wraps untouched', () => {
+    assert.deepEqual(Object.keys(P.PHOTO_QUADS), [TOTE]);
+    assert.deepEqual(Object.keys(P.PHOTO_QUADS[TOTE]), ['0']);
+    assert.ok(!P.PHOTO_AREAS[TOTE], 'quads live apart from the body-cylinder table');
+    assert.equal(cal.side, 'front'); assert.equal(cal.angle, 'front'); assert.ok(!cal.body);
+    assert.equal(P.TEMPLATE_KIND.tote, TOTE); assert.equal(P.PHOTO_HERO[TOTE], 0);
+    assert.equal(P.photoCal(TOTE, {}), cal); assert.equal(P.photoCal(TOTE, { photoIndex: 0 }), cal); assert.equal(P.photoCal(TOTE, { angle: 'front' }), cal);
+    assert.equal(P.photoCal(TOTE, { photoIndex: 1 }), null);
+    ['x', 'y', 'w', 'h', 'ppi', 'top'].forEach(k => assert.ok(cal[k] > 0 && cal[k] < 1, k));
+    assert.deepEqual(P.photoRect(cal, 10, 10), { x: cal.x, y: cal.y, w: cal.w, h: cal.h });
+  });
+  ok3('tote: the print quad is convex, clockwise, near edge taller than the far edge', () => {
+    const q = cal.quad.map(([x, y]) => [x * 720, y * 960]);
+    q.forEach(([x, y]) => assert.ok(x > 0 && x < 720 && y > 0 && y < 960));
+    for (let i = 0; i < 4; i++) assert.ok(cross(q[i], q[(i + 1) % 4], q[(i + 2) % 4]) > 0, `corner ${i} turns the same way`);
+    const left = Math.hypot(q[3][0] - q[0][0], q[3][1] - q[0][1]), right = Math.hypot(q[2][0] - q[1][0], q[2][1] - q[1][1]);
+    assert.ok(left > right * 1.02 && left < right * 1.3, `near ${left.toFixed(1)} vs far ${right.toFixed(1)}`);
+    // 10 x 10 in shows ~300 x ~350 px on this shot (the width foreshortened)
+    const top = Math.hypot(q[1][0] - q[0][0], q[1][1] - q[0][1]);
+    assert.ok(top > 250 && top < 340 && left > 320 && left < 400, `top ${top.toFixed(0)}, left ${left.toFixed(0)}`);
+  });
+  ok3('tote: the print area sits inside the bag outline (every sampled point), the strap covers < 30% of it', () => {
+    const g = P.photoGeometry(TOTE, 0, 720, 960);
+    let all = 0, under = 0;
+    for (let a = 0; a <= 20; a++) for (let b = 0; b <= 20; b++) {
+      const [x, y] = g.toCanvas(a / 2, b / 2);
+      all += 1;
+      assert.ok(P.pointInPoly(x / 720, y / 960, cal.torso), `(${a / 2}, ${b / 2}) in off the bag`);
+      if (cal.cover.some(poly => P.pointInPoly(x / 720, y / 960, poly))) under += 1;
+    }
+    assert.ok(under > 0 && under / all < 0.3, `${(100 * under / all).toFixed(0)}% of the area under the strap`);
+    assert.ok(cal.torso.concat(...cal.cover).every(([x, y]) => x > 0 && x < 1 && y > 0 && y < 1));
+  });
+  ok3('tote: the area is centred on the panel (projective centre = the measured corners’ diagonal crossing)', () => {
+    const c = P.PHOTO_QUADS[TOTE][0].face;
+    // the panel's corners (unit square through the map) and its centre
+    const [p0, p1, p2, p3] = [[0, 0], [1, 0], [1, 1], [0, 1]].map(([u, v]) => { const w = c.m[6] * u + c.m[7] * v + 1; return [(c.m[0] * u + c.m[1] * v + c.m[2]) / w * 720, (c.m[3] * u + c.m[4] * v + c.m[5]) / w * 960]; });
+    const t = ((p2[0] - p0[0]) * (p3[1] - p1[1]) - (p2[1] - p0[1]) * (p3[0] - p1[0])) === 0 ? 0 : (((p1[0] - p0[0]) * (p3[1] - p1[1]) - (p1[1] - p0[1]) * (p3[0] - p1[0])) / ((p2[0] - p0[0]) * (p3[1] - p1[1]) - (p2[1] - p0[1]) * (p3[0] - p1[0])));
+    const X = [p0[0] + t * (p2[0] - p0[0]), p0[1] + t * (p2[1] - p0[1])];
+    const [cx, cy] = P.photoGeometry(TOTE, 0, 720, 960).toCanvas(5, 5);
+    assert.ok(Math.abs(cx - X[0]) < 1e-6 && Math.abs(cy - X[1]) < 1e-6, `${cx},${cy} vs ${X}`);
+    assert.deepEqual(p0.map(Math.round), [152, 207], 'the map hits the measured corner');
+  });
+  ok3('tote: photoGeometry is projective and round-trips at any canvas size', () => {
+    for (const W of [720, 1600, 2000]) {
+      const H = Math.round(W * 960 / 720);
+      const g = P.photoGeometry(TOTE, 0, W);
+      assert.equal(g.calibrated, true); assert.equal(g.projective, true); assert.equal(g.side, 'front');
+      assert.equal(g.inW, 10); assert.equal(g.inH, 10);
+      g.quad.forEach(([x, y], i) => { assert.ok(Math.abs(x - cal.quad[i][0] * W) < 1e-6 && Math.abs(y - cal.quad[i][1] * H) < 1e-6, `corner ${i}`); });
+      assert.ok(Math.abs(g.area.x - cal.x * W) < 1e-6 && Math.abs(g.area.w - cal.w * W) < 1e-6 && Math.abs(g.area.y - cal.y * H) < 1e-6);
+      for (let x = 0; x <= 10; x += 1.25) for (const y of [0, 3.3, 7.1, 10]) {
+        const [xi, yi] = g.toInches(...g.toCanvas(x, y));
+        assert.ok(Math.abs(xi - x) < 1e-6 && Math.abs(yi - y) < 1e-6, `${x},${y} -> ${xi},${yi}`);
+      }
+      // straight lines stay straight (a projective map, not a wrap)
+      const a = g.toCanvas(0, 4), b = g.toCanvas(5, 4), c = g.toCanvas(10, 4);
+      assert.ok(Math.abs(cross(a, b, c)) < 1e-6 * W * W);
+      // the far side is smaller: an inch near the right edge spans fewer px than at the left
+      assert.ok(g.toCanvas(10, 5)[0] - g.toCanvas(9, 5)[0] < g.toCanvas(1, 5)[0] - g.toCanvas(0, 5)[0]);
+    }
+    // a different area size is centred on the same spot
+    const s = P.photoGeometry(TOTE, 0, 720, 960, { inW: 6, inH: 6 });
+    const [ax, ay] = s.toCanvas(3, 3), [bx, by] = P.photoGeometry(TOTE, 0, 720, 960).toCanvas(5, 5);
+    assert.ok(Math.abs(ax - bx) < 1e-6 && Math.abs(ay - by) < 1e-6);
+  });
+  ok3('tote: photosFor opens on the calibrated photo in either colour; back prints are not drawn', () => {
+    const cols = [{ name: 'Black', hex: '#060606', photos: [{ url: 'k0', index: 0, angle: 'front' }] }, { name: 'Oyster', hex: '#f6ebcd', photos: ['o0'] }];
+    for (const [hexc, url] of [['#F6EBCD', 'o0'], ['#060606', 'k0'], ['#FFFFFF', 'o0']]) {
+      const list = P.photosFor(cols, hexc, TOTE);
+      assert.deepEqual(list.map(p => [p.url, p.angle, p.index, p.calibrated, p.primary]), [[url, 'front', 0, true, true]]);
+    }
+    assert.deepEqual(P.photosFor(cols, '#F6EBCD', TOTE, { region: 'back' }).map(p => p.calibrated), [false]);
+  });
+  {
+    const canvas = { width: 720, getContext() { throw new Error('drew a back print on the tote photo'); } };
+    assert.equal(await P.photoMock(P.yourWords(line), canvas, { photo: 'x.jpg', kind: 'tote', templateId: TOTE, photoIndex: 0, spec: { regionId: 'back', pixelsWidth: 1500, pixelsHeight: 1500, dpi: 150 } }), null);
+    assert.equal(await P.photoMock(P.yourWords(line), canvas, { photo: 'x.jpg', kind: 'tote', templateId: TOTE, photoIndex: 1, spec: { regionId: 'front', pixelsWidth: 1500, pixelsHeight: 1500, dpi: 150 } }), null);
+    m += 1; console.log('ok tote: photoMock never draws a back print or on an unmeasured photo');
+  }
+  console.log(`tote quad: ${m} checks passed`);
+}
+
 // ─── merch-realism: placement (mid-chest default, fit.xIn), designBox, photoGeometry ───
 {
   const T = 'pro_Vv1XdaPMSdm6jZ5pj24NCQ';
@@ -317,6 +406,33 @@ console.log(`merch7 photos: ${n} checks passed`);
         const geo = P.photoGeometry(T, 0, W, H); const b = P.designBox(concept, spec);
         const [ex0, ey0] = geo.toCanvas(b.x, b.y); const [ex1, ey1] = geo.toCanvas(b.x + b.w, b.y + b.h);
         out.ink = [x0, y0, x1 + 1, y1 + 1]; out.expect = [ex0, ey0, ex1, ey1].map(v => Math.round(v * 10) / 10);
+        // tote-cal: the tote's flat panel in perspective. Ink stays inside the projected
+        // design box, never under the strap, and the realism pass runs on it.
+        {
+          const TO = 'pro_367', ts = { regionId: 'front', pixelsWidth: 1500, pixelsHeight: 1500, dpi: 150, logo: 'inside' };
+          const tc = { palette: { a: '#111111', b: '#111111', ink: '#111111' }, stack: [{ text: 'TOTE DAY', size: 'big', fill: 'a', ink: 'ink' }, { text: 'EVERY DAY', size: 'big', fill: 'a', ink: 'ink' }], blanks: ['tote'] };
+          const cv = document.createElement('canvas'); cv.width = 720;
+          const res = await P.photoMock(tc, cv, { photo, kind: 'tote', templateId: TO, photoIndex: 0, spec: ts, garmentColor: '#F6EBCD', realism: false, logoSpot: 'inside' });
+          const tW = cv.width, tH = cv.height; const td = cv.getContext('2d').getImageData(0, 0, tW, tH).data;
+          const tg = P.photoGeometry(TO, 0, tW, tH); const tb = P.designBox(tc, ts);
+          const corners = [[tb.x, tb.y], [tb.x + tb.w, tb.y], [tb.x + tb.w, tb.y + tb.h], [tb.x, tb.y + tb.h]].map(([x, y]) => tg.toCanvas(x, y));
+          const cal = P.PHOTO_QUADS[TO][0];
+          const deep = (x, y) => [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]].every(([dx, dy]) => cal.cover.some(poly => P.pointInPoly((x + dx) / tW, (y + dy) / tH, poly)));
+          let inkN = 0, outside = 0, underStrap = 0;
+          for (let y = 0; y < tH; y++) for (let x = 0; x < tW; x++) {
+            const i = (y * tW + x) * 4; if (td[i] > 60) continue;
+            inkN += 1;
+            if (!P.pointInPoly(x + 0.5, y + 0.5, corners.map(([a, b], k) => [a + (k === 1 || k === 2 ? 3 : -3), b + (k >= 2 ? 3 : -3)]))) outside += 1;
+            if (deep(x + 0.5, y + 0.5)) underStrap += 1;
+          }
+          out.tote = { drawn: res && res.drawn, inkN, outside, underStrap, w: tW };
+          const big = document.createElement('canvas'); big.width = 720;
+          const rb = await P.photoMock(tc, big, { photo, kind: 'tote', templateId: TO, photoIndex: 0, spec: ts, garmentColor: '#060606', realism: true, width: 1600, logoSpot: 'inside' });
+          out.tote.bigShaded = rb.realism; out.tote.bigW = big.width;
+          // the flat fallback draws a tote (and the merch7 tops) instead of throwing
+          out.flat = [];
+          for (const kind of ['tote', 'longsleeve', 'tank']) { try { const f = document.createElement('canvas'); f.width = 300; await P.preview(tc, '#F6EBCD', f, { kind, spec: ts, size: 300 }); out.flat.push(kind); } catch (e) { out.flat.push(kind + ': ' + e.message); } }
+        }
         // the print PNG: byte-identical to the base engine for a fixed concept (explicit fit)
         if (window.MPBase) {
           const fixed = { id: 'fixed', palette: { a: '#0A7DFA', b: '#0B1F3A', ink: '#FFFFFF' }, stack: ['WE CENTER', 'FANS IN', 'EVERYTHING'].map((t, i) => ({ text: t, size: i ? 'mid' : 'big', fill: i % 2 ? 'b' : 'a', ink: 'white' })), elements: [{ type: 'icon', name: 'tennis', position: 'above', color: 'a' }], fit: { scale: 1, topIn: 1.75 } };
@@ -335,6 +451,13 @@ console.log(`merch7 photos: ${n} checks passed`);
       assert.equal(r.hugeW, 2000, 'width is capped at 2000');
       r.ink.forEach((v, i) => assert.ok(Math.abs(v - r.expect[i]) <= 3, `ink ${r.ink} vs photoGeometry ${r.expect}`));
       console.log(`ok photoMock width 1600 (${r.bigMs} ms; 720 px ${r.smallMs} ms), ink matches photoGeometry`);
+      assert.equal(r.tote.drawn, true, 'the tote photo is drawn on');
+      assert.ok(r.tote.inkN > 2000, `tote ink pixels ${r.tote.inkN}`);
+      assert.equal(r.tote.outside, 0, 'tote ink stays inside the projected design box (photoGeometry)');
+      assert.equal(r.tote.underStrap, 0, 'no ink on the strap');
+      assert.equal(r.tote.bigShaded, true); assert.equal(r.tote.bigW, 1600);
+      assert.deepEqual(r.flat, ['tote', 'longsleeve', 'tank'], 'flat preview has a shape for every blank');
+      console.log(`ok tote photoMock: ${r.tote.inkN} ink px inside the projected box, none on the strap; flat preview for tote / merch7 tops`);
       if (r.renderSame === undefined) console.log('skip print PNG comparison (no base ref)');
       else { assert.equal(r.renderSame, true, 'render() PNG changed vs the base'); assert.ok(r.renderLen > 1000); assert.equal(r.logoSame, true, 'renderLogo() PNG changed'); console.log('ok render() / renderLogo() PNGs byte-identical to the base engine'); }
     } finally { chrome.close(); server.close(); }
