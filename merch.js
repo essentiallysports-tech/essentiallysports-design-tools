@@ -12,7 +12,9 @@
    drawn by merch-palette.js (window.MerchPalette); this file owns the data.
    Calls /api/merch (modes status, templates, concepts, refine, moments, copy,
    upload-url, register, preview, create, publish, hide, product, archive, list,
-   collections, collection-create, collection-set, sales; upload-relay as a
+   collections, collection-create, collection-set, sales, brainstorm-open /
+   -turn / -line / -add / -get (the Brainstorm room: a shared line board per
+   trend, opened from a moment card or "Brainstorm from my line"); upload-relay as a
    fallback when the direct upload is blocked: the PNG goes to Supabase Storage
    merch-art/<user>/<file>.png first, then the server streams it to Fourthwall)
    and window.MerchPrint (preview / closeup / photoMock / photoFor / render /
@@ -37,7 +39,7 @@
   const COLLECTION_LABEL = { auto: 'Auto', replay: 'Replay', nickname: 'Nickname', quote: 'In their own words', core: 'Core ES', current: 'Current' };
   const RIGHTS_LABEL = { name: 'Name', nickname: 'Nickname', quote: 'Quote', team: 'Team colours' };
   const STEPS = ['content', 'designs', 'publish'];
-  const VIEWS = ['content', 'designs', 'publish', 'list'];
+  const VIEWS = ['content', 'brainstorm', 'designs', 'publish', 'list'];
   const BLANK_ORDER = ['tee', 'hoodie', 'poster', 'sticker', 'mug'];
   const BLANK_INFO = {
     tee: { label: 'T-shirt', noun: 'Tee', apparel: true },
@@ -129,7 +131,7 @@
     const demo = isDemo(window.location);
     const scenario = new URLSearchParams(window.location.search).get('state') || 'ok';
     await ensurePrint();
-    if (demo && !window.MerchDemo) await loadScript('merch-demo.js?v=20261126-merch6');
+    if (demo && !window.MerchDemo) await loadScript('merch-demo.js?v=20261127-bs1');
 
     const readMode = () => { try { return window.localStorage.getItem(MODE_STORE) === 'pro' ? 'pro' : 'basic'; } catch { return 'basic'; } };
     const state = {
@@ -150,7 +152,7 @@
     async function api(body, { signal } = {}) {
       if (demo && window.MerchDemo) {
         // Sample data: long enough for the making checklist to show.
-        await wait(body.mode === 'concepts' ? 1400 : 150, signal);
+        await wait(body.mode === 'concepts' || body.mode === 'brainstorm-turn' ? 1400 : body.mode === 'brainstorm-open' ? 900 : 150, signal);
         const [status, data] = window.MerchDemo.reply(body, scenario);
         if (status >= 400 || data.ok === false) throw Object.assign(new Error(data.error || 'Something went wrong.'), { status, reason: data.reason, data });
         return data;
@@ -218,6 +220,7 @@
       try { window.localStorage.setItem(MODE_STORE, mode); } catch { /* private mode: remembered for this visit only */ }
       renderMode();
       syncContent();
+      if (state.step === 'brainstorm') renderBsMode();
       if (state.step === 'designs' && selectedConcept()) { renderElements(selectedConcept()); renderChatNote(); renderFoldMeta(); }
       track('merch', { action: 'ai-mode', mode });
     }
@@ -234,6 +237,7 @@
     function canGo(step) {
       const s = normStep(step);
       if (s === 'content' || s === 'list') return true;
+      if (s === 'brainstorm') return Boolean(state.bs?.key);
       if (s === 'designs') return Boolean(state.making) || state.concepts.length > 0;
       if (s === 'publish') return !state.making && Boolean(selectedConcept()) && !blockingChecks().length;
       return false;
@@ -249,6 +253,7 @@
       closePop(false);
       renderSteps();
       renderListTab();
+      if (s === 'brainstorm') renderBrainstorm(); else if (from === 'brainstorm') stopPoll();
       if (s === 'designs') enterStudio();
       if (s === 'publish') enterPublish();
       if (s === 'list' && !state.list && !state.listBusy) loadList();
@@ -258,7 +263,8 @@
       return true;
     }
     function renderSteps() {
-      const at = STEPS.indexOf(state.step);
+      const at = STEPS.indexOf(state.step === 'brainstorm' ? 'content' : state.step);
+      show('mx-steps-crumb', state.step === 'brainstorm');
       document.querySelectorAll('#mx-steps [data-step]').forEach(b => {
         const step = normStep(b.dataset.step);
         const i = STEPS.indexOf(step);
@@ -301,6 +307,16 @@
       if (!b || b.disabled) return;
       e.preventDefault();
       const to = b.dataset.go;
+      if (to === 'content' && state.step === 'brainstorm' && b.id === 'mx-bs-back') {
+        // Back to moments: land on the moment this board came from.
+        const from = state.bs.from;
+        go('content', { focus: 'none' });
+        const card = from ? $('mx-moments')?.querySelector(`[data-mid="${CSS.escape(from)}"]`) : null;
+        const target = card?.querySelector('[data-moment-brainstorm]') || null;
+        (card || $('mx-moments-wrap'))?.scrollIntoView({ block: 'center' });
+        (target || $('mx-text'))?.focus({ preventScroll: true });
+        return;
+      }
       if (to === 'content') { go('content', { focus: 'none' }); $('mx-text')?.focus({ preventScroll: true }); return; }
       go(to);
     });
@@ -362,7 +378,7 @@
     const sportOf = m => String(m?.sportLabel || m?.sport || m?.trend?.sport || m?.trend?.category || '').trim().toUpperCase();
     const teamName = t => (t && typeof t === 'object' ? t.short || t.name || '' : String(t || ''));
     const TIMING_LABEL = { now: 'Sell now', week: 'This week', season: 'All season', evergreen: 'Evergreen' };
-    const ANGLE_LABEL = { quote: 'Quote', nickname: 'Nickname', chant: 'Chant', callback: 'Callback', pun: 'Wordplay', stat: 'Stat', rivalry: 'Rivalry', era: 'Era' };
+    const ANGLE_LABEL = { quote: 'Quote', nickname: 'Nickname', chant: 'Chant', callback: 'Callback', pun: 'Wordplay', stat: 'Stat', rivalry: 'Rivalry', era: 'Era', city: 'City pride', player: 'Player', troll: 'Troll' };
     const linesOf = m => { const l = (Array.isArray(m.lines) ? m.lines : []).filter(x => x && x.text); return l.length ? l.slice(0, 3) : (m.line ? [{ text: m.line, angle: 'callback' }] : []); };
     function momentCard(m) {
       const on_ = state.trend && String(state.trend.momentId || state.trend.id) === String(m.id);
@@ -377,7 +393,7 @@
         </div>
         <h3 class="mx-moment__title">${esc(m.title)}</h3>
         <div class="mx-moment__print">
-          <p class="mx-moment__label">What to print</p>
+          <div class="mx-moment__printhead"><p class="mx-moment__label">What to print</p><button class="mx-moment__bs" type="button" data-moment-brainstorm="${esc(m.id)}" aria-label="Brainstorm more lines for ${esc(m.title)}"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-bulb"/></svg>Brainstorm</button></div>
           ${linesOf(m).length ? `<ul class="mx-mlines">${linesOf(m).map((l, n) => {
             const picked = on_ && state.trend?.momentLine === n;
             return `<li class="mx-mline${picked ? ' is-on' : ''}">
@@ -425,6 +441,8 @@
     on('mx-moments-sports', 'click', e => { const b = e.target.closest('[data-sport]'); if (!b) return; state.sport = b.dataset.sport; renderMoments(); $('mx-moments-sports').querySelector(`[data-sport="${CSS.escape(state.sport)}"]`)?.focus(); });
     on('mx-moments', 'click', e => {
       if (e.target.closest('[data-moments=retry]')) { loadMoments(); return; }
+      const bs = e.target.closest('[data-moment-brainstorm]');
+      if (bs) { const m = (state.moments || []).find(x => String(x.id) === bs.dataset.momentBrainstorm); if (m) openBrainstorm({ trend: trendOfMoment(m), from: String(m.id) }); return; }
       const b = e.target.closest('[data-moment-line],[data-moment-use],[data-design]');
       if (!b) return;
       const id = b.dataset.momentLine ?? b.dataset.momentUse ?? b.dataset.design;
@@ -485,6 +503,7 @@
       if (btn) btn.disabled = !has || Boolean(state.making);
       const neu = $('mx-strip-new');
       if (neu) neu.disabled = !has || Boolean(state.making);
+      show('mx-bs-from-line', contentPayload().text.length > 2);
       if (state.making) return;
       if (has) setText('mx-content-meta', '');
     }
@@ -696,8 +715,8 @@
       const b = $('mx-made-mode');
       if (b) {
         b.hidden = !m || making;
-        b.className = `es-badge es-badge--${m === 'pro' ? 'brand' : m === 'free' ? 'warn' : 'ink'}`;
-        b.textContent = m === 'pro' ? 'Made with Pro' : m === 'free' ? 'Made without AI' : 'Made with Basic';
+        b.className = `es-badge es-badge--${m === 'pro' || m === 'board' ? 'brand' : m === 'free' ? 'warn' : 'ink'}`;
+        b.textContent = m === 'pro' ? 'Made with Pro' : m === 'free' ? 'Made without AI' : m === 'board' ? 'From the brainstorm' : 'Made with Basic';
       }
       const fell = making ? '' : m === 'free' && state.fellBack ? `Pro wasn’t used (${FELL_SHORT[state.fellBack] || 'not available'}), so these were made without AI. They still follow the ES style.` : FELL[state.fellBack] || (state.fellBack ? 'Pro wasn’t used this time, so Basic made these.' : '');
       show('mx-fell', Boolean(fell));
@@ -2510,6 +2529,657 @@
       }
     });
 
+    // ── Brainstorm room: a shared line board per trend (POST brainstorm-*) ──
+    // Opens full width from a moment card ("Brainstorm") or from Create
+    // ("Brainstorm from my line"). Left: what the AI reads + the chat (angle
+    // chips, thinking state, each turn's note and the mode used). Right: the
+    // line board (live ES-pill previews in the trend's colours, star, mix,
+    // more like this, edit, remove, Design this, Design all starred). The
+    // board is shared with ES: it refreshes every 20 s and on focus.
+    const BS_POLL_MS = 20000;
+    const BS_ANGLES = [
+      ['Chant', { kind: 'angle', angle: 'chant' }],
+      ['Wordplay', { kind: 'angle', angle: 'pun' }],
+      ['Nickname', { kind: 'angle', angle: 'nickname' }],
+      ['Stat', { kind: 'angle', angle: 'stat' }],
+      ['Rivalry', { kind: 'angle', angle: 'rivalry' }],
+      ['Era', { kind: 'angle', angle: 'era' }],
+      ['City pride', { kind: 'angle', angle: 'city' }],
+      ['Player', { kind: 'angle', angle: 'player' }],
+      ['Troll (in good taste)', { kind: 'angle', angle: 'troll' }],
+      ['Funnier', { kind: 'tone', tone: 'funnier' }],
+      ['More emotional', { kind: 'tone', tone: 'emotional' }],
+      ['Shorter', { kind: 'tone', tone: 'shorter' }],
+      ['For neutral fans', { kind: 'audience', audience: 'neutral' }],
+    ];
+    const BS_THINK = { basic: ['Reading the sources', 'Reading the board', 'Writing new lines', 'Checking ES rules'], pro: ['Reading the sources', 'Reading the board', 'Finding the angle', 'Writing new lines', 'Checking ES rules'] };
+    const BS_MODE_NOTE = { basic: 'Basic: quick lines, light on your AI usage.', pro: 'Pro: the smarter AI, sharper lines, more usage.' };
+    const AV_HUES = [212, 152, 28, 280, 340, 190, 48, 0];
+    state.bs = { key: '', trend: null, content: null, from: '', session: null, context: null, me: '', opening: false, error: '', busy: false, pending: null, chatError: '', lastAsk: null, think: 0, filter: 'all', sort: 'new', picks: [], editing: '', fresh: [], turnMeta: {}, addNote: '', addTone: '', dirty: false, refreshing: false };
+    const bsLow = s => String(s || '').trim().toLowerCase();
+    const isMe = by => Boolean(state.bs.me) && bsLow(by) === state.bs.me;
+    function personName(by) {
+      if (!by) return 'Someone';
+      if (isMe(by)) return 'You';
+      const local = String(by).split('@')[0].replace(/[._-]+/g, ' ').trim();
+      return local ? local.replace(/\b\w/g, c => c.toUpperCase()) : 'Someone';
+    }
+    function avatar(by, { ai = false } = {}) {
+      if (ai) return '<span class="mx-av mx-av--ai" aria-hidden="true"><span class="es-ai-mark"></span></span>';
+      const name = personName(by) === 'You' ? String(by || 'You').split('@')[0] : personName(by);
+      const ini = name.split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || '?';
+      let h = 0; for (const c of bsLow(by)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+      return `<span class="mx-av" style="--av-h:${AV_HUES[h % AV_HUES.length]}" aria-hidden="true">${esc(ini)}</span>`;
+    }
+    const agoText = iso => {
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return '';
+      const m = Math.round((Date.now() - t) / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return `${m} min ago`;
+      const h = Math.round(m / 60);
+      return h < 24 ? `${h} h ago` : new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    };
+    const shortAgo = iso => { const t = new Date(iso).getTime(); if (!Number.isFinite(t)) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'now' : m < 60 ? `${m}m` : m < 1440 ? `${Math.round(m / 60)}h` : `${Math.round(m / 1440)}d`; };
+    const bsTeam = () => { const t = state.bs.context?.team || state.bs.session?.team || state.bs.trend?.team; if (!t) return null; if (typeof t === 'string') return { name: t }; return t.name ? { name: t.name, short: t.short || '' } : null; };
+    const cr = (x, y) => { try { return window.FrameUpRules?.contrastRatio ? window.FrameUpRules.contrastRatio(x, y) : 4.5; } catch { return 4.5; } };
+    function bsPalette() {
+      const col = state.bs.context?.colours || state.bs.context?.colors || null;
+      const cp = state.bs.context?.palette;
+      let p = cp && normHex(cp.a) ? { a: normHex(cp.a), b: normHex(cp.b) || WHITE, ink: normHex(cp.ink) } : null;
+      if (p) { /* the server's MerchPrint.teamPalette */ } else if (col && !Array.isArray(col) && typeof col === 'object' && normHex(col.a)) p = { a: normHex(col.a), b: normHex(col.b) || WHITE, ink: normHex(col.ink) };
+      else if (Array.isArray(col) && normHex(col[0])) p = { a: normHex(col[0]), b: normHex(col[1]) || WHITE, ink: '' };
+      if (!p) { try { p = MP().teamPalette ? { ...MP().teamPalette(bsTeam()?.name || '') } : null; } catch { p = null; } }
+      if (!p || !normHex(p.a)) p = { a: '#0A7DFA', b: '#033162', ink: '#FFFFFF' };
+      if (!normHex(p.ink)) p.ink = cr(p.b, '#000000') >= cr(p.b, WHITE) ? '#000000' : WHITE;
+      return { a: normHex(p.a), b: normHex(p.b) || WHITE, ink: normHex(p.ink) };
+    }
+    const BS_RIGHTS = ['name', 'nickname', 'quote', 'team'];
+    // A board line as a studio concept: "Your words" in the trend's palette.
+    function lineConcept(l) {
+      const pal = bsPalette();
+      const team = bsTeam();
+      const inkA = cr(pal.a, WHITE) >= 3 ? 'white' : 'ink';
+      let base = null;
+      try { base = MP().yourWords ? MP().yourWords({ text: l.text, team }) : null; } catch { base = null; }
+      const rows = base?.stack?.length ? base.stack.map(r => r.text) : [String(l.text || '').replace(/["“”]/g, '').trim()];
+      const stack = rows.map((t, n) => ({ text: t, size: 'big', fill: n % 2 ? 'b' : 'a', ink: n % 2 ? 'ink' : inkA }));
+      const seen = new Set();
+      const rights = [...(base?.rights || []), ...(Array.isArray(l.rights) ? l.rights : []).map(r => ({ kind: BS_RIGHTS.includes(r?.kind) ? r.kind : 'name', text: String(r?.text || '').slice(0, 80) }))]
+        .filter(r => r.text && !seen.has(`${r.kind}:${bsLow(r.text)}`) && seen.add(`${r.kind}:${bsLow(r.text)}`));
+      if (team && !rights.some(r => r.kind === 'team')) rights.push({ kind: 'team', text: team.name });
+      return { ...(base || {}), id: `bs-${l.id}`, collection: 'current', label: ANGLE_LABEL[l.angle] || 'Your words', title: String(l.text || '').slice(0, 60), team: team ? { id: base?.team?.id || bsLow(team.name).replace(/\W+/g, '-'), name: team.name } : null, palette: pal, garment: { color: WHITE, name: 'White' }, align: base?.align || 'left', stack, blanks: base?.blanks || ['tee', 'hoodie'], rights, why: l.why || 'A line from the brainstorm board.', fit: { scale: 1, topIn: null }, fromBoard: state.bs.session?.id || '' };
+    }
+    // Live mini previews: one render per line text + palette, then copied.
+    const bsArt = new Map();
+    async function drawLineArt(cv, l) {
+      if (!cv || !MP().closeup) return;
+      const c = lineConcept(l);
+      const key = JSON.stringify([c.stack.map(r => [r.text, r.fill, r.ink]), c.palette, cv.width, cv.height]);
+      if (cv.dataset.key === key) return;
+      cv.dataset.key = key;
+      if (!bsArt.has(key)) {
+        if (bsArt.size > 160) bsArt.clear();
+        bsArt.set(key, (async () => { const off = document.createElement('canvas'); off.width = cv.width; off.height = cv.height; await MP().closeup(c, WHITE, off, { kind: 'tee', pad: 0.16 }); return off; })().catch(error => { console.warn('merch brainstorm preview', error); bsArt.delete(key); return null; }));
+      }
+      const off = await bsArt.get(key);
+      if (!off || cv.dataset.key !== key) return;
+      const g = cv.getContext('2d');
+      g.clearRect(0, 0, cv.width, cv.height);
+      g.drawImage(off, 0, 0);
+      cv.classList.add('is-drawn');
+    }
+
+    function trendOfMoment(m) {
+      const t = m.trend && typeof m.trend === 'object' ? m.trend : {};
+      const out = { ...t, id: t.id || m.id, title: t.title || m.title, sport: t.sport || t.category || m.sport || '' };
+      if (m.team && !out.team) out.team = m.team;
+      return out;
+    }
+    async function whoAmI() {
+      if (state.bs.me) return;
+      try { const s = await window.ESAuth?.getSession?.(); const e = s?.user?.email; if (e && !state.bs.me) { state.bs.me = bsLow(e); if (state.step === 'brainstorm') renderBrainstorm(); } } catch { /* signed-in name only affects "You" and Mine */ }
+    }
+    async function openBrainstorm({ trend = null, content = null, from = '' } = {}) {
+      const key = trend?.id ? `t:${trend.id}` : `line:${bsLow(content?.text)}`;
+      if (key === 'line:') return;
+      const b = state.bs;
+      const same = b.key === key && Boolean(b.session);
+      if (!same) Object.assign(b, { key, trend, content, session: null, context: null, error: '', picks: [], editing: '', fresh: [], chatError: '', lastAsk: null, addNote: '', filter: 'all', dirty: false });
+      b.from = from;
+      whoAmI();
+      go('brainstorm');
+      track('merch', { action: 'brainstorm-open', from: from ? 'moment' : 'line', trend: Boolean(trend) });
+      if (same) refreshBoard(); else await loadBoard();
+    }
+    // 409 'busy': someone else saved the board at the same moment. Retry once, then say so.
+    async function apiRetry(body) {
+      try { return await api(body); } catch (error) {
+        if (error.reason !== 'busy' && error.status !== 409) throw error;
+        await wait(400);
+        try { return await api(body); } catch (again) {
+          if (again.reason === 'busy' || again.status === 409) { refreshBoard(); throw Object.assign(new Error('Someone else just changed this board — refreshed. Try again.'), { reason: 'busy' }); }
+          throw again;
+        }
+      }
+    }
+    const BS_OPEN_STEPS = ['Reading the trend', 'Finding ES articles', 'Checking facts on the web', 'Setting up the board'];
+    function openStep() { const i = Math.min(BS_OPEN_STEPS.length - 1, Math.floor((Date.now() - (state.bs.openAt || Date.now())) / 2600)); return i; }
+    function tickOpen() {
+      if (!state.bs.opening) { clearInterval(state.bs.openTimer); return; }
+      const i = openStep();
+      document.querySelectorAll('#mx-bs-opening [data-open-step]').forEach((li, n) => { li.classList.toggle('is-done', n < i); li.classList.toggle('is-active', n === i); });
+      setText('mx-bs-open-time', `${Math.floor((Date.now() - state.bs.openAt) / 1000)} s`);
+    }
+    function openBody() {
+      const b = state.bs;
+      const body = { mode: 'brainstorm-open', [AI_KEY]: state.aiMode };
+      if (b.trend) body.trend = b.trend;
+      if (b.content?.text) body.content = b.content;
+      return body;
+    }
+    async function loadBoard() {
+      const b = state.bs;
+      const key = b.key;
+      b.opening = true;
+      b.openAt = Date.now();
+      b.error = '';
+      clearInterval(b.openTimer);
+      b.openTimer = setInterval(tickOpen, 300);
+      renderBrainstorm();
+      try {
+        const data = await api(openBody());
+        if (b.key !== key) return;
+        b.session = data.session || null;
+        b.context = data.context || null;
+        if (data.me) b.me = bsLow(data.me);
+        if (!b.session) b.error = 'The board didn’t open. Try again.';
+      } catch (error) {
+        if (b.key !== key) return;
+        b.error = explain(error).text;
+      }
+      b.opening = false;
+      clearInterval(b.openTimer);
+      renderBrainstorm();
+      if (b.session) startPoll();
+    }
+    // Teammates' lines: a quiet re-read every 20 s while the board is open, and on focus.
+    let bsPoll = 0;
+    function startPoll() { clearInterval(bsPoll); bsPoll = setInterval(() => { if (state.step === 'brainstorm' && !document.hidden) refreshBoard(); }, BS_POLL_MS); }
+    function stopPoll() { clearInterval(bsPoll); bsPoll = 0; }
+    async function refreshBoard() {
+      const b = state.bs;
+      if (!b.session || b.busy || b.opening || b.refreshing) return false;
+      const key = b.key;
+      b.refreshing = true;
+      try {
+        const data = await apiRetry({ mode: 'brainstorm-get', sessionId: b.session.id, withContext: !b.context });
+        if (b.key === key && !b.busy && data.session) {
+          const before = new Set((b.session.lines || []).map(l => l.id));
+          const changed = data.session.updatedAt !== b.session.updatedAt || (data.session.lines || []).length !== before.size;
+          if (data.context) b.context = data.context;
+          if (changed) {
+            b.session = data.session;
+            const added = (data.session.lines || []).filter(l => !before.has(l.id)).map(l => l.id);
+            if (added.length) b.fresh = added;
+            if (b.editing) b.dirty = true; else renderBrainstorm();
+          }
+        }
+      } catch { /* the next refresh tries again */ }
+      b.refreshing = false;
+      return true;
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && state.step === 'brainstorm') refreshBoard(); });
+    window.addEventListener('focus', () => { if (state.step === 'brainstorm') refreshBoard(); });
+
+    // ── Rendering ──
+    // The room fills the window under its title (wide layouts); see .mx-bs__grid.
+    function fitRoom() {
+      const g = $('mx-bs-grid-wrap');
+      if (!g || state.step !== 'brainstorm' || g.hidden) return;
+      const top = g.getBoundingClientRect().top + window.scrollY;
+      g.style.setProperty('--bs-h', `${Math.max(560, Math.round(window.innerHeight - top - 16))}px`);
+    }
+    window.addEventListener('resize', fitRoom);
+    function renderBrainstorm() {
+      if (state.step !== 'brainstorm') return;
+      requestAnimationFrame(fitRoom);
+      renderBsHead();
+      renderBsContext();
+      renderBsMode();
+      renderThread();
+      renderBoard();
+    }
+    function bsPeople() {
+      const s = state.bs.session;
+      if (!s) return [];
+      const list = Array.isArray(s.people) && s.people.length ? s.people : [...(s.lines || []).map(l => l.by), ...(s.turns || []).map(t => t.by), s.createdBy];
+      return [...new Set(list.filter(Boolean).map(bsLow))];
+    }
+    function renderBsHead() {
+      const b = state.bs;
+      const s = b.session;
+      const ctx = b.context || {};
+      const title = ctx.title || s?.title || b.trend?.title || (b.content?.text ? `“${b.content.text}”` : 'Brainstorm');
+      setText('mx-h-brainstorm', title);
+      const team = bsTeam();
+      const sport = String(ctx.sportLabel || ctx.sport || s?.sport || b.trend?.sport || '').toUpperCase();
+      const lines = s ? (s.lines || []).length : 0;
+      setText('mx-bs-sub', [sport, team?.name, s ? plural(lines, 'line') : '', s?.updatedAt ? `updated ${agoText(s.updatedAt)}` : ''].filter(Boolean).join(' · '));
+      const people = bsPeople();
+      const box = $('mx-bs-people');
+      if (box) {
+        box.hidden = !s;
+        box.innerHTML = s ? `<span class="mx-bs-avs">${people.slice(0, 5).map(p => avatar(p)).join('')}${people.length > 5 ? `<span class="mx-av mx-av--more" aria-hidden="true">+${people.length - 5}</span>` : ''}</span><span class="mx-bs-people__text">${people.length <= 1 ? 'Shared with ES' : `${people.length} people on this board`}</span>` : '';
+        if (s) box.title = people.map(personName).join(', ');
+      }
+      const err = $('mx-bs-open-error');
+      if (err) {
+        err.hidden = !b.error;
+        err.innerHTML = b.error ? `<span>${esc(b.error)}</span><button class="es-btn es-btn--sm" type="button" data-bs-retry-open>Try again</button>` : '';
+      }
+      show('mx-bs-grid-wrap', !b.error || Boolean(s));
+    }
+    const SRC = [['trend', 'Trend', 'trend', 'Trend headlines'], ['es', 'ES articles', 'news', 'ES’s own articles'], ['web', 'Web check', 'globe', 'A live web fact check']];
+    function renderBsContext() {
+      const b = state.bs;
+      const ctx = b.context;
+      const pal = bsPalette();
+      const team = bsTeam();
+      setHtml('mx-bs-team', ctx || b.session ? `<span class="mx-bs-dots" aria-hidden="true"><i style="background:${pal.a}"></i><i style="background:${pal.b}"></i></span><span>${esc(team ? team.short || team.name : 'ES colours')}</span>` : '');
+      const src = ctx?.sources || {};
+      if (b.opening && !ctx) {
+        setHtml('mx-bs-sources', '<li class="es-skeleton mx-bs-src mx-bs-src--skel" aria-hidden="true"></li>'.repeat(3));
+        setHtml('mx-bs-ctx-more', '<span class="es-skeleton mx-skel mx-skel--line" aria-hidden="true"></span><span class="es-skeleton mx-skel mx-skel--short" aria-hidden="true"></span>');
+        return;
+      }
+      const lineOnly = !b.trend && !src.trend;
+      setHtml('mx-bs-sources', SRC.map(([k, label0, icon, long0]) => {
+        const label = k === 'trend' && lineOnly ? 'Your line' : label0;
+        const long = k === 'trend' && lineOnly ? 'Your line (no trend)' : long0;
+        const yes = k === 'trend' && lineOnly ? true : k === 'trend' ? src.trend !== false && Boolean(ctx) && (src.trend || (ctx.headlines || []).length > 0) : Boolean(src[k]);
+        return `<li class="mx-bs-src${yes ? ' is-on' : ''}" title="${esc(long)}: ${yes ? 'read' : 'not available this time'}"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-${icon}"/></svg><span>${esc(label)}</span><span class="es-sr-only">: ${yes ? 'read' : 'not available'}</span><svg class="mx-i mx-bs-src__mark" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-${yes ? 'check' : 'close'}"/></svg></li>`;
+      }).join(''));
+      if (!ctx) { setHtml('mx-bs-ctx-more', ''); return; }
+      const open = new Set([...document.querySelectorAll('#mx-bs-ctx-more details[open]')].map(d => d.dataset.more));
+      const sec = (k, label, items, html) => (items.length ? `<details class="mx-bs-more" data-more="${k}"${open.has(k) ? ' open' : ''}><summary><span>${esc(label)}</span><span class="mx-bs-more__n">${items.length}</span></summary>${html}</details>` : '');
+      const heads = (ctx.headlines || []).filter(Boolean).slice(0, 8);
+      const arts = (ctx.esArticles || []).filter(a => a && a.title).slice(0, 6);
+      const facts = (ctx.facts || []).filter(Boolean).slice(0, 6);
+      const nicks = (ctx.nicknames || []).filter(Boolean).slice(0, 10);
+      const safeUrl = u => (/^https:\/\//i.test(String(u || '')) ? String(u) : '');
+      if ($('mx-bs-ctx-more')) $('mx-bs-ctx-more').innerHTML = ([
+        sec('headlines', 'Headlines', heads, `<ul class="mx-bs-more__list">${heads.map(h => `<li>${esc(typeof h === 'string' ? h : h.title || '')}</li>`).join('')}</ul>`),
+        sec('es', 'ES articles', arts, `<ul class="mx-bs-more__list">${arts.map(a => `<li>${safeUrl(a.url) ? `<a href="${esc(safeUrl(a.url))}" target="_blank" rel="noopener">${esc(a.title)}</a>` : esc(a.title)}</li>`).join('')}</ul>`),
+        sec('facts', 'Fact check', facts, `<ul class="mx-bs-more__list">${facts.map(f => `<li>${esc(typeof f === 'string' ? f : f.text || '')}</li>`).join('')}</ul>`),
+        sec('nicknames', 'Nicknames', nicks, `<p class="mx-bs-nicks">${nicks.map(n => `<span class="mx-bs-nick">${esc(n)}</span>`).join('')}</p>`),
+      ].join('') || '<p class="mx-meta">Only the trend title this time. The AI keeps numbers and quotes to it.</p>') + ((ctx.notes || []).length ? `<p class="mx-meta mx-bs-notes">${esc(ctx.notes.slice(0, 3).join(' · '))}</p>` : '');
+    }
+    function renderBsMode() {
+      document.querySelectorAll('#mx-bs-mode [data-bs-mode]').forEach(x => setOn(x, x.dataset.bsMode === state.aiMode));
+      setText('mx-bs-mode-note', `${BS_MODE_NOTE[state.aiMode]} Enter to send.`);
+      const b = state.bs;
+      const send = $('mx-bs-send');
+      if (send) { send.disabled = b.busy || !b.session || !val('mx-bs-input').trim(); send.setAttribute('aria-busy', String(b.busy)); }
+      $('mx-bs-angles')?.querySelectorAll('button').forEach(x => { x.disabled = b.busy || !b.session; });
+    }
+    const lineText = id => (state.bs.session?.lines || []).find(l => l.id === id)?.text || '';
+    function askLabel(t) {
+      if (t.prompt) return t.prompt;
+      const a = t.action || {};
+      if (a.kind === 'angle') return BS_ANGLES.find(([, x]) => x.kind === 'angle' && x.angle === a.angle)?.[0] || `Angle: ${a.angle || ''}`;
+      if (a.kind === 'tone') return BS_ANGLES.find(([, x]) => x.kind === 'tone' && x.tone === a.tone)?.[0] || `Tone: ${a.tone || ''}`;
+      if (a.kind === 'audience') return a.audience === 'neutral' ? 'For neutral fans' : `For ${a.audience || 'fans'}`;
+      const ids = Array.isArray(a.lineIds) ? a.lineIds : [];
+      if (a.kind === 'more-like') return `More like “${lineText(ids[0]) || a.text || 'that line'}”`;
+      if (a.kind === 'mix') { const [x, y] = ids.map(lineText); return x && y ? `Mix “${x}” + “${y}”` : 'Mix 2 lines'; }
+      return 'New lines';
+    }
+    const turnKey = t => `${t.at || ''}|${bsLow(t.by)}`;
+    function modeBadge(mode, fellBack) {
+      const m = mode === 'pro' ? 'pro' : mode === 'free' || mode === 'code' ? 'free' : mode === 'basic' ? 'basic' : '';
+      if (!m) return '';
+      const label = m === 'pro' ? 'Pro' : m === 'free' ? 'No AI' : 'Basic';
+      const why = fellBack ? ` (${FELL_SHORT[fellBack] || 'fell back'})` : '';
+      return `<span class="mx-bs-mbadge mx-bs-mbadge--${m}" title="${esc(m === 'free' ? 'Made in code, no AI this turn' : `Written by ${label}`)}${esc(why)}">${esc(label)}${esc(why)}</span>`;
+    }
+    function renderThread() {
+      const box = $('mx-bs-thread');
+      if (!box) return;
+      const b = state.bs;
+      const s = b.session;
+      const ctx = b.context;
+      const near = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+      const src = ctx?.sources || {};
+      const read = [ctx ? 'the trend' : '', src.es ? `${plural((ctx?.esArticles || []).length || 1, 'ES article')}` : '', src.web ? 'a live web check' : ''].filter(Boolean);
+      const readText = read.length > 1 ? `${read.slice(0, -1).join(', ')} and ${read.slice(-1)}` : read[0] || 'the trend';
+      const intro = b.opening && !s
+        ? `<li class="mx-bs-turn mx-bs-turn--ai is-thinking is-opening" aria-label="Opening the board"><span class="mx-bs-turn__mark" aria-hidden="true"></span><div class="mx-bs-bubble"><span class="mx-bs-think"><span class="mx-bs-think__dots" aria-hidden="true"><i></i><i></i><i></i></span><span>Getting the story first</span></span><span class="mx-bs-think__mode" id="mx-bs-open-time">${Math.floor((Date.now() - (b.openAt || Date.now())) / 1000)} s</span><ol class="mx-bs-opensteps" id="mx-bs-opening">${BS_OPEN_STEPS.map((x, n) => `<li data-open-step="${n}" class="${n < openStep() ? 'is-done' : n === openStep() ? 'is-active' : ''}">${esc(x)}</li>`).join('')}</ol></div></li>`
+        : s ? `<li class="mx-bs-turn mx-bs-turn--ai mx-bs-turn--intro"><span class="mx-bs-turn__mark" aria-hidden="true"></span><div class="mx-bs-bubble"><p>I’ve read ${esc(readText)}. Ask for lines in your own words, or pick an angle below. Numbers and quotes only come from these sources.</p></div></li>` : '';
+      const turns = (s?.turns || []).slice(-40).map(t => {
+        const meta = b.turnMeta[turnKey(t)] || {};
+        const mode = t.ai === false ? 'free' : (t.designMode || t.mode || meta.mode || '');
+        const n = (t.lineIds || []).filter(id => (s.lines || []).some(l => l.id === id)).length;
+        const who = personName(t.by);
+        return `<li class="mx-bs-turn mx-bs-turn--ask${isMe(t.by) ? ' is-me' : ''}"><div class="mx-bs-bubble">${esc(askLabel(t))}</div><span class="mx-bs-turn__who">${esc(who)}${t.at ? ` · ${esc(agoText(t.at))}` : ''}</span></li>
+          <li class="mx-bs-turn mx-bs-turn--ai"><span class="mx-bs-turn__mark" aria-hidden="true"></span><div class="mx-bs-bubble">${t.note ? `<p>${esc(t.note)}</p>` : ''}<div class="mx-bs-turn__foot">${n ? `<button class="mx-bs-turn__lines" type="button" data-bs-show="${esc(turnKey(t))}">${esc(plural(n, 'new line'))}<svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-arrow"/></svg></button>` : `<span class="mx-bs-turn__none">${(t.lineIds || []).length ? 'Those lines were removed' : 'No new lines this time'}</span>`}${modeBadge(mode, t.fellBack || meta.fellBack)}</div></div></li>`;
+      }).join('');
+      const pending = b.busy && b.pending ? `<li class="mx-bs-turn mx-bs-turn--ask is-me"><div class="mx-bs-bubble">${esc(askLabel(b.pending))}</div><span class="mx-bs-turn__who">You · just now</span></li>
+        <li class="mx-bs-turn mx-bs-turn--ai is-thinking" aria-label="The AI is thinking"><span class="mx-bs-turn__mark" aria-hidden="true"></span><div class="mx-bs-bubble"><span class="mx-bs-think"><span class="mx-bs-think__dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="mx-bs-think__text" id="mx-bs-think-text">${esc(thinkText())}</span></span><span class="mx-bs-think__mode">${esc(state.aiMode === 'pro' ? 'Pro' : 'Basic')} · <span id="mx-bs-think-time">0 s</span></span></div></li>` : '';
+      const err = b.chatError ? `<li class="mx-bs-turn mx-bs-turn--ai mx-bs-turn--error" role="alert"><span class="mx-bs-turn__mark" aria-hidden="true"></span><div class="mx-bs-bubble"><p>${esc(b.chatError)}</p>${b.lastAsk ? '<button class="es-btn es-btn--sm" type="button" data-bs-retry>Try again</button>' : ''}</div></li>` : '';
+      box.innerHTML = intro + turns + pending + err;
+      box.setAttribute('aria-busy', String(b.busy));
+      if (near || b.busy || b.justAsked) { box.scrollTop = box.scrollHeight; b.justAsked = false; }
+    }
+    function thinkText() {
+      const steps = BS_THINK[state.aiMode] || BS_THINK.basic;
+      const at = Math.min(steps.length - 1, Math.floor((Date.now() - (state.bs.thinkAt || Date.now())) / (state.aiMode === 'pro' ? 1600 : 1000)));
+      const n = (state.bs.session?.lines || []).length;
+      const label = steps[at];
+      return label === 'Reading the board' ? `Reading the board (${plural(n, 'line')})…` : `${label}…`;
+    }
+    function tickThink() {
+      if (!state.bs.busy) { clearInterval(state.bs.think); return; }
+      setText('mx-bs-think-text', thinkText());
+      setText('mx-bs-think-time', `${Math.floor((Date.now() - state.bs.thinkAt) / 1000)} s`);
+    }
+    function bsVisible() {
+      const b = state.bs;
+      const all = (b.session?.lines || []).map((l, i) => ({ l, i }));
+      let list = all;
+      if (b.filter === 'starred') list = list.filter(x => (x.l.starred || []).length > 0);
+      if (b.filter === 'mine') list = list.filter(x => isMe(x.l.by));
+      const at = x => new Date(x.l.at || 0).getTime() || 0;
+      list.sort((x, y) => (b.sort === 'stars' ? ((y.l.starred || []).length - (x.l.starred || []).length) : 0) || (at(y) - at(x)) || (y.i - x.i));
+      return list.map(x => x.l);
+    }
+    const starredLines = () => (state.bs.session?.lines || []).filter(l => (l.starred || []).length > 0).sort((x, y) => (y.starred.length - x.starred.length) || ((new Date(y.at).getTime() || 0) - (new Date(x.at).getTime() || 0)));
+    const canEdit = l => isMe(l.by);
+    const canRemove = l => isMe(l.by) || Boolean(state.status?.canArchive);
+    function lineCard(l) {
+      const b = state.bs;
+      const stars = (l.starred || []).length;
+      const mine = (l.starred || []).some(isMe);
+      const picked = b.picks.includes(l.id);
+      const fresh = b.fresh.includes(l.id);
+      const ai = l.source !== 'person';
+      const t = String(l.text || '');
+      const who = l.source === 'code' ? `${l.by ? `${personName(l.by)} · ` : ''}No AI` : ai ? `${l.by ? `${personName(l.by)} · ` : ''}AI${l.designMode === 'pro' ? ' Pro' : ''}` : personName(l.by);
+      const whoLong = l.source === 'code' ? `A quick pick made from the headlines without AI${l.by ? `, for ${personName(l.by)}` : ''}` : ai ? `Written by the AI${l.by ? ` for ${personName(l.by)}` : ''}${l.at ? `, ${agoText(l.at)}` : ''}` : `Added by ${personName(l.by)}${l.at ? `, ${agoText(l.at)}` : ''}`;
+      const starNames = (l.starred || []).map(personName).join(', ');
+      const editing = b.editing === l.id;
+      const rights = (Array.isArray(l.rights) ? l.rights : []).filter(r => r && r.text).slice(0, 3);
+      return `<article class="mx-bsl${mine ? ' is-starred' : ''}${picked ? ' is-picked' : ''}${fresh ? ' is-new' : ''}" data-lid="${esc(l.id)}">
+        <div class="mx-bsl__art">
+          <div class="mx-bsl__bar">
+            <label class="mx-bsl__pick" title="Pick two lines to mix them"><input type="checkbox" data-bs-pick="${esc(l.id)}" data-bs-focus="pick:${esc(l.id)}"${picked ? ' checked' : ''} aria-label="Pick “${esc(t)}” to mix"><span aria-hidden="true">Mix</span></label>
+            ${fresh ? '<span class="mx-bsl__new">New</span>' : ''}
+            <button class="mx-bsl__star${mine ? ' is-on' : ''}" type="button" data-bs-star="${esc(l.id)}" data-bs-focus="star:${esc(l.id)}" aria-pressed="${mine}" aria-label="${mine ? 'Unstar' : 'Star'} “${esc(t)}”, ${esc(plural(stars, 'star'))}" title="${esc(starNames ? `Starred by ${starNames}` : 'Star this line')}"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-star"/></svg><span>${stars}</span></button>
+          </div>
+          <canvas class="mx-bsl__canvas" width="560" height="340" role="img" aria-label="Preview: ${esc(t)} as ES pills"></canvas>
+        </div>
+        <div class="mx-bsl__body">
+          ${editing ? `<form class="mx-bsl__edit" data-bs-edit-form="${esc(l.id)}"><label class="es-sr-only" for="mx-bs-edit-${esc(l.id)}">Edit the line</label><input class="mx-input mx-input--sm" id="mx-bs-edit-${esc(l.id)}" data-bs-edit-input maxlength="${l.source === 'person' ? 60 : 32}" value="${esc(t)}"><button class="es-btn es-btn--sm" type="submit">Save</button><button class="es-btn es-btn--ghost es-btn--sm" type="button" data-bs-edit-cancel>Cancel</button></form>`
+            : `<div class="mx-bsl__textrow"><p class="mx-bsl__text">${esc(t)}</p>${canEdit(l) ? `<button class="mx-bsl__icon" type="button" data-bs-edit="${esc(l.id)}" data-bs-focus="edit:${esc(l.id)}" aria-label="Edit “${esc(t)}”" title="Edit"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-edit"/></svg></button>` : ''}${canRemove(l) ? `<button class="mx-bsl__icon mx-bsl__icon--bad" type="button" data-bs-remove="${esc(l.id)}" aria-label="Remove “${esc(t)}”" title="Remove"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-trash"/></svg></button>` : ''}</div>`}
+          <p class="mx-bsl__meta"><span class="mx-bsl__angle${l.source === 'code' ? ' mx-bsl__angle--quick' : l.source === 'person' ? ' mx-bsl__angle--own' : ''}">${esc(l.source === 'code' ? 'Quick pick' : l.source === 'person' ? 'Own line' : ANGLE_LABEL[l.angle] || 'Idea')}</span><span class="mx-bsl__by" title="${esc(whoLong)}">${avatar(l.by)}<span class="mx-bsl__name">${esc(who)}</span></span>${l.at ? `<span class="mx-bsl__at">${esc(shortAgo(l.at))}</span>` : ''}</p>
+          ${l.why ? `<p class="mx-bsl__why">${esc(l.why)}</p>` : ''}
+          ${rights.length ? `<p class="mx-bsl__rights">${rights.map(r => `<span class="mx-bsl__flag" title="Rights: check before selling"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-warn"/></svg>${esc(RIGHTS_LABEL[r.kind] || 'Rights')}: ${esc(r.text)}</span>`).join('')}</p>` : ''}
+          <div class="mx-bsl__actions">
+            <button class="es-btn es-btn--ghost es-btn--sm" type="button" data-bs-more="${esc(l.id)}" data-bs-focus="more:${esc(l.id)}"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-sparkle"/></svg>More like this</button>
+            <button class="es-btn es-btn--sm" type="button" data-bs-design="${esc(l.id)}">Design this</button>
+          </div>
+        </div>
+      </article>`;
+    }
+    const BS_SKEL = '<div class="mx-bsl mx-bsl--skel" aria-hidden="true"><span class="es-skeleton mx-bsl__art"></span><div class="mx-bsl__body"><span class="es-skeleton mx-skel mx-skel--title"></span><span class="es-skeleton mx-skel mx-skel--line"></span><span class="es-skeleton mx-skel mx-skel--short"></span></div></div>';
+    function renderBoard() {
+      const box = $('mx-bs-lines');
+      if (!box) return;
+      const b = state.bs;
+      const s = b.session;
+      document.querySelectorAll('#mx-bs-filter [data-bs-filter]').forEach(x => setOn(x, x.dataset.bsFilter === b.filter));
+      if ($('mx-bs-sort')) $('mx-bs-sort').value = b.sort;
+      const total = s ? (s.lines || []).length : 0;
+      const starred = starredLines();
+      setText('mx-bs-count', s ? String(total) : '');
+      setText('mx-bs-board-meta', s?.storage === 'memory' && state.status?.canArchive ? 'Board not shared yet: the brainstorm table isn’t set up, so only this server sees it (admins only see this note).' : 'Star the lines you’d sell. Anyone at ES can add and star.');
+      setText('mx-bs-design-starred-label', starred.length ? `Design all starred (${starred.length})` : 'Design all starred');
+      const ds = $('mx-bs-design-starred');
+      if (ds) { ds.disabled = !starred.length; ds.title = starred.length ? `Opens the ${plural(starred.length, 'starred line')} in the studio as one set` : 'Star lines first'; }
+      setText('mx-bs-add-note', b.addNote);
+      const note = $('mx-bs-add-note');
+      if (note) note.dataset.tone = b.addTone || '';
+      ['mx-bs-add-input', 'mx-bs-add-btn'].forEach(id => { const el = $(id); if (el) el.disabled = !s; });
+      box.setAttribute('aria-busy', String(b.opening || b.busy));
+      const focusKey = document.activeElement?.closest?.('#mx-bs-lines') ? document.activeElement.dataset.bsFocus || '' : '';
+      if (b.opening && !s) { box.innerHTML = BS_SKEL.repeat(6); renderMix(); return; }
+      if (!s) { box.innerHTML = ''; renderMix(); return; }
+      const list = bsVisible();
+      const skel = b.busy ? BS_SKEL.repeat(4) : '';
+      if (!list.length && !skel) {
+        const empty = b.filter === 'starred' ? ['No starred lines yet', 'Star the lines you’d sell. Teammates’ stars count too.'] : b.filter === 'mine' ? ['No lines from you yet', 'Ask the AI for lines, or add your own above.'] : ['No lines yet', 'Ask the AI for lines, pick an angle, or add your own.'];
+        box.innerHTML = `<div class="es-empty mx-bs-empty"><span class="mx-bs-empty__art" aria-hidden="true"><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-bulb"/></svg></span><p class="es-empty__title">${esc(empty[0])}</p><p class="es-empty__copy">${esc(empty[1])}</p></div>`;
+      } else box.innerHTML = skel + list.map(lineCard).join('');
+      box.querySelectorAll('.mx-bsl[data-lid]').forEach(card => { const l = (s.lines || []).find(x => x.id === card.dataset.lid); if (l) drawLineArt(card.querySelector('canvas'), l); });
+      if (focusKey) box.querySelector(`[data-bs-focus="${CSS.escape(focusKey)}"]`)?.focus({ preventScroll: true });
+      if (b.editing) { const i = box.querySelector('[data-bs-edit-input]'); if (i && document.activeElement !== i) { i.focus(); i.select(); } }
+      renderMix();
+    }
+    function renderMix() {
+      const b = state.bs;
+      const lines = b.session?.lines || [];
+      b.picks = b.picks.filter(id => lines.some(l => l.id === id));
+      show('mx-bs-mixbar', b.picks.length > 0);
+      const [x, y] = b.picks.map(lineText);
+      setText('mx-bs-mix-text', b.picks.length >= 2 ? `Mix “${x}” + “${y}”` : `“${x || ''}” picked. Pick one more to mix.`);
+      const go_ = $('mx-bs-mix');
+      if (go_) go_.disabled = b.picks.length < 2 || b.busy;
+    }
+
+    // ── Actions ──
+    async function bsAsk(req) {
+      const b = state.bs;
+      if (!b.session || b.busy) return;
+      const sid = b.session.id;
+      b.busy = true;
+      b.pending = req;
+      b.chatError = '';
+      b.lastAsk = null;
+      b.justAsked = true;
+      b.thinkAt = Date.now();
+      clearInterval(b.think);
+      b.think = setInterval(tickThink, 250);
+      if (req.prompt && $('mx-bs-input')) $('mx-bs-input').value = '';
+      renderBrainstorm();
+      const asked = state.aiMode;
+      try {
+        const data = await api({ mode: 'brainstorm-turn', sessionId: sid, [AI_KEY]: asked, ...req });
+        if (b.session?.id !== sid) return;
+        const lines = Array.isArray(data.lines) ? data.lines : [];
+        if (data.session) b.session = data.session;
+        else {
+          const at = new Date().toISOString();
+          b.session = { ...b.session, lines: [...(b.session.lines || []), ...lines], turns: [...(b.session.turns || []), { by: b.me, at, ...req, note: data.note || '', lineIds: lines.map(l => l.id) }], updatedAt: at };
+        }
+        const mine = [...(b.session.turns || [])].reverse().find(t => isMe(t.by) || !b.me) || (b.session.turns || []).slice(-1)[0];
+        if (mine) b.turnMeta[turnKey(mine)] = { mode: data.free ? 'free' : (data[AI_KEY] || asked), fellBack: data.fellBack || '' };
+        b.fresh = lines.map(l => l.id);
+        if (lines.length && b.filter !== 'all') b.filter = 'all';
+        if (req.action?.kind === 'mix') b.picks = [];
+        track('merch', { action: 'brainstorm-turn', mode: data[AI_KEY] || asked, kind: req.action?.kind || 'prompt', lines: lines.length, free: Boolean(data.free) });
+      } catch (error) {
+        b.chatError = explain(error).text;
+        b.lastAsk = req;
+        if (req.prompt && $('mx-bs-input') && !$('mx-bs-input').value) $('mx-bs-input').value = req.prompt;
+      }
+      b.busy = false;
+      b.pending = null;
+      clearInterval(b.think);
+      b.justAsked = true;
+      renderBrainstorm();
+      if (b.fresh.length) $('mx-bs-lines')?.querySelector('.mx-bsl.is-new')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+    function sendPrompt() {
+      const text = val('mx-bs-input').trim().slice(0, 300);
+      if (!text) { $('mx-bs-input')?.focus(); return; }
+      bsAsk({ prompt: text });
+    }
+    async function bsLineOp(lineId, op, text) {
+      const b = state.bs;
+      const s = b.session;
+      const l = s?.lines?.find(x => x.id === lineId);
+      if (!s || !l) return false;
+      const before = JSON.stringify(s.lines);
+      // Stars feel instant; the server's copy wins when it answers.
+      if (op === 'star' && !l.starred.some(isMe)) l.starred = [...(l.starred || []), b.me || 'you'];
+      if (op === 'unstar') l.starred = (l.starred || []).filter(x => !isMe(x) && x !== 'you');
+      if (op === 'star' || op === 'unstar') renderBoard();
+      try {
+        const data = await apiRetry({ mode: 'brainstorm-line', sessionId: s.id, lineId, op, ...(op === 'edit' ? { text } : {}) });
+        if (b.session?.id === s.id && data.session) b.session = data.session;
+        else if (op === 'remove') s.lines = s.lines.filter(x => x.id !== lineId);
+        else if (op === 'edit') l.text = text;
+        b.addNote = op === 'remove' ? `Removed “${l.text}”.` : '';
+        b.addTone = '';
+        track('merch', { action: 'brainstorm-line', op });
+        return true;
+      } catch (error) {
+        if (op === 'star' || op === 'unstar') s.lines = JSON.parse(before);
+        b.addNote = explain(error).text;
+        b.addTone = 'bad';
+        return false;
+      } finally { renderBoard(); renderThread(); renderBsHead(); }
+    }
+    async function bsAdd() {
+      const b = state.bs;
+      const input = $('mx-bs-add-input');
+      const text = String(input?.value || '').trim().replace(/\s+/g, ' ');
+      if (!b.session) return;
+      if (text.length < 2) { b.addNote = 'Type a line first (up to 60 characters).'; b.addTone = 'bad'; renderBoard(); input?.focus(); return; }
+      const btn = $('mx-bs-add-btn');
+      if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
+      try {
+        const data = await apiRetry({ mode: 'brainstorm-add', sessionId: b.session.id, text });
+        const before = new Set((b.session.lines || []).map(l => l.id));
+        if (data.session) b.session = data.session;
+        b.fresh = (b.session.lines || []).filter(l => !before.has(l.id)).map(l => l.id);
+        if (b.filter === 'starred') b.filter = 'all';
+        if (input) input.value = '';
+        b.addNote = `Added “${text}” to the board.`;
+        b.addTone = 'good';
+        track('merch', { action: 'brainstorm-add' });
+      } catch (error) {
+        b.addNote = explain(error).text;
+        b.addTone = 'bad';
+      }
+      btn?.removeAttribute('aria-busy');
+      renderBrainstorm();
+      input?.focus();
+    }
+    // A set of board lines → the studio: each line is a Your-words design in the trend's colours.
+    function bsDesign(lines, { single = false } = {}) {
+      const b = state.bs;
+      if (!lines.length || state.making) return;
+      let concepts = lines.slice(0, 12).map(lineConcept);
+      if (single && MP().variations) {
+        try { concepts = [concepts[0], ...MP().variations(concepts[0], { max: 3 }).map(v => ({ ...v, variantOf: concepts[0].id, garment: { ...(v.garment || {}) } }))]; } catch (error) { console.warn('merch brainstorm variations', error); }
+      }
+      const team = bsTeam();
+      const title = b.context?.title || b.session?.title || '';
+      const plan = single
+        ? { idea: lines[0].why || `“${lines[0].text}” from the brainstorm board.`, angle: `${ANGLE_LABEL[lines[0].angle] || 'Line'}, in ${team ? team.name : 'ES'} colours. Three other layouts follow it.` }
+        : { idea: `${plural(lines.length, 'starred line')} from the ${title ? `“${title}” ` : ''}board, one design each.`, angle: `Your words in ${team ? team.name : 'ES'} colours; tune each one by hand or ask the AI.` };
+      const trend = b.trend ? { ...b.trend, momentId: b.from || b.trend.id, momentKind: 'moment', momentLine: null } : null;
+      loadSet(concepts, { plan, brief: lines[0].text, trend });
+      track('merch', { action: 'brainstorm-design', count: lines.length, single });
+    }
+    function loadSet(concepts, { plan = null, brief = '', trend = null } = {}) {
+      if (state.making || !concepts.length) return;
+      state.concepts = concepts.map(c => { const x = { ...c, garment: { ...(c.garment || { color: WHITE, name: 'White' }) }, mode: 'basic' }; delete x.elements; return x; });
+      state.selected = state.concepts[0].id;
+      state.history = {}; state.future = []; state.chat = {}; state.notes = {}; state.lastEdit = {}; state.pal = {}; state.errCount = {};
+      state.ack = false; if ($('mx-ack')) $('mx-ack').checked = false;
+      state.image = null; state.copyFor = ''; state.product = null; state.progFailed = false;
+      state.conceptsFree = false; state.plan = plan; state.madeMode = 'board'; state.fellBack = '';
+      const text = $('mx-text');
+      if (text && brief) text.value = brief;
+      if (trend) state.trend = trend;
+      state.made = { content: { text: brief, url: '' }, trend: trendBody() };
+      renderChip(); renderMoments(); syncContent();
+      go('designs');
+    }
+
+    // ── Wiring ──
+    document.addEventListener('click', e => {
+      const ret = e.target.closest('[data-bs-retry-open]');
+      if (ret) { loadBoard(); return; }
+    });
+    // A board for the line itself (key = the line); a moment in the brief goes along as context only.
+    on('mx-bs-from-line', 'click', () => { const c = contentPayload(); const t = trendBody(); if (c.text.length > 2) openBrainstorm({ content: { text: c.text, ...(c.url ? { url: c.url } : {}), ...(t ? { trend: t } : {}) } }); });
+    on('mx-bs-angles', 'click', e => { const x = e.target.closest('[data-bs-angle]'); if (!x || x.disabled) return; const a = BS_ANGLES[Number(x.dataset.bsAngle)]; if (a) bsAsk({ action: { ...a[1] } }); });
+    on('mx-bs-send', 'click', sendPrompt);
+    on('mx-bs-input', 'input', renderBsMode);
+    on('mx-bs-input', 'keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendPrompt(); } });
+    on('mx-bs-mode', 'click', e => { const x = e.target.closest('[data-bs-mode]'); if (x) { setMode(x.dataset.bsMode); x.focus(); } });
+    on('mx-bs-mode', 'keydown', e => { if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); setMode(state.aiMode === 'pro' ? 'basic' : 'pro'); $('mx-bs-mode').querySelector(`[data-bs-mode="${state.aiMode}"]`)?.focus(); });
+    on('mx-bs-thread', 'click', e => {
+      if (e.target.closest('[data-bs-retry]')) { const req = state.bs.lastAsk; if (req) { if (req.prompt && $('mx-bs-input')) $('mx-bs-input').value = ''; bsAsk(req); } return; }
+      const x = e.target.closest('[data-bs-show]');
+      if (!x) return;
+      const t = (state.bs.session?.turns || []).find(y => turnKey(y) === x.dataset.bsShow);
+      if (!t) return;
+      Object.assign(state.bs, { fresh: (t.lineIds || []).slice(), filter: 'all', sort: 'new' });
+      renderBoard();
+      $('mx-bs-lines')?.querySelector('.mx-bsl.is-new')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    on('mx-bs-filter', 'click', e => { const x = e.target.closest('[data-bs-filter]'); if (!x) return; state.bs.filter = x.dataset.bsFilter; renderBoard(); x.focus(); });
+    on('mx-bs-sort', 'change', () => { state.bs.sort = val('mx-bs-sort') === 'stars' ? 'stars' : 'new'; renderBoard(); });
+    on('mx-bs-add', 'submit', e => { e.preventDefault(); bsAdd(); });
+    on('mx-bs-design-starred', 'click', () => { const list = starredLines(); if (list.length) bsDesign(list); });
+    on('mx-bs-mix', 'click', () => { const ids = state.bs.picks.slice(0, 2); if (ids.length === 2) bsAsk({ action: { kind: 'mix', lineIds: ids } }); });
+    on('mx-bs-mix-clear', 'click', () => { state.bs.picks = []; renderBoard(); });
+    on('mx-bs-lines', 'change', e => {
+      const x = e.target.closest('[data-bs-pick]');
+      if (!x) return;
+      const id = x.dataset.bsPick;
+      const b = state.bs;
+      b.picks = x.checked ? [...b.picks.filter(p => p !== id), id].slice(-2) : b.picks.filter(p => p !== id);
+      renderBoard();
+    });
+    on('mx-bs-lines', 'click', e => {
+      const b = state.bs;
+      const find = id => (b.session?.lines || []).find(l => l.id === id);
+      const star = e.target.closest('[data-bs-star]');
+      if (star) { const l = find(star.dataset.bsStar); if (l) bsLineOp(l.id, l.starred?.some(isMe) ? 'unstar' : 'star'); return; }
+      const more = e.target.closest('[data-bs-more]');
+      if (more) { bsAsk({ action: { kind: 'more-like', lineIds: [more.dataset.bsMore] } }); return; }
+      const des = e.target.closest('[data-bs-design]');
+      if (des) { const l = find(des.dataset.bsDesign); if (l) bsDesign([l], { single: true }); return; }
+      const edit = e.target.closest('[data-bs-edit]');
+      if (edit) { b.editing = edit.dataset.bsEdit; renderBoard(); return; }
+      if (e.target.closest('[data-bs-edit-cancel]')) { const id = b.editing; b.editing = ''; if (b.dirty) { b.dirty = false; renderBrainstorm(); } else renderBoard(); $('mx-bs-lines')?.querySelector(`[data-bs-focus="edit:${CSS.escape(id)}"]`)?.focus(); return; }
+      const rm = e.target.closest('[data-bs-remove]');
+      if (rm) { const l = find(rm.dataset.bsRemove); if (l) bsLineOp(l.id, 'remove'); }
+    });
+    on('mx-bs-lines', 'submit', async e => {
+      const f = e.target.closest('[data-bs-edit-form]');
+      if (!f) return;
+      e.preventDefault();
+      const id = f.dataset.bsEditForm;
+      const text = String(f.querySelector('[data-bs-edit-input]')?.value || '').trim().replace(/\s+/g, ' ');
+      const l = (state.bs.session?.lines || []).find(x => x.id === id);
+      if (!l) return;
+      if (!text || text === l.text) { state.bs.editing = ''; renderBoard(); return; }
+      state.bs.editing = '';
+      const okEdit = await bsLineOp(id, 'edit', text);
+      if (!okEdit) state.bs.editing = id;
+      if (state.bs.dirty) { state.bs.dirty = false; renderBrainstorm(); }
+      renderBoard();
+      if (!state.bs.editing) $('mx-bs-lines')?.querySelector(`[data-bs-focus="edit:${CSS.escape(id)}"]`)?.focus();
+    });
+    on('mx-bs-lines', 'keydown', e => { if (e.key === 'Escape' && e.target.closest('[data-bs-edit-input]')) { e.preventDefault(); e.target.closest('form')?.querySelector('[data-bs-edit-cancel]')?.click(); } });
+    setHtml('mx-bs-angles', BS_ANGLES.map(([label, a], i) => `${i === 9 ? '<span class="mx-bs-angles__sep" aria-hidden="true"></span>' : ''}<button class="es-chip mx-bs-chip${a.kind === 'angle' ? '' : ' mx-bs-chip--tone'}" type="button" data-bs-angle="${i}">${esc(label)}</button>`).join(''));
+
     // ── Start ──
     renderMode();
     renderCollections();
@@ -2525,7 +3195,7 @@
     renderConn();
     loadStatus();
     loadMoments();
-    window.MerchUI = { state, go, demo, refine, undo, redo, stop: stopMaking, openPop, closePop }; // for the UI check
+    window.MerchUI = { state, go, demo, refine, undo, redo, stop: stopMaking, openPop, closePop, brainstorm: openBrainstorm, bsRefresh: refreshBoard }; // for the UI check
   }
   // Small line icons for the blanks (decorative; 24px box, currentColor).
   const svg = d => `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${d}</svg>`;

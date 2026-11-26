@@ -18,6 +18,11 @@
 // button in view, unlabelled controls, broken images, console errors /
 // exceptions, and any step that doesn't do what it says.
 // No AI, no Fourthwall, no Supabase: every external request is answered locally.
+// Brainstorm room: open from a moment card (full width, Create + Brainstorm
+// crumb, context sources), ask + angle chip turns (thinking row, skeletons,
+// mode per turn), star, mix 2, add / edit own line, teammates' lines on the
+// 20 s refresh (brainstorm-get), filters, Design this → studio, Design all
+// starred → one set, Back to moments, "Brainstorm from my line", free mode.
 // Run: node scripts/check-merch-ui.mjs   (MX_SHOTS=dir saves screenshots)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -43,7 +48,7 @@ const { server, base } = await startServer({
       bodies.push(body || {});
       const [status, data] = DEMO.reply(body || {}, scenario);
       if (body?.mode === 'upload-url' && blockPut) data.uploadUrl = 'https://upload.blocked.example/put';
-      return { status, body: data, delay: body?.mode === 'concepts' ? slow : 0 };
+      return { status, body: data, delay: body?.mode === 'concepts' || body?.mode === 'brainstorm-turn' ? slow : 0 };
     }
     if (url.pathname === '/api/trend-design') return { status: 200, body: { ok: true, items: DEMO.TRENDS } };
     if (url.pathname === '/api/ai-status') return { status: 200, body: { ok: true, mode: 'ai' } };
@@ -450,7 +455,167 @@ async function states(width, theme) {
   await audit(`${tag}-error`);
 }
 
+
+// ─── Brainstorm room ──────────────────────────────────────────────────────
+const bsN = sel_ => `document.querySelectorAll(${JSON.stringify(sel_)}).length`;
+async function brainstormFlow(width, theme, mode) {
+  const tag = `${width}-${theme}-${mode}-bs`;
+  scenario = 'ok';
+  calls.length = 0; bodies.length = 0;
+  await load(width, theme, 'bs', mode === 'pro' ? 'pro' : '');
+  await until("document.querySelectorAll('#mx-moments [data-moment-brainstorm]').length >= 3", `${tag} moment Brainstorm buttons`);
+  ok(await ev("[...document.querySelectorAll('#mx-moments .mx-moment[data-mid]')].every(c => c.querySelector('[data-moment-brainstorm]'))"), `${tag}: every moment card has Brainstorm`);
+  ok(await ev("document.getElementById('mx-bs-from-line').hidden"), `${tag}: Brainstorm from my line hidden with an empty brief`);
+  await click('[data-moment-brainstorm="m3"]');
+  await until(`${step('brainstorm')} && !document.getElementById('mx-view-brainstorm').hidden && MerchUI.state.bs.session && ${bsN('#mx-bs-lines .mx-bsl[data-lid]')} >= 8`, `${tag} board opens`);
+  const open = bodies.find(b => b.mode === 'brainstorm-open');
+  ok(open && open.trend && open.trend.id === 't2' && open.designMode === mode, `${tag}: open sends the moment's trend and mode (${JSON.stringify(open).slice(0, 120)})`);
+  ok(await ev("document.querySelector('#mx-steps [data-step=content]').getAttribute('aria-current') === 'step' && !document.getElementById('mx-steps-crumb').hidden && /Brainstorm/.test(document.getElementById('mx-steps-crumb').textContent)"), `${tag}: steps show Create + Brainstorm crumb`);
+  ok(await ev("/Packers/.test(document.getElementById('mx-h-brainstorm').textContent) && document.querySelectorAll('#mx-bs-sources .mx-bs-src.is-on').length === 3 && /Trend/.test(document.getElementById('mx-bs-sources').textContent) && /ES articles/.test(document.getElementById('mx-bs-sources').textContent) && /Web check/.test(document.getElementById('mx-bs-sources').textContent)"), `${tag}: context title and three sources on`);
+  ok(await ev("document.querySelectorAll('#mx-bs-ctx-more details').length >= 3 && /people on this board/.test(document.getElementById('mx-bs-people').textContent)"), `${tag}: headlines / ES articles / facts and people count`);
+  ok(await ev("document.querySelectorAll('#mx-bs-angles [data-bs-angle]').length === 13 && /Troll \\(in good taste\\)/.test(document.getElementById('mx-bs-angles').textContent)"), `${tag}: 13 angle chips`);
+  ok(await ev("document.querySelectorAll('#mx-bs-thread .mx-bs-turn').length >= 5 && document.querySelectorAll('#mx-bs-thread .mx-bs-mbadge').length >= 2"), `${tag}: earlier turns with the mode used`);
+  await until(`document.querySelectorAll('#mx-bs-lines canvas.is-drawn').length >= 6`, `${tag} live pill previews`);
+  ok(await ev("[...document.querySelectorAll('#mx-bs-lines .mx-bsl[data-lid]')].every(c => c.querySelector('[data-bs-star]') && c.querySelector('[data-bs-more]') && c.querySelector('[data-bs-design]') && c.querySelector('[data-bs-pick]') && c.querySelector('.mx-bsl__by'))"), `${tag}: every line card has star, more like this, design this, mix pick and who added it`);
+  ok(await ev("!document.querySelector('#mx-bs-lines [data-lid] [data-bs-edit]') || [...document.querySelectorAll('#mx-bs-lines [data-bs-edit]')].every(b => MerchUI.state.bs.session.lines.find(l => l.id === b.dataset.bsEdit).by === MerchUI.state.bs.me)"), `${tag}: edit only on your own lines`);
+  await audit(`${tag}-open`);
+
+  // Ask in words: thinking row + skeletons, then new lines and the turn.
+  const n0 = await ev('MerchUI.state.bs.session.lines.length');
+  slow = 900;
+  await setText('#mx-bs-input', 'play on the snow, Packers fans');
+  await click('#mx-bs-send');
+  await until("MerchUI.state.bs.busy && document.querySelector('#mx-bs-thread .is-thinking') && document.querySelectorAll('#mx-bs-lines .mx-bsl--skel').length >= 3", `${tag} thinking`);
+  ok(await ev("/Basic|Pro/.test(document.querySelector('#mx-bs-thread .is-thinking').textContent)"), `${tag}: thinking row shows the mode`);
+  await audit(`${tag}-thinking`);
+  await until('!MerchUI.state.bs.busy', `${tag} turn done`);
+  slow = 0;
+  const turn = bodies.filter(b => b.mode === 'brainstorm-turn').pop();
+  ok(turn && turn.prompt === 'play on the snow, Packers fans' && turn.designMode === mode && turn.sessionId, `${tag}: turn sends prompt, mode and session`);
+  ok(await ev(`MerchUI.state.bs.session.lines.length >= ${n0 + 4} && document.querySelectorAll('#mx-bs-lines .mx-bsl.is-new').length >= 4`), `${tag}: 4+ new lines, marked new`);
+  ok(await ev(`/${mode === 'pro' ? 'Pro' : 'Basic'}/i.test([...document.querySelectorAll('#mx-bs-thread .mx-bs-mbadge')].pop().textContent) && /new line/.test(document.getElementById('mx-bs-thread').textContent)`), `${tag}: the turn's note, new lines link and mode`);
+  // Angle chip.
+  await click('#mx-bs-angles [data-bs-angle="0"]');
+  await until('!MerchUI.state.bs.busy && MerchUI.state.bs.session.turns.length >= 4', `${tag} chip turn`);
+  const chip = bodies.filter(b => b.mode === 'brainstorm-turn').pop();
+  ok(chip && chip.action && chip.action.kind === 'angle' && chip.action.angle === 'chant', `${tag}: Chant chip sends an angle action`);
+
+  // Star.
+  const lid = await ev("document.querySelector('#mx-bs-lines .mx-bsl[data-lid]').dataset.lid");
+  await click(`#mx-bs-lines [data-bs-star="${lid}"]`);
+  await until(`document.querySelector('#mx-bs-lines [data-bs-star="${lid}"]').getAttribute('aria-pressed') === 'true' && MerchUI.state.bs.session.lines.find(l => l.id === ${JSON.stringify(lid)}).starred.includes(MerchUI.state.bs.me)`, `${tag} star`);
+  for (let t = 0; t < 40 && !bodies.some(b => b.mode === 'brainstorm-line' && b.op === 'star' && b.lineId === lid); t++) await sleep(100);
+  ok(bodies.some(b => b.mode === 'brainstorm-line' && b.op === 'star' && b.lineId === lid), `${tag}: star saved`);
+
+  // Mix 2.
+  ok(await ev("document.getElementById('mx-bs-mixbar').hidden"), `${tag}: no mix bar before picking`);
+  await ev("(() => { const p = document.querySelectorAll('#mx-bs-lines [data-bs-pick]'); p[0].click(); return true; })()");
+  ok(await ev("!document.getElementById('mx-bs-mixbar').hidden && document.getElementById('mx-bs-mix').disabled"), `${tag}: one pick shows the bar, Mix waits`);
+  await ev("(() => { const p = document.querySelectorAll('#mx-bs-lines [data-bs-pick]'); p[1].click(); return true; })()");
+  ok(await ev("!document.getElementById('mx-bs-mix').disabled && /Mix 2/.test(document.getElementById('mx-bs-mix').textContent)"), `${tag}: Mix 2 appears with two picks`);
+  await audit(`${tag}-mix`);
+  await click('#mx-bs-mix');
+  await until("!MerchUI.state.bs.busy && MerchUI.state.bs.picks.length === 0", `${tag} mix turn`);
+  const mix = bodies.filter(b => b.mode === 'brainstorm-turn').pop();
+  ok(mix && mix.action?.kind === 'mix' && mix.action.lineIds?.length === 2, `${tag}: Mix sends two line ids`);
+
+  // More like this.
+  await click('#mx-bs-lines [data-bs-more]');
+  await until("!MerchUI.state.bs.busy", `${tag} more like this`);
+  ok(bodies.filter(b => b.mode === 'brainstorm-turn').pop()?.action?.kind === 'more-like', `${tag}: More like this sends more-like`);
+
+  // Add your own line, then edit it.
+  const own = `Lambeau loud ${width}${theme}`;
+  await setText('#mx-bs-add-input', own);
+  await ev("document.getElementById('mx-bs-add').requestSubmit(); true");
+  await until(`MerchUI.state.bs.session.lines.some(l => l.text === ${JSON.stringify(own)} && l.source === 'person')`, `${tag} own line`);
+  ok(await ev(`[...document.querySelectorAll('#mx-bs-lines .mx-bsl')].some(c => c.querySelector('.mx-bsl__text')?.textContent === ${JSON.stringify(own)} && /Own line/.test(c.textContent) && c.querySelector('[data-bs-edit]') && c.querySelector('[data-bs-remove]'))`), `${tag}: own line on the board, editable`);
+  const ownId = await ev(`MerchUI.state.bs.session.lines.find(l => l.text === ${JSON.stringify(own)}).id`);
+  await click(`#mx-bs-lines [data-bs-edit="${ownId}"]`);
+  await until("document.querySelector('#mx-bs-lines [data-bs-edit-input]')", `${tag} edit field`);
+  await ev(`(() => { const i = document.querySelector('#mx-bs-lines [data-bs-edit-input]'); i.value = ${JSON.stringify(own + ' x')}; i.closest('form').requestSubmit(); return true; })()`);
+  await until(`MerchUI.state.bs.session.lines.some(l => l.id === ${JSON.stringify(ownId)} && l.text === ${JSON.stringify(own + ' x')}) && !document.querySelector('#mx-bs-lines [data-bs-edit-input]')`, `${tag} edit saved`);
+
+  // A teammate's line arrives on the refresh (brainstorm-get, no AI).
+  const sid = await ev('MerchUI.state.bs.session.id');
+  DEMO.teammateAdds(sid, `MAYA WAS HERE ${width}${theme}`);
+  calls.length = 0;
+  await ev('MerchUI.bsRefresh(); true');
+  await until(`[...document.querySelectorAll('#mx-bs-lines .mx-bsl__text')].some(t => t.textContent === ${JSON.stringify(`MAYA WAS HERE ${width}${theme}`)})`, `${tag} teammate line`);
+  ok(calls.includes('brainstorm-get') && !calls.includes('brainstorm-open'), `${tag}: refresh uses brainstorm-get (${calls.join(',')})`);
+
+  // Filters and sort.
+  await click('#mx-bs-filter [data-bs-filter="starred"]');
+  ok(await ev("[...document.querySelectorAll('#mx-bs-lines .mx-bsl[data-lid]')].every(c => Number(c.querySelector('[data-bs-star] span').textContent) > 0)"), `${tag}: Starred filter`);
+  await click('#mx-bs-filter [data-bs-filter="mine"]');
+  ok(await ev("[...document.querySelectorAll('#mx-bs-lines .mx-bsl[data-lid]')].every(c => MerchUI.state.bs.session.lines.find(l => l.id === c.dataset.lid).by === MerchUI.state.bs.me)"), `${tag}: Mine filter`);
+  await click('#mx-bs-filter [data-bs-filter="all"]');
+  await ev("(() => { const s = document.getElementById('mx-bs-sort'); s.value = 'stars'; s.dispatchEvent(new Event('change', { bubbles: true })); return true; })()");
+  ok(await ev("(() => { const n = [...document.querySelectorAll('#mx-bs-lines [data-bs-star] span')].map(x => Number(x.textContent)); return n.every((v, i) => i === 0 || n[i - 1] >= v); })()"), `${tag}: Most starred sort`);
+  await audit(`${tag}-board`);
+
+  // Design this → the studio (no AI call).
+  const dl = await ev("MerchUI.state.bs.session.lines.find(l => l.text === 'FROZEN TUNDRA')?.id");
+  calls.length = 0;
+  await click(`#mx-bs-lines [data-bs-design="${dl}"]`);
+  await until(`${step('designs')} && MerchUI.state.concepts.length >= 1 && document.querySelectorAll('#mx-strip [data-pick]').length >= 1`, `${tag} design this`);
+  ok(await ev("MerchUI.state.concepts[0].title === 'FROZEN TUNDRA' && MerchUI.state.concepts[0].palette.a === '#203731' && MerchUI.state.concepts[0].rights.some(r => r.kind === 'nickname')"), `${tag}: Design this: the line in Packers colours with its rights`);
+  ok(!calls.includes('concepts') && await ev("/From the brainstorm/.test(document.getElementById('mx-made-mode').textContent) && !document.getElementById('mx-idea').hidden"), `${tag}: no AI call; From the brainstorm + the idea line`);
+  await audit(`${tag}-design-this`);
+
+  // Back to the board, then Design all starred → one set.
+  await click('#mx-steps [data-step=content]');
+  await click('[data-moment-brainstorm="m3"]');
+  await until(`${step('brainstorm')} && MerchUI.state.bs.session`, `${tag} board again`);
+  const starred = await ev('MerchUI.state.bs.session.lines.filter(l => l.starred.length).length');
+  ok(starred >= 4 && await ev(`!document.getElementById('mx-bs-design-starred').disabled && /\\(${starred}\\)/.test(document.getElementById('mx-bs-design-starred').textContent)`), `${tag}: Design all starred (${starred})`);
+  await click('#mx-bs-design-starred');
+  await until(`${step('designs')} && MerchUI.state.concepts.length === ${Math.min(12, starred)}`, `${tag} starred set`);
+  ok(await ev("MerchUI.state.concepts.every(c => c.palette.a === '#203731' && c.id.startsWith('bs-'))"), `${tag}: every starred line is a design in the trend's palette`);
+  await until("!document.getElementById('mx-to-setup').disabled", `${tag} set continue`);
+
+  // Back to moments from the board.
+  await click('#mx-steps [data-step=content]');
+  await click('[data-moment-brainstorm="m3"]');
+  await until(step('brainstorm'), `${tag} board third time`);
+  await click('#mx-bs-back');
+  ok(await ev(`${step('content')} && document.activeElement?.dataset?.momentBrainstorm === 'm3'`), `${tag}: Back to moments lands on the moment`);
+
+  // From my line (no trend).
+  await setText('#mx-text', 'We center fans');
+  ok(await ev("!document.getElementById('mx-bs-from-line').hidden"), `${tag}: Brainstorm from my line shows with a brief`);
+  bodies.length = 0;
+  await click('#mx-bs-from-line');
+  await until(`${step('brainstorm')} && MerchUI.state.bs.session && !MerchUI.state.bs.opening`, `${tag} from line`);
+  const fl = bodies.find(b => b.mode === 'brainstorm-open');
+  ok(fl && fl.content?.text === 'We center fans', `${tag}: from my line sends the brief`);
+  ok(await ev("document.querySelectorAll('#mx-bs-sources .mx-bs-src:not(.is-on)').length === 2 && /Your line/.test(document.querySelector('#mx-bs-sources .mx-bs-src.is-on').textContent) && document.querySelector('#mx-bs-lines .es-empty') && /We center fans/.test(document.getElementById('mx-h-brainstorm').textContent)"), `${tag}: a new line board: your line, sources off, empty state`);
+  await audit(`${tag}-from-line`);
+  await click('#mx-bs-back');
+}
+async function brainstormStates(width, theme) {
+  const tag = `${width}-${theme}-bs`;
+  scenario = 'free';
+  await load(width, theme, 'bsfree');
+  await until("document.querySelector('[data-moment-brainstorm=\"m3\"]')", `${tag} free moments`);
+  await click('[data-moment-brainstorm="m3"]');
+  await until(`${step('brainstorm')} && MerchUI.state.bs.session`, `${tag} free open`);
+  await click('#mx-bs-angles [data-bs-angle="1"]');
+  await until('!MerchUI.state.bs.busy && MerchUI.state.bs.session.turns.length >= 3', `${tag} free turn`);
+  ok(await ev("/No AI/.test([...document.querySelectorAll('#mx-bs-thread .mx-bs-mbadge')].pop().textContent) && /Free mode/.test(document.getElementById('mx-bs-thread').textContent) && /Quick pick/.test(document.getElementById('mx-bs-lines').textContent)"), `${tag}: free mode turn says No AI, Quick pick lines`);
+  await audit(`${tag}-free`);
+  scenario = 'error';
+  await load(width, theme, 'bserr');
+  await ev("MerchUI.brainstorm({ trend: { id: 't2', title: 'Sample' } }); true");
+  await until("!document.getElementById('mx-bs-open-error').hidden && document.querySelector('[data-bs-retry-open]')", `${tag} open error with retry`);
+  await audit(`${tag}-error`);
+}
+
 try {
+  await brainstormFlow(1440, 'light', 'pro');
+  await brainstormFlow(1440, 'dark', 'pro');
+  await brainstormFlow(1024, 'light', 'basic');
+  await brainstormStates(1440, 'light');
   await flow(1440, 'light', 'pro');
   await flow(1440, 'dark', 'pro');
   await flow(1024, 'light', 'basic');
@@ -472,4 +637,4 @@ if (fails.length) {
   [...new Set(fails)].forEach(f => console.log('  ✗ ' + f));
   process.exit(1);
 }
-console.log(`merch ui: ${checks} checks passed (1440 light + dark Pro, 1024 light Basic; Create, making, studio folds, pill colours, popover, Publish, live panel, list and states; 375 list)`);
+console.log(`merch ui: ${checks} checks passed (1440 light + dark Pro, 1024 light Basic; brainstorm room; Create, making, studio folds, pill colours, popover, Publish, live panel, list and states; 375 list)`);
