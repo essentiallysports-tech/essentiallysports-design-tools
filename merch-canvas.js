@@ -254,8 +254,8 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
         <span class="mx-cv__h" data-corner="sw" aria-hidden="true"></span><span class="mx-cv__h" data-corner="se" aria-hidden="true"></span>
       </div>
       <div class="mx-cv__tag" hidden></div>
-      <span class="mx-cv__sr" data-mx-cv-hint></span>
-      <div class="mx-cv__sr" role="status" aria-live="polite" aria-atomic="true"></div>`;
+      <span class="mx-cv__sr es-sr-only" data-mx-cv-hint></span>
+      <div class="mx-cv__sr es-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>`;
     host.insertBefore(rootEl, canvas.nextSibling);
     const box = rootEl.querySelector('.mx-cv__box');
     const guide = rootEl.querySelector('.mx-cv__guide');

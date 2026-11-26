@@ -978,13 +978,16 @@
       return { off, caption, pic: view === 'closeup' ? 'closeup' : /^FrameUp preview on Fourthwall’s blank photo/.test(caption) ? 'photo' : 'flat' };
     }
     const tokens = { stage: 0, product: 0 };
+    let canvasCtl = null; // merch-canvas.js: move / resize on the stage
+    let canvasGesture = false; // one undo step per drag
     const rightsText = c => ((c.rights || []).length ? [...new Set(c.rights.map(r => RIGHTS_LABEL[r.kind] || r.kind))].join(', ') : 'none found');
     async function drawStage() {
       const c = selectedConcept();
       if (!c || state.making) return;
       const t = ++tokens.stage;
-      const { off, caption } = await paint(c, state.view, {});
+      const { off, caption, pic } = await paint(c, state.view, {});
       if (t !== tokens.stage) return;
+      state.stagePic = pic;
       const cv = $('mx-stage-canvas');
       if (!cv) return;
       cv.width = off.width; cv.height = off.height;
@@ -997,6 +1000,7 @@
       const cap = $('mx-stage-cap');
       if (cap) cap.innerHTML = `<span class="mx-stage__title">${esc(c.title || 'Untitled design')}</span> · <span class="mx-stage__rights">Rights: ${esc(rightsText(c))}</span>${state.view === 'tee' && caption && /Fourthwall’s mockups\.$/.test(caption) ? `<span class="mx-stage__photo-note">${esc(caption)}</span>` : ''}`;
       renderAngles();
+      canvasCtl?.refresh();
     }
     // Model / angle switcher: every Fourthwall photo of the blank in this colour.
     function renderAngles() {
@@ -1584,17 +1588,42 @@
       el.addEventListener('click', e => { if (e.target.closest('[data-pill-reset]')) resetPill(); else if (e.target.closest('[data-pop-close]')) closePop(); });
       return pop.picker;
     }
+    // position:fixed is relative to the nearest transformed/filtered ancestor
+    // (the studio's entrance animation leaves one), not the screen, so the
+    // popover could run off-screen. Place it in screen coordinates and subtract
+    // that ancestor's offset; measured after it is visible; kept on screen both
+    // ways (scrolls inside when taller than the screen).
+    function fixedOrigin(el) {
+      for (let a = el.parentElement; a && a !== document.documentElement; a = a.parentElement) {
+        const cs = getComputedStyle(a);
+        if (cs.transform !== 'none' || cs.filter !== 'none' || cs.perspective !== 'none' || /paint|layout|strict|content/.test(cs.contain || '') || /transform|filter/.test(cs.willChange || '')) {
+          const r = a.getBoundingClientRect();
+          return { x: r.left, y: r.top };
+        }
+      }
+      return { x: 0, y: 0 };
+    }
     function placePop(el, btn) {
-      const r = btn.getBoundingClientRect();
       el.style.position = 'fixed';
       el.style.zIndex = '60';
-      const w = el.offsetWidth || 300;
-      const h = el.offsetHeight || 260;
-      const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
-      const below = r.bottom + 6;
-      const top = below + h > window.innerHeight - 8 && r.top - h - 6 > 8 ? r.top - h - 6 : below;
-      el.style.left = `${Math.round(left)}px`;
-      el.style.top = `${Math.round(top)}px`;
+      el.style.maxHeight = `${Math.max(160, window.innerHeight - 16)}px`;
+      el.style.overflowY = 'auto';
+      const place = () => {
+        const r = btn.getBoundingClientRect();
+        const w = el.offsetWidth || 304;
+        const h = el.offsetHeight || 260;
+        let left = r.left;
+        if (left + w > window.innerWidth - 8) left = r.right - w;
+        left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+        const below = r.bottom + 6;
+        let top = below + h > window.innerHeight - 8 && r.top - h - 6 > 8 ? r.top - h - 6 : below;
+        top = Math.max(8, Math.min(top, window.innerHeight - h - 8));
+        const o = fixedOrigin(el);
+        el.style.left = `${Math.round(left - o.x)}px`;
+        el.style.top = `${Math.round(top - o.y)}px`;
+      };
+      place();
+      requestAnimationFrame(place);
     }
     function openPop(i, btn) {
       const el = $('mx-pill-pop');
@@ -3875,6 +3904,37 @@
     renderConn();
     loadStatus();
     loadMoments();
+    // Move and resize the design on the stage (merch-canvas.js): only where the
+    // design's position is real (a calibrated Fourthwall photo or the close-up).
+    function attachStageCanvas() {
+      const cv = $('mx-stage-canvas');
+      if (!cv || !window.MerchCanvas || canvasCtl) return;
+      canvasCtl = window.MerchCanvas.attach({
+        canvas: cv,
+        getConcept: () => (state.making || state.step !== 'designs' ? null : selectedConcept()),
+        getView: () => {
+          const c = selectedConcept();
+          const ph = state.view === 'tee' && c ? photoChoice(c.garment?.color) : null;
+          return {
+            view: state.view, kind: kind(), spec: thumbSpec(), pad: 0.14,
+            templateId: state.templateId || '', photoIndex: ph?.index,
+            calibrated: state.view === 'tee' && state.stagePic === 'photo' && Boolean(ph?.calibrated),
+          };
+        },
+        onChange: (fit, { final, source }) => {
+          const c = selectedConcept();
+          if (!c) return;
+          if (source === 'cancel') { if (canvasGesture) (state.history[c.id] || []).pop(); canvasGesture = false; c.fit = fit; designChanged(); return; }
+          if (!canvasGesture) { remember(c, 'canvas'); canvasGesture = true; }
+          c.fit = fit;
+          if (final) { canvasGesture = false; designChanged(); return; }
+          renderFit();
+          clearTimeout(drawT);
+          drawT = setTimeout(drawStage, 30);
+        },
+      });
+    }
+    try { attachStageCanvas(); } catch (error) { console.warn('merch canvas', error); }
     window.MerchUI = { state, go, demo, refine, undo, redo, stop: stopMaking, openPop, closePop, brainstorm: openBrainstorm, bsRefresh: refreshBoard }; // for the UI check
   }
   // Small line icons for the blanks (decorative; 24px box, currentColor).
