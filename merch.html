@@ -27,7 +27,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="merch.css?v=20261127-bs1">
+  <link rel="stylesheet" href="merch.css?v=20261127-m7">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -84,6 +84,9 @@
     <symbol id="mx-i-trend" viewBox="0 0 24 24"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></symbol>
     <symbol id="mx-i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
     <symbol id="mx-i-stop" viewBox="0 0 24 24"><rect width="12" height="12" x="6" y="6" rx="2"/></symbol>
+    <symbol id="mx-i-zap" viewBox="0 0 24 24"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></symbol>
+    <symbol id="mx-i-megaphone" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></symbol>
+    <symbol id="mx-i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></symbol>
   </svg>
 
   <main class="mx-page ais-page" id="main">
@@ -311,6 +314,7 @@
               <button class="es-btn es-btn--sm" type="button" data-go="content">Go to Create</button>
             </div>
           </div>
+          <div class="mx-angles" id="mx-angles" role="radiogroup" aria-label="Model and angle" hidden></div>
           <p class="mx-stage__cap" id="mx-stage-cap" aria-live="polite"></p>
         </section>
 
@@ -337,6 +341,7 @@
             <span class="mx-meta" id="mx-designs-meta"></span>
             <button class="mx-blocker" type="button" id="mx-design-blocker" aria-controls="mx-fold-checks" hidden>Fix 2 print checks first</button>
             <button class="es-btn es-btn--primary es-btn--lg" type="button" id="mx-to-setup" aria-keyshortcuts="Control+Enter Meta+Enter" disabled><span>Continue to Publish</span><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-arrow"/></svg></button>
+            <button class="es-btn mx-quickbtn" type="button" id="mx-quick" aria-haspopup="dialog" hidden><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-zap"/></svg><span>Quick publish</span><span class="mx-quickbtn__meta" id="mx-quick-meta"></span></button>
           </div>
           <section class="mx-ask ais-surface" id="mx-ask" aria-labelledby="mx-ask-h">
             <h3 class="mx-ask__title" id="mx-ask-h"><span class="es-ai-mark" aria-hidden="true"></span>Ask AI</h3>
@@ -497,13 +502,19 @@
             <button class="es-btn es-btn--sm" type="button" id="mx-preview" hidden><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-refresh"/></svg>Update</button>
           </div>
           <div class="mx-mockups" id="mx-mockups" aria-live="polite"></div>
+          <div class="mx-pvariants" id="mx-pvariants" role="radiogroup" aria-label="Preview a colour" hidden></div>
+          <div class="mx-adcta" id="mx-adcta">
+            <span class="mx-adcta__icon" aria-hidden="true"><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-megaphone"/></svg></span>
+            <div class="mx-adcta__text"><p class="mx-adcta__title">Make an ad</p><p class="mx-meta">Feed post, story or carousel in the ES look, from these mockups.</p></div>
+            <button class="es-btn es-btn--sm" type="button" id="mx-ad-open" aria-haspopup="dialog">Make an ad</button>
+          </div>
         </section>
 
         <div class="mx-pubcol">
           <div class="mx-card mx-form mx-pub-form" id="mx-pub-form">
             <div class="mx-form__head">
               <h2 class="mx-h2" id="mx-h-publish" tabindex="-1">Put it in the shop</h2>
-              <p class="mx-meta">Pick the product, write the listing, check the rights. It goes to Fourthwall hidden.</p>
+              <p class="mx-meta">Product, colours and price are picked for you. Check them, tick the rights, and it goes to Fourthwall hidden.</p>
             </div>
 
             <div class="mx-psec" aria-labelledby="mx-blank-label" role="group">
@@ -514,17 +525,13 @@
               <p class="mx-meta" id="mx-blank-detail"></p>
               <div class="mx-pubcolor"><svg class="mx-i" viewBox="0 0 24 24" aria-hidden="true"><use href="#mx-i-shirt"/></svg><span class="mx-pubcolor__text" id="mx-pub-color">Black tee</span><span class="mx-pubcolor__sep" aria-hidden="true">·</span><button class="mx-link" type="button" id="mx-pub-color-change">Change</button></div>
               <p class="mx-meta" id="mx-pub-color-note" hidden></p>
-              <div class="mx-row mx-row--wrap">
-                <label class="mx-pal__field mx-grow">
-                  <span class="mx-pal__key">Print area</span>
-                  <select class="es-select es-select--sm" id="mx-side"></select>
-                </label>
-                <label class="mx-pal__field mx-grow">
-                  <span class="mx-pal__key">ES logo</span>
-                  <select class="es-select es-select--sm" id="mx-logo" aria-describedby="mx-logo-hint"></select>
-                </label>
+              <div class="mx-pcolors" id="mx-pcolors-wrap" hidden>
+                <div class="mx-sec__head">
+                  <span class="mx-sublabel" id="mx-pcolors-label">Colours to sell</span>
+                  <span class="mx-meta" id="mx-pcolors-note"></span>
+                </div>
+                <div class="mx-pcolors__list" id="mx-pcolors" role="group" aria-labelledby="mx-pcolors-label" aria-describedby="mx-pcolors-note"></div>
               </div>
-              <p class="mx-meta" id="mx-logo-hint"></p>
             </div>
 
             <div class="mx-psec" role="group" aria-labelledby="mx-listing-label">
@@ -532,10 +539,6 @@
               <label class="mx-pal__field">
                 <span class="mx-pal__key">Title</span>
                 <input class="mx-input" id="mx-title-input" type="text" maxlength="120" autocomplete="off">
-              </label>
-              <label class="mx-pal__field">
-                <span class="mx-pal__key">Description</span>
-                <textarea class="mx-input mx-textarea" id="mx-desc" rows="3"></textarea>
               </label>
               <div class="mx-row mx-row--wrap mx-row--end">
                 <label class="mx-pal__field mx-price">
@@ -546,11 +549,31 @@
               </div>
             </div>
 
-            <fieldset class="mx-fieldset mx-psec mx-shopcolls" id="mx-shopcolls-setup">
-              <legend class="mx-eyebrow">Shop collections</legend>
-              <p class="mx-meta">Fourthwall has no tags, so collections group products in the shop. Pick any.</p>
-              <div class="mx-shopcolls__body" data-colls="setup"></div>
-            </fieldset>
+            <details class="mx-psec mx-pmore" id="mx-pub-more">
+              <summary><span class="mx-pmore__title">More options</span><span class="mx-pmore__meta" id="mx-pub-more-meta"></span></summary>
+              <div class="mx-pmore__body">
+                <label class="mx-pal__field">
+                  <span class="mx-pal__key">Description</span>
+                  <textarea class="mx-input mx-textarea" id="mx-desc" rows="3"></textarea>
+                </label>
+                <div class="mx-row mx-row--wrap">
+                  <label class="mx-pal__field mx-grow">
+                    <span class="mx-pal__key">Print area</span>
+                    <select class="es-select es-select--sm" id="mx-side"></select>
+                  </label>
+                  <label class="mx-pal__field mx-grow">
+                    <span class="mx-pal__key">ES logo</span>
+                    <select class="es-select es-select--sm" id="mx-logo" aria-describedby="mx-logo-hint"></select>
+                  </label>
+                </div>
+                <p class="mx-meta" id="mx-logo-hint"></p>
+                <fieldset class="mx-fieldset mx-shopcolls" id="mx-shopcolls-setup">
+                  <legend class="mx-pal__key">Shop collections</legend>
+                  <p class="mx-meta">Fourthwall has no tags, so collections group products in the shop. Pick any.</p>
+                  <div class="mx-shopcolls__body" data-colls="setup"></div>
+                </fieldset>
+              </div>
+            </details>
 
             <div class="mx-psec mx-rights" id="mx-rights" role="group" aria-labelledby="mx-rights-label">
               <h3 class="mx-eyebrow" id="mx-rights-label">Rights</h3>
@@ -617,6 +640,30 @@
       </div>
     </dialog>
 
+    <dialog class="mx-ad" id="mx-ad" aria-labelledby="mx-ad-h"></dialog>
+
+    <dialog class="es-dialog mx-dialog mx-quick" id="mx-quick-dlg" aria-labelledby="mx-quick-h" aria-describedby="mx-quick-copy">
+      <form method="dialog" class="mx-dialog__form" id="mx-quick-form">
+        <div class="mx-quick__head">
+          <span class="mx-quick__badge" aria-hidden="true"><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-zap"/></svg></span>
+          <h2 class="mx-dialog__title" id="mx-quick-h">Quick publish</h2>
+        </div>
+        <div class="mx-quick__sum">
+          <canvas class="mx-quick__img" id="mx-quick-canvas" width="240" height="280" role="img" aria-label="The design on the product"></canvas>
+          <dl class="mx-quick__facts" id="mx-quick-facts"></dl>
+        </div>
+        <p class="mx-dialog__copy" id="mx-quick-copy">One t-shirt in the colour on the stage, at the suggested price, with the AI-written listing. It’s created hidden on Fourthwall; publish it from the next screen.</p>
+        <ul class="mx-rights__list" id="mx-quick-rights"></ul>
+        <label class="mx-check"><input type="checkbox" id="mx-quick-ack"><span>I’ve checked this design: no logos or official marks, quotes are exact, and I accept the likeness and trademark risk.</span></label>
+        <p class="mx-meta" id="mx-quick-status" role="status" aria-live="polite"></p>
+        <div class="mx-dialog__actions">
+          <button class="es-btn es-btn--ghost" type="button" id="mx-quick-more">Change details</button>
+          <button class="es-btn" type="button" id="mx-quick-cancel">Cancel</button>
+          <button class="es-btn es-btn--primary" type="button" id="mx-quick-go" disabled>Create hidden</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="es-dialog mx-dialog" id="mx-archive" aria-labelledby="mx-archive-h" aria-describedby="mx-archive-copy">
       <form method="dialog" class="mx-dialog__form" id="mx-archive-form">
         <h2 class="mx-dialog__title" id="mx-archive-h">Archive this product?</h2>
@@ -643,6 +690,7 @@
   <script src="merch-guidelines.js?v=20261127-bs1"></script>
   <script src="merch-print.js?v=20261126-merch6"></script>
   <script src="merch-palette.js?v=20261126-merch5"></script>
-  <script src="merch.js?v=20261127-bs1"></script>
+  <script src="merch-ads.js?v=20261127-m7"></script>
+  <script src="merch.js?v=20261127-m7"></script>
 </body>
 </html>
