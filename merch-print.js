@@ -749,7 +749,7 @@
     neck: { x: 500, y: 150, w: 64 },
     'back-neck': { x: 500, y: 150, w: 64 },
     label: { x: 500, y: 150, w: 64 },
-    sleeve: { x: 128, y: 290, w: 54 },
+    sleeve: { x: 872, y: 290, w: 54 }, // wearer's left sleeve = viewer's right (Fourthwall sleeve_left)
     none: null,
   };
   const MOCK = {
@@ -857,7 +857,11 @@
   // 720 x 960, 2026-11-26). Kinds without a calibration return null so the
   // page falls back to the flat preview.
   const PHOTO_AREAS = {
-    tee: { x: 258 / 720, y: 292 / 960, w: 204 / 720, h: 245 / 960, logo: { sleeve: { x: 500 / 720, y: 372 / 960, w: 34 / 720 }, neck: { x: 343 / 720, y: 268 / 960, w: 34 / 720 } } },
+    // Stanley/Stella tee photo 0 (front, model). Measured 2026-11-26 by eye on the
+    // 720x960 photo; scripts/test-merch-v3.mjs checks the sleeve spot stays inside
+    // SLEEVE_LEFT (the wearer's left sleeve, which is the viewer's right).
+    tee: { templates: ['pro_Vv1XdaPMSdm6jZ5pj24NCQ'], x: 258 / 720, y: 292 / 960, w: 204 / 720, h: 245 / 960, logo: { sleeve: { x: 523 / 720, y: 426 / 960, w: 30 / 720 } },
+      sleeveLeft: [[512 / 720, 318 / 960], [532 / 720, 302 / 960], [572 / 720, 470 / 960], [508 / 720, 490 / 960]] },
   };
   // Nearest template colour (by hex) with photos, for a garment colour.
   function photoFor(colors = [], garment = WHITE) {
@@ -888,6 +892,9 @@
     const kind = MerchRules.BLANKS[opts.kind] ? opts.kind : 'tee';
     const cal = PHOTO_AREAS[kind];
     if (!cal || !opts.photo) return null;
+    // Calibrations belong to one template's photos: another blank's photo would put
+    // the print and logo in the wrong place, so the page shows the flat preview.
+    if (opts.templateId && Array.isArray(cal.templates) && !cal.templates.includes(opts.templateId)) return null;
     await loadFonts();
     const img = await loadPhoto(opts.photo);
     if (!img) return null;
@@ -914,13 +921,17 @@
     g.globalAlpha = 0.96;
     g.drawImage(off, Math.round(rect.x + (rect.w - off.width) / 2), Math.round(rect.y));
     g.restore();
-    const spot = cal.logo?.[opts.logoSpot === 'back-neck' || opts.logoSpot === 'label' ? 'neck' : opts.logoSpot];
+    // Only spots measured on this photo are drawn (the front photo can't show a
+    // back-neck or inside label); the rest are named in the caption instead.
+    const spot = cal.logo?.[opts.logoSpot];
+    const logoNote = opts.logoSpot && opts.logoSpot !== 'none' && opts.logoSpot !== 'inline' && !spot ? opts.logoSpot : '';
     if (spot) {
       const logo = await loadImage(BASE + (contrast(garment, ES_BLUE) < 1.6 ? WORDMARK.white : WORDMARK.blue));
       if (logo) { const lw = spot.w * W; g.drawImage(logo, Math.round(spot.x * W), Math.round(spot.y * H), Math.round(lw), Math.round(lw * WORDMARK.h / WORDMARK.w)); }
     }
-    return { width: W, height: H, scene };
+    return { width: W, height: H, scene, logoNote };
   }
+  const pointInPoly = (x, y, poly) => { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i]; const [xj, yj] = poly[j]; if (((yi > y) !== (yj > y)) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside; } return inside; };
 
   // ─── Concepts without AI ───────────────────────────────────────────────
   const STOP = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'from', 'is', 'was', 'are', 'were', 'be', 'it', 'its', 'his', 'her', 'their', 'this', 'that', 'as', 'after', 'before', 'over', 'into', 'than', 'then', 'he', 'she', 'they', 'we', 'you', 'i', 'said', 'says', 'has', 'have', 'had', 'will', 'just', 'who', 'what', 'when']);
@@ -1101,7 +1112,7 @@
 
   return {
     VERSION: '2026-11-26-merch5', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, ICONS, ICON_SHAPES, ELEMENT_TYPES, elementsOf, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
-    render, renderLogo, checks, preview, closeup, photoMock, photoFor, PHOTO_AREAS, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
+    render, renderLogo, checks, preview, closeup, photoMock, photoFor, PHOTO_AREAS, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     kitSports, kitTeams, kitSwatches, paletteFromKit, pillInk, ES_SWATCHES, boxContrast, resolve,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,

@@ -812,9 +812,9 @@
           let done = null;
           if (ph && MP().photoMock) {
             off.width = 720;
-            done = await MP().photoMock(c, off, { photo: ph.url, kind: k, garmentColor: ph.hex, spec, logoSpot: logoSpotFor() });
+            done = await MP().photoMock(c, off, { photo: ph.url, kind: k, garmentColor: ph.hex, spec, logoSpot: logoSpotFor(), templateId: state.templateId || '' });
           }
-          if (done) caption = `FrameUp preview on Fourthwall’s blank photo${ph.name ? ` · ${ph.name}` : ''}`;
+          if (done) caption = `FrameUp preview on Fourthwall’s blank photo${ph.name ? ` · ${ph.name}` : ''}${done.logoNote ? ` · ES logo on the ${({ 'back-neck': 'back neck', label: 'inside label', neck: 'neck' })[done.logoNote] || done.logoNote}, shown in Fourthwall’s mockups` : ''}`;
           else {
             await P('preview')(c, g, off, { logoSpot: logoSpotFor(), size: 720, kind: k, spec });
             caption = BLANK_INFO[k].apparel ? 'FrameUp drawn preview (Fourthwall’s blank photo isn’t available).' : `FrameUp drawn preview of the ${BLANK_INFO[k].label.toLowerCase()}.`;

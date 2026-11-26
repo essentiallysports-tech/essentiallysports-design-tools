@@ -105,3 +105,20 @@ ok('photoFor picks the nearest template colour with photos', () => {
   assert.equal(P.photoFor([], '#fff'), null);
 });
 console.log(`merch v3 + merch4 engine: ${n} checks passed`);
+
+// ─── Logo placement guards (owner: the sleeve logo landed on the body) ───
+ok('photo mockup: sleeve logo sits inside the measured wearer-left sleeve', () => {
+  const cal = P.PHOTO_AREAS.tee;
+  const s = cal.logo.sleeve;
+  const ratio = 960 / 720;
+  const h = s.w * 31 / 258 * ratio; // wordmark height as a fraction of the photo height
+  const corners = [[s.x, s.y], [s.x + s.w, s.y], [s.x, s.y + h], [s.x + s.w, s.y + h]];
+  corners.forEach(([x, y]) => assert.ok(P.pointInPoly(x, y, cal.sleeveLeft), `corner ${x.toFixed(3)},${y.toFixed(3)} outside the sleeve`));
+  assert.ok(s.x > 0.5, 'wearer-left sleeve is on the viewer\'s right');
+  assert.ok(!cal.logo.neck && !cal.logo['back-neck'] && !cal.logo.label, 'unmeasured spots are not drawn on the photo');
+  assert.ok(cal.templates.includes('pro_Vv1XdaPMSdm6jZ5pj24NCQ'), 'calibration names its template');
+});
+ok('flat preview: sleeve logo on the wearer-left sleeve (viewer right)', () => {
+  assert.ok(P.LOGO_SPOTS.sleeve.x > 772, `x ${P.LOGO_SPOTS.sleeve.x}`);
+});
+console.log(`logo guards: ${n} checks passed`);
