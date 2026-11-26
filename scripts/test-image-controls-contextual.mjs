@@ -133,9 +133,12 @@ assert(
     && /event\.key === 'Escape'/.test(html),
   'Crop mode must preserve normal page scrolling and provide Done and Escape exits.',
 );
+// 2026-11-26 (cover drag restored): in image edit mode a press ON the text drags
+// the text and a press anywhere else moves the photo, so the two never compete.
 assert(
-  /if \(isCanvasImageEditMode\(\)\) return;/.test(html),
-  'Image edit mode must prevent the text drag handler from competing for the canvas.',
+  /if \(isCanvasImageEditMode\(\) && !textDragTakesPriority\(point\)\) return;/.test(html)
+    && /canStartTextDragAt\(point\) && \(!isCanvasImageEditMode\(\) \|\| textDragTakesPriority\(point\)\)/.test(html),
+  'Image edit mode must hand a press to exactly one handler: text drag on the text, the photo elsewhere.',
 );
 assert(
   /class="image-context-precision"[\s\S]*?type="number" id="rail-offset-x"[\s\S]*?type="number" id="rail-offset-y"[\s\S]*?type="number" id="rail-photo-scale"/.test(html),
