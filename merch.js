@@ -1523,7 +1523,8 @@
     // ── Shortcuts (Design): ⌘Z / ⇧⌘Z, "/" Ask AI, ←/→ designs, T / C view,
     // ⌘Enter Continue. Never while typing, with a dialog open, or in the popover.
     const isTyping = t => Boolean(t && (t.isContentEditable || (t.closest && t.closest('input:not([type=button]):not([type=checkbox]):not([type=radio]):not([type=submit]), textarea, select, [contenteditable="true"]'))));
-    document.addEventListener('keydown', e => {
+    // Capture phase on window: runs before app-shell's "/" search shortcut.
+    window.addEventListener('keydown', e => {
       if (e.defaultPrevented || state.step !== 'designs' || state.making) return;
       if (isTyping(e.target) || popOpen() || document.querySelector('dialog[open]')) return;
       const mod = e.metaKey || e.ctrlKey;
@@ -1532,14 +1533,14 @@
       if (mod && k === 'y') { e.preventDefault(); redo(); return; }
       if (mod && e.key === 'Enter') { e.preventDefault(); if (!$('mx-to-setup')?.disabled) go('publish'); return; }
       if (mod || e.altKey) return;
-      if (e.key === '/') { e.preventDefault(); $('mx-chat-input')?.focus(); return; }
+      if (e.key === '/') { e.preventDefault(); e.stopImmediatePropagation(); $('mx-chat-input')?.focus(); return; }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         if (e.target.closest?.('[role=radiogroup], [role=tablist], .es-segmented, details summary')) return;
         e.preventDefault(); stepDesign(e.key === 'ArrowRight' ? 1 : -1); return;
       }
       if (k === 't') { setView('tee'); return; }
       if (k === 'c') setView('closeup');
-    });
+    }, true);
 
     // ── 3 Publish ──
     // templates → [{ blank, label, templateId, name, basePrice, suggestedPrice?, printSpec,

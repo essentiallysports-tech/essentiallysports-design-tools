@@ -3,6 +3,33 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-26-merch-studio",
+      "date": "2026-11-26",
+      "title": "Merch Designs: a cleaner flow, pill colours and ES pill spacing",
+      "items": [
+        {
+          "title": "Create, Design, Publish",
+          "text": "Three clear steps. Type a line or pick a trending moment, watch the AI make your designs, then edit and publish.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Pill colours",
+          "text": "Pick a sport and team for its colour pairs, use ES colours, or choose any custom colour. Change one pill or the whole design; FrameUp warns you when a pill won't stand out.",
+          "page": "merch.html"
+        },
+        {
+          "title": "ES pill spacing",
+          "text": "Pills now stack like the ES editor: the same colour overlaps slightly into one shape, different colours touch with no gap.",
+          "page": "merch.html"
+        },
+        {
+          "title": "A tidier studio",
+          "text": "Ask AI sits on top; text, colours, layout, extras and print checks fold away. Undo, redo and keyboard shortcuts work throughout.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-26-merch-mvp",
       "date": "2026-11-26",
       "title": "Merch Designs MVP: create with AI, Basic and Pro, merch moments",
