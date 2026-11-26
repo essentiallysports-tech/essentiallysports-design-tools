@@ -850,28 +850,208 @@
     return { width: W, height: H, scene };
   }
 
-  // ─── Mockup on Fourthwall's real blank photo (the fallback mockup) ──────
-  // Fourthwall's templates carry real photos per colour (colorVariants[].photos).
-  // Photo 0 is the front view. PHOTO_AREAS maps the print area onto that photo
-  // (fractions of the photo; measured on the Stanley/Stella tee photos,
-  // 720 x 960, 2026-11-26). Kinds without a calibration return null so the
-  // page falls back to the flat preview.
-  const PHOTO_AREAS = {
-    // Stanley/Stella tee photo 0 (front, model). Measured 2026-11-26 by eye on the
-    // 720x960 photo; scripts/test-merch-v3.mjs checks the sleeve spot stays inside
-    // SLEEVE_LEFT (the wearer's left sleeve, which is the viewer's right).
-    tee: { templates: ['pro_Vv1XdaPMSdm6jZ5pj24NCQ'], x: 258 / 720, y: 292 / 960, w: 204 / 720, h: 245 / 960, logo: { sleeve: { x: 523 / 720, y: 426 / 960, w: 30 / 720 } },
-      sleeveLeft: [[512 / 720, 318 / 960], [532 / 720, 302 / 960], [572 / 720, 470 / 960], [508 / 720, 490 / 960]] },
+  // ─── Mockup on Fourthwall's real blank photos (the fallback mockup) ─────
+  // Fourthwall's templates carry 4 real photos per colour (colorVariants[].photos).
+  // Every colour of a template is the same shoot re-coloured (same pose per photo
+  // index, checked on all colours 2026-11-26), so one calibration per photo index
+  // serves every colour. PHOTO_AREAS[templateId][photoIndex] says where the print
+  // sits on that photo; photos without an entry never get a design drawn.
+  //
+  // Measured by eye on the 720 x 960 photos (2026-11-26, merch7), in photo pixels:
+  //   ppi   photo pixels per inch of fabric at the chest (from tee length, shoulder
+  //         and forearm proportions), so the print is drawn at its real size;
+  //   top   y of the print area's top edge (Fourthwall front_large starts just under
+  //         the neckline; back_large ~2.5 in under the back collar);
+  //   body  the torso as a cylinder seen from the camera: axis x (cx), radius (r) and
+  //         the angle of the print's centre line (yaw, degrees; 0 = facing camera).
+  //         The flat print wraps round it, so the edges foreshorten like on a body;
+  //   torso the visible shirt panel (sleeves, arms and hands in front are cut out):
+  //         the print is clipped to it, so an arm in front of the chest covers ink
+  //         (occluded names what covers part of the print; never the photo to open on);
+  //   logo.sleeve / sleeveLeft  the ES wordmark spot on the wearer's left sleeve
+  //         (viewer's right on front photos) and that sleeve's outline (tests keep
+  //         the spot inside it). Back photos carry no logo spot.
+  // x, y, w, h (fractions) are the template's main area of that side, for callers
+  // that only need a box. scripts/test-merch-v3.mjs guards all of it.
+  const PHOTO_W = 720;
+  const PHOTO_H = 960;
+  // merch7 blanks (PROD lane): long sleeve, crewneck, tank, youth tee. The tote's only
+  // photo is an angled product shot, so it keeps the flat preview.
+  const TEMPLATE_KIND = { tee: 'pro_Vv1XdaPMSdm6jZ5pj24NCQ', hoodie: 'pro_380', longsleeve: 'pro_6ae602fcb22447bfbc', crewneck: 'pro_14kNy0EJQkqopY-Z9Pm41A', tank: 'pro_xPL7YjOBRQWVL50Im8eKAA', youth: 'pro_ODh_gv0ESl6jIcRfvSww0w' };
+  // The photo to open on per template (the hoodie's photo 0 has an arm across the chest).
+  // What each photo index shows (all four, calibrated or not), when the reply has no angle.
+  // What each photo index shows (all of them, calibrated or not), when the templates
+  // reply carries no angle. Same order as PROD's PHOTO_ANGLES (_merch-templates.js).
+  const PHOTO_ANGLES = {
+    pro_Vv1XdaPMSdm6jZ5pj24NCQ: ['front', 'side', 'side', 'back'], pro_380: ['front', 'back', 'front', 'back'],
+    pro_6ae602fcb22447bfbc: ['front', 'side', 'front', 'back', 'detail', 'detail'], 'pro_14kNy0EJQkqopY-Z9Pm41A': ['front', 'back', 'side', 'side'],
+    pro_xPL7YjOBRQWVL50Im8eKAA: ['front', 'back', 'front', 'back', 'detail', 'detail'], pro_ODh_gv0ESl6jIcRfvSww0w: ['flat', 'flat'], pro_367: ['front'],
   };
+  const PHOTO_HERO = { pro_Vv1XdaPMSdm6jZ5pj24NCQ: 0, pro_380: 2, pro_6ae602fcb22447bfbc: 0, 'pro_14kNy0EJQkqopY-Z9Pm41A': 0, pro_xPL7YjOBRQWVL50Im8eKAA: 0, pro_ODh_gv0ESl6jIcRfvSww0w: 0 };
+  const MAIN_INCHES = {
+    pro_Vv1XdaPMSdm6jZ5pj24NCQ: { front: [15, 18], back: [15, 18] }, pro_380: { front: [11, 11], back: [15, 18] },
+    pro_6ae602fcb22447bfbc: { front: [15, 18], back: [15, 18] }, 'pro_14kNy0EJQkqopY-Z9Pm41A': { front: [15, 18], back: [15, 18] },
+    pro_xPL7YjOBRQWVL50Im8eKAA: { front: [12, 16], back: [12, 16] }, pro_ODh_gv0ESl6jIcRfvSww0w: { front: [10, 12], back: [10, 12] },
+  };
+  const PHOTO_PX = {
+    // Stanley/Stella Creator tee (male model, ~17 px/in on the close shots).
+    pro_Vv1XdaPMSdm6jZ5pj24NCQ: {
+      0: { angle: 'front', side: 'front', ppi: 17, top: 296, body: { cx: 362, r: 122, yaw: 0 },
+        torso: [[236, 300], [290, 262], [330, 272], [365, 284], [400, 272], [440, 262], [492, 300], [490, 780], [232, 780]],
+        logo: { sleeve: { x: 530, y: 418, w: 28, rot: 13 } },
+        sleeveLeft: [[512, 318], [532, 302], [572, 470], [508, 490]] },
+      // 1: waist-up three-quarter ('side'): the chest still faces the camera.
+      1: { angle: 'side', side: 'front', ppi: 17, top: 306, body: { cx: 366, r: 114, yaw: -9 },
+        // his left forearm crosses the shirt low on the right: cut out of the panel
+        torso: [[250, 330], [254, 298], [305, 262], [345, 290], [395, 252], [462, 282], [472, 470], [478, 545], [446, 600], [404, 668], [330, 700], [250, 740]],
+        logo: { sleeve: { x: 512, y: 380, w: 34, rot: 9 } },
+        sleeveLeft: [[468, 292], [528, 298], [556, 352], [568, 466], [500, 476], [478, 400]] },
+      // 2: back three-quarter, his arm covers the back: no calibration.
+      3: { angle: 'back', side: 'back', ppi: 11.5, top: 197, body: { cx: 358, r: 90, yaw: 0 },
+        torso: [[262, 196], [320, 172], [358, 167], [398, 172], [455, 196], [448, 320], [452, 500], [272, 505], [272, 320]] },
+    },
+    // Cotton Heritage premium hoodie (female model).
+    pro_380: {
+      // 0: close front; her right arm is raised in front of the chest (viewer's left),
+      // so the left of a wide print hides behind the sleeve.
+      0: { angle: 'front', side: 'front', occluded: 'arm', ppi: 18.8, top: 400, body: { cx: 360, r: 160, yaw: -4 },
+        torso: [[282, 355], [330, 338], [380, 342], [470, 336], [508, 372], [500, 470], [492, 640], [302, 640], [297, 560], [286, 450]],
+        logo: { sleeve: { x: 526, y: 580, w: 24, rot: 4 } },
+        sleeveLeft: [[508, 392], [540, 400], [556, 520], [556, 700], [548, 800], [500, 800], [494, 600], [500, 470]] },
+      1: { angle: 'back', side: 'back', ppi: 18.3, top: 415, body: { cx: 375, r: 170, yaw: 8.5 },
+        torso: [[215, 400], [262, 330], [300, 312], [470, 312], [525, 350], [512, 430], [500, 600], [502, 760], [496, 840], [210, 840], [205, 560]] },
+      2: { angle: 'front', side: 'front', ppi: 11.2, top: 240, body: { cx: 362, r: 85, yaw: 0 },
+        torso: [[288, 218], [332, 204], [390, 204], [438, 218], [444, 372], [440, 512], [282, 512], [284, 372]],
+        logo: { sleeve: { x: 460, y: 352, w: 17, rot: 6 } },
+        sleeveLeft: [[440, 226], [468, 236], [488, 320], [492, 500], [458, 506], [448, 330]] },
+      // 3: back three-quarter, her right arm covers half the back: no calibration.
+    },
+    // Gildan long sleeve (female model; 2 = raised arm, 4-5 = close-up details: not calibrated).
+    pro_6ae602fcb22447bfbc: {
+      0: { angle: 'front', side: 'front', ppi: 21, top: 298, body: { cx: 302, r: 140, yaw: -3 },
+        torso: [[165, 300], [200, 262], [245, 250], [290, 282], [340, 250], [400, 262], [432, 300], [445, 430], [470, 560], [520, 700], [540, 860], [150, 860], [160, 600]],
+        logo: { sleeve: { x: 472, y: 462, w: 28, rot: 27 } },
+        sleeveLeft: [[425, 290], [465, 320], [505, 430], [565, 560], [645, 690], [600, 740], [530, 690], [470, 575], [440, 440]] },
+      3: { angle: 'back', side: 'back', ppi: 12.3, top: 189, body: { cx: 365, r: 95, yaw: 0 },
+        torso: [[262, 190], [320, 162], [370, 156], [420, 162], [478, 190], [465, 330], [470, 520], [262, 520], [265, 330]] },
+    },
+    // Gildan crewneck sweatshirt (female model; 2-3 three-quarter, not calibrated).
+    'pro_14kNy0EJQkqopY-Z9Pm41A': {
+      0: { angle: 'front', side: 'front', ppi: 18, top: 315, body: { cx: 358, r: 143, yaw: 0 },
+        torso: [[215, 320], [265, 290], [310, 280], [358, 300], [405, 280], [450, 290], [505, 320], [505, 735], [215, 735]],
+        logo: { sleeve: { x: 556, y: 480, w: 26, rot: 4 } },
+        sleeveLeft: [[505, 320], [545, 330], [580, 420], [596, 560], [592, 700], [548, 830], [515, 830], [505, 700], [500, 420]] },
+      1: { angle: 'back', side: 'back', ppi: 18.5, top: 318, body: { cx: 390, r: 185, yaw: 3 },
+        torso: [[200, 320], [260, 290], [330, 272], [400, 270], [470, 272], [540, 290], [575, 330], [570, 770], [205, 770]] },
+    },
+    // Bella+Canvas tank (male model; no sleeves, so no logo spot).
+    pro_xPL7YjOBRQWVL50Im8eKAA: {
+      0: { angle: 'front', side: 'front', ppi: 19, top: 365, body: { cx: 360, r: 138, yaw: -15 },
+        torso: [[224, 420], [230, 360], [250, 300], [285, 280], [300, 330], [318, 358], [345, 345], [385, 300], [440, 252], [470, 275], [490, 410], [500, 520], [490, 640], [470, 750], [230, 750], [222, 560]] },
+      1: { angle: 'back', side: 'back', ppi: 15.5, top: 280, body: { cx: 370, r: 125, yaw: 0 },
+        torso: [[245, 300], [262, 240], [300, 232], [330, 255], [370, 262], [410, 255], [445, 232], [478, 240], [495, 300], [490, 500], [495, 688], [248, 688], [245, 500]] },
+    },
+    // Gildan youth tee: flat lays (front, back), so the body is a very wide cylinder.
+    pro_ODh_gv0ESl6jIcRfvSww0w: {
+      0: { angle: 'flat', side: 'front', ppi: 22.5, top: 258, body: { cx: 360, r: 20000, yaw: 0 },
+        torso: [[168, 200], [255, 160], [290, 142], [360, 240], [430, 142], [465, 160], [552, 200], [556, 815], [166, 815]] },
+      1: { angle: 'flat', side: 'back', ppi: 22.5, top: 206, body: { cx: 359, r: 20000, yaw: 0 },
+        torso: [[163, 190], [300, 142], [420, 142], [555, 190], [556, 820], [163, 820]] },
+    },
+  };
+  const fx = v => v / PHOTO_W;
+  const fy = v => v / PHOTO_H;
+  // Horizontal photo position (fraction) of a point d inches from the print's centre line.
+  function wrapX(cal, d, ppiF) {
+    const th = Math.max(-1.5, Math.min(1.5, cal.body.yaw * Math.PI / 180 + (d * ppiF) / cal.body.r));
+    return cal.body.cx + cal.body.r * Math.sin(th);
+  }
+  // The print area's box on a photo (fractions), for an area inW x inH inches.
+  function photoRect(cal, inW, inH) {
+    const left = wrapX(cal, -inW / 2, cal.ppi);
+    const right = wrapX(cal, inW / 2, cal.ppi);
+    return { x: left, y: cal.top, w: right - left, h: cal.ppi * inH * (PHOTO_W / PHOTO_H) };
+  }
+  const PHOTO_AREAS = {};
+  for (const [tid, photos] of Object.entries(PHOTO_PX)) {
+    PHOTO_AREAS[tid] = {};
+    for (const [i, p] of Object.entries(photos)) {
+      const cal = {
+        angle: p.angle, side: p.side, occluded: p.occluded || '', ppi: fx(p.ppi), top: fy(p.top),
+        body: { cx: fx(p.body.cx), r: fx(p.body.r), yaw: p.body.yaw },
+        torso: p.torso.map(([x, y]) => [fx(x), fy(y)]),
+      };
+      if (p.logo) cal.logo = { sleeve: { x: fx(p.logo.sleeve.x), y: fy(p.logo.sleeve.y), w: fx(p.logo.sleeve.w), rot: p.logo.sleeve.rot || 0 } };
+      if (p.sleeveLeft) cal.sleeveLeft = p.sleeveLeft.map(([x, y]) => [fx(x), fy(y)]);
+      const [inW, inH] = MAIN_INCHES[tid][p.side];
+      Object.assign(cal, photoRect(cal, inW, inH), { warp: { yaw: p.body.yaw, cx: cal.body.cx, r: cal.body.r } });
+      PHOTO_AREAS[tid][i] = cal;
+    }
+  }
+  // The four corners of the sleeve wordmark (fractions), rotated about its top-left.
+  function logoCorners(spot, ratio = PHOTO_H / PHOTO_W) {
+    const w = spot.w;
+    const h = spot.w * (WORDMARK.h / WORDMARK.w); // in width units
+    const a = (spot.rot || 0) * Math.PI / 180;
+    const c = Math.cos(a), s = Math.sin(a);
+    return [[0, 0], [w, 0], [w, h], [0, h]].map(([dx, dy]) => [spot.x + dx * c - dy * s, spot.y + (dx * s + dy * c) / ratio]);
+  }
+  const sideOf = (spec = {}) => (/back/i.test(String(spec.regionId || spec.region || '')) ? 'back' : 'front');
+  const templateOf = (templateId, kind) => templateId || TEMPLATE_KIND[kind] || '';
+  // The calibration for one photo: by index, else the first calibrated photo with that angle.
+  function photoCal(templateId, { photoIndex, angle } = {}) {
+    const set = PHOTO_AREAS[templateId];
+    if (!set) return null;
+    if (photoIndex !== undefined && photoIndex !== null && photoIndex !== '') return set[Number(photoIndex)] || null;
+    if (angle) return Object.values(set).find(c => c.angle === angle) || null;
+    return set[0] || null;
+  }
+  const photoUrl = p => (typeof p === 'string' ? p : String(p?.url || ''));
   // Nearest template colour (by hex) with photos, for a garment colour.
-  function photoFor(colors = [], garment = WHITE) {
+  function nearestColor(colors = [], garment = WHITE) {
     const g = hex(garment) || WHITE;
     const rgb = x => [1, 3, 5].map(i => parseInt(x.slice(i, i + 2), 16));
     const [r, gg, b] = rgb(g);
-    const withPhotos = colors.filter(c => hexOk(c.hex) && Array.isArray(c.photos) && c.photos.length);
+    const withPhotos = (colors || []).filter(c => hexOk(c?.hex) && Array.isArray(c.photos) && c.photos.some(photoUrl));
     if (!withPhotos.length) return null;
-    const best = withPhotos.map(c => { const [R, G, B] = rgb(c.hex.toUpperCase()); return [c, (r - R) ** 2 + (gg - G) ** 2 + (b - B) ** 2]; }).sort((x, y) => x[1] - y[1])[0][0];
-    return { url: best.photos[0], color: best };
+    return withPhotos.map(c => { const [R, G, B] = rgb(c.hex.toUpperCase()); return [c, (r - R) ** 2 + (gg - G) ** 2 + (b - B) ** 2]; }).sort((x, y) => x[1] - y[1])[0][0];
+  }
+  // Photo 0 of the nearest colour (kept for older callers).
+  function photoFor(colors = [], garment = WHITE) {
+    const best = nearestColor(colors, garment);
+    if (!best) return null;
+    const i = best.photos.findIndex(photoUrl);
+    const p = best.photos[i];
+    // index: pass it on as photoMock's photoIndex (the calibration is per photo index)
+    return { url: photoUrl(p), index: Number.isInteger(p?.index) ? p.index : i, color: best };
+  }
+  // Every photo of the nearest colour: [{ url, angle, index, calibrated, side, primary, color }].
+  // primary marks the photo to open on (calibrated, nothing in front of the print).
+  // calibrated = the design can be drawn on it for this print side (opts.region:
+  // 'front' default, or 'back'); a back photo is never calibrated for a front print.
+  // Photos may be strings or { url, angle, index, view?, sampleArt? } (the templates reply;
+  // index = Fourthwall's order, which is what the calibrations are keyed by).
+  function photosFor(colors = [], garment = WHITE, templateId = '', opts = {}) {
+    const best = nearestColor(colors, garment);
+    if (!best) return [];
+    const side = sideOf({ region: opts.region || opts.regionId || 'front' });
+    const set = PHOTO_AREAS[templateId] || {};
+    const list = best.photos.map((p, i) => {
+      const url = photoUrl(p);
+      if (!url) return null;
+      const index = Number.isInteger(p?.index) ? p.index : i;
+      const cal = set[index];
+      const angle = (typeof p === 'object' && p.angle && p.angle !== 'unknown') ? p.angle : (cal?.angle || PHOTO_ANGLES[templateId]?.[index] || 'unknown');
+      // Fourthwall's own sample print on the photo: never draw over it.
+      const sampleArt = !!(typeof p === 'object' && p.sampleArt);
+      const out = { url, angle, index, calibrated: !!cal && cal.side === side && !sampleArt, side: cal?.side || (typeof p === 'object' && p.view) || null, color: best.name, primary: false };
+      if (sampleArt) out.sampleArt = true;
+      return out;
+    }).filter(Boolean);
+    const want = side === 'back' ? null : PHOTO_HERO[templateId];
+    const hero = list.find(x => x.calibrated && x.index === want) || list.find(x => x.calibrated);
+    if (hero) hero.primary = true;
+    return list;
   }
   const photoCache = new Map();
   function loadPhoto(src) {
@@ -886,50 +1066,205 @@
     }
     return photoCache.get(src);
   }
-  // opts: { photo: url, kind, garmentColor, spec, logoSpot: 'sleeve'|'neck'|'none' }.
-  // Resolves { width, height, scene } or null (no photo / no calibration).
+  // Separable box blur of a w x h float map (radius r).
+  function boxBlur(src, w, h, r) {
+    const tmp = new Float32Array(src.length);
+    const out = new Float32Array(src.length);
+    for (let y = 0; y < h; y++) {
+      let acc = 0; const row = y * w;
+      for (let x = -r; x <= r; x++) acc += src[row + Math.max(0, Math.min(w - 1, x))];
+      for (let x = 0; x < w; x++) {
+        tmp[row + x] = acc / (2 * r + 1);
+        acc += src[row + Math.min(w - 1, x + r + 1)] - src[row + Math.max(0, x - r)];
+      }
+    }
+    for (let x = 0; x < w; x++) {
+      let acc = 0;
+      for (let y = -r; y <= r; y++) acc += tmp[Math.max(0, Math.min(h - 1, y)) * w + x];
+      for (let y = 0; y < h; y++) {
+        out[y * w + x] = acc / (2 * r + 1);
+        acc += tmp[Math.min(h - 1, y + r + 1) * w + x] - tmp[Math.max(0, y - r) * w + x];
+      }
+    }
+    return out;
+  }
+  const polyPath = (g, poly, W, H) => { g.beginPath(); poly.forEach(([x, y], i) => (i ? g.lineTo(x * W, y * H) : g.moveTo(x * W, y * H))); g.closePath(); };
+  // Fabric realism: the ink takes the shirt's light and folds. The photo's luminance
+  // under the ink, relative to the fabric's lit level, shades the ink (multiply-like
+  // on light shirts; on dark shirts softer, with screen-style highlights on the
+  // folds' crests) and nudges where the ink is sampled along the fold gradient (a
+  // 1-2 px displacement). The fabric's own texture comes through the same map.
+  // Returns false when the photo can't be read (no CORS), so the caller draws plainly.
+  function inkIntoFabric(g, layer, box, light) {
+    let base, ink;
+    try {
+      base = g.getImageData(box.x, box.y, box.w, box.h);
+      ink = layer.getContext('2d').getImageData(box.x, box.y, box.w, box.h);
+    } catch { return false; }
+    const b = base.data, d = ink.data, w = box.w, h = box.h;
+    const L = new Float32Array(w * h);
+    const hist = new Uint32Array(256);
+    let count = 0;
+    for (let i = 0, p = 0; p < L.length; p++, i += 4) {
+      const v = 0.299 * b[i] + 0.587 * b[i + 1] + 0.114 * b[i + 2];
+      L[p] = v;
+      if (d[i + 3]) { hist[v | 0]++; count++; }
+    }
+    if (!count) return true;
+    // The fabric's lit level: 70th percentile of the luminance under the ink.
+    let acc = 0, ref = 128;
+    for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= count * 0.7) { ref = Math.max(8, v); break; } }
+    // Smoothed copies: Ls (r 2) shades without JPEG noise; Lg (r 5) gives the fold
+    // gradient for the displacement, so heather specks don't scatter the ink.
+    const Ls = boxBlur(L, w, h, 2);
+    const Lg = boxBlur(Ls, w, h, 4);
+    const out = new Uint8ClampedArray(d.length);
+    const amp = 0.06;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const p = y * w + x;
+        const gx = (Lg[p + (x < w - 1 ? 1 : 0)] - Lg[p - (x > 0 ? 1 : 0)]);
+        const gy = (Lg[p + (y < h - 1 ? w : 0)] - Lg[p - (y > 0 ? w : 0)]);
+        const sx = Math.max(0, Math.min(w - 1, Math.round(x - Math.max(-1.5, Math.min(1.5, gx * amp)))));
+        const sy = Math.max(0, Math.min(h - 1, Math.round(y - Math.max(-1.5, Math.min(1.5, gy * amp)))));
+        const q = (sy * w + sx) * 4;
+        const a = d[q + 3];
+        const o = p * 4;
+        if (!a) { out[o + 3] = 0; continue; }
+        // light shirts: mostly the folds plus a little of the knit; dark shirts: folds
+        // only (their knit is JPEG noise that would stripe the ink)
+        const lum = light ? Ls[p] * 0.75 + L[p] * 0.25 : Ls[p];
+        let r = d[q], gg = d[q + 1], bb = d[q + 2];
+        if (light) {
+          // multiply-style: the folds' shadows darken the ink as they darken the shirt
+          const k = Math.max(0.4, Math.min(1.03, lum / ref));
+          r *= k; gg *= k; bb *= k;
+        } else {
+          // dark shirt: ink a touch duller and softer, shadows deepen it, the folds'
+          // crests catch light (screen). Differences, not ratios: near-black fabric
+          // would turn every JPEG step into a streak.
+          const dl = (lum - ref) / 255;
+          const k = 0.96 * (dl < 0 ? Math.max(0.55, 1 + dl * 2.2) : 1);
+          const hi = dl > 0 ? Math.min(0.25, dl * 1.2) : 0;
+          r *= k; gg *= k; bb *= k;
+          r += (255 - r) * hi; gg += (255 - gg) * hi; bb += (255 - bb) * hi;
+        }
+        out[o] = r; out[o + 1] = gg; out[o + 2] = bb;
+        out[o + 3] = a * (light ? 0.93 : 0.95); // a trace of the fabric shows through
+      }
+    }
+    // composite the shaded ink over the photo
+    for (let i = 0; i < b.length; i += 4) {
+      const a = out[i + 3] / 255;
+      if (!a) continue;
+      b[i] = b[i] * (1 - a) + out[i] * a;
+      b[i + 1] = b[i + 1] * (1 - a) + out[i + 1] * a;
+      b[i + 2] = b[i + 2] * (1 - a) + out[i + 2] * a;
+    }
+    g.putImageData(base, box.x, box.y);
+    return true;
+  }
+  // opts: { photo: url, kind, garmentColor, spec, logoSpot: 'sleeve'|'neck'|'none',
+  //         templateId, photoIndex, angle, sampleArt, realism (default true), plain }.
+  // Resolves { width, height, scene, logoNote, photoIndex, angle, side, drawn: true }
+  // or null when the photo has no calibration for this print side (or no photo):
+  // the design is never drawn on an uncalibrated photo. With plain: true an
+  // uncalibrated photo is drawn as is and { drawn: false, caption } comes back.
   async function photoMock(concept, canvas, opts = {}) {
     const kind = MerchRules.BLANKS[opts.kind] ? opts.kind : 'tee';
-    const cal = PHOTO_AREAS[kind];
-    if (!cal || !opts.photo) return null;
-    // Calibrations belong to one template's photos: another blank's photo would put
-    // the print and logo in the wrong place, so the page shows the flat preview.
-    if (opts.templateId && Array.isArray(cal.templates) && !cal.templates.includes(opts.templateId)) return null;
+    if (!opts.photo) return null;
+    const templateId = templateOf(opts.templateId, kind);
+    const garment = hex(opts.garmentColor) || WHITE;
+    const spec = { ...(DEFAULT_AREAS[kind]), ...(opts.spec || {}), garmentColor: garment, kind };
+    const side = sideOf(opts.spec || {});
+    let cal = photoCal(templateId, opts);
+    if (cal && cal.side !== side) cal = null;
+    if (opts.sampleArt) cal = null; // Fourthwall's own sample print is on that photo
+    if (!cal && !opts.plain) return null;
     await loadFonts();
     const img = await loadPhoto(opts.photo);
     if (!img) return null;
     const W = canvas.width || 600;
-    const H = Math.round(W * (img.naturalHeight || 960) / (img.naturalWidth || 720));
+    const H = Math.round(W * (img.naturalHeight || PHOTO_H) / (img.naturalWidth || PHOTO_W));
     canvas.height = H;
     const g = canvas.getContext('2d');
     g.clearRect(0, 0, W, H);
     g.drawImage(img, 0, 0, W, H);
-    const garment = hex(opts.garmentColor) || WHITE;
-    const spec = { ...(DEFAULT_AREAS[kind]), ...(opts.spec || {}), garmentColor: garment, kind };
+    if (!cal) return { width: W, height: H, scene: null, logoNote: '', drawn: false, caption: 'Design shown in Fourthwall’s mockups', side };
     const scene = layout(concept, spec);
-    const rect = { x: cal.x * W, y: cal.y * H, w: cal.w * W, h: cal.h * H };
-    const k = Math.min(rect.w / scene.w, rect.h / scene.h);
+    // The print, flat, at its real size on this photo (ppi), then wrapped round the body.
+    const ppiPx = cal.ppi * W;
+    const k = ppiPx / scene.dpi;
     const off = document.createElement('canvas');
     off.width = Math.max(1, Math.round(scene.w * k));
     off.height = Math.max(1, Math.round(scene.h * k));
     const og = off.getContext('2d');
     og.scale(k, k);
     await drawScene(scene, og);
-    // Ink sits in the fabric: multiply on light shirts keeps the folds; on dark shirts draw it straight.
-    g.save();
-    g.globalCompositeOperation = isLight(garment) ? 'multiply' : 'source-over';
-    g.globalAlpha = 0.96;
-    g.drawImage(off, Math.round(rect.x + (rect.w - off.width) / 2), Math.round(rect.y));
-    g.restore();
+    const layer = document.createElement('canvas');
+    layer.width = W;
+    layer.height = H;
+    const lg = layer.getContext('2d');
+    const light = isLight(garment);
+    const realism = opts.realism !== false;
+    if (realism && 'filter' in lg) lg.filter = `blur(${light ? 0.3 : 0.4}px)`; // ink soaks in a little
+    lg.save();
+    polyPath(lg, cal.torso, W, H);
+    lg.clip();
+    const top = cal.top * H;
+    const strips = 48;
+    const sw = off.width / strips;
+    for (let i = 0; i < strips; i++) {
+      const d0 = (i / strips - 0.5) * scene.inW;
+      const d1 = ((i + 1) / strips - 0.5) * scene.inW;
+      const x0 = wrapX(cal, d0, cal.ppi) * W;
+      const x1 = wrapX(cal, d1, cal.ppi) * W;
+      if (x1 - x0 < 0.05) continue;
+      lg.drawImage(off, i * sw, 0, sw, off.height, x0, top, x1 - x0 + 0.6, off.height);
+    }
+    lg.restore();
     // Only spots measured on this photo are drawn (the front photo can't show a
     // back-neck or inside label); the rest are named in the caption instead.
     const spot = cal.logo?.[opts.logoSpot];
     const logoNote = opts.logoSpot && opts.logoSpot !== 'none' && opts.logoSpot !== 'inline' && !spot ? opts.logoSpot : '';
     if (spot) {
       const logo = await loadImage(BASE + (contrast(garment, ES_BLUE) < 1.6 ? WORDMARK.white : WORDMARK.blue));
-      if (logo) { const lw = spot.w * W; g.drawImage(logo, Math.round(spot.x * W), Math.round(spot.y * H), Math.round(lw), Math.round(lw * WORDMARK.h / WORDMARK.w)); }
+      if (logo) {
+        const lw = spot.w * W;
+        lg.save();
+        lg.translate(spot.x * W, spot.y * H);
+        lg.rotate((spot.rot || 0) * Math.PI / 180);
+        lg.drawImage(logo, 0, 0, lw, lw * WORDMARK.h / WORDMARK.w);
+        lg.restore();
+      }
     }
-    return { width: W, height: H, scene, logoNote };
+    lg.filter = 'none';
+    // Where ink can be: the torso box plus the logo spot.
+    const pr = photoRect(cal, scene.inW, scene.inH);
+    const tx = cal.torso.map(p => p[0]);
+    const ty = cal.torso.map(p => p[1]);
+    const ax0 = Math.max(pr.x, Math.min(...tx)) * W, ax1 = Math.min(pr.x + pr.w, Math.max(...tx)) * W;
+    const ay0 = Math.max(pr.y, Math.min(...ty)) * H, ay1 = Math.min(pr.y + pr.h, Math.max(...ty)) * H;
+    const lc = spot ? logoCorners(spot, PHOTO_H / PHOTO_W) : [];
+    const xs = [ax0, ax1].concat(lc.map(p => p[0] * W));
+    const ys = [ay0, ay1].concat(lc.map(p => p[1] * H));
+    const box = { x: Math.max(0, Math.floor(Math.min(...xs)) - 2), y: Math.max(0, Math.floor(Math.min(...ys)) - 2) };
+    box.w = Math.min(W, Math.ceil(Math.max(...xs)) + 2) - box.x;
+    box.h = Math.min(H, Math.ceil(Math.max(...ys)) + 2) - box.y;
+    const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
+    const shaded = realism && box.w > 0 && box.h > 0 && inkIntoFabric(g, layer, box, light);
+    if (!shaded) {
+      // Plain (photo not readable): multiply only on near-white shirts (keeps the
+      // folds; white ink would vanish into any coloured shirt), straight otherwise.
+      g.save();
+      g.globalCompositeOperation = contrast(garment, WHITE) < 1.1 ? 'multiply' : 'source-over';
+      g.globalAlpha = 0.96;
+      g.drawImage(layer, 0, 0);
+      g.restore();
+    }
+    const ms = typeof performance !== 'undefined' ? Math.round(performance.now() - t0) : 0;
+    const index = Number(Object.keys(PHOTO_AREAS[templateId]).find(i => PHOTO_AREAS[templateId][i] === cal));
+    return { width: W, height: H, scene, logoNote, photoIndex: index, angle: cal.angle, side, drawn: true, realism: !!shaded, shadeMs: ms };
   }
   const pointInPoly = (x, y, poly) => { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i]; const [xj, yj] = poly[j]; if (((yi > y) !== (yj > y)) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside; } return inside; };
 
@@ -1112,7 +1447,7 @@
 
   return {
     VERSION: '2026-11-26-merch5', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, ICONS, ICON_SHAPES, ELEMENT_TYPES, elementsOf, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
-    render, renderLogo, checks, preview, closeup, photoMock, photoFor, PHOTO_AREAS, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
+    render, renderLogo, checks, preview, closeup, photoMock, photoFor, photosFor, photoRect, photoCal, logoCorners, PHOTO_AREAS, PHOTO_PX, PHOTO_HERO, TEMPLATE_KIND, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     kitSports, kitTeams, kitSwatches, paletteFromKit, pillInk, ES_SWATCHES, boxContrast, resolve,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,
