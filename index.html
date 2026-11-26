@@ -899,6 +899,10 @@
   .multi-tweet-slot .twitter-quote-status:empty {
     display: none;
   }
+  #multi-tweet-hide-mentions.quote-switch {
+    gap: 16px;
+    padding: 12px 16px;
+  }
   /* Player Stat Line + Team Record: their own fields; the colour card stays
      (team colours) and the image tools stay (the photo). */
   body:is([data-instagram-post-type="player-stat-line"], [data-instagram-post-type="team-record"]) #pill-position-card,
@@ -3743,6 +3747,9 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
   .canvas-wrap.is-image-dragging canvas#preview {
     cursor: grabbing;
+  }
+  .canvas-wrap.is-text-hover canvas#preview {
+    cursor: grab;
   }
   .canvas-wrap.is-dragging canvas#preview {
     cursor: grabbing;
@@ -8450,6 +8457,10 @@ body[data-current-page="faq"] .faq-cta-art img {
           </div>
           <div class="twitter-quote-status" data-multi-tweet-status="2" aria-live="polite"></div>
         </div>
+        <button class="quote-switch is-active" id="multi-tweet-hide-mentions" type="button" role="switch" aria-checked="true" title="Removes the @handles a reply starts with. @mentions inside the sentence stay.">
+          <span>Hide reply @mentions</span>
+          <span class="quote-switch-track" aria-hidden="true"></span>
+        </button>
         <div class="input-wrap">
           <input id="multi-tweet-headline" class="pill-entry" type="text" placeholder="Headline pill above the tweets (optional)" spellcheck="true" aria-label="Optional headline above the tweets">
         </div>
@@ -12892,6 +12903,11 @@ function initUI() {
       render();
     });
   });
+  syncMultiTweetHideMentionsToggle();
+  document.getElementById('multi-tweet-hide-mentions')?.addEventListener('click', () => {
+    setMultiTweetHideMentions(!multiTweetHideMentions);
+    render();
+  });
   document.getElementById('multi-tweet-headline')?.addEventListener('input', event => {
     state.multiTweetHeadline = event.target.value;
     render();
@@ -15981,9 +15997,44 @@ const MULTI_TWEET_SAMPLES = Object.freeze([
   { ...DEFAULT_TWEET_QUOTE, text: 'Your photo goes behind the cards, blurred and darkened so the tweets stay easy to read.', dateLabel: '2m' },
 ]);
 
+// Replies come back from X starting with the @handles they answer
+// ("@AdamSchefter @ESPNNFL Oddly convenient."). "Hide reply @mentions" drops
+// that leading run (and the space after it) when the cards are drawn and
+// exported. @mentions inside the sentence stay, the stored text is untouched
+// (so the switch can be turned back off), and a tweet that is only @handles
+// keeps its text rather than going blank. Default on, remembered per browser.
+const MULTI_TWEET_HIDE_MENTIONS_KEY = 'frameup.multiTweet.hideReplyMentions';
+let multiTweetHideMentions = (() => {
+  try { return localStorage.getItem(MULTI_TWEET_HIDE_MENTIONS_KEY) !== '0'; } catch (error) { return true; }
+})();
+
+function stripLeadingReplyMentions(text) {
+  const original = String(text ?? '');
+  const stripped = original.replace(/^\s*(?:@[A-Za-z0-9_]{1,15}\s+)+/, '');
+  return stripped === original || !stripped.trim() ? original : stripped;
+}
+
+function setMultiTweetHideMentions(isOn) {
+  multiTweetHideMentions = Boolean(isOn);
+  try { localStorage.setItem(MULTI_TWEET_HIDE_MENTIONS_KEY, multiTweetHideMentions ? '1' : '0'); } catch (error) {}
+  syncMultiTweetHideMentionsToggle();
+}
+
+function syncMultiTweetHideMentionsToggle() {
+  const toggle = document.getElementById('multi-tweet-hide-mentions');
+  if (!toggle) return;
+  toggle.classList.toggle('is-active', multiTweetHideMentions);
+  toggle.setAttribute('aria-checked', multiTweetHideMentions ? 'true' : 'false');
+}
+
 function getMultiTweets() {
   const tweets = (Array.isArray(state.multiTweets) ? state.multiTweets : []).filter(tweet => tweet && String(tweet.text || '').trim());
-  return tweets.length ? tweets : MULTI_TWEET_SAMPLES;
+  if (!tweets.length) return MULTI_TWEET_SAMPLES;
+  if (!multiTweetHideMentions) return tweets;
+  return tweets.map(tweet => {
+    const text = stripLeadingReplyMentions(tweet.text);
+    return text === tweet.text ? tweet : { ...tweet, text };
+  });
 }
 
 // The photo, cover-fitted (never stretched), heavily blurred, then darkened.
@@ -18606,25 +18657,42 @@ function setupLayersPanel() {
   });
 }
 
+// Templates whose text block can be dragged on the canvas (the cover pills and
+// the other free-text layouts). Shared by the text drag, the hover cursor and
+// the image crop handler, which steps aside when the pointer is on the text.
+function canStartTextDragAt(point) {
+  const postType = state.postType || 'cover';
+  if (
+    activeWorkspace === 'instagram' &&
+    (postType === 'listicle-type-1' || postType === 'listicle-type-2' || postType === 'asap-template-1' || isStatTemplatePostType(postType))
+  ) return false;
+  if (activeWorkspace === 'instagram' && ['long-quote', 'stats-single-ent', 'stats-double-ent', 'double-entity-quote'].includes(postType)) return false;
+  if (activeWorkspace === 'reels' && getReelsFormatConfig().postType === 'stats-single-ent') return false;
+  if (!state.lines.length || !state.lastTextBounds) return false;
+  if (isCoverLayerLocked('pills')) return false;
+  return !!point && pointInTextHitArea(point);
+}
+
+// Desktop shows one long settings menu (studioInspector 'all'), so the photo
+// crop mode is on whenever a photo is loaded. Since 2026-11-13 its capture
+// handler swallowed every pointerdown, so the text could no longer be dragged.
+// The text is drawn on top of the photo, so a press on the text moves the text;
+// only the phone Photos tab (studioInspector 'image') keeps the photo first.
+function textDragTakesPriority(point) {
+  if (document.body.dataset.studioInspector === 'image') return false;
+  return canStartTextDragAt(point);
+}
+
 function setupCanvasDrag() {
   const canvas = document.getElementById('preview');
   const wrap = canvas.closest('.canvas-wrap');
 
   canvas.addEventListener('pointerdown', evt => {
-    if (isCanvasImageEditMode()) return;
-    if (
-      activeWorkspace === 'instagram' &&
-      ((state.postType || 'cover') === 'listicle-type-1' || (state.postType || 'cover') === 'listicle-type-2' || (state.postType || 'cover') === 'asap-template-1' || isStatTemplatePostType(state.postType))
-    ) return;
-    if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'long-quote') return;
-    if ((activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-single-ent') || (activeWorkspace === 'reels' && getReelsFormatConfig().postType === 'stats-single-ent')) return;
-    if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'stats-double-ent') return;
-    if (activeWorkspace === 'instagram' && (state.postType || 'cover') === 'double-entity-quote') return;
-    if (!state.lines.length || !state.lastTextBounds) return;
-    if (isCoverLayerLocked('pills')) return;
+    if (evt.button !== 0 && evt.pointerType === 'mouse') return;
     const point = getCanvasPoint(evt);
+    if (isCanvasImageEditMode() && !textDragTakesPriority(point)) return;
+    if (!canStartTextDragAt(point)) return;
     const bounds = state.lastTextBounds;
-    if (!pointInTextHitArea(point)) return;
     const currentCenterX = state.textBlockX ?? bounds.x + bounds.w / 2;
     const currentTopY = state.textBlockY ?? bounds.y;
 
@@ -18633,17 +18701,27 @@ function setupCanvasDrag() {
 
     state.isDraggingText = true;
     wrap.classList.add('is-dragging');
+    wrap.classList.remove('is-text-hover');
     try { canvas.setPointerCapture(evt.pointerId); } catch (e) {}
     evt.preventDefault();
   });
 
   canvas.addEventListener('pointermove', evt => {
-    if (!state.isDraggingText) return;
+    if (!state.isDraggingText) {
+      // Hover affordance: a grab cursor over the draggable text (mouse / pen).
+      if (evt.pointerType !== 'touch' && !wrap.classList.contains('is-image-dragging')) {
+        const point = getCanvasPoint(evt);
+        const overText = canStartTextDragAt(point) && (!isCanvasImageEditMode() || textDragTakesPriority(point));
+        wrap.classList.toggle('is-text-hover', overText);
+      }
+      return;
+    }
     const point = getCanvasPoint(evt);
     setTextBlockPosition(point.x - state.dragOffsetX, point.y - state.dragOffsetY);
     render();
     evt.preventDefault();
   });
+  canvas.addEventListener('pointerleave', () => wrap.classList.remove('is-text-hover'));
 
   const stopDrag = evt => {
     if (!state.isDraggingText) return;
@@ -18723,6 +18801,8 @@ function setupCanvasImageEditing() {
     const lockLayerId = imageToolCoverLayerId(activeImageTool);
     if (lockLayerId && isCoverLayerLocked(lockLayerId)) return;
     const point = getCanvasPoint(event);
+    // A press on the text block drags the text (setupCanvasDrag), not the photo.
+    if (textDragTakesPriority(point)) return;
     const bounds = getSelectedImageEditBounds();
     event.stopImmediatePropagation();
     if (!bounds || !pointInBounds(point, bounds)) {
