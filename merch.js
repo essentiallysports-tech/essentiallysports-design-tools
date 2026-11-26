@@ -18,8 +18,14 @@
    fallback when the direct upload is blocked: the PNG goes to Supabase Storage
    merch-art/<user>/<file>.png first, then the server streams it to Fourthwall)
    and window.MerchPrint (preview / closeup / photoMock / photoFor / render /
-   checks / fallbackConcepts / variations / elementsOf). Blanks: tee, hoodie,
-   poster, sticker, mug. merch-stub.js stands in for anything MerchPrint lacks.
+   checks / fallbackConcepts / variations / elementsOf; photosFor when the
+   engine has it, for the model / angle switcher). Blanks: tee, long sleeve,
+   crewneck, hoodie, tank, youth tee, tote, poster, sticker, mug.
+   merch-stub.js stands in for anything MerchPrint lacks.
+   Merch7: Publish sells one product in several colours (colour chips, send
+   colors:[…], a preview per colour), "Quick publish" for admins (one tee,
+   the stage colour, the suggested price, created hidden), and "Make an ad"
+   (merch-ads.js: feed / story / carousel in the ES look, PNG or .zip).
    window.MerchGuidelines (merch-guidelines.js) gives the "How the AI designs"
    bullets; the page works without it.
    Sample data: on localhost, or ?demo=merch off production, replies come from
@@ -40,14 +46,21 @@
   const RIGHTS_LABEL = { name: 'Name', nickname: 'Nickname', quote: 'Quote', team: 'Team colours' };
   const STEPS = ['content', 'designs', 'publish'];
   const VIEWS = ['content', 'brainstorm', 'designs', 'publish', 'list'];
-  const BLANK_ORDER = ['tee', 'hoodie', 'poster', 'sticker', 'mug'];
+  const BLANK_ORDER = ['tee', 'longsleeve', 'crewneck', 'hoodie', 'tank', 'youth', 'tote', 'poster', 'sticker', 'mug'];
   const BLANK_INFO = {
     tee: { label: 'T-shirt', noun: 'Tee', apparel: true },
+    longsleeve: { label: 'Long sleeve', noun: 'Long sleeve tee', apparel: true },
+    crewneck: { label: 'Crewneck', noun: 'Crewneck', apparel: true },
     hoodie: { label: 'Hoodie', noun: 'Hoodie', apparel: true },
+    tank: { label: 'Tank top', noun: 'Tank', apparel: true },
+    youth: { label: 'Youth tee', noun: 'Youth tee', apparel: true },
+    tote: { label: 'Tote bag', noun: 'Tote', apparel: false },
     poster: { label: 'Poster', noun: 'Poster', apparel: false },
     sticker: { label: 'Sticker', noun: 'Sticker', apparel: false },
     mug: { label: 'Mug', noun: 'Mug', apparel: false },
   };
+  const ANGLE_LABEL_PHOTO = { front: 'Front', side: 'Side', back: 'Back', lifestyle: 'Lifestyle', flat: 'Flat lay', detail: 'Detail' };
+  const MAX_COLORS = 12; // the server takes 1–12 colours per product
   const ART_BUCKET = 'merch-art';
   const ETA = { basic: '10–20 seconds', pro: '20–40 seconds', preview: '10–30 seconds', create: 'about 30 seconds' };
   // Basic / Pro (owner decision): open to everyone; Pro counts against the same
@@ -92,6 +105,7 @@
   const val = id => ($(id)?.value ?? '');
   const clone = o => JSON.parse(JSON.stringify(o));
   const sameHex = (x, y) => String(x || '').toLowerCase() === String(y || '').toLowerCase();
+  const sameName = (x, y) => String(x || '').trim().toLowerCase() === String(y || '').trim().toLowerCase();
   const normHex = v => { const s = String(v || '').trim(); return /^#[0-9a-f]{6}$/i.test(s) ? s.toUpperCase() : ''; };
   const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
   // A radio in a radiogroup, or a toggle button.
@@ -131,7 +145,7 @@
     const demo = isDemo(window.location);
     const scenario = new URLSearchParams(window.location.search).get('state') || 'ok';
     await ensurePrint();
-    if (demo && !window.MerchDemo) await loadScript('merch-demo.js?v=20261127-bs1');
+    if (demo && !window.MerchDemo) await loadScript('merch-demo.js?v=20261127-m7');
 
     const readMode = () => { try { return window.localStorage.getItem(MODE_STORE) === 'pro' ? 'pro' : 'basic'; } catch { return 'basic'; } };
     const state = {
@@ -146,6 +160,9 @@
       image: null, logo: null, logoImage: null, product: null, pushError: '', progAt: 0, progFailed: false,
       shopColls: null, shopCollsError: '', pick: { setup: [], live: [] }, newColl: '',
       list: null, listCount: null, listError: '', listSource: '', salesAt: '', listBusy: false, archiving: null,
+      photoAt: null, // the stage's model / angle: { angle, index } of the photo picked in the switcher
+      pubColor: '', // the colour the Publish preview shows (one of state.colors)
+      copy: null, quick: false,
     };
 
     // ── API ──
@@ -202,6 +219,7 @@
       const s = state.status;
       if (s && !s.configured) banner('setup', 'Fourthwall isn’t connected yet, so you can design but not create products. Ask an admin to add FOURTHWALL_API_USERNAME / PASSWORD in Vercel.');
       if (state.step === 'publish') { syncPublish(); renderMockups(); autoMockups(); }
+      syncQuick();
       loadListCount();
     }
 
@@ -255,7 +273,7 @@
       renderListTab();
       if (s === 'brainstorm') renderBrainstorm(); else if (from === 'brainstorm') stopPoll();
       if (s === 'designs') enterStudio();
-      if (s === 'publish') enterPublish();
+      if (s === 'publish') state.enterP = enterPublish();
       if (s === 'list' && !state.list && !state.listBusy) loadList();
       if (from !== s) track('merch', { action: 'step', step: s, from });
       if (focus === 'heading') { const h = $(`mx-h-${s}`); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
@@ -809,13 +827,55 @@
     // The big stage: "On a tee" = FrameUp's composite on Fourthwall's real blank
     // photo in the chosen colour (flat drawn tee when there is no photo);
     // "Close-up" = the print on the shirt colour.
-    function photoChoice(garment) {
-      const t = template() || defaultTemplate();
-      if (!t || !MP().photoFor || !BLANK_INFO[kindOf(t)].apparel) return null;
-      try { const r = MP().photoFor(t.colors || [], garment || WHITE); return r?.url ? { url: r.url, hex: r.color?.hex || garment, name: r.color?.name || '' } : null; } catch { return null; }
+    // Every Fourthwall photo of the blank in the nearest colour, as
+    // [{ url, angle, index, calibrated, hex, name }]. The engine's photosFor
+    // decides which photos have a measured print area (only those get the
+    // design drawn); without it, today's rule: photo 0 of a calibrated template.
+    // Photos may be strings (older templates) or { url, angle, index }.
+    const photoUrl = p => (typeof p === 'string' ? p : p?.url || '');
+    function nearestColor(list, garment) {
+      const g = normHex(garment) || WHITE;
+      const withPhotos = (list || []).filter(x => normHex(x.hex) && (x.photos || []).some(photoUrl));
+      return withPhotos.sort((x, y) => colorDist(x.hex, g) - colorDist(y.hex, g))[0] || null;
     }
+    function photosOf(garment) {
+      const t = template() || defaultTemplate();
+      if (!t || !BLANK_INFO[kindOf(t)].apparel) return [];
+      const col = nearestColor(t.colors, garment || WHITE);
+      if (!col) return [];
+      const meta = { hex: col.hex, name: col.name || '' };
+      if (typeof MP().photosFor === 'function') {
+        try {
+          // Photos with Fourthwall's own sample print are never offered (they'd show someone else's art).
+          const list = MP().photosFor(t.colors || [], col.hex, t.templateId, { region: state.side || 'front' });
+          if (Array.isArray(list)) return list.filter(p => p && p.url && !p.sampleArt).map((p, i) => ({ url: p.url, angle: p.angle || 'unknown', index: Number.isInteger(p.index) ? p.index : i, calibrated: Boolean(p.calibrated), primary: Boolean(p.primary), ...meta }));
+        } catch (error) { console.warn('merch photosFor', error); }
+      }
+      // Older engine: PHOTO_AREAS by template id then photo index, or the merch6
+      // shape (one calibration per kind, photo 0 of the listed templates).
+      const byId = MP().PHOTO_AREAS?.[t.templateId];
+      const old = MP().PHOTO_AREAS?.[kindOf(t)];
+      const oldOk = Boolean(old && Array.isArray(old.templates) && old.templates.includes(t.templateId));
+      const calAt = i => Boolean(byId ? byId[i] && (!byId[i].side || byId[i].side === (/back/i.test(state.side || '') ? 'back' : 'front')) : oldOk && i === 0);
+      return col.photos.filter(p => !(typeof p === 'object' && p?.sampleArt)).map((p, i) => ({ url: photoUrl(p), angle: (typeof p === 'object' && p?.angle) || (i === 0 ? 'front' : 'unknown'), index: typeof p === 'object' && Number.isInteger(p?.index) ? p.index : i })).filter(p => p.url).map(p => ({ ...p, calibrated: calAt(p.index), ...meta }));
+    }
+    // The photo the stage shows: the one picked in the switcher (same angle
+    // in the new colour), else the first calibrated one, else the first.
+    function photoChoice(garment, { pick = state.photoAt } = {}) {
+      const list = photosOf(garment);
+      if (!list.length) return null;
+      // The same photo when this colour has it, else the same angle in the new colour.
+      const same = pick && (list.find(p => p.index === pick.index && p.angle === pick.angle) || list.find(p => p.angle !== 'unknown' && p.angle === pick.angle) || list.find(p => p.index === pick.index));
+      return same || list.find(p => p.primary) || list.find(p => p.calibrated) || list[0];
+    }
+    const angleName = p => ANGLE_LABEL_PHOTO[p.angle] || `Photo ${p.index + 1}`;
     // Draws the design on a fresh canvas, then copies it to the visible one (no half-drawn frames).
-    async function paint(c, view, { garment } = {}) {
+    const plainPhotos = new Map();
+    function loadPhotoImg(src) {
+      if (!plainPhotos.has(src)) plainPhotos.set(src, new Promise(resolve => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => resolve(img); img.onerror = () => { const plain = new Image(); plain.onload = () => resolve(plain); plain.onerror = () => resolve(null); plain.src = src; }; img.src = src; }));
+      return plainPhotos.get(src);
+    }
+    async function paint(c, view, { garment, photoPick = state.photoAt } = {}) {
       const off = document.createElement('canvas');
       const spec = thumbSpec();
       const k = kind();
@@ -827,20 +887,31 @@
           await MP().closeup(c, g, off, { kind: k, spec, pad: 0.14 });
           caption = 'Close-up of the print on the shirt colour.';
         } else {
-          const ph = BLANK_INFO[k].apparel ? photoChoice(g) : null;
+          const ph = BLANK_INFO[k].apparel ? photoChoice(g, { pick: photoPick }) : null;
           let done = null;
-          if (ph && MP().photoMock) {
-            off.width = 720;
-            done = await MP().photoMock(c, off, { photo: ph.url, kind: k, garmentColor: ph.hex, spec, logoSpot: logoSpotFor(), templateId: state.templateId || '' });
+          if (ph && !ph.calibrated) {
+            // No measured print area on this photo: never draw on it; show the
+            // photo as it is and say where the design is shown.
+            const img = await loadPhotoImg(ph.url);
+            if (img) {
+              off.width = 720;
+              off.height = Math.round(720 * (img.naturalHeight || 960) / (img.naturalWidth || 720));
+              off.getContext('2d').drawImage(img, 0, 0, off.width, off.height);
+              return { off, caption: `${angleName(ph)}${ph.name ? ` · ${ph.name}` : ''}: Fourthwall’s blank photo. The design is shown in Fourthwall’s mockups.`, photo: ph, pic: 'plain' };
+            }
           }
-          if (done) caption = `FrameUp preview on Fourthwall’s blank photo${ph.name ? ` · ${ph.name}` : ''}${done.logoNote ? ` · ES logo on the ${({ 'back-neck': 'back neck', label: 'inside label', neck: 'neck' })[done.logoNote] || done.logoNote}, shown in Fourthwall’s mockups` : ''}`;
+          if (ph && ph.calibrated && MP().photoMock) {
+            off.width = 720;
+            done = await MP().photoMock(c, off, { photo: ph.url, kind: k, garmentColor: ph.hex, spec, logoSpot: logoSpotFor(), templateId: state.templateId || '', angle: ph.angle, photoIndex: ph.index, realism: true });
+          }
+          if (done) caption = `FrameUp preview on Fourthwall’s blank photo${ph.angle !== 'unknown' && ph.angle !== 'front' ? ` · ${angleName(ph)}` : ''}${ph.name ? ` · ${ph.name}` : ''}${done.logoNote ? ` · ES logo on the ${({ 'back-neck': 'back neck', label: 'inside label', neck: 'neck' })[done.logoNote] || done.logoNote}, shown in Fourthwall’s mockups` : ''}`;
           else {
             await P('preview')(c, g, off, { logoSpot: logoSpotFor(), size: 720, kind: k, spec });
             caption = BLANK_INFO[k].apparel ? 'FrameUp drawn preview (Fourthwall’s blank photo isn’t available).' : `FrameUp drawn preview of the ${BLANK_INFO[k].label.toLowerCase()}.`;
           }
         }
       } catch (error) { console.warn('merch stage', error); }
-      return { off, caption };
+      return { off, caption, pic: view === 'closeup' ? 'closeup' : /^FrameUp preview on Fourthwall’s blank photo/.test(caption) ? 'photo' : 'flat' };
     }
     const tokens = { stage: 0, product: 0 };
     const rightsText = c => ((c.rights || []).length ? [...new Set(c.rights.map(r => RIGHTS_LABEL[r.kind] || r.kind))].join(', ') : 'none found');
@@ -859,8 +930,42 @@
       cv.title = caption;
       // The caption is the one rights display in Design.
       const cap = $('mx-stage-cap');
-      if (cap) cap.innerHTML = `<span class="mx-stage__title">${esc(c.title || 'Untitled design')}</span> · <span class="mx-stage__rights">Rights: ${esc(rightsText(c))}</span>`;
+      if (cap) cap.innerHTML = `<span class="mx-stage__title">${esc(c.title || 'Untitled design')}</span> · <span class="mx-stage__rights">Rights: ${esc(rightsText(c))}</span>${state.view === 'tee' && caption && /Fourthwall’s mockups\.$/.test(caption) ? `<span class="mx-stage__photo-note">${esc(caption)}</span>` : ''}`;
+      renderAngles();
     }
+    // Model / angle switcher: every Fourthwall photo of the blank in this colour.
+    function renderAngles() {
+      const box = $('mx-angles');
+      if (!box) return;
+      const c = selectedConcept();
+      const list = c && state.view === 'tee' && !state.making && apparel() ? photosOf(c.garment?.color) : [];
+      box.hidden = list.length < 2;
+      if (list.length < 2) { box.innerHTML = ''; return; }
+      const cur = photoChoice(c.garment?.color);
+      const key = list.map(p => `${p.url}|${p.calibrated}`).join(',') + `|${cur?.url}`;
+      if (box.dataset.key === key) return;
+      box.dataset.key = key;
+      box.innerHTML = list.map(p => {
+        const on_ = p === cur || (cur && p.url === cur.url);
+        return `<button class="mx-angle${p.calibrated ? '' : ' is-plain'}" type="button" role="radio" aria-checked="${on_}" tabindex="${on_ ? 0 : -1}" data-angle-i="${p.index}" data-angle="${esc(p.angle)}" aria-label="${esc(angleName(p))}${p.calibrated ? ', with your design' : ', Fourthwall photo only'}" title="${esc(p.calibrated ? `${angleName(p)}: your design drawn on it` : `${angleName(p)}: Fourthwall’s photo; the design shows in Fourthwall’s mockups`)}"><img src="${esc(imgUrl(p.url))}" alt="" loading="lazy"><span class="mx-angle__label">${esc(angleName(p))}</span>${p.calibrated ? '<span class="mx-angle__dot" aria-hidden="true"></span>' : ''}</button>`;
+      }).join('');
+    }
+    function pickAngle(btn) {
+      const c = selectedConcept();
+      if (!c || !btn) return;
+      state.photoAt = { angle: btn.dataset.angle, index: Number(btn.dataset.angleI) || 0 };
+      track('merch', { action: 'angle', angle: btn.dataset.angle });
+      drawStage().then(() => $('mx-angles')?.querySelector(`[data-angle-i="${CSS.escape(btn.dataset.angleI)}"]`)?.focus({ preventScroll: true }));
+    }
+    on('mx-angles', 'click', e => pickAngle(e.target.closest('[data-angle-i]')));
+    on('mx-angles', 'keydown', e => {
+      const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      const all = [...$('mx-angles').querySelectorAll('[data-angle-i]')];
+      const i = Math.max(0, all.findIndex(b => b.getAttribute('aria-checked') === 'true'));
+      pickAngle(all[(i + d + all.length) % all.length]);
+    });
     const nounLower = () => BLANK_INFO[kind()].noun.toLowerCase();
     function renderViewToggle() {
       document.querySelectorAll('#mx-view-toggle [data-view], [data-stage]').forEach(b => {
@@ -930,6 +1035,7 @@
       const r = $('mx-redo');
       if (r) r.disabled = !c || state.making || !state.future.some(f => f.id === c.id);
       renderBadge();
+      syncQuick();
       renderSteps();
     }
 
@@ -1393,7 +1499,7 @@
       if (!c || !btn) return;
       remember(c);
       c.garment = { color: btn.dataset.hex, name: btn.dataset.name };
-      if (template() && (template().colors || []).some(x => x.name === btn.dataset.name)) state.colors = [btn.dataset.name];
+      if (template() && (template().colors || []).some(x => x.name === btn.dataset.name)) state.colors = multiColor() ? [btn.dataset.name, ...state.colors.slice(1).filter(n => n !== btn.dataset.name)] : [btn.dataset.name];
       state.colorNote = '';
       renderTeeColors();
       renderPalette();
@@ -1574,6 +1680,7 @@
       if (mod && k === 'y') { e.preventDefault(); redo(); return; }
       if (mod && e.key === 'Enter') { e.preventDefault(); if (!$('mx-to-setup')?.disabled) go('publish'); return; }
       if (mod || e.altKey) return;
+      if (e.target.closest?.('#mx-angles')) return;
       if (e.key === '/') { e.preventDefault(); e.stopImmediatePropagation(); $('mx-chat-input')?.focus(); return; }
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         if (e.target.closest?.('[role=radiogroup], [role=tablist], .es-segmented, details summary')) return;
@@ -1604,15 +1711,21 @@
     };
     // Apparel: the ES logo is its own print in a small area. Hard goods have one
     // print area, so the logo goes under the design in the same print ('inline').
-    const logoAreas = () => (apparel() ? (template()?.areas || []).filter(a => usable(a) && a.suitsLogo && a.regionId !== state.side) : []);
+    // The logo goes inside the print on hard goods and on blanks with no small logo area (tank, youth tee, tote: template.logo 'inside').
+    const insideLogo = () => !apparel() || template()?.logo === 'inside';
+    const logoAreas = () => (!insideLogo() ? (template()?.areas || []).filter(a => usable(a) && a.suitsLogo && a.regionId !== state.side) : []);
     const areaLabel = a => a.name || a.label || String(a.regionId).replace(/[_-]+/g, ' ').replace(/^./, m => m.toUpperCase());
     const area = () => designAreas().find(a => a.regionId === state.side) || designAreas()[0] || null;
     const logoArea = () => logoAreas().find(a => a.regionId === state.logo) || null;
-    const logoInline = () => !apparel() && state.logo === 'inline';
+    const logoInline = () => insideLogo() && state.logo === 'inline';
     const logoSpot = () => { if (logoInline()) return 'inline'; const la = logoArea(); if (!la) return 'none'; const r = la.regionId.toLowerCase(); return /sleeve/.test(r) ? 'sleeve' : /back/.test(r) ? 'back-neck' : /label/.test(r) ? 'label' : 'neck'; };
     const logoSpotFor = () => (template() ? logoSpot() : 'sleeve');
     const logoText = () => (logoInline() ? 'ES logo inside the design' : logoArea() ? `ES logo on the ${areaLabel(logoArea()).toLowerCase()}` : 'no ES logo');
-    const garmentHex = () => (template()?.colors || []).find(x => x.name === state.colors[0])?.hex || (apparel() ? selectedConcept()?.garment?.color : WHITE);
+    const hexOfColor = name => (template()?.colors || []).find(x => x.name === name)?.hex || '';
+    const garmentHex = () => hexOfColor(state.colors[0]) || (apparel() ? selectedConcept()?.garment?.color : WHITE);
+    // Several colours in one product: only when the server says the blank takes them.
+    const multiColor = () => Boolean(template()?.multiColor) && (template()?.colors || []).length > 1;
+    const pubColorName = () => (state.colors.includes(state.pubColor) ? state.pubColor : state.colors[0] || '');
     // The print spec for the chosen blank and area (what render and checks use).
     function printSpec() {
       const a = area() || { regionId: state.side, ...(MP().DEFAULT_AREAS?.[kind()] || { pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150 }) };
@@ -1628,7 +1741,7 @@
       const c = selectedConcept();
       if (!c || !$('mx-pstage-canvas')) return;
       const t = ++tokens.product;
-      const { off, caption } = await paint(c, 'tee', { garment: garmentHex() });
+      const { off, caption } = await paint(c, 'tee', { garment: hexOfColor(pubColorName()) || garmentHex(), photoPick: null });
       if (t !== tokens.product) return;
       const cv = $('mx-pstage-canvas');
       cv.width = off.width; cv.height = off.height;
@@ -1663,7 +1776,7 @@
       if (!template() && defaultTemplate()) pickTemplate(defaultTemplate().templateId, false);
       else pickColorFor(c);
       renderPublish();
-      if (state.copyFor !== copyKey(c)) loadCopy(c);
+      if (state.copyFor !== copyKey(c)) state.copyP = loadCopy(c);
       autoMockups();
     }
     // The product's colour for the design's tee colour: the same colour, else the
@@ -1675,13 +1788,16 @@
       const list = t?.colors || [];
       state.colorNote = '';
       const fallback = list.find(x => x.name === t?.defaultColor) || list[0];
-      if (!apparel()) { state.colors = fallback ? [fallback.name] : []; return; }
+      const extras = state.colors.slice(1);
+      // The design's colour first; extra colours picked in Publish stay while the product has them.
+      const withExtras = main => (multiColor() ? [main, ...extras.filter(n => n !== main && list.some(x => x.name === n))].slice(0, MAX_COLORS) : [main]);
+      if (!apparel()) { state.colors = fallback ? withExtras(fallback.name) : []; return; }
       const exact = list.find(x => x.name === c?.garment?.name && sameHex(x.hex, c?.garment?.color)) || list.find(x => sameHex(x.hex, c?.garment?.color)) || list.find(x => x.name === c?.garment?.name);
-      if (exact) { state.colors = [exact.name]; return; }
+      if (exact) { state.colors = withExtras(exact.name); return; }
       const g = normHex(c?.garment?.color);
       const near = g ? list.filter(x => normHex(x.hex)).sort((x, y) => colorDist(x.hex, g) - colorDist(y.hex, g))[0] : null;
       const pick = near || fallback;
-      state.colors = pick ? [pick.name] : [];
+      state.colors = pick ? withExtras(pick.name) : [];
       if (c && g && pick?.hex) {
         state.colorNote = `The ${BLANK_INFO[kind()].label.toLowerCase()} doesn’t come in ${c.garment.name || colorWord(g)}, so it’s ${pick.name}, the closest colour.`;
         c.garment = { color: pick.hex, name: pick.name }; // Design shows the same colour
@@ -1695,18 +1811,19 @@
       state.side = designAreas()[0]?.regionId || template()?.printSpec?.regionId || 'front';
       if (template()?.printSpec?.regionId && designAreas().some(a => a.regionId === template().printSpec.regionId)) state.side = template().printSpec.regionId;
       const logos = logoAreas();
-      if (!apparel()) state.logo = 'inline';
+      if (insideLogo()) state.logo = 'inline';
       else if (!logos.some(x => x.regionId === state.logo)) state.logo = logos[0]?.regionId || null;
       state.image = null; state.logoImage = null;
       if (before !== kind()) state.mock = { key: '', images: [], busy: state.mock.busy, error: '' }; // another product's mockups don't apply
       if (render) {
         renderPublish();
         const c = selectedConcept();
-        if (before !== kind() && c) loadCopy(c);
+        if (before !== kind() && c) state.copyP = loadCopy(c);
         autoMockups();
       }
     }
-    const base = () => Number(template()?.basePrice) || 0;
+    // Base cost: the template's, or the highest of the chosen colours when they differ (merch7 colours carry base).
+    const base = () => { const t = template(); const per = (t?.colors || []).filter(x => state.colors.includes(x.name)).map(x => Number(x.base)).filter(n => n > 0); return per.length ? Math.max(...per) : Number(t?.basePrice) || 0; };
     function blankCard(x) {
       const k = kindOf(x);
       const sel = x.templateId === state.templateId;
@@ -1715,7 +1832,7 @@
       const photo = (x.colors || []).find(cc => (cc.photos || []).length)?.photos?.[0] || '';
       return `<button class="mx-blank" type="button" role="radio" aria-checked="${sel}" tabindex="${sel ? 0 : -1}" data-tpl="${esc(x.templateId)}" data-kind="${esc(k)}" aria-label="${esc(x.label || BLANK_INFO[k].label)}, base cost ${x.basePrice != null ? money(x.basePrice) : 'unknown'}${sug ? `, suggested price ${money(sug)}` : ''}${fits ? ', suits this design' : ''}">
         <span class="mx-blank__icon" aria-hidden="true">${photo ? `<img class="mx-blank__photo" src="${esc(imgUrl(photo))}" alt="" loading="lazy">` : BLANK_ICON[k] || ''}${fits ? '<span class="mx-blank__fit"></span>' : ''}</span>
-        <span class="mx-blank__name">${esc(x.label || BLANK_INFO[k].label)}</span>
+        <span class="mx-blank__name" title="${esc(x.label || BLANK_INFO[k].label)}">${esc(BLANK_INFO[k].label)}</span>
         <span class="mx-blank__price">${x.basePrice != null ? money(x.basePrice) : '—'}</span>
       </button>`;
     }
@@ -1730,9 +1847,91 @@
       const c = selectedConcept();
       const el = $('mx-pub-color');
       const note = state.colorNote;
-      if (el) el.textContent = !template() ? '' : apparel() ? `${state.colors[0] || c?.garment?.name || 'White'} ${nounLower()}` : `${BLANK_INFO[kind()].label} · prints on white`;
+      if (el) el.textContent = !template() ? '' : apparel() ? `${state.colors[0] || c?.garment?.name || 'White'} ${nounLower()}` : (template().colors || []).length > 1 ? `${state.colors[0] || ''} ${nounLower()}`.trim() : `${BLANK_INFO[kind()].label} · prints on white`;
       show('mx-pub-color-change', Boolean(template()) && apparel());
       if ($('mx-pub-color-note')) { setText('mx-pub-color-note', note); show('mx-pub-color-note', Boolean(note)); }
+      renderPubColors();
+    }
+    // Colours to sell (one product, several colours): the design's colour is
+    // always in; tick more. Only when the blank takes several colours.
+    function renderPubColors() {
+      const wrap = $('mx-pcolors-wrap');
+      const box = $('mx-pcolors');
+      if (!wrap || !box) return;
+      const multi = Boolean(template()) && multiColor();
+      wrap.hidden = !multi;
+      if (!multi) { box.innerHTML = ''; return; }
+      const list = (template().colors || []).filter(x => x.name);
+      const main = state.colors[0];
+      const full = state.colors.length >= MAX_COLORS;
+      box.innerHTML = list.map(x => {
+        const on_ = state.colors.includes(x.name);
+        const isMain = x.name === main;
+        return `<label class="mx-colchip${isMain ? ' is-main' : ''}" title="${esc(isMain ? `${x.name}: the design’s colour. Change it in Design.` : x.name)}"><input type="checkbox" data-pub-color="${esc(x.name)}"${on_ ? ' checked' : ''}${isMain || (full && !on_) ? ' disabled' : ''}><span class="mx-colchip__sw${PAL()?.isLight(x.hex) ? ' is-light' : ''}" style="--sw:${esc(normHex(x.hex) || '#FFFFFF')}" aria-hidden="true"></span><span class="mx-colchip__name">${esc(x.name)}</span>${isMain ? '<span class="mx-colchip__tag">Design</span>' : ''}</label>`;
+      }).join('');
+      const sizes = (template().sizes || []).filter(Boolean);
+      setText('mx-pcolors-note', `${plural(state.colors.length, 'colour')} in one product${sizes.length ? ` · sizes ${sizes[0]}–${sizes[sizes.length - 1]}` : ''}${full ? ` · up to ${MAX_COLORS}` : ''}`);
+    }
+    on('mx-pcolors', 'change', e => {
+      const x = e.target.closest('[data-pub-color]');
+      if (!x) return;
+      const name = x.dataset.pubColor;
+      if (name === state.colors[0]) { x.checked = true; return; }
+      state.colors = x.checked ? [...state.colors.filter(n => n !== name), name].slice(0, MAX_COLORS) : state.colors.filter(n => n !== name);
+      if (!state.colors.includes(state.pubColor)) state.pubColor = '';
+      track('merch', { action: 'colors', count: state.colors.length });
+      renderPubColors();
+      syncEarn();
+      productChanged();
+      $('mx-pcolors')?.querySelector(`[data-pub-color="${CSS.escape(name)}"]`)?.focus();
+    });
+    // A small preview per colour under the stage; pick one to see it big.
+    let variantsT = 0;
+    async function renderVariants() {
+      const box = $('mx-pvariants');
+      if (!box) return;
+      const c = selectedConcept();
+      const names = c && apparel() && !liveShown() ? state.colors.slice() : [];
+      box.hidden = names.length < 2;
+      if (names.length < 2) { box.innerHTML = ''; return; }
+      const cur = pubColorName();
+      const key = `${mockKey()}|${names.join(',')}`;
+      if (box.dataset.key !== key) {
+        box.dataset.key = key;
+        box.innerHTML = names.map(n => `<button class="mx-pvar" type="button" role="radio" aria-checked="${n === cur}" tabindex="${n === cur ? 0 : -1}" data-pvar="${esc(n)}" aria-label="Preview in ${esc(n)}"><canvas class="mx-pvar__img" width="96" height="112" aria-hidden="true"></canvas><span class="mx-pvar__name">${esc(n)}</span></button>`).join('');
+        const t = ++variantsT;
+        for (const n of names) {
+          const { off } = await paint(c, 'tee', { garment: hexOfColor(n) || WHITE, photoPick: null });
+          if (t !== variantsT) return;
+          const cv = box.querySelector(`[data-pvar="${CSS.escape(n)}"] canvas`);
+          if (!cv) continue;
+          cv.width = 192; cv.height = Math.round(192 * off.height / Math.max(1, off.width));
+          cv.getContext('2d').drawImage(off, 0, 0, cv.width, cv.height);
+          cv.dataset.drawn = '1';
+        }
+      } else box.querySelectorAll('[data-pvar]').forEach(b => { const on_ = b.dataset.pvar === cur; b.setAttribute('aria-checked', String(on_)); b.tabIndex = on_ ? 0 : -1; });
+    }
+    function pickVariant(btn) {
+      if (!btn) return;
+      state.pubColor = btn.dataset.pvar;
+      renderVariants();
+      drawProductStage();
+      renderMockups();
+      $('mx-pvariants')?.querySelector(`[data-pvar="${CSS.escape(state.pubColor)}"]`)?.focus();
+    }
+    on('mx-pvariants', 'click', e => pickVariant(e.target.closest('[data-pvar]')));
+    on('mx-pvariants', 'keydown', e => {
+      const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+      if (!d) return;
+      e.preventDefault();
+      const all = [...$('mx-pvariants').querySelectorAll('[data-pvar]')];
+      const i = Math.max(0, all.findIndex(b => b.getAttribute('aria-checked') === 'true'));
+      pickVariant(all[(i + d + all.length) % all.length]);
+    });
+    // "More options" (description, print area, ES logo, collections): closed, with a one-line summary.
+    function renderPubMore() {
+      const colls = (state.shopColls || []).filter(x => state.pick.setup.includes(x.id)).length;
+      setText('mx-pub-more-meta', template() ? [designAreas().length > 1 ? areaLabel(area() || designAreas()[0]) : '', logoText().replace(/^ES logo /, 'logo '), colls ? plural(colls, 'collection') : 'no collections'].filter(Boolean).join(' · ') : '');
     }
     on('mx-pub-color-change', 'click', e => {
       e.preventDefault();
@@ -1757,13 +1956,13 @@
       const logos = logoAreas();
       const logo = $('mx-logo');
       if (logo) {
-        logo.innerHTML = apparel()
+        logo.innerHTML = !insideLogo()
           ? `${logos.map(a => `<option value="${esc(a.regionId)}">${esc(areaLabel(a))}</option>`).join('')}<option value="">No logo</option>`
           : '<option value="inline">Inside the design (small ES pill at the bottom)</option><option value="">No logo</option>';
-        logo.value = (apparel() ? state.logo : (state.logo === 'inline' ? 'inline' : '')) || '';
+        logo.value = (!insideLogo() ? state.logo : (state.logo === 'inline' ? 'inline' : '')) || '';
       }
-      setText('mx-logo-hint', !apparel()
-        ? `A ${BLANK_INFO[k].label.toLowerCase()} has one print area, so the small ESSENTIALLYSPORTS pill is printed at the bottom of the design, in the same file.`
+      setText('mx-logo-hint', insideLogo()
+        ? `A ${BLANK_INFO[k].label.toLowerCase()} has ${apparel() ? 'no small logo area' : 'one print area'}, so the small ESSENTIALLYSPORTS pill is printed at the bottom of the design, in the same file.`
         : logos.length ? 'The ES logo is the small ESSENTIALLYSPORTS pill, printed in its own area. The preview shows where.' : `This ${BLANK_INFO[k].label.toLowerCase()} has no small print areas, so it goes without the ES logo.`);
       drawProductStage();
       renderMockups();
@@ -1818,9 +2017,10 @@
       state.copyMsg = 'Writing the title and description…';
       syncPublish();
       try {
-        const data = await api({ mode: 'copy', concept: forServer(c), content: { ...contentPayload(), trend: trendBody() }, blank: kind() });
+        const data = await api({ mode: 'copy', concept: forServer(c), content: { ...contentPayload(), trend: trendBody() }, blank: kind(), ...(state.colors.length ? { colors: state.colors.slice() } : {}) });
         if (state.copyFor !== key) return;
         const copy = data.copy || data;
+        state.copy = { key, title: copy.title || '', description: copy.description || '', adLine: copy.adLine || copy.ad?.line || '', ai: data.ai !== false && !data.free };
         if (copy.title && $('mx-title-input')) $('mx-title-input').value = copy.title;
         if (copy.description && $('mx-desc')) $('mx-desc').value = copy.description;
         if (copy.retail && $('mx-price')) $('mx-price').value = copy.retail;
@@ -1862,9 +2062,12 @@
       show('mx-pub-blocker', Boolean(blocker));
       const left = state.status?.caps?.person?.left;
       const colls = (state.shopColls || []).filter(c => state.pick.setup.includes(c.id)).map(c => c.name);
-      const summary = template() ? [BLANK_INFO[kind()].label, apparel() ? (state.colors[0] || '') : '', Number(val('mx-price')) > 0 ? money(val('mx-price')) : '', logoText(), colls.length ? `in ${colls.join(', ')}` : '', left != null ? `${left} create${left === 1 ? '' : 's'} left today` : 'up to 10 creates a day'].filter(Boolean).join(' · ') : '';
+      const colorText = state.colors.length > 2 ? `${state.colors[0]} + ${state.colors.length - 1} more colours` : state.colors.join(' and ');
+      const summary = template() ? [BLANK_INFO[kind()].label, apparel() ? colorText : '', Number(val('mx-price')) > 0 ? money(val('mx-price')) : '', logoText(), colls.length ? `in ${colls.join(', ')}` : '', left != null ? `${left} create${left === 1 ? '' : 's'} left today` : 'up to 10 creates a day'].filter(Boolean).join(' · ') : '';
       setText('mx-setup-meta', state.copyMsg || summary);
       syncMockButton();
+      renderPubMore();
+      syncQuick();
       renderSteps();
     }
     on('mx-blanks', 'click', e => { const b = e.target.closest('[data-tpl]'); if (b && b.dataset.tpl !== state.templateId) { pickTemplate(b.dataset.tpl); $('mx-blanks').querySelector(`[data-tpl="${CSS.escape(b.dataset.tpl)}"]`)?.focus(); } });
@@ -1878,7 +2081,7 @@
       $('mx-blanks').querySelector('[aria-checked="true"]')?.focus();
     });
     on('mx-side', 'change', () => { state.side = val('mx-side'); if (state.logo === state.side) state.logo = null; state.image = null; renderPublish(); });
-    on('mx-logo', 'change', () => { state.logo = val('mx-logo') || null; state.logoImage = null; if (!apparel()) state.image = null; productChanged(); });
+    on('mx-logo', 'change', () => { state.logo = val('mx-logo') || null; state.logoImage = null; if (insideLogo()) state.image = null; productChanged(); });
     ['mx-title-input', 'mx-desc'].forEach(id => on(id, 'input', syncPublish));
     on('mx-price', 'input', () => { syncEarn(); syncPublish(); });
     on('mx-ack', 'change', () => { state.ack = $('mx-ack').checked; syncPublish(); });
@@ -1895,10 +2098,18 @@
       return id;
     }
     function imagesHtml(list, label, gid = '') {
-      const items = (list || []).filter(m => imgUrl(m));
-      if (!items.length) return '';
+      const raw = (list || []).filter(m => imgUrl(m));
+      if (!raw.length) return '';
+      // Several colours: one group per colour (the gallery follows the same order).
+      const colors = [...new Set(raw.map(m => m?.color || '').filter(Boolean))];
+      const grouped = colors.length > 1;
+      const items = grouped ? colors.flatMap(cn => raw.filter(m => m?.color === cn)).concat(raw.filter(m => !m?.color)) : raw;
       const id = gid || galleryOf(items, label);
-      return `<p class="mx-meta mx-mockups__count">${plural(items.length, 'mockup')} · click one to enlarge</p><div class="mx-mockups__grid">${items.map((m, i) => `<figure class="mx-mock"><button class="mx-mock__btn" type="button" data-gal="${id}" data-gi="${i}" aria-label="View ${esc(m?.color || label)} mockup ${i + 1} of ${items.length}"><img src="${esc(imgUrl(m))}" alt="" loading="lazy"></button>${m?.color ? `<figcaption>${esc(m.color)}</figcaption>` : ''}</figure>`).join('')}</div>`;
+      const fig = (m, i) => `<figure class="mx-mock"><button class="mx-mock__btn" type="button" data-gal="${id}" data-gi="${i}" aria-label="View ${esc(m?.color || label)} mockup ${i + 1} of ${items.length}"><img src="${esc(imgUrl(m))}" alt="" loading="lazy"></button>${m?.color && !grouped ? `<figcaption>${esc(m.color)}</figcaption>` : ''}</figure>`;
+      const head = `<p class="mx-meta mx-mockups__count">${plural(items.length, 'mockup')}${grouped ? ` in ${plural(colors.length, 'colour')}` : ''} · click one to enlarge</p>`;
+      if (!grouped) return `${head}<div class="mx-mockups__grid">${items.map(fig).join('')}</div>`;
+      let at = 0;
+      return `${head}${[...colors, ''].map(cn => { const part = items.filter(m => (m?.color || '') === cn); if (!part.length) return ''; const html = `<div class="mx-mockups__group"><p class="mx-mockups__color">${esc(cn || 'Other')}<span class="mx-mockups__n">${part.length}</span></p><div class="mx-mockups__grid">${part.map(m => fig(m, at++)).join('')}</div></div>`; return html; }).join('')}`;
     }
     let galleryAt = { id: '', i: 0, from: null };
     function showGallery() {
@@ -1930,7 +2141,7 @@
     // ── Mockups: Fourthwall's live mockups first (admins), else FrameUp's preview ──
     // The key says what the mockups show; when the design, colour, area or logo
     // changes they are out of date and "Update" appears.
-    const mockKey = () => { const c = selectedConcept(); return c ? JSON.stringify([c.stack, c.palette, c.align, c.fit || null, c.elements || null, c.mode || '', printSpec(), state.colors[0] || '', logoSpot()]) : ''; };
+    const mockKey = () => { const c = selectedConcept(); return c ? JSON.stringify([c.stack, c.palette, c.align, c.fit || null, c.elements || null, c.mode || '', printSpec(), state.colors.join('|'), logoSpot()]) : ''; };
     const mockFresh = () => state.mock.images.length > 0 && state.mock.key === mockKey();
     function mockStatus(text) { setText('mx-mockup-status', text || ''); }
     function syncMockButton() {
@@ -1950,12 +2161,15 @@
       const live = liveShown() && (state.product.images || []).some(imgUrl);
       const has = live || state.mock.images.length > 0;
       const fresh = live || mockFresh();
-      const what = apparel() ? (state.colors[0] || '') : BLANK_INFO[kind()].label;
+      const what = apparel() ? (state.colors.length > 1 ? pubColorName() : state.colors[0] || '') : BLANK_INFO[kind()].label;
       main.querySelector('.mx-pstage__live')?.remove();
       show('mx-pstage-canvas', !has);
       main.classList.toggle('is-stale', has && !fresh);
       if (has) {
-        const items = (live ? state.product.images : state.mock.images).filter(m => imgUrl(m));
+        const all = (live ? state.product.images : state.mock.images).filter(m => imgUrl(m));
+        // Several colours: the stage shows the picked colour's mockups first.
+        const lead = all.filter(m => m?.color && sameName(m.color, what));
+        const items = lead.length ? [...lead, ...all.filter(m => !lead.includes(m))] : all;
         const gid = galleryOf(items, what || 'Product');
         main.insertAdjacentHTML('beforeend', `<button class="mx-pstage__live" type="button" data-gal="${gid}" data-gi="0" aria-label="Enlarge the first Fourthwall mockup"><img src="${esc(imgUrl(items[0]))}" alt="Fourthwall mockup${what ? `, ${esc(what)}` : ''}"></button>`);
         setHtml('mx-pstage-title', `${live ? 'On Fourthwall' : 'Fourthwall live mockups'}${what ? ` · ${esc(what)}` : ''}`);
@@ -1968,6 +2182,8 @@
       }
       if (!state.mock.busy && !state.mock.error) mockStatus(live ? '' : has && !fresh ? 'Live mockups out of date.' : has || !pushAllowed().ok ? '' : 'Live mockups come from Fourthwall.');
       syncMockButton();
+      renderVariants();
+      show('mx-adcta', Boolean(selectedConcept()) && !liveShown());
     }
     async function requestMockups() {
       const gate = pushAllowed();
@@ -1983,7 +2199,7 @@
         const img = await ensureImages((p, text) => mockStatus(text));
         mockStatus(`Getting live mockups… usually ${ETA.preview}.`);
         const body = { mode: 'preview', blank: kind(), imageId: img.imageId, region: img.region };
-        if (state.colors[0]) body.color = state.colors[0];
+        if (state.colors[0]) { body.color = state.colors[0]; body.colors = state.colors.slice(); }
         if (img.logo) body.logo = img.logo;
         const data = await api(body);
         state.mock = { key, images: data.images || [], busy: false, error: '' };
@@ -1999,6 +2215,7 @@
     // Admins: ask Fourthwall automatically when entering Publish (once per version of the design).
     function autoMockups() {
       const key = mockKey();
+      if (state.quick) return; // Quick publish: Fourthwall makes the mockups when it creates the product
       if (!state.status || liveShown() || !pushAllowed().ok || !template() || blockingChecks().length || state.mock.busy || mockFresh() || state.autoMockFor === key) return;
       state.autoMockFor = key;
       requestMockups();
@@ -2196,10 +2413,11 @@
     }
 
     // ── Create on Fourthwall, then the live panel replaces the form ──
-    on('mx-create-fw', 'click', async () => {
+    on('mx-create-fw', 'click', () => createOnFourthwall());
+    async function createOnFourthwall() {
       const gate = pushAllowed();
-      if (!gate.ok) { setText('mx-pub-blocker', gate.text); show('mx-pub-blocker', true); return; }
-      if (state.busy === 'create' || pubBlocker()) return;
+      if (!gate.ok) { setText('mx-pub-blocker', gate.text); show('mx-pub-blocker', true); return false; }
+      if (state.busy === 'create' || pubBlocker()) return false;
       state.busy = 'create';
       state.pushError = '';
       const btn = $('mx-create-fw');
@@ -2215,10 +2433,13 @@
           title: val('mx-title-input').trim(), description: val('mx-desc').trim(), retail: Number(val('mx-price')),
           ack: { accepted: state.ack, items: (c.rights || []).map(r => ({ kind: r.kind, text: r.text })) },
         };
-        if (state.colors[0]) body.color = state.colors[0];
+        // One product, every chosen colour (colors); color stays for older servers.
+        if (state.colors[0]) { body.color = state.colors[0]; body.colors = state.colors.slice(); }
         if (img.logo) body.logo = img.logo;
         const data = await api(body);
-        state.product = { id: data.productId, forId: c.id, name: data.title || body.title, description: data.description || body.description, url: data.productUrl || '', state: data.state || 'HIDDEN', price: data.price?.retail ?? body.retail, margin: data.price?.margin, images: data.images || [], color: body.color, blank: kind(), collectionIds: [] };
+        const made = Array.isArray(data.colors) && data.colors.length ? data.colors.map(x => (typeof x === 'string' ? x : x?.name)).filter(Boolean) : (body.colors || []);
+        state.product = { id: data.productId, forId: c.id, name: data.title || body.title, description: data.description || body.description, url: data.productUrl || '', state: data.state || 'HIDDEN', price: data.price?.retail ?? body.retail, margin: data.price?.margin, images: data.images || [], color: body.color, colors: made, blank: kind(), collectionIds: [] };
+        if (body.colors && body.colors.length > 1 && made.length < body.colors.length) collNote = `Fourthwall made it in ${made.join(', ') || body.color} only.`;
         if (data.caps && state.status) state.status.caps = data.caps;
         window.FrameUpTrack?.track?.('export', { tool: 'merch', action: 'fourthwall-create' });
         // Shop collections: Fourthwall replaces a collection's whole list, so the server reads first and appends.
@@ -2243,8 +2464,9 @@
       renderMockups();
       syncPublish();
       if (collNote) setText('mx-live-status', collNote);
-      if (state.product && liveShown()) $('mx-h-publish')?.focus?.({ preventScroll: true });
-    });
+      if (state.product && liveShown()) $('mx-live-h')?.focus?.({ preventScroll: true });
+      return Boolean(state.product && liveShown());
+    }
 
     const STATE_LABEL = { HIDDEN: ['Hidden', 'warn'], PUBLIC: ['Live', 'good'], AVAILABLE: ['Live', 'good'], PRIVATE: ['Private', 'ink'], ARCHIVED: ['Archived', 'ink'], DRAFT: ['Draft', 'ink'] };
     const stateKey = s => String(s || '').toUpperCase();
@@ -2266,7 +2488,7 @@
       box.innerHTML = `
         <div class="mx-row mx-row--between">
           <div class="mx-live__head">
-            <h2 class="mx-h2">${esc(p.name)}</h2>
+            <h2 class="mx-h2" id="mx-live-h" tabindex="-1">${esc(p.name)}</h2>
             <span class="es-badge es-badge--${tone}">${esc(label)}</span>
           </div>
           <div class="mx-row">
@@ -2275,7 +2497,13 @@
           </div>
         </div>
         ${archived ? '<p class="mx-meta">Archived: this product is gone from the Fourthwall shop. Past orders stay in Fourthwall.</p>' : `
-        <p class="mx-meta">${p.url ? `Product link: <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url)}</a> · ` : ''}${p.price != null ? `${money(p.price)}${p.margin != null ? `, you earn ${money(p.margin)} a sale` : ''}` : ''}</p>
+        <p class="mx-live__next">${live ? 'It’s live in the shop. Make an ad to tell fans.' : 'Created hidden. Check the mockups, then publish it to the shop.'}</p>
+        <p class="mx-meta">${p.url ? `Product link: <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url)}</a> · ` : ''}${p.price != null ? `${money(p.price)}${p.margin != null ? `, you earn ${money(p.margin)} a sale` : ''}` : ''}${(p.colors || []).length > 1 ? ` · ${esc(p.colors.join(', '))}` : ''}</p>
+        <div class="mx-adcta mx-adcta--live">
+          <span class="mx-adcta__icon" aria-hidden="true"><svg class="mx-i" viewBox="0 0 24 24"><use href="#mx-i-megaphone"/></svg></span>
+          <div class="mx-adcta__text"><p class="mx-adcta__title">Make an ad</p><p class="mx-meta">Feed post, story or carousel with the product link${(p.images || []).length ? ' and Fourthwall’s mockups' : ''}.</p></div>
+          <button class="es-btn es-btn--sm" type="button" data-live="ad" aria-haspopup="dialog">Make an ad</button>
+        </div>
         ${(p.images || []).length ? imagesHtml(p.images, p.color || p.name) : '<p class="mx-meta">Fourthwall is still making the mockups. Check the product page in a minute.</p>'}
         ${(p.variants || []).length ? `<div class="es-table-wrap mx-variants"><table class="es-table"><caption class="es-sr-only">Variants</caption><thead><tr><th scope="col">SKU</th><th scope="col">Colour</th><th scope="col">Size</th><th scope="col">Price</th><th scope="col">Stock</th></tr></thead><tbody>${p.variants.map(v => `<tr><td>${esc(v.sku)}</td><td>${esc(v.color)}</td><td>${esc(v.size)}</td><td>${money(v.price)}</td><td>${esc(v.stock ?? '')}</td></tr>`).join('')}</tbody></table></div>` : ''}
         <fieldset class="mx-fieldset mx-shopcolls mx-shopcolls--live">
@@ -2322,6 +2550,7 @@
       if (!b || !state.product) return;
       const act = b.dataset.live;
       if (act === 'archive') { openArchive({ productId: state.product.id, title: state.product.name }, b); return; }
+      if (act === 'ad') { openAd('live'); return; }
       if (act === 'copy-desc') {
         try {
           await navigator.clipboard.writeText(state.product.description);
@@ -2343,6 +2572,199 @@
       }
       renderLive();
     });
+
+    // ── Quick publish (admins): one tee, the stage colour, the suggested price ──
+    // A confirm dialog (product, colour, price, rights tick), then the normal
+    // create path in Publish: the same print file, checks and progress, created
+    // hidden. "Change details" opens the full Publish form instead.
+    function isAdmin() { return Boolean(state.status && state.status.configured && state.status.canPush === true); }
+    function syncQuick() {
+      const b = $('mx-quick');
+      if (!b) return;
+      const c = selectedConcept();
+      const can = isAdmin() && pushAllowed().ok && Boolean(c) && !state.making;
+      b.hidden = !can;
+      if (!can) return;
+      const tee = (state.templates || []).find(t => kindOf(t) === 'tee');
+      const sug = tee ? (Number(tee.pricing?.suggested ?? tee.suggestedPrice) || (window.MerchRules?.suggestedPrice ? window.MerchRules.suggestedPrice('tee', tee.basePrice) : 0)) : 0;
+      setText('mx-quick-meta', [c.garment?.name || 'White', sug ? money(sug) : ''].filter(Boolean).join(' · '));
+      b.disabled = state.busy === 'create' || (template() && kind() === 'tee' ? blockingChecks().length > 0 : false);
+      b.title = b.disabled && state.busy !== 'create' ? 'Fix the print check first.' : 'Create one t-shirt in this colour at the suggested price, hidden on Fourthwall.';
+    }
+    function quickStatus(text, bad = false) { const el = $('mx-quick-status'); if (el) { el.textContent = text || ''; el.classList.toggle('mx-meta--bad', bad); } }
+    function quickReady() {
+      const go_ = $('mx-quick-go');
+      if (!go_) return;
+      const bad = state.quickBlock || '';
+      go_.disabled = Boolean(bad) || !$('mx-quick-ack')?.checked || state.busy === 'create';
+    }
+    async function openQuick() {
+      const c = selectedConcept();
+      const d = $('mx-quick-dlg');
+      if (!c || !d || !isAdmin()) return;
+      state.quickReturn = document.activeElement;
+      state.quickBlock = 'loading';
+      $('mx-quick-ack').checked = false;
+      setHtml('mx-quick-facts', '');
+      setHtml('mx-quick-rights', (c.rights || []).map(r => `<li><span class="mx-rchip">${esc(RIGHTS_LABEL[r.kind] || r.kind)}</span> ${esc(r.text)}</li>`).join('') || '<li class="mx-meta">No names, quotes or team colours found.</li>');
+      quickStatus('Getting the t-shirt…');
+      quickReady();
+      if (typeof d.showModal === 'function' && !d.open) d.showModal(); else d.setAttribute('open', '');
+      $('mx-quick-ack')?.focus();
+      const ok = await ensureTemplates();
+      const tee = ok ? (state.templates || []).find(t => kindOf(t) === 'tee') : null;
+      if (!tee) { state.quickBlock = 'no-tee'; quickStatus(ok ? 'There’s no t-shirt on Fourthwall yet. Use Continue to Publish.' : state.templatesError, true); quickReady(); return; }
+      if (state.templateId !== tee.templateId) pickTemplate(tee.templateId, false); else pickColorFor(c);
+      state.colors = state.colors.slice(0, 1);
+      state.pubColor = '';
+      const price = suggested();
+      const m = window.MerchRules?.marginFor ? window.MerchRules.marginFor(price, base()) : null;
+      const earn = m && Number.isFinite(m.margin) ? m.margin : price - base();
+      const sizes = (tee.sizes || []).filter(Boolean);
+      setHtml('mx-quick-facts', [
+        ['Product', `${tee.label || 'T-shirt'}${tee.name ? ` · ${tee.name}` : ''}`],
+        ['Colour', state.colors[0] || c.garment?.name || 'White'],
+        ['Price', price ? `${money(price)} · you earn ${money(earn)}` : 'Suggested price'],
+        ['Sizes', sizes.length ? `${sizes[0]}–${sizes[sizes.length - 1]}` : 'Standard sizes'],
+        ['ES logo', logoText().replace(/^ES logo /, '').replace(/^no ES logo$/, 'none')],
+      ].map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join(''));
+      if (state.colorNote) quickStatus(state.colorNote);
+      const cv = $('mx-quick-canvas');
+      if (cv) {
+        const { off } = await paint(c, 'tee', { garment: garmentHex(), photoPick: null });
+        cv.width = off.width; cv.height = off.height;
+        cv.getContext('2d').drawImage(off, 0, 0);
+        cv.setAttribute('aria-label', `${c.title || 'The design'} on a ${state.colors[0] || ''} t-shirt`.replace(/\s+/g, ' '));
+      }
+      const bad = blockingChecks();
+      state.quickBlock = bad.length ? 'checks' : '';
+      if (bad.length) quickStatus(`Fix the print check first: ${bad[0].text}`, true);
+      else if (!state.colorNote) quickStatus('');
+      quickReady();
+    }
+    function closeQuick(restore = true) {
+      const d = $('mx-quick-dlg');
+      if (d?.open) { if (typeof d.close === 'function') d.close(); else d.removeAttribute('open'); }
+      if (restore && state.quickReturn?.isConnected) state.quickReturn.focus({ preventScroll: true });
+      state.quickReturn = null;
+    }
+    async function runQuick() {
+      const c = selectedConcept();
+      if (!c || state.quickBlock || !$('mx-quick-ack')?.checked) return;
+      state.quick = true;
+      state.ack = true;
+      if ($('mx-ack')) $('mx-ack').checked = true;
+      closeQuick(false);
+      track('merch', { action: 'quick-publish', step: 'start' });
+      if (!go('publish', { focus: 'none' })) { state.quick = false; return; }
+      try { await state.enterP; await state.copyP; } catch { /* the form shows what's missing */ }
+      const price = suggested();
+      if (price && $('mx-price')) $('mx-price').value = price;
+      syncEarn();
+      syncPublish();
+      const ok = await createOnFourthwall();
+      state.quick = false;
+      track('merch', { action: 'quick-publish', step: ok ? 'created' : 'stopped' });
+      if (!ok) { const why = pubBlocker(); if (why && !state.pushError) { setText('mx-pub-blocker', why); show('mx-pub-blocker', true); } $('mx-h-publish')?.focus({ preventScroll: true }); }
+    }
+    on('mx-quick', 'click', openQuick);
+    on('mx-quick-ack', 'change', quickReady);
+    on('mx-quick-go', 'click', runQuick);
+    on('mx-quick-cancel', 'click', () => closeQuick());
+    on('mx-quick-more', 'click', () => { closeQuick(false); go('publish'); });
+    on('mx-quick-dlg', 'cancel', e => { e.preventDefault(); closeQuick(); });
+
+    // ── Make an ad (merch-ads.js): feed / story / carousel in the ES look ──
+    // The line: the AI copy's ad line when the server sends one, else the
+    // first sentence of the AI-written description (already paid for and
+    // cached), else a code line. Never a second AI call.
+    const CODE_LINE = { quote: 'Word for word, on a tee.', nickname: 'One name. Every fan knows it.', replay: 'For the fans who remember.', current: 'Wear the moment.', core: 'Made for ES fans.' };
+    function adSource(c) { return [c?.title, ...(c?.stack || []).map(r => r.text), state.made?.content?.text, state.trend?.title, val('mx-title-input')].filter(Boolean).join(' '); }
+    function adLineProblem(line, c = selectedConcept()) {
+      const t = String(line || '').trim();
+      if (!t) return 'Add a short line for the ad.';
+      if (/\b(official|officially|licen[cs]ed|authori[sz]ed|authentic)\b/i.test(t)) return 'Don’t call it official or licensed.';
+      if (window.MerchRules?.bannedIn && window.MerchRules.bannedIn(t).length) return 'That word isn’t allowed on ES merch.';
+      const src = adSource(c).replace(/,/g, '');
+      const stray = (t.replace(/,/g, '').match(/\d+(?:\.\d+)?/g) || []).filter(n => !src.includes(n));
+      if (stray.length) return `Numbers must come from the story or the design (${stray[0]} isn’t).`;
+      return '';
+    }
+    function adLineFor(c) {
+      const copy = state.copy && state.copy.key === copyKey(c) ? state.copy : null;
+      if (copy?.adLine && !adLineProblem(copy.adLine, c)) return { line: copy.adLine.slice(0, 48), source: 'ai' };
+      const first = copy?.ai ? String(copy.description || '').split(/(?<=[.!?])\s+/)[0].trim() : '';
+      if (first && first.length >= 8 && first.length <= 48 && !/^(this|these|printed|made to order|the es|our|a |an )/i.test(first) && !adLineProblem(first, c)) return { line: first, source: 'ai' };
+      return { line: CODE_LINE[c?.collection] || 'Wear the moment.', source: 'code' };
+    }
+    const canvasUrl = cv => { try { return cv.toDataURL('image/png'); } catch { return ''; } };
+    async function adImages(c, p) {
+      const out = [];
+      const live = (p?.images?.length ? p.images : mockFresh() ? state.mock.images : []).filter(m => imgUrl(m));
+      // One Fourthwall mockup per colour, up to 4.
+      const seen = new Set();
+      for (const m of live) {
+        const k = m?.color || '';
+        if (seen.has(k)) continue;
+        seen.add(k);
+        out.push({ src: imgUrl(m), kind: 'live', label: `Fourthwall mockup${k ? ` · ${k}` : ''}`, color: k });
+        if (out.length >= 4) break;
+      }
+      const names = apparel() ? ((p?.colors?.length ? p.colors : state.colors).slice(0, 4)) : [''];
+      for (const n of names) {
+        const { off, pic } = await paint(c, 'tee', { garment: n ? hexOfColor(n) || garmentHex() : garmentHex(), photoPick: null });
+        const src = canvasUrl(off);
+        if (src && pic !== 'plain') out.push({ src, kind: pic === 'photo' ? 'photo' : 'flat', label: `FrameUp mockup${n ? ` · ${n}` : ''}`, color: n });
+      }
+      // Other calibrated angles of the main colour (the design drawn on them).
+      if (apparel()) {
+        const extra = photosOf(hexOfColor(names[0]) || garmentHex()).filter(x => x.calibrated).slice(1, 3);
+        for (const ph of extra) {
+          const { off, pic } = await paint(c, 'tee', { garment: ph.hex, photoPick: { angle: ph.angle, index: ph.index } });
+          const src = canvasUrl(off);
+          if (src && pic === 'photo') out.push({ src, kind: 'photo', label: `${angleName(ph)} · ${ph.name}`, color: ph.name, angle: ph.angle });
+        }
+      }
+      const { off } = await paint(c, 'closeup', { garment: hexOfColor(names[0]) || garmentHex() });
+      const close = canvasUrl(off);
+      if (close) out.push({ src: close, kind: 'closeup', label: 'Close-up of the design', color: names[0] || '' });
+      return out;
+    }
+    async function openAd(from) {
+      const c = selectedConcept();
+      if (!c) return;
+      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261127-m7');
+      if (!window.MerchAds) return;
+      const p = liveShown() ? state.product : null;
+      const { line, source } = adLineFor(c);
+      const btn = document.activeElement;
+      btn?.setAttribute?.('aria-busy', 'true');
+      const images = await adImages(c, p);
+      btn?.removeAttribute?.('aria-busy');
+      const price = p?.price ?? (Number(val('mx-price')) > 0 ? Number(val('mx-price')) : 0);
+      window.MerchAds.open({
+        key: `${c.id}|${p?.id || ''}|${kind()}`, title: p?.name || val('mx-title-input').trim() || c.title || 'ES merch', name: p?.name || c.title,
+        line, lineSource: source, fallbackLine: CODE_LINE[c.collection], price, url: p?.url || '', palette: c.palette, collection: c.collection, images,
+        check: t => adLineProblem(t, c), track: d => track('merch', { ...d, from }),
+      });
+    }
+    // An ad for a product in Your merch: its Fourthwall mockups and link (no design to redraw).
+    async function openRowAd(row, btn) {
+      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261127-m7');
+      if (!window.MerchAds) return;
+      btn?.setAttribute('aria-busy', 'true');
+      if (!row.imagesLoaded) { try { const data = await api({ mode: 'product', productId: row.productId }); row.images = data.product?.images || []; row.imagesLoaded = true; } catch { /* the thumb is enough */ } }
+      btn?.removeAttribute('aria-busy');
+      const pics = (row.images || []).filter(m => imgUrl(m)).slice(0, 5).map(m => ({ src: imgUrl(m), kind: 'live', label: `Fourthwall mockup${m?.color ? ` · ${m.color}` : ''}`, color: m?.color || '' }));
+      if (!pics.length && row.thumb) pics.push({ src: imgUrl(row.thumb), kind: 'live', label: 'Fourthwall mockup' });
+      const title = String(row.title || 'ES merch').replace(/\s*\(sample\)$/i, '');
+      window.MerchAds.open({
+        key: `row|${row.productId}`, title, name: title, line: 'Wear the moment.', lineSource: 'code', price: row.price || 0, url: row.url || '', palette: null, images: pics,
+        check: t => (/\b(official|licen[cs]ed)\b/i.test(t) ? 'Don’t call it official or licensed.' : (window.MerchRules?.bannedIn && window.MerchRules.bannedIn(t).length ? 'That word isn’t allowed on ES merch.' : (/\d/.test(t) && !/\d/.test(title) ? 'Numbers must come from the product.' : ''))),
+        track: d => track('merch', { ...d, from: 'list' }),
+      });
+    }
+    on('mx-ad-open', 'click', () => openAd('publish'));
 
     // ── Archive (permanent; typed-name confirm) ──
     const norm = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -2445,6 +2867,7 @@
         <td class="mx-num">${p.revenue30 != null ? money(p.revenue30) : '—'}</td>
         <td class="mx-lt__acts">
           ${p.url && !archived ? `<a class="es-btn es-btn--ghost es-btn--sm" href="${esc(p.url)}" target="_blank" rel="noopener" aria-label="Open ${esc(p.title)} on Fourthwall">Open</a>` : ''}
+          ${!archived && (p.url || p.thumb) ? `<button class="es-btn es-btn--ghost es-btn--sm" type="button" data-row="ad" aria-haspopup="dialog" aria-label="Make an ad for ${esc(p.title)}">Ad</button>` : ''}
           <button class="es-btn es-btn--ghost es-btn--sm" type="button" data-row="mockups" aria-expanded="${state.openMocks === p.productId}" aria-label="Mockups of ${esc(p.title)}">Mockups</button>
           ${archived ? '' : `<button class="es-btn es-btn--ghost es-btn--sm" type="button" data-row="refresh" aria-label="Refresh ${esc(p.title)}">Refresh</button>`}
           ${archived ? '' : `<button class="es-btn es-btn--ghost es-btn--sm mx-lt__archive" type="button" data-row="archive" aria-label="Archive ${esc(p.title)}"${can.ok ? '' : ` disabled title="${esc(can.text)}"`}>Archive</button>`}
@@ -2511,6 +2934,7 @@
       if (!row) return;
       if (b.dataset.row === 'archive') { openArchive({ productId: row.productId, title: row.title }, b); return; }
       if (b.dataset.row === 'mockups') { toggleMockups(row); return; }
+      if (b.dataset.row === 'ad') { openRowAd(row, b); return; }
       b.disabled = true;
       b.setAttribute('aria-busy', 'true');
       setText('mx-list-updated', `Refreshing “${row.title}”…`);
@@ -3205,6 +3629,11 @@
     poster: svg('<rect x="5" y="2.5" width="14" height="19" rx="1"/><path d="M8 7h8M8 10h5"/>'),
     sticker: svg('<path d="M20 12a8 8 0 1 1-8-8h8v8Z"/><path d="M20 12h-4a4 4 0 0 1-4-4V4"/>'),
     mug: svg('<path d="M4 6h12v12a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V6Z"/><path d="M16 9h2a3 3 0 0 1 0 6h-2"/>'),
+    longsleeve: svg('<path d="M8 3 5 4.5 2.5 19l3 .8L8 10v11h8V10l2.5 9.8 3-.8L19 4.5 16 3c-.5 1.5-2 2.5-4 2.5S8.5 4.5 8 3Z"/>'),
+    crewneck: svg('<path d="M8 3.5 5 5 2.5 19l3 .8L8 10.5V21h8V10.5l2.5 9.3 3-.8L19 5l-3-1.5"/><path d="M8 3.5c1 1.6 2.4 2.3 4 2.3s3-.7 4-2.3"/><path d="M8 19.5h8"/>'),
+    tank: svg('<path d="M8.5 3v3.5a3.5 3.5 0 0 0 7 0V3"/><path d="M8.5 3 7 7.5 6 21h12l-1-13.5L15.5 3"/>'),
+    youth: svg('<path d="M9 5.5 6 7 4.5 10l2.3 1.4.7-.6V20h9v-9.2l.7.6L19.5 10 18 7l-3-1.5c-.4 1.1-1.6 1.9-3 1.9s-2.6-.8-3-1.9Z"/>'),
+    tote: svg('<path d="M4.5 8h15l-1 13h-13l-1-13Z"/><path d="M8.5 10V6.5a3.5 3.5 0 0 1 7 0V10"/>'),
   };
   boot();
 }());

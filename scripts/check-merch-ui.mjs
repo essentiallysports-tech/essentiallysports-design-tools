@@ -23,6 +23,15 @@
 // mode per turn), star, mix 2, add / edit own line, teammates' lines on the
 // 20 s refresh (brainstorm-get), filters, Design this → studio, Design all
 // starred → one set, Back to moments, "Brainstorm from my line", free mode.
+// Merch7: model / angle switcher on the stage (design only on calibrated
+// photos), Quick publish (admins: one tee, stage colour, suggested price,
+// rights tick, created hidden), multi-colour publish (colour chips, colors:[…]
+// in preview + create, a preview per colour, mockups grouped by colour), the
+// new blanks (long sleeve, crewneck, tank, youth, tote; logo inside on tank /
+// youth / tote), and Make an ad (feed / story / carousel, AI line from the
+// cached copy, line checks, price / link / QR, PNG + .zip downloads, the QR
+// read back with the browser's BarcodeDetector when it has one), from
+// Publish, the live panel and Your merch.
 // Run: node scripts/check-merch-ui.mjs   (MX_SHOTS=dir saves screenshots)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -118,7 +127,8 @@ const AUDIT = `(() => {
   const out = [];
   const vis = e => e.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) && e.getBoundingClientRect().width > 0;
   if (document.documentElement.scrollWidth > innerWidth + 1) out.push("horizontal scroll " + document.documentElement.scrollWidth + " " + [...document.querySelectorAll("#main *")].filter(e => e.getBoundingClientRect().right > innerWidth + 1).slice(0, 4).map(e => e.tagName + "." + String(e.className).slice(0, 30)).join(" | "));
-  const main = document.getElementById('main');
+  // An open dialog is audited on its own (the page under it is inert).
+  const main = document.querySelector('#main dialog[open]') || document.getElementById('main');
   const prim = [...main.querySelectorAll('.es-btn--primary')].filter(vis);
   if (prim.length > 1) out.push('primary buttons: ' + prim.length + ' ' + prim.map(p => p.id || p.textContent.trim().slice(0, 20)).join(', '));
   main.querySelectorAll('button,a[href],input,select,textarea,[role=radio]').forEach(e => {
@@ -312,7 +322,7 @@ async function flow(width, theme, mode) {
   calls.length = 0; bodies.length = 0; stored.length = 0;
   blockPut = theme === 'dark';
   await click('#mx-to-setup');
-  await until(`${step('publish')} && document.querySelectorAll('#mx-blanks [data-tpl]').length === 5 && document.getElementById('mx-price').value`, `${tag} publish`);
+  await until(`${step('publish')} && document.querySelectorAll('#mx-blanks [data-tpl]').length === ${DEMO.TEMPLATES.length} && document.getElementById('mx-price').value`, `${tag} publish`);
   ok(await ev("!document.querySelector('#mx-steps [data-step=designs]').disabled && !document.querySelector('#mx-steps [data-step=content]').disabled"), `${tag}: done steps stay open`);
   ok(await ev(TEE_ONLY_IN_DESIGN) && await ev("/Black tee/i.test(document.getElementById('mx-pub-color').textContent)") && await ev(visible('#mx-pub-color-change')), `${tag}: read-only colour line with Change`);
   ok(await ev("document.querySelectorAll('#mx-view-publish canvas:not([hidden])').length <= 1"), `${tag}: one preview`);
@@ -611,7 +621,145 @@ async function brainstormStates(width, theme) {
   await audit(`${tag}-error`);
 }
 
+// ─── Merch7: angles, Quick publish, ads, colours, new blanks ───────────────
+const adOpen = "document.getElementById('mx-ad').open";
+async function adFlow(tag, { live }) {
+  await until(`${adOpen} && document.querySelectorAll('#mx-ad-frames canvas.is-drawn').length >= 1 && document.getElementById('mx-ad-frames').getAttribute('aria-busy') === 'false'`, `${tag} ad drawn`, 20000);
+  ok(await ev("document.getElementById('mx-ad-line').value.length > 3 && !document.getElementById('mx-ad-line-note').classList.contains('is-bad')"), `${tag}: ad line filled (${await ev("document.getElementById('mx-ad-line').value")})`);
+  ok(await ev("document.querySelectorAll('#mx-ad-pics [data-ad-pic]').length >= 2"), `${tag}: lead image choices`);
+  ok(await ev(`document.querySelector('[data-ad-opt=link]').disabled === ${!live} && document.querySelector('[data-ad-opt=qr]').disabled === ${!live}`), `${tag}: link and QR ${live ? 'on offer' : 'wait for the product link'}`);
+  ok(await ev("(() => { const c = document.querySelector('#mx-ad-frames canvas'); return Math.abs(c.height / c.width - 1350 / 1080) < 0.02; })()"), `${tag}: feed is 4:5`);
+  await audit(`${tag}-ad-feed`);
+  // Line checks.
+  await setText('#mx-ad-line', 'The official tee');
+  ok(await ev("document.getElementById('mx-ad-line-note').classList.contains('is-bad') && /official/i.test(document.getElementById('mx-ad-line-note').textContent)"), `${tag}: "official" is refused`);
+  await setText('#mx-ad-line', 'Ninety 99 nights');
+  ok(await ev("/Numbers/.test(document.getElementById('mx-ad-line-note').textContent)"), `${tag}: invented numbers are refused`);
+  await click('#mx-ad-line-reset');
+  ok(await ev("!document.getElementById('mx-ad-line-note').classList.contains('is-bad')"), `${tag}: Reset brings the suggested line back`);
+  // Story.
+  await click('#mx-ad-format [data-ad-format=story]');
+  await until("(() => { const c = document.querySelector('#mx-ad-frames canvas.is-drawn'); return c && Math.abs(c.height / c.width - 1920 / 1080) < 0.02 && document.getElementById('mx-ad-frames').getAttribute('aria-busy') === 'false'; })()", `${tag} story`, 15000);
+  ok(true, `${tag}: story is 9:16`);
+  // Carousel.
+  await click('#mx-ad-format [data-ad-format=carousel]');
+  await until("document.getElementById('mx-ad-frames').dataset.format === 'carousel' && document.querySelectorAll('#mx-ad-frames canvas.is-drawn').length >= 3 && document.getElementById('mx-ad-frames').getAttribute('aria-busy') === 'false'", `${tag} carousel`, 20000);
+  ok(await ev("(() => { const n = document.querySelectorAll('#mx-ad-frames canvas').length; return n >= 3 && n <= 5 && new RegExp('Download ' + n + ' slides').test(document.getElementById('mx-ad-download').textContent); })()"), `${tag}: carousel 3–5 slides, download says how many`);
+  await audit(`${tag}-ad-carousel`);
+  if (live) {
+    await click('[data-ad-opt=qr]');
+    ok(await ev("MerchAds.state.qr && /^data:image\\/png/.test(MerchAds.state.qrSrc)"), `${tag}: QR on`);
+    const read = await ev(`(async () => { if (!('BarcodeDetector' in window)) return 'skip'; try { const img = new Image(); img.src = MerchAds.state.qrSrc; await img.decode(); const r = await new BarcodeDetector({ formats: ['qr_code'] }).detect(img); return r[0]?.rawValue || 'none'; } catch (e) { return 'skip'; } })()`);
+    ok(read === 'skip' || read === await ev('MerchAds.state.url'), `${tag}: the QR reads back as the product link (${read})`);
+  }
+  // Downloads (captured, not saved).
+  await ev("window.__mxSaved = []; window.__mxAdSave = (b, n) => { window.__mxSaved.push({ n, size: b.size, type: b.type, b }); }; true");
+  await click('#mx-ad-download');
+  await until("window.__mxSaved.length >= 1", `${tag} carousel zip`, 30000);
+  ok(await ev("(async () => { const s = window.__mxSaved[0]; const h = new Uint8Array(await s.b.slice(0, 2).arrayBuffer()); return /\\.zip$/.test(s.n) && s.size > 1000 && h[0] === 0x50 && h[1] === 0x4B; })()"), `${tag}: carousel downloads as a .zip of PNGs`);
+  await click('#mx-ad-format [data-ad-format=feed]');
+  await click('#mx-ad-download');
+  await until("window.__mxSaved.length >= 2", `${tag} feed png`, 20000);
+  ok(await ev("(async () => { const s = window.__mxSaved[1]; const h = new Uint8Array(await s.b.slice(1, 4).arrayBuffer()); return /feed-1080x1350\\.png$/.test(s.n) && String.fromCharCode(...h) === 'PNG'; })()"), `${tag}: feed downloads as a 1080×1350 PNG`);
+  ok(calls.filter(c => c === 'copy').length <= 1, `${tag}: no extra AI call for the ad (${calls.filter(c => c === 'copy').length} copy)`);
+  await ev("document.getElementById('mx-ad').close(); delete window.__mxAdSave; true");
+}
+async function merch7(width, theme) {
+  const tag = `${width}-${theme}-m7`;
+  scenario = 'ok';
+  calls.length = 0; bodies.length = 0;
+  await load(width, theme, 'm7');
+  await until('MerchUI.state.status', `${tag} status`);
+  await quickDesigns(tag);
+  // ── Model / angle switcher (White tee: four Fourthwall photos).
+  await until("document.querySelectorAll('#mx-angles [data-angle-i]').length >= 3", `${tag} angle switcher`);
+  ok(await ev("document.querySelector('#mx-angles [aria-checked=true]') && document.getElementById('mx-angles').getAttribute('role') === 'radiogroup' && document.querySelectorAll('#mx-angles .mx-angle__dot').length >= 1"), `${tag}: switcher opens on a photo with the design`);
+  const plain = await ev("document.querySelector('#mx-angles .is-plain')?.dataset.angleI ?? ''");
+  if (plain !== '') {
+    await click(`#mx-angles [data-angle-i="${plain}"]`);
+    await until("/Fourthwall’s mockups/.test(document.getElementById('mx-stage-cap').textContent)", `${tag} plain photo caption`);
+    ok(true, `${tag}: a photo without a print area shows Fourthwall's photo and says so`);
+  }
+  await click('#mx-angles [data-angle-i="0"]');
+  await audit(`${tag}-angles`);
+  // ── Quick publish.
+  await until(`${visible('#mx-quick')} && !document.getElementById('mx-quick').disabled`, `${tag} quick publish button`);
+  ok(await ev("!document.getElementById('mx-quick').classList.contains('es-btn--primary')"), `${tag}: Quick publish is not a second primary`);
+  await click('#mx-quick');
+  await until("document.getElementById('mx-quick-dlg').open && /T-shirt/.test(document.getElementById('mx-quick-facts').textContent) && /\\$25\\.99/.test(document.getElementById('mx-quick-facts').textContent)", `${tag} quick dialog`);
+  ok(await ev("document.getElementById('mx-quick-go').disabled"), `${tag}: Create hidden waits for the rights tick`);
+  await audit(`${tag}-quick`);
+  await click('#mx-quick-ack');
+  await until("!document.getElementById('mx-quick-go').disabled", `${tag} quick ready`);
+  calls.length = 0; bodies.length = 0;
+  await click('#mx-quick-go');
+  await until("!document.getElementById('mx-live').hidden && /Hidden/.test(document.querySelector('#mx-live .es-badge')?.textContent || '')", `${tag} quick created`, 25000);
+  const qb = bodies.find(b => b.mode === 'create');
+  ok(qb && qb.blank === 'tee' && qb.colors?.length === 1 && qb.colors[0] === qb.color && qb.retail === 25.99 && qb.ack?.accepted === true, `${tag}: Quick publish creates one tee, one colour, suggested price (${JSON.stringify({ b: qb?.blank, c: qb?.colors, r: qb?.retail })})`);
+  ok(!calls.includes('preview'), `${tag}: Quick publish skips the preview round trip (${calls.join(',')})`);
+  ok(await ev("/publish it to the shop/i.test(document.querySelector('#mx-live .mx-live__next').textContent)"), `${tag}: the live panel says what to do next`);
+  // ── Make an ad from the live panel.
+  await click('#mx-live [data-live=ad]');
+  await adFlow(`${tag}-live`, { live: true });
+  // ── Multi-colour publish on another design.
+  await click('#mx-steps [data-step=designs]');
+  await ev(`(() => { const b = document.querySelectorAll('#mx-strip [data-pick]')[1]; b.click(); return true; })()`);
+  await until("!document.getElementById('mx-to-setup').disabled", `${tag} continue`);
+  calls.length = 0; bodies.length = 0;
+  await click('#mx-to-setup');
+  await until(`${step('publish')} && !document.getElementById('mx-pcolors-wrap').hidden && document.querySelectorAll('#mx-pcolors [data-pub-color]').length >= 3`, `${tag} colour chips`);
+  ok(await ev("document.querySelector('#mx-pcolors [data-pub-color]:checked').disabled && document.querySelectorAll('#mx-pcolors [data-pub-color]:checked').length === 1"), `${tag}: the design's colour is in and fixed`);
+  ok(await ev("document.getElementById('mx-pub-more') && !document.getElementById('mx-pub-more').open && document.getElementById('mx-pub-more-meta').textContent.length > 3"), `${tag}: More options closed with a summary`);
+  const extra = await ev("[...document.querySelectorAll('#mx-pcolors [data-pub-color]:not(:checked)')].slice(0, 2).map(x => x.dataset.pubColor)");
+  for (const n of extra) await click(`#mx-pcolors [data-pub-color="${n}"]`);
+  ok(await ev(`MerchUI.state.colors.length === 3 && ${JSON.stringify(extra)}.every(n => MerchUI.state.colors.includes(n))`), `${tag}: two more colours ticked (${await ev('MerchUI.state.colors.join()')})`);
+  await until("document.querySelectorAll('#mx-pvariants [data-pvar] canvas[data-drawn]').length === 3", `${tag} a preview per colour`);
+  await click(`#mx-pvariants [data-pvar="${extra[0]}"]`);
+  ok(await ev(`MerchUI.state.pubColor === ${JSON.stringify(extra[0])} && document.querySelector('#mx-pvariants [aria-checked=true]').dataset.pvar === ${JSON.stringify(extra[0])}`), `${tag}: pick a colour to preview it`);
+  await until("!document.getElementById('mx-preview').hidden && !document.getElementById('mx-preview').disabled && !MerchUI.state.mock.busy", `${tag} update mockups button`, 15000);
+  await click('#mx-preview');
+  await until("document.querySelectorAll('#mx-mockups .mx-mockups__group').length === 3", `${tag} mockups by colour`, 15000);
+  const pv = bodies.filter(b => b.mode === 'preview').pop();
+  ok(pv && pv.colors?.length === 3, `${tag}: preview sends every colour`);
+  await audit(`${tag}-colors`);
+  // Ad before create: no link yet.
+  await click('#mx-ad-open');
+  await adFlow(`${tag}-publish`, { live: false });
+  await click('#mx-ack');
+  await until("!document.getElementById('mx-create-fw').disabled", `${tag} create enabled`);
+  bodies.length = 0;
+  await click('#mx-create-fw');
+  await until("!document.getElementById('mx-live').hidden && document.querySelector('#mx-live img')", `${tag} multi-colour live`, 25000);
+  const cb = bodies.find(b => b.mode === 'create');
+  ok(cb && cb.colors?.length === 3 && cb.colors[0] === cb.color, `${tag}: create sends colors:[3] with the design colour first`);
+  ok(await ev("MerchUI.state.product.colors.length === 3 && document.querySelectorAll('#mx-live .mx-mockups__group').length === 3"), `${tag}: live panel groups mockups by colour`);
+  // ── New blanks.
+  await click('#mx-steps [data-step=designs]');
+  await ev(`(() => { const b = document.querySelectorAll('#mx-strip [data-pick]')[2]; b.click(); return true; })()`);
+  await until("!document.getElementById('mx-to-setup').disabled", `${tag} continue 2`);
+  await click('#mx-to-setup');
+  await until(`${step('publish')} && document.querySelectorAll('#mx-blanks [data-tpl]').length === ${DEMO.TEMPLATES.length}`, `${tag} blanks`);
+  ok(await ev("['longsleeve','crewneck','tank','youth','tote'].every(k => { const b = document.querySelector('#mx-blanks [data-kind=' + k + ']'); return b && b.querySelector('.mx-blank__name').textContent.trim().length > 3; })"), `${tag}: new blanks with labels`);
+  await click('#mx-blanks [data-kind=tank]');
+  await until("MerchUI.state.templateId === 'pro_xPL7YjOBRQWVL50Im8eKAA' && document.querySelector('#mx-logo option[value=inline]')", `${tag} tank`);
+  ok(await ev("document.getElementById('mx-logo').value === 'inline' && !document.getElementById('mx-pcolors-wrap').hidden"), `${tag}: tank: ES logo inside the print, colour chips`);
+  await click('#mx-blanks [data-kind=tote]');
+  await until("MerchUI.state.templateId === 'pro_367'", `${tag} tote`);
+  ok(await ev("MerchUI.state.colors[0] === 'Oyster' && document.querySelectorAll('#mx-pcolors [data-pub-color]').length === 2 && document.getElementById('mx-logo').value === 'inline'"), `${tag}: tote: Oyster by default, Black on offer, logo inside`);
+  await audit(`${tag}-blanks`);
+  // ── Your merch: an ad from a row.
+  await click('#mx-tab-list');
+  await until("document.querySelector('#mx-list [data-row=ad]')", `${tag} list ad button`);
+  await click('#mx-list [data-row=ad]');
+  await until(`${adOpen} && document.querySelectorAll('#mx-ad-frames canvas.is-drawn').length >= 1`, `${tag} row ad`, 20000);
+  ok(await ev("!document.querySelector('[data-ad-opt=link]').disabled"), `${tag}: a row ad links to the product`);
+  await ev("document.getElementById('mx-ad').close(); true");
+}
+
 try {
+  await merch7(1440, 'light');
+  await merch7(1440, 'dark');
+  await merch7(1024, 'light');
   await brainstormFlow(1440, 'light', 'pro');
   await brainstormFlow(1440, 'dark', 'pro');
   await brainstormFlow(1024, 'light', 'basic');
@@ -637,4 +785,4 @@ if (fails.length) {
   [...new Set(fails)].forEach(f => console.log('  ✗ ' + f));
   process.exit(1);
 }
-console.log(`merch ui: ${checks} checks passed (1440 light + dark Pro, 1024 light Basic; brainstorm room; Create, making, studio folds, pill colours, popover, Publish, live panel, list and states; 375 list)`);
+console.log(`merch ui: ${checks} checks passed (1440 light + dark Pro, 1024 light Basic; merch7 angles, Quick publish, colours, new blanks, ads; brainstorm room; Create, making, studio folds, pill colours, popover, Publish, live panel, list and states; 375 list)`);
