@@ -3,6 +3,28 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-27-merch-brainstorm",
+      "date": "2026-11-27",
+      "title": "Merch Brainstorm: work a trend with AI, as a team",
+      "items": [
+        {
+          "title": "Brainstorm any moment",
+          "text": "Press Brainstorm on a trending moment. The AI reads the headlines, ES articles and a quick fact check, then suggests shirt lines you can push in any direction: funnier, a chant, a nickname, for neutral fans.",
+          "page": "merch.html"
+        },
+        {
+          "title": "One shared board",
+          "text": "Every line lands on a board the whole team can see. Star favourites, mix two lines, add your own, and see who added what.",
+          "page": "merch.html"
+        },
+        {
+          "title": "Straight to designs",
+          "text": "Design this opens a line in the studio. Design all starred turns your shortlist into a set.",
+          "page": "merch.html"
+        }
+      ]
+    },
+    {
       "id": "2026-11-26-editor-drag-replies",
       "date": "2026-11-26",
       "title": "Editor: drag cover text again, cleaner reply tweets",
