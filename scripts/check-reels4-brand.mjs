@@ -127,7 +127,15 @@ function analyse(f, voc, ctx) {
   const log = f.log;
   const texts = Q.classify(log, voc, ctx.band);
   // Type scale, fit, frame.
-  if (ctx.steps.length) texts.forEach(t => { if (!ctx.steps.some(s => Math.abs(s - t.size) <= 0.6)) add('scale', '"' + t.text.slice(0, 24) + '" (' + t.role + ') is ' + t.size + ' px, not on the type scale', t); });
+  if (ctx.steps.length) texts.forEach(t => {
+    if (ctx.steps.some(s => Math.abs(s - t.size) <= 0.6)) return;
+    // A caption word pops in from 0.86 of its step (CAPTION_POP) on the out curve.
+    if (t.role === 'caption' && ctx.steps.some(s => t.size >= s * 0.85 && t.size <= s + 0.6)) return;
+    // In motion (a pop or a morph)? The same words 400 ms later settle on a step.
+    const later = ctx.later ? ctx.later.filter(x => x.op === 'text' && x.text === t.text) : [];
+    if (later.length && later.every(x => ctx.steps.some(s => Math.abs(s - x.size) <= 0.6))) return;
+    add('scale', '"' + t.text.slice(0, 24) + '" (' + t.role + ') is ' + t.size + ' px, not on the type scale' + (later.length ? ' (also ' + later[0].size + ' px 400 ms later)' : ''), t);
+  });
   texts.forEach(t => {
     if (t.clipped) add('fit', '"' + t.text.slice(0, 24) + '" is cut off (drawn past its clip)', t);
     if (t.maxW != null && t.natW > t.maxW + 1) add('fit', '"' + t.text.slice(0, 24) + '" is squeezed (maxWidth ' + Math.round(t.maxW) + ' < ' + Math.round(t.natW) + ')', t);
@@ -151,6 +159,7 @@ function analyse(f, voc, ctx) {
     const m = Q.pillMetrics(t.size);
     const h = b.b - b.t;
     if (!m) { notes.push('no FrameUpRules.pillMetrics'); continue; }
+    if (h >= m.h * 1.6) { notes.push('a card / button (' + Math.round(b.r - b.l) + 'x' + Math.round(h) + ') holding "' + t.text.slice(0, 20) + '"'); continue; }
     if (!(near(h, m.h, 2.5) && (near(t.l - b.l, m.padLeft, 4) || near((b.l + b.r) / 2, (t.l + t.r) / 2, 4)))) add('pill', 'a one-line box (' + inner.map(x => x.role).join('/') + ' "' + t.text.slice(0, 20) + '") is not an ES pill: h ' + Math.round(h) + ', pad ' + Math.round(t.l - b.l) + ' (pill at ' + t.size + ' px: h ' + Math.round(m.h) + ', pad ' + Math.round(m.padLeft) + ')', b);
   }
   // Mark: always, top right.
@@ -166,7 +175,7 @@ function analyse(f, voc, ctx) {
   if (capWords > 3) add('caption', capWords + ' caption words on screen ("' + caps.map(t => t.text).join(' ').slice(0, 40) + '"; max 3)', union(caps));
   caps.forEach(t => { if (![T.ink, T.white, T.blue, '#ffffff', '#121212'].map(x => x.toLowerCase()).includes(t.fill)) add('caption', 'caption word "' + t.text + '" is ' + t.fill + ' (highlight is ES blue)', t); });
   // Zones.
-  const head = texts.filter(t => t.role === 'headline' || t.role === 'marker');
+  const head = texts.filter(t => t.role === 'headline');
   const mediaImgs = log.filter(e => e.op === 'image' && !/logo:/.test(String(e.src)) && area(e) > Q.W * Q.H * 0.02);
   const mod = texts.filter(t => t.role === 'module');
   const zone = { headline: union(head), media: union(mediaImgs), data: union(mod), caption: union(caps) };
@@ -212,7 +221,8 @@ function renderReel(entry, opts) {
     const d = bt.outMs - bt.inMs;
     const tS = Math.round(Math.max(bt.inMs + d * 0.45, Math.min(bt.inMs + 1700, bt.outMs - 700)));
     const f = Q.frame(tS, { thumb: { w: 180, h: 320 } });
-    const res = analyse(f, voc, { ...ctx, isClose });
+    const later = Q.frame(isClose ? bt.outMs - 200 : Math.min(bt.outMs - 1, tS + 400)).log;
+    const res = analyse(f, voc, { ...ctx, isClose, later });
     const beat = Q.beatsOf(plan).find(x => x.id === bt.id);
     if (beat && beat.stamp) {
       const late = Q.frame(Math.round(bt.outMs - 360));

@@ -225,26 +225,28 @@ function vocabFor(plan, beatId) {
   const set = k => new Set(strings(k).flatMap(words));
   const marker = ch.marker == null ? [] : (typeof ch.marker === 'string' ? [ch.marker] : ['#' + ch.marker.n, String(ch.marker.n), String(ch.marker.i), String(ch.marker.of), '3·2·1']);
   return {
-    headline: set(ch.headline), marker: set(marker), vo: set(b.vo), module: set(b.module), stamp: set(b.stamp && b.stamp.text), tag: set([b.tag && b.tag.text, b.module && b.module.tag]),
+    headline: set(ch.headline), marker: set(marker), vo: set(b.vo), module: set([b.module, b.module && b.module.type === 'wl' ? ['W', 'L', 'T'] : []]), stamp: set(b.stamp && b.stamp.text), tag: set([b.tag && b.tag.text, b.module && b.module.tag]),
     label: set([b.media && b.media.label, b.media && b.media.cards]), close: set(plan.close), source: set([plan.sourceLine, (plan.sources || []).map(s => s.source)]),
-    all: set([ch.headline, marker, b.vo, b.module, b.stamp, b.tag, b.media && b.media.label, b.media && b.media.cards, plan.sourceLine, plan.close]),
+    all: set([ch.headline, marker, b.vo, b.module, b.module && b.module.type === 'wl' ? ['W', 'L', 'T'] : [], b.stamp, b.tag, b.media && b.media.label, b.media && b.media.cards, plan.sourceLine, plan.close]),
     headlineRaw: plain(ch.headline || ''), emphasis: (String(ch.headline || '').match(/\*([^*]+)\*/) || [])[1] || '', tone: ch.tone || 'blue',
   };
 }
-function within(set, text) { const ws = words(text); return ws.length > 0 && ws.every(w => set.has(w) || NUMLIKE.test(w) || w.split(/[-/]/).every(x => !x || set.has(x) || NUMLIKE.test(x))); }
+// Every word of text is in set. strict: numbers must be in the set too (a headline's "21-POINT"
+// is in it, a module's "+21" is not); loose: any formatted number passes.
+function within(set, text, strict) { const ws = words(text); const ok = w => set.has(w) || (!strict && NUMLIKE.test(w)); return ws.length > 0 && ws.every(w => ok(w) || w.split(/[-/]/).every(x => !x || ok(x))) && (!strict || ws.some(w => set.has(w))); }
 function classify(log, voc, captionBand) {
   const texts = log.filter(e => e.op === 'text');
   return texts.map(t => {
     const cy = (t.t + t.b) / 2;
     let role = 'other';
     const inBand = captionBand && cy >= captionBand[0] && cy <= captionBand[1];
-    if (Math.abs(t.rot) >= 1 && within(voc.stamp, t.text)) role = 'stamp';
-    else if (inBand && within(voc.vo, t.text) && !within(voc.headline, t.text)) role = 'caption';
-    else if (within(voc.headline, t.text) && t.size >= 64) role = 'headline';
-    else if (within(voc.marker, t.text)) role = 'marker';
-    else if (within(voc.stamp, t.text)) role = 'stamp';
-    else if (within(voc.tag, t.text)) role = 'tag';
-    else if (within(voc.label, t.text)) role = 'label';
+    if (Math.abs(t.rot) >= 1 && within(voc.stamp, t.text, true)) role = 'stamp';
+    else if (inBand && within(voc.vo, t.text) && !within(voc.headline, t.text, true) && !within(voc.module, t.text, true) && !within(voc.tag, t.text, true) && !within(voc.label, t.text, true) && !within(voc.stamp, t.text, true)) role = 'caption';
+    else if (within(voc.headline, t.text, true) && t.size >= 64 && (!captionBand || t.b < captionBand[0])) role = 'headline';
+    else if (within(voc.marker, t.text, true)) role = 'marker';
+    else if (within(voc.stamp, t.text, true)) role = 'stamp';
+    else if (within(voc.tag, t.text, true)) role = 'tag';
+    else if (within(voc.label, t.text, true)) role = 'label';
     else if (within(voc.module, t.text)) role = 'module';
     else if (within(voc.close, t.text)) role = 'close';
     else if (within(voc.source, t.text)) role = 'source';

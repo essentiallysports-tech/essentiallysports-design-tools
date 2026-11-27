@@ -123,24 +123,42 @@ function segments(track) {
       const big = ch === 'a' ? Math.abs(total) >= 0.4 : Math.abs(total) >= 24;
       if (big && j - i >= 2) {
         const pts = track.slice(i - 1, j + 1).map(s => ({ t: s.t, p: (s.e[ch] - s0.e[ch]) / total }));
-        out.push({ ch, t0: s0.t, t1: s1.t, total, pts });
+        // The fit sees the track around the move: from 3 steps before to 10 steps after.
+        const ctxPts = track.slice(Math.max(0, i - 4), Math.min(track.length, j + 11)).map(s => ({ t: s.t, v: s.e[ch] }));
+        out.push({ ch, t0: s0.t, t1: s1.t, total, pts, v0: s0.e[ch], v1: track[Math.min(track.length - 1, j + 1)].e[ch], ctxPts });
       }
       i = j + 1;
     }
   }
   return out;
 }
+// Which named curve and which scale duration explain the move? Fit pred(t) = v0 + (v1 - v0) * f((t - t0) / D)
+// over the samples around it, for f in out / inOut / in / spring / linear, D on the scale (and free D for
+// the record), t0 near the first changed sample. Linear: the straight line explains it clearly better.
+function springAt(q, durMs) { if (q <= 0) return 0; if (q >= 1) return 1; const k = 300, d = 26, m = 1; const w0 = Math.sqrt(k / m), z = d / (2 * Math.sqrt(k * m)), wd = w0 * Math.sqrt(1 - z * z), tau = q * durMs / 1000; return 1 - Math.exp(-z * w0 * tau) * (Math.cos(wd * tau) + (z * w0 / wd) * Math.sin(wd * tau)); }
 function judge(seg, step) {
-  const T = seg.t1 - seg.t0;
-  const xs = seg.pts.map(p => ({ x: (p.t - seg.t0) / T, p: p.p }));
-  const linDev = Math.max(...xs.map(q => Math.abs(q.p - q.x)));
-  const overshoot = Math.max(...xs.map(q => q.p)) > 1.03 || Math.min(...xs.map(q => q.p)) < -0.03;
-  let best = null;
-  for (const [k, f] of Object.entries(NAMED)) { const rms = Math.sqrt(xs.reduce((s, q) => s + (q.p - f(q.x)) ** 2, 0) / xs.length); if (!best || rms < best.rms) best = { k, rms }; }
-  // The real duration: the move started up to one step before the first changed sample and ended by the last.
-  const dur = T;
-  const onScale = SCALE.find(s => Math.abs(s - dur) <= step + 10) || null;
-  return { linear: !overshoot && linDev < 0.06 && xs.length >= 4, linDev: Math.round(linDev * 100) / 100, spring: overshoot, curve: best, dur: Math.round(dur), onScale };
+  const pts = seg.ctxPts;
+  const v0 = pts[0].v, v1 = pts[pts.length - 1].v;
+  const span = Math.abs(v1 - v0) || Math.abs(seg.total) || 1;
+  const fns = { ...NAMED, linear: x => x };
+  const fit = (f, D, t0, spring) => Math.sqrt(pts.reduce((a, q) => { const x = Math.max(0, Math.min(1, (q.t - t0) / D)); const pv = v0 + (v1 - v0) * (spring ? springAt(x, D) : f(x)); return a + ((q.v - pv) / span) ** 2; }, 0) / pts.length);
+  const durs = [...SCALE, 80, 120, 200, 280, 320, 360, 480, 560, 800, 1000, 1200];
+  let best = null; let bestScale = null; let bestLin = null;
+  for (const [name, f] of [...Object.entries(fns), ['spring', null]]) {
+    for (const D of durs) {
+      for (let t0 = seg.t0 - step - 24; t0 <= seg.t0 + 8; t0 += 4) {
+        const e = fit(f, D, t0, name === 'spring');
+        const r = { k: name, D, t0, rms: e };
+        if (name === 'linear') { if (!bestLin || e < bestLin.rms) bestLin = r; continue; }
+        if (!best || e < best.rms) best = r;
+        if (SCALE.includes(D) && (!bestScale || e < bestScale.rms)) bestScale = r;
+      }
+    }
+  }
+  const linear = bestLin && best && bestLin.rms + 0.01 < best.rms && bestLin.rms < 0.04;
+  // Within about one 16 ms sample of a scale step counts as on the scale.
+  const onScale = bestScale && bestScale.rms <= Math.max(0.05, best.rms + 0.02) ? bestScale.D : null;
+  return { linear, linDev: bestLin ? Math.round(bestLin.rms * 1000) / 1000 : null, spring: best && best.k === 'spring', curve: best ? { k: best.k, rms: Math.round(best.rms * 1000) / 1000 } : null, dur: best ? best.D : Math.round(seg.t1 - seg.t0), onScale, fitScale: bestScale ? { k: bestScale.k, D: bestScale.D, rms: Math.round(bestScale.rms * 1000) / 1000 } : null };
 }
 
 function run(entry, opts) {
@@ -194,9 +212,12 @@ function run(entry, opts) {
       const { els } = elements(f.log, vocAt(t), band);
       for (const [k, e] of els) { if (!tracks.has(k)) tracks.set(k, []); tracks.get(k).push({ t, e }); }
       if (prev) for (const [k, e] of els) {
-        const p = prev.get(k);
-        if (p && Math.hypot(p.x - e.x, p.y - e.y) > 200) bad.push(k.replace(/#\d+$/, '') + ' teleports ' + Math.round(Math.hypot(p.x - e.x, p.y - e.y)) + ' px in ' + step + ' ms @' + t);
-        if (!p && t > tb && e.a > 0.9 && e.kind === 'text' && e.role !== 'stamp') { const later = Q.frame(t + 400); const L2 = elements(later.log, vocAt(t + 400), band).els.get(k); if (L2 && Math.abs(L2.size - e.size) < 0.5 && Math.abs(L2.y - e.y) < 1 && Math.abs(L2.x - e.x) < 1) bad.push(k.replace(/#\d+$/, '') + ' appears at full size and opacity @' + t + ' (no entrance)'); }
+        const base = k.replace(/#\d+$/, '');
+        const same = [...prev.entries()].filter(([pk]) => pk.replace(/#\d+$/, '') === base).map(([, v]) => v);
+        const nowN = [...els.keys()].filter(x => x.replace(/#\d+$/, '') === base).length;
+        const p = same.length ? same.reduce((a, c) => (Math.hypot(c.x - e.x, c.y - e.y) < Math.hypot(a.x - e.x, a.y - e.y) ? c : a)) : null;
+        if (p && same.length === nowN && Math.hypot(p.x - e.x, p.y - e.y) > 400) bad.push(base + ' teleports ' + Math.round(Math.hypot(p.x - e.x, p.y - e.y)) + ' px in ' + step + ' ms @' + t);
+        if (!p && t > tb && e.a > 0.9 && e.kind === 'text' && e.role !== 'stamp' && !/^[#+\-−]?[\d.,:%]+$/.test(base.split(':').slice(2).join(':'))) { const later = Q.frame(t + 400); const L2 = elements(later.log, vocAt(t + 400), band).els.get(k); if (L2 && Math.abs(L2.size - e.size) < 0.5 && Math.abs(L2.y - e.y) < 1 && Math.abs(L2.x - e.x) < 1) bad.push(k.replace(/#\d+$/, '') + ' appears at full size and opacity @' + t + ' (no entrance)'); }
       }
       prev = els;
     }
@@ -291,11 +312,12 @@ function run(entry, opts) {
     for (const [k, tr2] of tracks) segments(tr2).forEach(s => { if (!moves.some(m => m.key === k.replace(/#\d+$/, '') && m.ch === s.ch && Math.abs(m.t0 - s.t0) < 20)) moves.push({ key: k.replace(/#\d+$/, ''), at: bt.id, ...s, ...judge(s, 16) }); });
   }
   const isKB = m => /^I:/.test(m.key) && m.t1 - m.t0 > 900;
+  // Ambient (Ken Burns on photos, a quote's read bar) is marked ambient by the engine: not on the scale.
   for (const m of moves) {
     const where = m.at + ' ' + m.key.slice(0, 40) + ' ' + m.ch + ' @' + m.t0 + '-' + m.t1 + ' ms';
     if (m.linear) fail('easing', where + ': linear (max deviation ' + m.linDev + ')' + (isKB(m) ? ' [Ken Burns]' : ''));
-    else if (!m.spring && m.curve && m.curve.rms > 0.12 && !isKB(m)) notes.push(where + ': not close to a named curve (best ' + m.curve.k + ', rms ' + m.curve.rms.toFixed(3) + ')');
-    if (!m.spring && !isKB(m) && !m.onScale) fail('durations', where + ': lasts ~' + m.dur + ' ms (scale ' + SCALE.join('/') + ')');
+    else if (m.curve && m.curve.rms > 0.06 && !isKB(m)) notes.push(where + ': no curve x duration explains it well (best ' + m.curve.k + ' ' + m.dur + ' ms, rms ' + m.curve.rms.toFixed(3) + ')');
+    if (!m.linear && !isKB(m) && !m.onScale && m.curve && m.curve.rms <= 0.06) fail('durations', where + ': best fit ' + m.curve.k + ' ' + m.dur + ' ms (rms ' + m.curve.rms + '); on the scale the best is ' + (m.fitScale ? m.fitScale.k + ' ' + m.fitScale.D + ' ms rms ' + m.fitScale.rms : 'none'));
   }
   return { v: b.v, durationMs: b.durationMs, chapters: info.chapters.length, beats: info.beats.length, band, wipes, transitions: transitions.map(t => ({ ...t })), moves: moves.map(m => ({ key: m.key, at: m.at, ch: m.ch, t0: m.t0, t1: m.t1, dur: m.dur, linear: m.linear, linDev: m.linDev, spring: m.spring, curve: m.curve, onScale: m.onScale })), stills, fails, notes, sheet: opts.sheet && strips.length ? Q.sheet(strips.slice(0, 24), 'reels4 motion · ' + entry.label) : '' };
 }
