@@ -201,6 +201,18 @@ const CHECKS = [
     },
   },
   {
+    // Merch's Create button showed a "⌘ ↵" shortcut hint on phones.
+    id: 'merch-no-kbd-on-phone',
+    async run() {
+      for (const [width, want] of [[375, false], [1440, true]]) {
+        if (!await open('/merch.html', { width, ready: "document.querySelector('#mx-create-kbd')", ms: 15000 })) return `merch never loaded at ${width}`;
+        const shown = await c.evaluate("Boolean(document.querySelector('#mx-create-kbd').getClientRects().length)");
+        if (shown !== want) return `at ${width}px the ⌘ ↵ hint is ${shown ? 'shown' : 'hidden'}`;
+      }
+      return '';
+    },
+  },
+  {
     // Keyboard users tabbed through ~20 sidebar links before the work on every
     // page. The first Tab stop is now "Skip to main content".
     id: 'skip-link',
