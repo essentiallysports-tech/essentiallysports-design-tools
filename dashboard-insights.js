@@ -36,6 +36,7 @@
   //   feedback:       [{ feedbackType, createdAt }]
   //   errorRows:      frameup_client_errors rows from the last 7 days, or null (not loaded)
   //   rangeDays:      the overview range (1, 7, 30, 90)
+  //   requestsOff:    Design Requests are paused (pass tasks without requests)
   //   exportTime(task), creatorName(task): the page's own helpers
   function computeInsights(input = {}, { now = Date.now(), limit = 5 } = {}) {
     const tasks = Array.isArray(input.tasks) ? input.tasks : [];
@@ -179,7 +180,9 @@
     const sorted = out.sort((a, b) => TONE_ORDER[a.tone] - TONE_ORDER[b.tone]);
     const needsAction = sorted.filter(item => item.tone === 'bad' || item.tone === 'warn').length;
     if (!needsAction) {
-      sorted.unshift({ id: 'clear', tone: 'good', title: 'Nothing urgent', detail: 'No overdue or unassigned requests, and nobody waiting for access.', action: null });
+      // requestsOff: Design Requests are paused (no request wording).
+      const detail = input.requestsOff ? 'Nobody is waiting for access.' : 'No overdue or unassigned requests, and nobody waiting for access.';
+      sorted.unshift({ id: 'clear', tone: 'good', title: 'Nothing urgent', detail, action: null });
     }
     return { items: sorted.slice(0, limit), total: sorted.length, needsAction };
   }

@@ -40,6 +40,8 @@ function supabaseReply(url, method, headers) {
   return [404, {}];
 }
 
+// Per-check rewrites of local files as Chrome loads them: { 'app-shell.js': text => text' }.
+let REWRITE = {};
 const c = await startChrome(CHROME);
 const errors = [];
 const external = u => { try { const h = new URL(u).hostname; return h !== 'localhost' && h !== '127.0.0.1'; } catch { return false; } };
@@ -50,6 +52,9 @@ c.on(m => {
       const [status, body] = supabaseReply(request.url, request.method, request.headers || {});
       const headers = [{ name: 'content-type', value: 'application/json' }, { name: 'access-control-allow-origin', value: '*' }, { name: 'access-control-allow-headers', value: '*' }, { name: 'access-control-allow-methods', value: '*' }, { name: 'content-range', value: '0-0/0' }];
       c.send('Fetch.fulfillRequest', { requestId, responseCode: request.method === 'OPTIONS' ? 204 : status, responseHeaders: headers, body: Buffer.from(request.method === 'OPTIONS' ? '' : JSON.stringify(body)).toString('base64') });
+    } else if (!external(request.url) && Object.keys(REWRITE).some(k => new URL(request.url).pathname.endsWith('/' + k))) {
+      const k = Object.keys(REWRITE).find(name => new URL(request.url).pathname.endsWith('/' + name));
+      fetch(request.url).then(r => r.text()).then(text => c.send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'content-type', value: 'text/javascript' }, { name: 'cache-control', value: 'no-store' }], body: Buffer.from(REWRITE[k](text)).toString('base64') }));
     } else if (external(request.url) && !/fonts\.(googleapis|gstatic)\.com/.test(request.url)) {
       c.send('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' });
     } else c.send('Fetch.continueRequest', { requestId });
@@ -236,13 +241,64 @@ const CHECKS = [
       return '';
     },
   },
+  // ── Slice 2 (qa/ux-audit-2, 2026-11-28) ────────────────────────────────
+  {
+    // Owner decision R4: while Design Requests are paused the admin dashboard
+    // hides the Open requests KPI, the Board and Requests tabs and request
+    // activity; switching requests back on brings them back.
+    id: 'dashboard-requests-paused',
+    async run() {
+      const ago = h => new Date(Date.now() - h * 3600e3).toISOString();
+      const REQ = '00000000-0000-4000-8000-0000000000a1';
+      SB = {
+        is_es_designer_admin: [200, true],
+        es_designer_tasks: [200, [
+          { id: REQ, source_id: 'REQ-1', task_type: 'design_request', title: 'Lakers playoff poster', status: 'In Progress', priority: 'Urgent', requester_email: 'ana@essentiallysports.com', design_due_at: ago(30), created_at: ago(50), updated_at: ago(2) },
+          { id: '00000000-0000-4000-8000-0000000000b1', task_type: 'exported_design', title: 'Scheffler wins', status: 'Backlog', creator_email: 'priya@essentiallysports.com', workspace: 'Social Media', created_at: ago(3), updated_at: ago(3), meta_exported_at: ago(3) },
+        ]],
+        es_designer_activity: [200, [
+          { id: 'a1', created_at: ago(1), type: 'request_submitted', label: 'New request: Lakers playoff poster', entity_type: 'request', entity_id: 'REQ-1' },
+          { id: 'a2', created_at: ago(2), type: 'task_updated', label: 'Updated Lakers playoff poster', entity_type: 'task', entity_id: REQ },
+          { id: 'a3', created_at: ago(3), type: 'design_exported', label: 'Exported Scheffler wins', entity_type: 'task', entity_id: '00000000-0000-4000-8000-0000000000b1' },
+        ]],
+      };
+      await c.send('Network.enable');
+      await c.send('Network.setCacheDisabled', { cacheDisabled: true });
+      const read = `(() => ({
+        kpis: [...document.querySelectorAll('.dov-kpi')].filter(e => getComputedStyle(e).display !== 'none').map(e => e.dataset.kpi),
+        tabs: [...document.querySelectorAll('.sidebar-nav [data-dashboard-view]')].filter(e => e.getClientRects().length).map(e => e.dataset.dashboardView),
+        feed: document.querySelector('#dov-activity-feed').innerText,
+        log: document.querySelector('#activity-list').innerText,
+        queue: document.querySelector('#dov-queue').closest('.dov-card').innerText,
+        view: document.body.dataset.dashboardView,
+      }))()`;
+      try {
+        for (const on of [false, true]) {
+          REWRITE = on ? { 'app-shell.js': t => t.replace('Object.freeze({ requests: false })', 'Object.freeze({ requests: true })') } : {};
+          await c.send('Page.navigate', { url: `${base}/__blank` }); await sleep(200); // a full load, not a hash change
+          if (!await open('/dashboard.html#board', { ready: "document.querySelector('#dov-activity-feed .dov-feed')", ms: 20000 })) return `dashboard never showed the activity feed (requests ${on ? 'on' : 'off'})`;
+          await sleep(800);
+          const r = await c.evaluate(read);
+          const hasReq = r.kpis.includes('requests') && r.tabs.includes('board') && r.tabs.includes('list') && /Lakers/.test(r.feed) && /Lakers/.test(r.log) && /Open requests/.test(r.queue);
+          const noReq = !r.kpis.includes('requests') && !r.tabs.includes('board') && !r.tabs.includes('list') && !/Lakers|request/i.test(r.feed) && !/Lakers/.test(r.log) && !/Lakers|Open board|Design requests/i.test(r.queue) && /Scheffler/.test(r.feed);
+          if (on && !hasReq) return 'requests switched on but the dashboard does not show them: ' + JSON.stringify(r).slice(0, 400);
+          if (!on && !noReq) return 'requests paused but the dashboard still shows them: ' + JSON.stringify(r).slice(0, 400);
+          if (!on && r.view !== 'overview') return '#board while paused opened ' + r.view;
+          if (on && r.view !== 'board') return '#board with requests on opened ' + r.view;
+        }
+      } finally {
+        await c.send('Network.setCacheDisabled', { cacheDisabled: false });
+      }
+      return '';
+    },
+  },
 ];
 
 let failed = 0; let ran = 0;
 const only = process.env.UX_ONLY || '';
 for (const check of CHECKS) {
   if (only && !check.id.startsWith(only)) continue;
-  API = {}; SB = {};
+  API = {}; SB = {}; REWRITE = {};
   ran++;
   let problem = '';
   try { problem = await check.run(); } catch (error) { problem = 'threw: ' + String(error.message || error).slice(0, 300); }

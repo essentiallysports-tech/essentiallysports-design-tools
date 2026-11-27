@@ -445,24 +445,24 @@
   </style>
   <link rel="stylesheet" href="dashboard-v2.css?v=20261117-focus1">
   <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
-  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261125-chart">
+  <link rel="stylesheet" href="dashboard-ui-system.css?v=20261128-ux2">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
   <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
   <link rel="stylesheet" href="design-tokens.css?v=20261121-rel2">
-<link rel="stylesheet" href="es-ui.css?v=20261122-rel">
+<link rel="stylesheet" href="es-ui.css?v=20261128-ux2">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <script src="theme.js?v=20261120-rel2"></script>
   <link rel="stylesheet" href="dashboard-people.css?v=20261121-rel2">
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
 <script src="frameup-ai-mode.js?v=20261121-rel"></script>
-<script src="app-shell.js?v=20261127-ux1"></script>
-<link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
+<script src="app-shell.js?v=20261128-ux2"></script>
+<link rel="stylesheet" href="frameup-tour.css?v=20261128-ux2">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261121-notes"></script>
 <script src="tours/tours.js?v=20261128-reels3"></script>
-<script src="tours/tour-launcher.js?v=20261120-rel2"></script>
+<script src="tours/tour-launcher.js?v=20261128-ux2"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
 <link rel="stylesheet" href="frameup-posted.css?v=20261127-ux1">
 <link rel="stylesheet" href="frameup-impact.css?v=20261118-rel1">
@@ -477,7 +477,7 @@
 <link rel="stylesheet" href="frameup-newsletter-view.css?v=20261121-nl">
 <script src="frameup-newsletter-stats.js?v=20261121-nl"></script>
 <script src="frameup-newsletter-view.js?v=20261121-nl"></script>
-<script src="dashboard-insights.js?v=20261119-rel3"></script>
+<script src="dashboard-insights.js?v=20261128-ux2"></script>
 <script src="frameup-learning.js?v=20261122-rel" defer></script>
 <link rel="stylesheet" href="dashboard-insights.css?v=20261127-bottom1">
 </head>
@@ -528,7 +528,7 @@
         <button class="is-active" type="button" data-dashboard-view="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Overview</span></button>
         <button type="button" data-dashboard-view="usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span>Usage</span></button>
         <button type="button" data-dashboard-view="impact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 7h6v6"/><path d="m22 7-8.5 8.5-5-5L2 17"/></svg><span>Impact</span></button>
-        <span class="dash-tab-sep" aria-hidden="true"></span>
+        <span class="dash-tab-sep" aria-hidden="true" data-requests-only></span>
         <button type="button" data-dashboard-view="board"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3v14"/><path d="M12 3v8"/><path d="M19 3v18"/></svg><span>Board</span><span class="nav-count" data-request-count>0</span></button>
         <button type="button" data-dashboard-view="list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg><span>Requests</span><span class="nav-count" data-open-request-count>0</span></button>
         <span class="dash-tab-sep" aria-hidden="true"></span>
@@ -614,7 +614,7 @@
                 </article>
                 <article class="dov-card">
                   <header class="dov-card-head">
-                    <div><h3 class="dov-card-title es-type-card-title">Latest activity</h3><p class="dov-card-meta">Exports, requests, feedback and changes</p></div>
+                    <div><h3 class="dov-card-title es-type-card-title">Latest activity</h3><p class="dov-card-meta" data-requests-text="Exports, feedback and changes">Exports, requests, feedback and changes</p></div>
                     <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="activity">View all</button>
                   </header>
                   <div class="dov-card-body is-flush" id="dov-activity-feed"></div>
@@ -634,8 +634,8 @@
               <div class="dov-grid is-2-1">
                 <article class="dov-card">
                   <header class="dov-card-head">
-                    <div><h3 class="dov-card-title es-type-card-title">Requests and exports by status</h3><p class="dov-card-meta" id="dov-queue-meta">All time</p></div>
-                    <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="board">Open board</button>
+                    <div><h3 class="dov-card-title es-type-card-title" data-requests-text="Exports by status">Requests and exports by status</h3><p class="dov-card-meta" id="dov-queue-meta">All time</p></div>
+                    <button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-dashboard-view="board" data-requests-only>Open board</button>
                   </header>
                   <div class="dov-card-body" id="dov-queue"></div>
                 </article>
@@ -801,7 +801,7 @@
 
           <section class="panel" data-view-section="activity" data-dashboard-panel="activity">
             <div class="panel-head">
-              <div><h2 class="panel-title">Activity log</h2><p class="panel-subtitle">Request submissions, editor exports, assignments and status changes. For everything people take from FrameUp, see Usage.</p></div>
+              <div><h2 class="panel-title">Activity log</h2><p class="panel-subtitle" data-requests-text="Editor exports, assignments and status changes. For everything people take from FrameUp, see Usage.">Request submissions, editor exports, assignments and status changes. For everything people take from FrameUp, see Usage.</p></div>
             </div>
             <div class="activity-list" id="activity-list"></div>
           </section>
@@ -868,6 +868,26 @@
     let peopleAdmin = null;
     const DASHBOARD_SEEN_KEY = 'es.dashboard.seenBadges.v1';
     const DASHBOARD_VIEWS = new Set(['overview', 'usage', 'impact', 'board', 'list', 'designs', 'newsletter', 'feedback', 'people', 'access', 'activity']);
+    // Design requests are paused (app-shell.js FEATURES.requests sets
+    // html.fu-requests-off). While paused the dashboard drops the Open requests
+    // KPI, the Board and Requests tabs, request rows in the queue, insights and
+    // request items in the activity feeds; data stays untouched, so turning
+    // requests back on restores all of it. CSS: dashboard-ui-system.css.
+    const REQUEST_VIEWS = new Set(['board', 'list']);
+    function requestsPaused() {
+      return document.documentElement.classList.contains('fu-requests-off');
+    }
+    function withoutRequestActivity(items, state) {
+      if (!requestsPaused()) return items;
+      const requestIds = new Set((state.tasks || []).filter(task => task.type === 'design_request').map(task => String(task.id)));
+      return items.filter(item => !(/^request[_-]/.test(String(item.type || ''))
+        || item.entityType === 'request'
+        || (item.entityType === 'task' && requestIds.has(String(item.entityId)))));
+    }
+    function applyRequestsPauseCopy() {
+      if (!requestsPaused()) return;
+      document.querySelectorAll('[data-requests-text]').forEach(el => { el.textContent = el.dataset.requestsText; });
+    }
     let dashboardUser = { name: 'ES Admin', email: '', role: 'Admin', accessRole: 'Admin', designation: 'Design Operations' };
     let canAssignDashboardRoles = false;
     let selectedTaskId = '';
@@ -1312,6 +1332,7 @@
 
     function requestedDashboardView() {
       const fromHash = String(window.location.hash || '').replace(/^#/, '').trim().toLowerCase();
+      if (requestsPaused() && REQUEST_VIEWS.has(fromHash)) return 'overview';
       return DASHBOARD_VIEWS.has(fromHash) ? fromHash : 'overview';
     }
 
@@ -1824,7 +1845,8 @@
         : '<span class="dash-head-warn">Couldn’t load dashboard data</span>');
       else if (sync.checkedAt) parts.push(`Updated ${escapeHtml(new Date(sync.checkedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }))}`);
       else parts.push('Loading the latest data…');
-      parts.push(`<span class="dash-head-live"><span class="es-live-dot" aria-hidden="true"></span>${fmt(online)} online</span>`);
+      // The green live dot only when someone is online ("0 online" with a green dot read as live).
+      parts.push(`<span class="dash-head-live${online ? '' : ' is-empty'}">${online ? '<span class="es-live-dot" aria-hidden="true"></span>' : ''}${fmt(online)} online</span>`);
       const greeting = meta.querySelector('[data-greeting]')?.outerHTML || '';
       const name = meta.querySelector('[data-welcome-name]')?.outerHTML || '';
       setHtml(meta, `<span>${greeting}, ${name}</span> · ${parts.join(' · ')}`);
@@ -1893,11 +1915,11 @@
       if (!target) return;
       const gate = sectionGate(state, { rows: 6 });
       if (gate) { setHtml(target, gate); return; }
-      const items = (state.activity || []).slice()
+      const items = withoutRequestActivity(state.activity || [], state).slice()
         .sort((a, b) => (Date.parse(b.createdAt || '') || 0) - (Date.parse(a.createdAt || '') || 0))
         .slice(0, 7);
       if (!items.length) {
-        setHtml(target, emptyState('No activity yet', 'Exports, requests and changes are logged here.'));
+        setHtml(target, emptyState('No activity yet', requestsPaused() ? 'Exports and changes are logged here.' : 'Exports, requests and changes are logged here.'));
         return;
       }
       setHtml(target, `<ol class="dov-feed">${items.map(item => {
@@ -2086,6 +2108,11 @@
       if (gate) { setHtml(target, gate); return; }
       const requests = (state.tasks || []).filter(task => task.type === 'design_request');
       const designs = allExports(state);
+      if (requestsPaused()) {
+        setHtml('#dov-queue-meta', `${fmt(designs.filter(task => task.status !== 'Done').length)} exports not marked done`);
+        setHtml(target, `<div class="dov-strips">${statusStrip('Exports', designs, { exportsMode: true })}</div>`);
+        return;
+      }
       const open = requests.filter(task => !CLOSED_STATUSES.includes(task.status)).sort((a, b) =>
         priorityWeight(b.priority) - priorityWeight(a.priority)
         || (Date.parse(a.designDueAt || '') || Infinity) - (Date.parse(b.designDueAt || '') || Infinity));
@@ -2401,7 +2428,8 @@
       list.setAttribute('aria-busy', 'false');
       if (phase === 'error') { setHtml(meta, 'Not available'); setHtml(list, `<li>${errorState('Couldn’t work this out without the latest data.')}</li>`); return; }
       const { items, needsAction } = window.FrameUpDashboardInsights.computeInsights({
-        tasks: state.tasks || [],
+        tasks: requestsPaused() ? (state.tasks || []).filter(task => task.type !== 'design_request') : (state.tasks || []),
+        requestsOff: requestsPaused(),
         accessRequests: accessRequestsStatus === 'ready' ? accessRequests : [],
         feedback: state.toolFeedback || [],
         errorRows: clientErrorsCache && clientErrorsCache.ready ? clientErrorsCache.rows : null,
@@ -2654,11 +2682,12 @@
     function renderActivity(state) {
       const target = document.getElementById('activity-list');
       if (!target) return;
-      if (!state.activity.length) {
+      const activity = withoutRequestActivity(state.activity || [], state);
+      if (!activity.length) {
         target.innerHTML = '<div class="empty">No activity logged yet.</div>';
         return;
       }
-      target.innerHTML = state.activity.slice(0, 40).map(activity => `
+      target.innerHTML = activity.slice(0, 40).map(activity => `
         <article class="activity"><strong>${text(activity.label)}</strong><span>${dateText(activity.createdAt)} · ${text(personDisplayName(activity.actorName, activity.actorEmail))}</span></article>
       `).join('');
     }
@@ -2743,6 +2772,7 @@
     }
 
     function setDashboardView(view, shouldMarkSeen = false) {
+      if (requestsPaused() && REQUEST_VIEWS.has(view)) view = 'overview';
       if (shouldMarkSeen) markDashboardViewSeen(view);
       document.body.dataset.dashboardView = view;
       syncDashboardViewSections(view);
@@ -2756,6 +2786,7 @@
     }
 
     function renderDashboard() {
+      applyRequestsPauseCopy();
       const state = window.ESDashboardData.getDashboardState();
       renderMetrics(state);
       renderTaskFilters(state);

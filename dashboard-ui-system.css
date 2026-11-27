@@ -2572,3 +2572,16 @@ html[data-theme="dark"] body.dashboard-page .dashboard-app .kanban-column .empty
 html body.dashboard-page .dashboard-app .panel-head + .activity-list,
 html body.dashboard-page .dashboard-app .panel-head + .people-list { padding-top: 0 !important; }
 html body.dashboard-page .dashboard-app .feedback-summary { padding-top: var(--es-space-1) !important; }
+
+/* ---- Design requests paused (app-shell.js FEATURES.requests = false sets
+   html.fu-requests-off): no Open requests KPI, no Board / Requests tabs, no
+   "Open board". Turning requests back on brings all of it back. ---- */
+html.fu-requests-off body.dashboard-page :is(.dov-kpi[data-kpi="requests"], .sidebar-nav [data-dashboard-view="board"], .sidebar-nav [data-dashboard-view="list"], [data-requests-only]) { display: none !important; }
+html.fu-requests-off body.dashboard-page .dov-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1179px) {
+  html.fu-requests-off body.dashboard-page .dov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html.fu-requests-off body.dashboard-page .dov-kpi[data-kpi="visitors"] { grid-column: 1 / -1; }
+}
+@media (max-width: 599px) {
+  html.fu-requests-off body.dashboard-page .dov-kpis { grid-template-columns: minmax(0, 1fr); }
+}
