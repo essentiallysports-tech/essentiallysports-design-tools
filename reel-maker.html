@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Reels Studio | FrameUp</title>
-  <meta name="description" content="Describe a reel, pick one of four ES styles and get a reel that is ready to post: verified clips and photos, voiceover, captions. Exports MP4 in the browser.">
+  <meta name="description" content="Paste your script, pick one of four ES styles and get a reel built around your words: chapters, verified clips, data, voiceover and captions. Exports MP4 in the browser.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="reel-maker.css?v=20261127-rv4ui">
+  <link rel="stylesheet" href="reel-maker.css?v=20261127-rv4ui5">
   <link rel="stylesheet" href="reel-inputs.css?v=20261125-reels2">
   <link rel="stylesheet" href="reel-b-panels.css?v=20261125-reels2">
   <script src="theme.js?v=20261120-rel2"></script>
@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
   <script src="frameup-tour.js?v=20261117-tour1"></script>
   <script src="tours/updates.js?v=20261121-notes"></script>
-  <script src="tours/tours.js?v=20261128-reels3"></script>
+  <script src="tours/tours.js?v=20261127-rv4ui"></script>
   <script src="tours/tour-launcher.js?v=20261120-rel2"></script>
 </head>
 <body class="rm-body">
@@ -83,27 +83,48 @@
       <!-- ── Create: one prompt, four styles, one button ───────────────────── -->
       <section class="rm-create" id="rm-pane-topic" data-pane="topic" aria-labelledby="rm-create-title">
         <div class="rm-create__intro">
-          <h2 class="rm-create__title" id="rm-create-title">What’s the reel about?</h2>
-          <p class="rm-create__lede">A topic, a trend, a link or your own script. Reels Studio writes it, finds verified clips and photos, checks every scene and hands you a reel that is ready to post.</p>
+          <h2 class="rm-create__title" id="rm-create-title">Your script</h2>
+          <p class="rm-create__lede">Paste or write the voiceover. Your words stay exactly as you wrote them; Reels Studio builds the chapters, clips, data and captions around them.</p>
         </div>
 
-        <div class="rm-prompt ais-surface" id="rm-prompt-card">
+        <div class="rm-prompt rm-script ais-surface" id="rm-prompt-card">
           <div class="rm-prompt__picked" id="rm-picked" hidden></div>
-          <label class="es-sr-only" for="rm-prompt">What’s the reel about?</label>
-          <textarea class="rm-prompt__input" id="rm-prompt" rows="3" maxlength="4000" placeholder="Rodgers’ 2011 season has no twin. Or paste a link, or your script." aria-describedby="rm-prompt-hint"></textarea>
+          <label class="es-sr-only" for="rm-prompt">Your script</label>
+          <textarea class="rm-prompt__input rm-script__input" id="rm-prompt" rows="10" maxlength="6000" placeholder="Dallas were up 21 in the fourth. They lost. It wasn’t the defence. It was three calls. One: the run on third and two…" aria-describedby="rm-script-meter rm-prompt-hint" spellcheck="true"></textarea>
           <div class="rm-prompt__bar">
+            <p class="rm-meter" id="rm-script-meter" aria-live="polite"><span class="rm-meter__words" id="rm-meter-words">0 words</span><span class="rm-meter__sec" id="rm-meter-sec">0 s</span><span class="rm-meter__target" id="rm-meter-target"></span></p>
             <div class="rm-prompt__tools" id="rm-prompt-tools">
-              <label class="rm-switch rm-prompt__script"><input type="checkbox" role="switch" id="rm-script-mode"><span>Use my exact words</span></label>
+              <input type="checkbox" role="switch" id="rm-script-mode" checked hidden aria-hidden="true" tabindex="-1">
             </div>
-            <span class="rm-meta rm-prompt__hint" id="rm-prompt-hint">Your script stays word for word; wrap a key word in *asterisks* to make it pop.</span>
+            <span class="rm-meta rm-prompt__hint" id="rm-prompt-hint">Wrap a key word in *asterisks* to make it pop in the captions.</span>
+          </div>
+        </div>
+
+        <div class="rm-extras">
+          <div class="es-field rm-extras__sources">
+            <label class="es-field__label" for="rm-topic">Sources and fact checks <span class="rm-meta">optional</span></label>
+            <textarea class="es-input rm-topic" id="rm-topic" rows="2" maxlength="1500" placeholder="A topic, a trend or links: ESPN box score, PFR game log…" aria-describedby="rm-topic-hint"></textarea>
+            <p class="es-field__hint" id="rm-topic-hint">Every number on screen must appear in your script or here.</p>
+          </div>
+          <div class="es-field rm-extras__voice">
+            <span class="es-field__label" id="rm-voicechoice-label">Voice</span>
+            <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-voicechoice-label" id="rm-voicechoice">
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-voicechoice="ai">AI voice</button>
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-voicechoice="own">Record my own</button>
+            </div>
+            <p class="es-field__hint" id="rm-voicechoice-hint">An ES voice reads your script. Captions are always on.</p>
           </div>
         </div>
 
         <section class="rm-stylesec" aria-labelledby="rm-styles4-label">
           <div class="rm-sec__head">
             <h3 class="rm-sec__title" id="rm-styles4-label">Style</h3>
-            <span class="rm-meta" id="rm-style-why"></span>
+            <div class="es-segmented rm-seg rm-length" role="radiogroup" aria-label="Length" id="rm-length">
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-length="full">Full · about 90 s</button>
+              <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-length="short">Short · about 40 s</button>
+            </div>
           </div>
+          <p class="rm-meta rm-stylesec__why" id="rm-style-why"></p>
           <div class="rm-styles4" id="rm-styles4" role="radiogroup" aria-labelledby="rm-styles4-label"></div>
         </section>
 
@@ -111,7 +132,7 @@
           <button class="es-btn es-btn--primary es-btn--lg rm-make rm-write" type="button" id="rm-make" data-alias="rm-write" aria-describedby="rm-make-hint rm-write-status">
             <span class="rm-spin rm-write__spin" aria-hidden="true"></span>
             <svg class="rm-write__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
-            <span id="rm-write-text">Make my reel</span>
+            <span id="rm-write-text">Build my reel</span>
           </button>
           <p class="rm-hint rm-make__hint" id="rm-make-hint"></p>
           <p class="rm-status" id="rm-write-status" role="status" aria-live="polite"></p>
@@ -119,13 +140,13 @@
 
         <section class="rm-trendrow" id="rm-trendrow" aria-labelledby="rm-trendrow-title">
           <div class="rm-sec__head">
-            <h3 class="rm-sec__title" id="rm-trendrow-title">Start from a trend</h3>
+            <h3 class="rm-sec__title" id="rm-trendrow-title">Add a story as a source</h3>
             <div class="rm-filter" role="radiogroup" aria-label="League" id="rm-leagues"></div>
           </div>
           <ul class="rm-trends" id="rm-trends" aria-label="Trending stories" aria-busy="true"></ul>
         </section>
 
-        <p class="rm-inspire"><button class="rm-link" type="button" id="rm-inspire-link" aria-haspopup="dialog">Need an idea?</button><span class="rm-hint">See which official clips are doing well, or brainstorm ES angles.</span></p>
+        <p class="rm-inspire"><button class="rm-link" type="button" id="rm-inspire-link" aria-haspopup="dialog">Need a script?</button><span class="rm-hint">Brainstorm ES angles, or see which official clips are doing well.</span></p>
 
         <section class="rm-recent" id="rm-recent" aria-labelledby="rm-recent-title" hidden>
           <h3 class="rm-sec__title" id="rm-recent-title">Continue a reel</h3>
@@ -143,7 +164,8 @@
           </div>
           <p class="rm-makingcard__about" id="rm-making-about"></p>
           <ol class="rm-making" id="rm-making" aria-label="Making your reel"></ol>
-          <p class="rm-hint rm-makingcard__note">Every clip and photo is checked against its scene before you see it.</p>
+          <ol class="rm-makingch" id="rm-making-chapters" aria-label="Chapters" hidden></ol>
+          <p class="rm-hint rm-makingcard__note">Your words stay as written. Every clip and photo is checked against its scene before you see it.</p>
         </div>
         <span class="es-sr-only" id="rm-making-live" aria-live="polite"></span>
       </section>
@@ -165,7 +187,7 @@
           <div class="rm-empty-stage" id="rm-empty-stage">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>
             <p>Your reel plays here.</p>
-            <span>Describe it, pick a style, then Make my reel.</span>
+            <span>Paste your script, pick a style, then Build my reel.</span>
           </div>
         </div>
         <div class="rm-slidenav" id="rm-slidenav" hidden>
@@ -506,8 +528,8 @@
   <script src="reel-data.js?v=20261119-rel4"></script>
   <script src="reel-render.js?v=20261128-reels3"></script>
   <script src="reel-lint.js?v=20261128-reels3"></script>
-  <script src="reel-clips.js?v=20261128-reels3"></script>
-  <script src="reel-sourcing.js?v=20261128-reels3"></script>
+  <script src="reel-clips.js?v=20261127-rv4ui5"></script>
+  <script src="reel-sourcing.js?v=20261127-rv4ui5"></script>
   <script src="frameup-zip.js?v=20261118-rel1"></script>
   <script src="reel-export.js?v=20261119-rel4"></script>
   <script src="reel-flow.js?v=20261119-rel4"></script>
@@ -516,9 +538,9 @@
   <script src="reel-captions-export.js?v=20261128-reels3"></script>
   <script src="reel-media-tray.js?v=20261125-reels2"></script>
   <script src="reel-voice-input.js?v=20261125-reels2"></script>
-  <script src="reel-storyboard.js?v=20261127-rv4ui"></script>
+  <script src="reel-storyboard.js?v=20261127-rv4ui5"></script>
   <script src="reel-a11y.js?v=20261125-reels2"></script>
-  <script src="reel-maker.js?v=20261127-rv4ui"></script>
+  <script src="reel-maker.js?v=20261127-rv4ui5"></script>
   <script src="reel-ideas.js?v=20261125-reels2"></script>
   <script src="reel-radar.js?v=20261125-reels2"></script>
 </body>
