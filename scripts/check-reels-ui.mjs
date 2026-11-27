@@ -102,6 +102,8 @@ const calls = []; // { path, mode, body } for every /api call
 const findClipCalls = [];
 const isFind = (pathname, body) => /find/i.test(String(body?.mode || '')) || body?.findClips === true || body?.retry === true || Boolean(body?.broaden) || (pathname === '/api/video-ads' && /find|search|clips/i.test(String(body?.mode || '')));
 const v4Style = body => body.esStyle || (STYLE_IDS.includes(body.style) ? body.style : '') || body.plan?.esStyle || 'breakdown';
+// Clips come from the confirmed-clip library (clip.confirmed { relevance, moment, kind }): the browser gate
+// (reel-clips gatedPicks) passes them without the judge, as the SOURCING lane's library does.
 function sceneMedia(body) {
   const style = v4Style(body);
   const clipsOn = scenario.clips === 'ok';
@@ -111,7 +113,7 @@ function sceneMedia(body) {
     const wants = b.media?.kind || (b.module ? 'none' : 'clip');
     const subject = b.media?.subject || { type: 'player', name: 'Dak Prescott', team: 'Dallas Cowboys' };
     const videoKind = ['clip', 'presser'].includes(wants);
-    const clips = videoKind && clipsOn ? [0, 1].map(k => ({ ...CLIP, url: `${CLIP.url.slice(0, -1)}${i}${k}`, text: `${subject.name} clip ${k + 1} for beat ${b.id}`, relevance: 9 - k, moment: 8 - k, judged: true, confirmed: true, gate: 'judge', score: 90 - k, kind: wants, segment: { start: 0.4, end: 4.4 } })) : [];
+    const clips = videoKind && clipsOn ? [0, 1].map(k => ({ ...CLIP, url: `${CLIP.url.slice(0, -1)}${i}${k}`, text: `${subject.name} clip ${k + 1} for beat ${b.id}`, relevance: 9 - k, moment: 8 - k, judged: true, confirmed: { relevance: 9 - k, moment: 8 - k, kind: wants, at: new Date(now).toISOString() }, gate: 'library', score: 90 - k, kind: wants, segment: { start: 0.4, end: 4.4 } })) : [];
     const photos = wants === 'none' ? [] : [0, 1, 2].map(k => ({ url: PHOTOS[(i + k) % PHOTOS.length], sourceUrl: `https://www.essentiallysports.com/photo-${i}-${k}`, verified: true, focus: { x: 0.3, y: 0.1, w: 0.4, h: 0.3 }, head: { x: 0.5, y: 0.22 }, kind: 'photo', title: `Photo ${k + 1}`, credit: 'ES', rights: { source: 'ES', licence: 'ES image pool', organic: true, paid: false } }));
     let pick;
     if (wants === 'none') pick = { kind: 'none', ref: '', why: 'module beat' };
