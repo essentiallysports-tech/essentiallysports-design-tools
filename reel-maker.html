@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="reel-maker.css?v=20261128-reels3">
+  <link rel="stylesheet" href="reel-maker.css?v=20261127-rv4ui">
   <link rel="stylesheet" href="reel-inputs.css?v=20261125-reels2">
   <link rel="stylesheet" href="reel-b-panels.css?v=20261125-reels2">
   <script src="theme.js?v=20261120-rel2"></script>
@@ -179,8 +179,9 @@
             <svg class="rm-ico-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>
             <svg class="rm-ico-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>
           </button>
-          <input class="rm-scrub" type="range" id="rm-scrub" min="0" max="1000" step="1" value="0" aria-label="Position in the reel" aria-valuetext="0:00" disabled>
           <span class="rm-time" id="rm-time" aria-hidden="true">0:00 / 0:00</span>
+          <span class="rm-scrubwrap"><span class="rm-ticks" id="rm-ticks" aria-hidden="true"></span>
+            <input class="rm-scrub" type="range" id="rm-scrub" min="0" max="1000" step="1" value="0" aria-label="Position in the reel" aria-valuetext="0:00" disabled></span>
           <button class="rm-icon-btn" type="button" id="rm-mute" aria-pressed="false" aria-label="Mute preview" title="Mute preview">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>
           </button>
@@ -190,28 +191,30 @@
           <button class="rm-icon-btn" type="button" id="rm-safe-toggle" aria-pressed="false" aria-label="Show safe zones" title="Show safe zones" data-admin hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
           </button>
+          <button class="rm-icon-btn rm-size" type="button" id="rm-size" aria-label="Preview size: Reel 9:16. Switch to Feed 4:5" title="Switch size"><span id="rm-size-text">9:16</span></button>
         </div>
         <p class="rm-meta" id="rm-stage-meta" aria-live="polite"></p>
         <p class="rm-hint rm-calm-note" id="rm-calm-note" hidden>Calm preview is on: scenes cut in place of the wipe. Your export keeps the full motion.</p>
         <p class="es-sr-only" id="rm-scene-desc" aria-live="polite"></p>
+      </section>
 
-        <!-- The scene strip: every scene's media, words and block, with Swap -->
-        <section class="rm-scenes" id="rm-scenes" aria-labelledby="rm-sb-title">
-          <div class="rm-scenes__head">
-            <h3 class="rm-sec__title" id="rm-sb-title">Scenes</h3>
-            <span class="rm-meta" id="rm-beats-meta"></span>
-            <button class="es-btn es-btn--sm es-btn--tertiary" type="button" id="rm-add-beat">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-              <span>Add a scene</span>
-            </button>
-          </div>
-          <p class="es-sr-only" id="rm-sb-help">Each scene is a card. Pick one to change its words, block or media. To reorder, drag a card or press Alt and an arrow key.</p>
-          <div class="rm-sb__scroll" id="rm-sb-scroll">
-            <ol class="rm-beats" id="rm-beats" aria-labelledby="rm-sb-title" aria-describedby="rm-sb-help"></ol>
-          </div>
-          <p class="es-sr-only" id="rm-sb-live" aria-live="assertive"></p>
-          <section id="ri-tray"></section>
-        </section>
+      <!-- The timeline: chapters as groups, scenes as 9:16 thumbnails, a playhead synced to the scrubber -->
+      <section class="rm-scenes rm-timeline" id="rm-scenes" aria-labelledby="rm-sb-title">
+        <div class="rm-scenes__head">
+          <h3 class="rm-sec__title" id="rm-sb-title">Scenes</h3>
+          <span class="rm-meta" id="rm-beats-meta"></span>
+          <button class="es-btn es-btn--sm es-btn--tertiary" type="button" id="rm-add-beat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            <span>Add a scene</span>
+          </button>
+        </div>
+        <p class="es-sr-only" id="rm-sb-help">Each scene is a card. Pick one to change its words, block or media. To reorder, drag a card or press Alt and an arrow key.</p>
+        <div class="rm-sb__scroll" id="rm-sb-scroll">
+          <span class="rm-playhead" id="rm-playhead" aria-hidden="true" hidden></span>
+          <ol class="rm-beats" id="rm-beats" aria-labelledby="rm-sb-title" aria-describedby="rm-sb-help"></ol>
+        </div>
+        <p class="es-sr-only" id="rm-sb-live" aria-live="assertive"></p>
+        <section id="ri-tray"></section>
       </section>
 
       <!-- ── One panel: Review or Export ───────────────────────────────────── -->
@@ -220,12 +223,16 @@
 
         <!-- Review -->
         <div class="rm-pane" id="rm-pane-edit" data-pane="edit" hidden>
+          <div class="rm-summary" id="rm-summary"></div>
           <div class="rm-revhead">
-            <div class="rm-summary" id="rm-summary"></div>
             <button class="rm-ready" type="button" id="rm-ready" aria-expanded="false" aria-controls="rm-lint" data-tone="good">
               <span class="rm-ready__dot" aria-hidden="true"></span>
               <span class="rm-ready__text" id="rm-ready-text">Checking…</span>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <button class="es-btn es-btn--sm rm-findclips" type="button" id="rm-findclips" data-find-clips hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>
+              <span>Find clips</span>
             </button>
           </div>
           <div class="rm-lintbox" id="rm-lint" hidden>
@@ -509,9 +516,9 @@
   <script src="reel-captions-export.js?v=20261128-reels3"></script>
   <script src="reel-media-tray.js?v=20261125-reels2"></script>
   <script src="reel-voice-input.js?v=20261125-reels2"></script>
-  <script src="reel-storyboard.js?v=20261128-reels3"></script>
+  <script src="reel-storyboard.js?v=20261127-rv4ui"></script>
   <script src="reel-a11y.js?v=20261125-reels2"></script>
-  <script src="reel-maker.js?v=20261128-reels3"></script>
+  <script src="reel-maker.js?v=20261127-rv4ui"></script>
   <script src="reel-ideas.js?v=20261125-reels2"></script>
   <script src="reel-radar.js?v=20261125-reels2"></script>
 </body>

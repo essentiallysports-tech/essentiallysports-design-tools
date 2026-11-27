@@ -98,7 +98,7 @@ function sceneMedia(body) {
     const wants = b.media?.kind || (b.module ? 'none' : 'clip');
     const subject = b.media?.subject || { type: 'player', name: 'Dak Prescott', team: 'Dallas Cowboys' };
     const videoKind = ['clip', 'presser'].includes(wants);
-    const clips = videoKind && clipsOn ? [0, 1].map(k => ({ ...CLIP, url: `${CLIP.url.slice(0, -1)}${i}${k}`, text: `${subject.name} clip ${k + 1} for beat ${b.id}`, relevance: 9 - k, moment: 8 - k, judged: true, gate: 'judge', score: 90 - k, kind: wants, segment: { start: 0.4, end: 4.4 } })) : [];
+    const clips = videoKind && clipsOn ? [0, 1].map(k => ({ ...CLIP, url: `${CLIP.url.slice(0, -1)}${i}${k}`, text: `${subject.name} clip ${k + 1} for beat ${b.id}`, relevance: 9 - k, moment: 8 - k, judged: true, confirmed: true, gate: 'judge', score: 90 - k, kind: wants, segment: { start: 0.4, end: 4.4 } })) : [];
     const photos = wants === 'none' ? [] : [0, 1, 2].map(k => ({ url: PHOTOS[(i + k) % PHOTOS.length], sourceUrl: `https://www.essentiallysports.com/photo-${i}-${k}`, verified: true, focus: { x: 0.3, y: 0.1, w: 0.4, h: 0.3 }, head: { x: 0.5, y: 0.22 }, kind: 'photo', title: `Photo ${k + 1}`, credit: 'ES', rights: { source: 'ES', licence: 'ES image pool', organic: true, paid: false } }));
     let pick;
     if (wants === 'none') pick = { kind: 'none', ref: '', why: 'module beat' };
@@ -131,7 +131,10 @@ async function reelApi(pathname, body) {
   }
   if (mode === 'plan') {
     if (scenario.planDelay) await sleep(scenario.planDelay);
-    if (scenario.planFrom === 'fixture' && !free && !body.script && !body.scriptMode && !body.exact) {
+    // v4 is script-first (AI lane): a v4 plan request needs the script (>= 6 words), word for word.
+    const v4Req = body.v === 4 || STYLE_IDS.includes(String(body.esStyle || ''));
+    if (v4Req && !free && String(body.script || '').trim().split(/\s+/).filter(Boolean).length < 6) return { status: 400, body: { ok: false, reason: 'need-script', error: 'Paste or write your script first: a sentence or two at least. It is read word for word.' } };
+    if (scenario.planFrom === 'fixture' && !free) {
       const style = STYLE_IDS.includes(body.esStyle) ? body.esStyle : 'breakdown';
       const plan = fixturePlan(style, lengthOf(body) || 'full');
       return { status: 200, body: { ok: true, plan, source: 'ai', model: 'qa', esStyle: style, style: 'es', sources: plan.sources, corpus: BRIEF, issues: [], lint: { critical: 0, warnings: 0 }, costs: {}, cost: 0 } };
@@ -142,6 +145,7 @@ async function reelApi(pathname, body) {
     return { status: r.ok ? 200 : (r.status || 502), body: free ? { ...r, mode: 'free', reason: 'user-limit' } : r };
   }
   if (mode === 'scene-media' || (mode && /media|clips/i.test(mode) && pathname === '/api/reel-maker')) { if (scenario.planDelay) await sleep(scenario.planDelay / 2); return { status: 200, body: sceneMedia(body) }; }
+  if (mode === 'script-draft') return { status: 200, body: { ok: true, script: BRIEF.replace(/ Source:.*$/, ''), cost: 0 } };
   if (mode === 'critique') {
     const pass = scenario.critic === 'pass';
     return { status: 200, body: { ok: true, pass, ready: pass, scores: { hook: pass ? 8 : 4, oneIdea: 8, mediaWords: 8, moduleClaim: 8, pacing: pass ? 8 : 5, close: 8 }, fixes: pass ? [] : [{ id: 'hook', chapterId: 'c1', text: 'The hook does not say the contradiction. Lead with the 21-point lead.', safe: false }], plan: body.plan, cost: 0, model: 'qa' } };
@@ -396,6 +400,15 @@ for (const w of WIDTHS) {
     const soon = await evaluate(`[...document.querySelectorAll('#main *')].filter(e => e.children.length === 0 && /^\\s*soon\\s*$/i.test(e.textContent) && ${SHOWN}(e)).length`);
     expect(!soon, `${soon} "Soon" labels`);
   });
+  await step('Create: "Need a script?" drafts one (script-draft) into the prompt, if offered', async () => {
+    const has = await evaluate(`[...document.querySelectorAll('#rm-pane-topic button, #rm-pane-topic a')].some(b => /need a script|draft (a|my) script|write (it|a script) for me/i.test(b.textContent) && ${SHOWN}(b))`);
+    if (!has) return;
+    await typeInto('#rm-prompt', 'Dallas blew a 21-point lead');
+    await evaluate(`([...document.querySelectorAll('#rm-pane-topic button, #rm-pane-topic a')].find(b => /need a script|draft (a|my) script|write (it|a script) for me/i.test(b.textContent) && ${SHOWN}(b)).click(), 1)`);
+    await waitFor(`document.querySelector('#rm-prompt').value.length > 60`, 4000, 'the drafted script in the prompt');
+    expect(calls.some(c => c.mode === 'script-draft'), 'no script-draft call');
+    await typeInto('#rm-prompt', '');
+  });
   await step('Create: Start from a trend and Need an idea?', async () => {
     expect(await visible('#rm-trends'), 'the trend row is not shown');
     expect(/start from a trend/i.test(await evaluate(`document.querySelector('#rm-pane-topic').textContent`)), 'no "Start from a trend" heading');
@@ -437,9 +450,11 @@ for (const w of WIDTHS) {
     expect(p.esStyle === 'breakdown' && p.style === 'es', `plan.esStyle ${p.esStyle} / plan.style ${p.style}`);
     const pl = calls.find(c => c.mode === 'plan');
     expect(pl && pl.body.esStyle === 'breakdown', `the plan request sent esStyle ${pl && pl.body.esStyle}`);
+    expect(pl.body.v === 4, `the plan request has no v: 4 (v ${pl.body.v})`);
+    expect(String(pl.body.script || '').replace(/\s+/g, ' ').trim() === BRIEF, `the plan request does not carry the prompt as the script, word for word: "${String(pl.body.script || '').slice(0, 80)}"`);
     expect(lengthOf(pl.body) === 'full', `the plan request does not say the length (Full): ${JSON.stringify(Object.fromEntries(Object.entries(pl.body).filter(([k]) => /len|dur|short|sec/i.test(k))))}`);
   });
-  await step('Review: sourcing, then the critic, then Ready to post', async () => {
+  await step('Review: sourcing (confirmed clips), then the critic, then Ready to post', async () => {
     await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 8000, '"Ready to post"').catch(async e => { throw new Error(`${e.message} (badge "${await readyText()}"; checklist: ${await checklistText()})`); });
     const modes = calls.map(c => c.mode);
     expect(modes.includes('scene-media'), `no scene-media call (calls: ${[...new Set(modes)].join(',')})`);
@@ -633,7 +648,8 @@ for (const w of WIDTHS) {
     await makeReel({ style: 'hotseat' });
     await sleep(1500);
     const t = await readyText();
-    expect(!READY_RE.test(t), `the badge says "${t}" with 0 clips`);
+    expect(!READY_RE.test(t), `a draft with no confirmed clip says "Ready to post": "${t}"`);
+    expect(/needs clips|draft/i.test(t), `the badge does not say Needs clips / Draft: "${t}"`);
     if (!(await evaluate(`${FIND_CLIPS}.length`))) { await click('#rm-ready'); await sleep(200); }
     expect(/clip/i.test(t + ' ' + await checklistText()), `the badge / checklist does not say a clip is needed: "${t}" / ${await checklistText()}`);
     expect(await evaluate(`${FIND_CLIPS}.length`) >= 1, 'no "Find clips" action on the badge, its checklist or the beats');
