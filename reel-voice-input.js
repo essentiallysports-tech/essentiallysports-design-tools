@@ -595,6 +595,11 @@
         } catch { rec.analyser = null; }
         const data = rec.analyser ? new Float32Array(rec.analyser.fftSize) : null;
         let lastAria = 0;
+        // Peak hold: the bar falls back slowly after a sound, and the meter's value
+        // (what a screen reader hears) is the loudest moment of the last 1.5 s, so
+        // a pause between words does not read as "no input".
+        let held = 0;
+        const recent = [];
         const meter = () => {
           if (token !== rec.token) return;
           const el = body.querySelector('[data-ri-meter]');
@@ -603,10 +608,13 @@
             let peak = 0;
             for (let i = 0; i < data.length; i += 1) peak = Math.max(peak, Math.abs(data[i]));
             const level = Math.round(Math.min(1, Math.sqrt(peak) * 1.15) * 100);
-            el.firstElementChild.style.width = `${level}%`;
-            el.classList.toggle('is-hot', peak > 0.97);
             const now = performance.now();
-            if (now - lastAria > 400) { el.setAttribute('aria-valuenow', String(level)); lastAria = now; }
+            held = Math.max(level, held - 1.5);
+            recent.push([now, level]);
+            while (recent.length && now - recent[0][0] > 1500) recent.shift();
+            el.firstElementChild.style.width = `${Math.round(held)}%`;
+            el.classList.toggle('is-hot', peak > 0.97);
+            if (now - lastAria > 400) { el.setAttribute('aria-valuenow', String(Math.max(0, ...recent.map(x => x[1])))); lastAria = now; }
           }
           rec.raf = requestAnimationFrame(meter);
         };

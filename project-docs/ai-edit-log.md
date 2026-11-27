@@ -4,6 +4,13 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-28 — Suhail (Claude, Agent UI): Reels flaky re-take check: the recorder meter, not a lost voiceover (branch fix/reels-retake)
+- Status: committed on fix/reels-retake (off origin/main 5d14560), not pushed.
+- Finding: not a page race. With traps on state.plan / state.voiceOwn, every failing run had NO voiceover before the re-take step began, and nothing changed either during it. The step above ("record: … meter") had failed first: Chrome's fake microphone beeps once a second, and the meter's value was the instantaneous peak sampled every 400 ms, so it sometimes read 0 in a gap, the step stopped before "Use the take", and the re-take step inherited no voiceover. Cancel never touches the voiceover (it only stops the stream and returns to idle).
+- Page (reel-voice-input.js): the level meter holds its peak (the bar falls back slowly) and its value (aria-valuenow) is the loudest moment of the last 1.5 s, so a pause between words no longer reads as "no input". Cache key 20261128-retake.
+- Test (scripts/check-reels-inputs-ui.mjs): the re-take step puts a voiceover on first when there is none (waits on active(), not on the order of the steps).
+- Tests: check-reels-inputs-ui 5/5 runs, 29/29 each; check-reels-ui 114 states, 0 problems, 0 behaviour failures.
+
 ## 2026-11-28 — Suhail (Claude, UX audit lane): UX debug sweep, slice 2 (branch qa/ux-audit-2)
 - Status: committed on qa/ux-audit-2 (base origin/main e3d939b; merged fa7271a and c7b6a70: brief R2/R3 + Reels v4), not pushed. run-suite after the c7b6a70 merge: 168 files, only the 3 accepted failures; check-editor-ui 0 problems, off-grid 59 (baseline 103); check-ux-audit 17/17. $0, no AI, no env vars, no migration, no Fourthwall writes (Merch walked in its local demo mode).
 - Owner decisions done: R4 (dashboard hides Design Requests while FEATURES.requests is false: Open requests KPI, Board / Requests tabs, request queue rows, request insights and request activity; #board falls back to Overview; all back when requests are on) and R5 (Generate live-trend cards fill the brief and ask "Generate designs for this trend? Uses AI budget"; nothing is sent until confirm; Cancel / Esc return focus to the card).

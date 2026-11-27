@@ -458,6 +458,12 @@ try {
     notes.push(`recording (fake microphone): ${r.seconds}s take, MediaRecorder -> decode -> 16 kHz WAV -> align -> ${r.own} scenes`);
   });
   await step('re-take and cancel release the microphone', async () => {
+    // Its own precondition: a voiceover is on (the step above may have stopped early), so a
+    // failure here is about cancel, never about the order of the steps.
+    if (!(await evaluate(`window.ReelMakerCtx.modules.voiceInput.active()`))) {
+      await evaluate(`(async () => { await qa.ctx().modules.voiceInput.useFile(qa.wav('my-voiceover.wav', 9)); return 1; })()`);
+      await waitFor(`window.ReelMakerCtx.modules.voiceInput.active()`, 15000, 'a voiceover on before the re-take');
+    }
     await evaluate(`(qa.ctx().modules.voiceInput.open(), 1)`);
     await click('#ri-voice [data-ri-record]');
     await waitFor(`document.querySelector('#ri-voice').dataset.view === 'recording'`, 8000, 'recording');
