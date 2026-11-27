@@ -1128,10 +1128,26 @@
     }
     const headers = new Headers(init.headers || {});
     headers.set('Authorization', `Bearer ${session.token}`);
-    return window.fetch(input, {
-      ...init,
-      headers,
-    });
+    try {
+      return await window.fetch(input, {
+        ...init,
+        headers,
+      });
+    } catch (error) {
+      // Offline or a dropped connection: the browser's own text ("Failed to
+      // fetch", "Load failed", "NetworkError when attempting to fetch
+      // resource") reached people verbatim in Generate, Video Ads and Merch.
+      // Still a TypeError, so callers that check the type keep working;
+      // aborts (AbortError) pass through untouched. UX audit 2026-11-27.
+      if (error?.name !== 'TypeError') throw error;
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      const friendly = new TypeError(offline
+        ? 'You are offline. Check your connection, then try again.'
+        : 'Could not reach FrameUp. Check your connection, then try again.');
+      friendly.cause = error;
+      friendly.network = true;
+      throw friendly;
+    }
   }
 
   async function logout() {
