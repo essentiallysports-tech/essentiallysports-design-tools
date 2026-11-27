@@ -78,7 +78,13 @@
   const WIPE = Object.freeze({ ms: 640, half: 320, curve: 'inOut', skewDeg: -14 });
   const CAPTION_POP = Object.freeze({ ms: 160, curve: 'out', from: 0.86, exitMs: 160, exitCurve: 'in' });
   const AMBIENT = Object.freeze({ photo: [1, 1.06], clip: [1, 1.03], curve: 'inOut' });
-  const MOTION4 = Object.freeze({ CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, CAPTION_POP, AMBIENT, NAMED: ['out', 'inOut', 'in', 'spring'] });
+  // Camera drift: two slow sines (6.7 s and 5.3 s), 5 px and 7 px: continuous
+  // (no kink at any boundary), always under 0.12 px a frame, never still for
+  // more than about half a second. Ambient, like Ken Burns.
+  const CAMERA = Object.freeze({ ax: 5, px: 6700, ay: 7, py: 5300, phase: 1.3 });
+  const cameraAt = t => ({ x: CAMERA.ax * Math.sin((2 * Math.PI * t) / CAMERA.px), y: CAMERA.ay * Math.sin((2 * Math.PI * t) / CAMERA.py + CAMERA.phase) });
+  const NO_CAMERA = /^(?:head$|marker|close\.(?:prompt|source|wordmark))/;
+  const MOTION4 = Object.freeze({ CAMERA, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, CAPTION_POP, AMBIENT, NAMED: ['out', 'inOut', 'in', 'spring'] });
 
   const clamp01 = v => Math.max(0, Math.min(1, Number(v) || 0));
   function bezier(x1, y1, x2, y2) {
@@ -135,7 +141,23 @@
 
   // ─── Copy helpers ───────────────────────────────────────────────────────
   const clean = (v, max = 400) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
-  const up = (v, max) => clean(v, max).toUpperCase();
+  // Copy is never cut mid-word: a soft limit (1.6x the design length) cut at a
+  // word boundary; the draw step then steps the pill / text down the scale to fit.
+  function wordCut(text, max) {
+    const t = String(text || '');
+    if (t.length <= max) return t;
+    const cut = t.slice(0, max + 1);
+    const sp = cut.lastIndexOf(' ');
+    return (sp > 0 ? cut.slice(0, sp) : t.split(' ')[0]).replace(/[\s·:,;\-–—=+]+$/, '');
+  }
+  const up = (v, max) => wordCut(clean(v, 240), Math.round(max * 1.6)).toUpperCase();
+  // The biggest step (from `size` down to body) at which the text fits maxW.
+  function fitStep(M, text, size, maxW, font = dFont, pad = 0) {
+    if (!maxW) return size;
+    const steps = Object.values(TS).filter(v => v <= size).sort((a, b) => b - a);
+    for (const z of steps) if (M(text, font(z)) + (pad ? PILL(z).padLeft + PILL(z).padRight : 0) <= maxW) return z;
+    return steps[steps.length - 1];
+  }
   const num = v => { const m = String(v == null ? '' : v).replace(/[$,]/g, '').replace('−', '-').match(/-?\d+(?:\.\d+)?/); return m ? Number(m[0]) : NaN; };
   // A number shown as text that can count: '35' -> 35, '47%' -> 47 + '%', '$1.2M'.
   function countable(v) {
@@ -189,7 +211,7 @@
       case 'statTiles': return { type: 'statTiles', title: up(m.title, 28), tiles: list(m.tiles, 3).map((x, i) => ({ value: up(x.value, 8), label: up(x.label, 18), tone: tone(x.tone, i === 0 ? 'blue' : 'ink') })).filter(x => x.value) };
       case 'reveal': return { type: 'reveal', from: up(m.from || '?', 6), to: up(m.to, 8), label: up(m.label, 22), tone: tone(m.tone, 'blue') };
       case 'compare': return { type: 'compare', from: { value: up(m.from && m.from.value, 8), label: up(m.from && m.from.label, 18) }, to: { value: up(m.to && m.to.value, 8), label: up(m.to && m.to.label, 18) }, tone: tone(m.tone, 'blue') };
-      case 'tally': return { type: 'tally', n: Math.max(0, Math.min(25, Math.round(Number(m.n) || 0))), label: up(m.label, 22) };
+      case 'tally': return { type: 'tally', n: Math.max(0, Math.min(60, Math.round(Number(m.n) || 0))), label: up(m.label, 22) };
       case 'calendar': return { type: 'calendar', month: up(m.month, 12), year: clean(m.year, 6), day: clean(m.day, 4), stamp: stampOf(m.stamp) };
       case 'timeline': return { type: 'timeline', title: up(m.title, 28), slots: list(m.slots, 10).map(s => ({ label: up(s.label, 8), filled: Boolean(s.filled), tone: tone(s.tone, 'blue') })) };
       case 'playDiagram': return { type: 'playDiagram', offense: pts(m.offense, 11), defense: pts(m.defense, 11), route: pts(m.route, 8), label: up(m.label, 24) };
@@ -228,16 +250,19 @@
     return need ? [] : [`The ${m.type} module is missing its data.`];
   }
   // Every string a module shows (the numbers lint reads these).
-  function moduleStrings(m) {
+  // data: true leaves out the engine's structural figures (axis ticks, scale
+  // marks, year labels on a timeline axis): they need no source. Data values stay.
+  function moduleStrings(m, { data = false } = {}) {
     if (!m) return [];
     const s = [];
     const add = (...v) => v.forEach(x => { if (x != null && x !== '') s.push(String(x)); });
+    const axis = (...v) => { if (!data) add(...v); };
     switch (m.type) {
       case 'scoreboard': m.rows.forEach(r => add(r.team, r.value)); if (m.tag) add(m.tag.text); break;
       case 'bars': add(m.title); m.rows.forEach(r => add(r.label, `${r.value}`)); break;
-      case 'numberLine': add(m.min, m.max, m.caption); m.marks.forEach(k => add(k.label)); break;
+      case 'numberLine': axis(m.min, m.max); add(m.caption); m.marks.forEach(k => add(k.label)); break;
       case 'dotGrid': add(m.title, m.total); m.groups.forEach(g => add(g.n, g.label)); break;
-      case 'scatter': add(m.title, m.axes.x, m.axes.y); if (m.highlight) add(m.highlight.label); break;
+      case 'scatter': add(m.title); axis(m.axes.x, m.axes.y); if (m.highlight) add(m.highlight.label); break;
       case 'wl': add(m.title); break;
       case 'rankList': add(m.title); m.rows.forEach(r => add(r.label, r.value, r.chip)); break;
       case 'statTiles': add(m.title); m.tiles.forEach(x => add(x.value, x.label)); break;
@@ -245,12 +270,12 @@
       case 'compare': add(m.from.value, m.from.label, m.to.value, m.to.label); break;
       case 'tally': add(m.n, m.label); break;
       case 'calendar': add(m.month, m.year, m.day); if (m.stamp) add(m.stamp.text); break;
-      case 'timeline': add(m.title); m.slots.forEach(x => add(x.label)); break;
+      case 'timeline': add(m.title); m.slots.forEach(x => (/^(?:19|20)\d\d$/.test(x.label) ? axis(x.label) : add(x.label))); break;
       case 'playDiagram': add(m.label); break;
       case 'flow': m.nodes.forEach(n => add(n.text)); break;
       case 'checklist': add(m.title); m.rows.forEach(r => add(r.text)); break;
       case 'quote': add(m.text, m.who); break;
-      case 'lineChart': add(m.label, m.axes.x, m.axes.y); if (m.stamp) add(m.stamp.text); break;
+      case 'lineChart': add(m.label); axis(m.axes.x, m.axes.y); if (m.stamp) add(m.stamp.text); break;
       default: break;
     }
     return s;
@@ -290,6 +315,8 @@
     if (c.kind === 'checklist') return { kind: 'checklist', prompt: up(c.prompt || 'THE CASE', 40), rows: cleanModule({ type: 'checklist', rows: c.rows }).rows, vo: clean(c.vo, 200) };
     return { kind: 'endcard' };
   }
+  // The closes: the contract's yourCall | endcard, plus checklist (Case File).
+  const CLOSE_KINDS = Object.freeze(['yourCall', 'endcard', 'checklist']);
   const isV4 = plan => Boolean(plan && (plan.v === 4 || Array.isArray(plan.chapters)));
   function normalize(plan) {
     const p = plan || {};
@@ -321,7 +348,7 @@
       title: clean(p.title, 140), team: p.team || null, sport: clean(p.sport, 12),
       sources: Array.isArray(p.sources) ? p.sources.slice(0, 20) : [], sourceLine: clean(p.sourceLine, 120),
       ...(p.voLengthMs ? { voLengthMs: Number(p.voLengthMs) } : {}),
-      chapters, close: cleanClose(p.close),
+      chapters, close: cleanClose(p.close), ...(p.close && p.close.kind && !CLOSE_KINDS.includes(p.close.kind) ? { closeRaw: { kind: clean(p.close.kind, 20) } } : {}),
     };
   }
 
@@ -391,7 +418,10 @@
       case 'rankList': return m.rows.length * 104 + (m.title ? 56 : 0);
       case 'checklist': return m.rows.length * 96 + 64;
       case 'statTiles': case 'compare': case 'wl': case 'timeline': case 'quote': return 320;
-      case 'reveal': case 'numberLine': case 'tally': return 420;
+      case 'reveal': case 'numberLine': return 420;
+      // Content-sized cards: a tally by its rows of marks, a flow by its levels.
+      case 'tally': { const g = Math.ceil(Math.max(1, m.n) / 5); const rows = Math.ceil(g / (g > 8 ? 6 : 4)); return 96 + rows * (g > 8 ? 144 : 224); }
+      case 'flow': { const incoming = new Set(m.edges.map(e => e[1])); const depth = {}; m.nodes.forEach(n => { if (!incoming.has(n.id)) depth[n.id] = 0; }); for (let k = 0; k < 6; k += 1) m.edges.forEach(([x, y]) => { if (depth[x] != null) depth[y] = Math.max(depth[y] || 0, depth[x] + 1); }); const lv = Math.max(1, ...Object.values(depth).map(v => v + 1)); return 96 + lv * 150; }
       default: return 600;
     }
   }
@@ -402,20 +432,24 @@
   // enter ('rise' | 'pop' | 'fade' | 'media' | 'draw'), order (stagger index),
   // parent (props dx / dy relative to the parent's x / y), at (absolute entry time) }.
   const DRAWN = new Set(['line', 'poly', 'check']);
-  const sp = (id, kind, p, o = {}) => ({ id, kind, buildAt: o.buildAt != null ? o.buildAt : null, z: o.z != null ? o.z : 20, p: { alpha: 1, dy: 0, sc: 1, sy: 1, ...(DRAWN.has(kind) ? { p: 1 } : {}), ...p }, from: o.from || null, enter: o.enter || 'rise', order: o.order || 0, parent: o.parent || null, at: o.at != null ? o.at : null, ambient: o.ambient || null });
+  const sp = (id, kind, p, o = {}) => ({ id, kind, pulse: Boolean(o.pulse), buildAt: o.buildAt != null ? o.buildAt : null, z: o.z != null ? o.z : 20, p: { alpha: 1, dy: 0, sc: 1, sy: 1, sx: 1, ...(DRAWN.has(kind) ? { p: 1 } : {}), ...p }, from: o.from || null, enter: o.enter || 'rise', order: o.order || 0, parent: o.parent || null, at: o.at != null ? o.at : null, ambient: o.ambient || null });
   function tSize(measure, text, sizes, width, font = dFont) { for (const s of sizes) if (measure(text, font(s)) <= width) return s; return sizes[sizes.length - 1]; }
 
-  function markerSpecs(marker) {
+  function markerSpecs(marker, measure = approxMeasure) {
     if (!marker) return [];
     const y = ZONE.markerY;
     if (marker.kind === 'label') return [sp('marker', 'pill', { x: ZONE.left, y, size: TS.label, fill: INK, ink: WHITE, text: marker.text }, { z: 30 })];
+    // 3·2·1 / 1-N: a row of ES pills (pillMetrics), 8 px apart. Active blue,
+    // done ink, to come white with an ink outline.
     const list = [];
-    const n = marker.kind === 'countdown' ? marker.of : marker.of;
-    for (let i = 0; i < n; i += 1) {
+    const pm = PILL(TS.label);
+    let x = ZONE.left;
+    for (let i = 0; i < marker.of; i += 1) {
       const label = marker.kind === 'countdown' ? `#${marker.of - i}` : String(i + 1);
       const active = marker.kind === 'countdown' ? marker.of - i === marker.n : i + 1 === marker.i;
       const done = marker.kind === 'countdown' ? marker.of - i > marker.n : i + 1 < marker.i;
-      list.push(sp(`marker.${i}`, 'chip', { x: ZONE.left + i * 108, y, w: 96, h: 52, size: TS.label, fill: active ? BLUE : done ? INK : WHITE, ink: active || done ? WHITE : INK, text: label, line: active || done ? 0 : 1 }, { z: 30, order: i }));
+      list.push(sp(`marker.${i}`, 'pill', { x, y, size: TS.label, fill: active ? BLUE : done ? INK : WHITE, ink: active || done ? WHITE : INK, text: label, line: active || done ? 0 : 1 }, { z: 30, order: i }));
+      x += measure(label, dFont(TS.label)) + pm.padLeft + pm.padRight + 8;
     }
     return list;
   }
@@ -424,15 +458,25 @@
   const PAD = 32;
   const HEAD_STEPS = [TS.h1, TS.h2, TS.caption];
   function panel(r, c, extra = {}) { return sp('mod.panel', 'panel', { x: r.x, y: r.y, w: r.w, h: r.h, chalk: extra.chalk ? 1 : 0 }, { z: 10, enter: 'fade' }); }
-  function titlePill(text, r) { return text ? [sp('mod.title', 'pill', { x: r.x + PAD, y: r.y - PILL(TS.label).h / 2, size: TS.label, fill: INK, ink: WHITE, text }, { z: 32, order: 0 })] : []; }
+  function titlePill(text, r) { return text ? [sp('mod.title', 'pill', { x: r.x + PAD, y: r.y - PILL(TS.label).h / 2, size: TS.label, fill: INK, ink: WHITE, text, maxW: r.w - 2 * PAD - 260 }, { z: 32, order: 0 })] : []; }
   function inner(r, top = 0) { return { x: r.x + PAD, y: r.y + PAD + top, w: r.w - 2 * PAD, h: r.h - 2 * PAD - top }; }
   const MOD = {};
   // When the voiceover says a figure ('35', 'thirty-five'): a reveal flips there.
+  function tickAt(c, text, i, n) {
+    if (!c || !c.beat) return null;
+    const keyw = String(text).toLowerCase().split(/[^a-z0-9']+/).filter(w => w.length > 3)[0];
+    const w = keyw && c.words ? c.words.find(x => x.beat === c.beat.id && String(x.w).toLowerCase().replace(/[^a-z0-9']/g, '') === keyw) : null;
+    if (w) return w.s - DUR.xs;
+    if (c.beatStart == null || c.beatEnd == null) return null;
+    const span = Math.max(0, c.beatEnd - c.beatStart - 2 * DUR.l - 400);
+    return c.beatStart + DUR.l + 400 + Math.round(((i + 1) * span) / (n + 1));
+  }
   function spokenAt(c, value) {
     const want = num(value);
     if (!Number.isFinite(want) || !c.words) return null;
     const w = c.words.find(x => x.beat === c.beat.id && (num(x.w) === want || (ES.spelledNumber && ES.spelledNumber(String(x.w).toLowerCase().replace(/[^a-z-]/g, '')) === want)));
-    return w ? w.s - DUR.xs : null;
+    // Flip on the word, but settled at least a second before the beat ends.
+    return w ? (c.beatEnd ? Math.min(w.s - DUR.xs, c.beatEnd - 1000) : w.s - DUR.xs) : null;
   }
   MOD.scoreboard = (m, r) => {
     const n = m.rows.length;
@@ -449,7 +493,7 @@
       const lead = Number.isFinite(vals[i]) && vals[i] === best && n > 1;
       out.push(sp(`${key}.row`, 'card', { x: r.x, y, w: r.w, h: rowH }, { z: 12, order: i }));
       out.push(sp(`${key}.chip`, 'teamchip', { x: r.x + 16, y: y + 16, w: rowH - 32, h: rowH - 32, text: row.team.slice(0, 3), logo: row.logo }, { z: 14, order: i }));
-      out.push(sp(`${key}.name`, 'text', { x: r.x + rowH + 16, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: INK, text: row.team }, { z: 14, order: i }));
+      out.push(sp(`${key}.name`, 'text', { x: r.x + rowH + 16, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: INK, text: row.team, maxW: r.w - rowH - 300 }, { z: 14, order: i }));
       out.push(sp(`${key}.val`, 'text', { x: r.x + r.w - 32, y: y + rowH / 2 + (CAP * TS.h2) / 2, size: TS.h2, color: lead ? BLUE : INK, align: 'right', text: row.value, ...(c0 ? { value: c0.value, fmt: c0 } : {}) }, { z: 14, order: i, from: c0 ? { value: 0 } : null }));
     });
     if (m.tag) out.push(sp('mod.sb.tag', 'pill', { x: r.x, y: top + n * (rowH + 12) + 12, size: TS.label, fill: toneHex(m.tag.tone, 'red'), ink: WHITE, text: m.tag.text }, { z: 16, order: n + 1, enter: 'pop' }));
@@ -466,11 +510,11 @@
     const block = n * rowH;
     const y0 = a.y + Math.max(0, (a.h - block) / 2);
     m.rows.forEach((row, i) => {
-      const key = `mod.bars.${row.label}`;
+      const key = `mod.bars.${i}.${row.label}`;
       const y = y0 + i * rowH;
       const bw = Math.max(8, ((a.w - valW) * row.value) / max);
       const c0 = countable(`${row.value}${m.unit}`) || { value: row.value, pre: '', post: m.unit, dec: 0 };
-      out.push(sp(`${key}.label`, 'text', { x: a.x, y: y + CAP * TS.label, size: TS.label, color: INK, text: row.label }, { order: i }));
+      out.push(sp(`${key}.label`, 'text', { x: a.x, y: y + CAP * TS.label, size: TS.label, color: INK, text: row.label, maxW: a.w }, { order: i }));
       out.push(sp(`${key}.bar`, 'rect', { x: a.x, y: y + CAP * TS.label + 14, w: bw, h: barH, fill: toneHex(row.tone) }, { order: i, from: { w: 0 }, enter: 'fade' }));
       out.push(sp(`${key}.val`, 'text', { x: a.x + bw + 20, y: y + CAP * TS.label + 14 + barH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: toneHex(row.tone), text: fmtCount(c0, row.value), value: row.value, fmt: c0 }, { order: i, from: { value: 0, x: a.x + 20 }, enter: 'fade' }));
     });
@@ -494,7 +538,7 @@
       k.below = below;
       const key = `mod.nl.m.${k.label}`;
       const ph = PILL(TS.label).h;
-      out.push(sp(`${key}.dot`, 'dot', { x: k.x, y: ay, r: 30, fill: toneHex(k.tone, 'blue'), stroke: WHITE, lw: 6 }, { order: 2 + j, enter: 'pop', from: { x: X(m.min) } }));
+      out.push(sp(`${key}.dot`, 'dot', { x: k.x, y: ay, r: 30, fill: toneHex(k.tone, 'blue'), stroke: WHITE, lw: 6 }, { order: 2 + j, enter: 'pop', from: { x: X(m.min) }, pulse: true }));
       out.push(sp(`${key}.pill`, 'pill', { x: k.x, y: below ? ay + 88 : ay - 52 - PILL(TS.caption).h, size: TS.caption, fill: toneHex(k.tone, 'blue'), ink: WHITE, text: k.label, anchor: 'center', minX: a.x, maxX: a.x + a.w }, { order: 2 + j, enter: 'pop', from: { x: X(m.min) } }));
     });
     if (m.caption) out.push(sp('mod.nl.cap', 'text', { x: a.x + a.w / 2, y: a.y + CAP * TS.label + 8, size: TS.label, color: INK, align: 'center', text: m.caption }, { order: 1 }));
@@ -563,7 +607,7 @@
       const hx = Number.isFinite(m.highlight.x) ? clamp01(m.highlight.x) : 0.9;
       const hy = Number.isFinite(m.highlight.y) ? clamp01(m.highlight.y) : 0.25;
       const [x, y] = P(hx, hy);
-      out.push(sp('mod.sc.hl', 'dot', { x, y, r: 22, fill: BLUE, stroke: WHITE, lw: 6 }, { z: 18, order: 12, enter: 'pop' }));
+      out.push(sp('mod.sc.hl', 'dot', { x, y, r: 22, fill: BLUE, stroke: WHITE, lw: 6 }, { z: 18, order: 12, enter: 'pop', pulse: true }));
       if (m.highlight.label) out.push(sp('mod.sc.hll', 'pill', { x, y: y - 22 - 16 - PILL(TS.label).h, size: TS.label, fill: BLUE, ink: WHITE, text: m.highlight.label, anchor: 'center', minX: a.x, maxX: a.x + a.w }, { z: 19, order: 13, enter: 'pop' }));
     }
     return out;
@@ -597,10 +641,10 @@
     const y0 = r.y + top + Math.max(0, (r.h - top - n * rowH - (n - 1) * 12) / 2);
     m.rows.forEach((row, i) => {
       const y = y0 + i * (rowH + 12);
-      const key = `mod.rk.${row.label}`;
+      const key = `mod.rk.${i}.${row.label}`;
       out.push(sp(`${key}.row`, 'card', { x: r.x, y, w: r.w, h: rowH }, { z: 12, order: i }));
       out.push(sp(`${key}.rank`, 'chip', { x: r.x, y, w: rowH, h: rowH, size: TS.caption, fill: toneHex(row.tone, 'ink'), ink: WHITE, text: `#${row.rank}` }, { z: 14, order: i }));
-      out.push(sp(`${key}.label`, 'text', { x: r.x + rowH + 24, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: INK, text: row.label, chip: row.chip }, { z: 14, order: i }));
+      out.push(sp(`${key}.label`, 'text', { x: r.x + rowH + 24, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: INK, text: row.label, chip: row.chip, maxW: r.w - rowH - 24 - 220 - (row.chip ? 140 : 0) }, { z: 14, order: i }));
       if (row.value) out.push(sp(`${key}.val`, 'text', { x: r.x + r.w - 28, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: toneHex(row.tone, 'ink') === INK ? INK : BLUE, align: 'right', text: row.value }, { z: 14, order: i }));
     });
     return out;
@@ -624,7 +668,7 @@
       const ty = y + (h - blockH) / 2 + CAP * size;
       out.push(sp(`${key}.card`, 'card', { x, y, w, h }, { z: 12, order: i }));
       out.push(sp(`${key}.val`, 'text', { x: x + w / 2, y: ty, size, color: toneHex(tile.tone, 'ink'), align: 'center', text: tile.value, ...(c0 ? { value: c0.value, fmt: c0 } : {}) }, { z: 14, order: i, from: c0 ? { value: 0 } : null }));
-      if (tile.label) out.push(sp(`${key}.lab`, 'pill', { x: x + w / 2, y: ty + 28, size: TS.label, fill: INK, ink: WHITE, text: tile.label, anchor: 'center' }, { z: 15, order: i + 1 }));
+      if (tile.label) out.push(sp(`${key}.lab`, 'pill', { x: x + w / 2, y: ty + 28, size: TS.label, fill: INK, ink: WHITE, text: tile.label, anchor: 'center', maxW: w - 32 }, { z: 15, order: i + 1 }));
     });
     return out;
   };
@@ -639,7 +683,7 @@
     return [
       sp('mod.rv.card', 'card', { x, y, w, h }, { z: 12 }),
       sp('mod.rv.val', 'text', { x: x + w / 2, y: ty, size, color: toneHex(m.tone, 'blue'), align: 'center', text: m.to }, { z: 14, from: { text: m.from, color: INK }, buildAt: spokenAt(c, m.to) }),
-      ...(m.label ? [sp('mod.rv.lab', 'pill', { x: x + w / 2, y: ty + 32, size: TS.label, fill: INK, ink: WHITE, text: m.label, anchor: 'center' }, { z: 15, order: 1 })] : []),
+      ...(m.label ? [sp('mod.rv.lab', 'pill', { x: x + w / 2, y: ty + 32, size: TS.label, fill: INK, ink: WHITE, text: m.label, anchor: 'center', maxW: w - 32 }, { z: 15, order: 1 })] : []),
     ];
   };
   MOD.compare = (m, r, c) => {
@@ -655,7 +699,7 @@
       return [
         sp(`mod.cmp.${i}.card`, 'card', { x, y, w, h }, { z: 12, order: i * 2 }),
         sp(`mod.cmp.${i}.val`, 'text', { x: x + w / 2, y: ty, size, color: col, align: 'center', text: k.value, ...(c0 ? { value: c0.value, fmt: c0 } : {}) }, { z: 14, order: i * 2, from: c0 && i ? { value: countable(m.from.value) ? countable(m.from.value).value : 0 } : null }),
-        ...(k.label ? [sp(`mod.cmp.${i}.lab`, 'pill', { x: x + w / 2, y: ty + 28, size: TS.label, fill: i ? toneHex(m.tone, 'blue') : INK, ink: WHITE, text: k.label, anchor: 'center' }, { z: 15, order: i * 2 + 1 })] : []),
+        ...(k.label ? [sp(`mod.cmp.${i}.lab`, 'pill', { x: x + w / 2, y: ty + 28, size: TS.label, fill: i ? toneHex(m.tone, 'blue') : INK, ink: WHITE, text: k.label, anchor: 'center', maxW: w - 32 }, { z: 15, order: i * 2 + 1 })] : []),
       ];
     };
     return [
@@ -668,11 +712,12 @@
     const out = [panel(r)];
     const a = inner(r);
     const groups = Math.ceil(m.n / 5);
-    const step = 40;
-    const groupW = 4 * step + 64;
+    // Big tallies (up to 60 = 12 groups) get a smaller step so every mark is drawn.
+    const step = groups > 8 ? 24 : groups > 4 ? 32 : 40;
+    const groupW = 4 * step + (groups > 8 ? 40 : 64);
     const perRow = Math.max(1, Math.min(groups, Math.floor((a.w - 240) / groupW)));
     const rowsN = Math.ceil(groups / perRow);
-    const mh = Math.min(200, (a.h - (rowsN - 1) * 24) / rowsN);
+    const mh = Math.min(groups > 8 ? 120 : 200, (a.h - (rowsN - 1) * 24) / rowsN);
     const x0 = a.x + 16;
     const y0 = a.y + (a.h - (rowsN * mh + (rowsN - 1) * 24)) / 2;
     for (let i = 0; i < m.n; i += 1) {
@@ -681,7 +726,7 @@
       const gx = x0 + (g % perRow) * groupW;
       const gy = y0 + Math.floor(g / perRow) * (mh + 24);
       const p = k < 4 ? { x1: gx + k * step, y1: gy, x2: gx + k * step, y2: gy + mh } : { x1: gx - 20, y1: gy + mh * 0.78, x2: gx + 3 * step + 20, y2: gy + mh * 0.22 };
-      out.push(sp(`mod.tally.${i}`, 'line', { ...p, stroke: k < 4 ? INK : BLUE, lw: 14, cap: 1 }, { z: 14, order: i, from: { p: 0 }, enter: 'fade' }));
+      out.push(sp(`mod.tally.${i}`, 'line', { ...p, stroke: k < 4 ? INK : BLUE, lw: groups > 8 ? 10 : 14, cap: 1 }, { z: 14, order: i, from: { p: 0 }, enter: 'fade' }));
     }
     void groups;
     out.push(sp('mod.tally.n', 'text', { x: a.x + a.w, y: a.y + CAP * TS.display + 8, size: TS.display, color: BLUE, align: 'right', text: String(m.n), value: m.n, fmt: { pre: '', post: '', dec: 0 } }, { z: 14, order: 1, from: { value: 0 } }));
@@ -756,9 +801,13 @@
     m.rows.forEach((row, i) => {
       const y = y0 + i * rowH;
       const box = 64;
-      const key = `mod.ck.${row.text}`;
-      out.push(sp(`${key}.box`, 'check', { x: a.x, y: y + (rowH - box) / 2, size: box, stroke: ink, mark: row.checked ? BLUE : RED, checked: row.checked ? 1 : 0 }, { z: 14, order: i * 2, from: { p: 0 } }));
-      out.push(sp(`${key}.t`, 'text', { x: a.x + box + 28, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: ink, text: row.rank ? `#${row.rank} ${row.text}` : row.text }, { z: 14, order: i * 2 }));
+      const key = `mod.ck.${i}`;
+      // Each row ticks off as the voiceover reaches it (its first content word), else one by one through the beat.
+      out.push(sp(`${key}.box`, 'check', { x: a.x, y: y + (rowH - box) / 2, size: box, stroke: ink, mark: row.checked ? BLUE : RED, checked: row.checked ? 1 : 0 }, { z: 14, order: i * 2, from: { p: 0 }, buildAt: tickAt(c, row.text, i, n) }));
+      // A rank is its own ES pill before the words (never glued into them).
+      const rw = row.rank ? c.measure(`${row.rank}`, dFont(TS.label)) + PILL(TS.label).padLeft + PILL(TS.label).padRight + 16 : 0;
+      if (row.rank) out.push(sp(`${key}.rank`, 'pill', { x: a.x + box + 28, y: y + (rowH - PILL(TS.label).h) / 2, size: TS.label, fill: chalk ? WHITE : INK, ink: chalk ? INK : WHITE, text: `${row.rank}` }, { z: 14, order: i * 2 }));
+      out.push(sp(`${key}.t`, 'text', { x: a.x + box + 28 + rw, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: ink, text: row.text, maxW: a.w - box - 28 - rw }, { z: 14, order: i * 2 }));
     });
     return out;
   };
@@ -784,7 +833,7 @@
     const list = m.points.map(P);
     out.push(sp('mod.lc.line', 'poly', { pts: list, stroke: BLUE, lw: 10, dot: 1 }, { z: 14, order: 1, from: { p: 0 }, enter: 'fade' }));
     const last = list[list.length - 1];
-    out.push(sp('mod.lc.end', 'dot', { x: last[0], y: last[1], r: 20, fill: BLUE, stroke: WHITE, lw: 6 }, { z: 16, order: 14, enter: 'pop' }));
+    out.push(sp('mod.lc.end', 'dot', { x: last[0], y: last[1], r: 20, fill: BLUE, stroke: WHITE, lw: 6 }, { z: 16, order: 14, enter: 'pop', pulse: true }));
     if (m.axes.x) out.push(sp('mod.lc.lx', 'text', { x: plot.x + plot.w, y: plot.y + plot.h + 16 + CAP * TS.body, size: TS.body, font: 's', color: INK, align: 'right', text: m.axes.x }, { order: 1 }));
     if (m.stamp) out.push(sp('mod.lc.stamp', 'stamp', { x: plot.x + plot.w * 0.72, y: plot.y + plot.h * 0.22, text: m.stamp.text, color: toneHex(m.stamp.tone, 'red'), rot: -8, size: TS.caption }, { z: 40, order: 16, enter: 'pop' }));
     return out;
@@ -804,7 +853,10 @@
       const list = assetsOf.cards;
       cards.slice(0, n).forEach((card, i) => {
         const x = r.x + i * (w + gap);
-        const asset = card.asset || list[i] || '';
+        // The same person keeps the same picture through the chapter (a card never re-enters).
+        const memo = c.cardMemo || {};
+        const asset = card.asset || memo[card.name] || list[i] || '';
+        if (card.name) memo[card.name] = asset;
         const id = `media.cards.${i}`;
         out.push(sp(id, 'namecard', { x, y: r.y, w, h: r.h, asset, name: card.name, tag: card.tag || '' }, { z: 20, order: i }));
         if (card.sticker) { const pm = PILL(TS.caption); const sw = c.measure(card.sticker, dFont(TS.caption)) + pm.padLeft + pm.padRight; out.push(sp(`${id}.st`, 'sticker', { ox: w - sw / 2 - 8, oy: 64, text: card.sticker, rot: 7, size: TS.caption }, { z: 26, order: i + 3, enter: 'pop', parent: id })); }
@@ -818,9 +870,10 @@
       out.push(sp('media.card', 'card', { x: r.x, y: r.y, w: r.w, h: r.h, polaroid: c.skin === 'scrapbook' && kind === 'photo' ? 1 : 0, media: 1 }, { z: 18 }));
       out.push(sp(`media.img.${asset || 'empty'}`, 'media', { asset, kind: kind === 'auto' ? '' : kind }, { z: 19, parent: 'media.card', enter: 'media' }));
     }
-    const label = media.label || (kind === 'presser' ? 'PRESS CONFERENCE' : '');
-    if (label) out.push(sp('media.label', 'pill', { ox: 24, oy: -ph / 2, size: TS.label, fill: INK, ink: WHITE, text: label }, { z: 24, order: 1, parent: kind === 'cutout' ? 'media.cutout' : 'media.card' }));
-    if (kind === 'presser' && media.subject.name) out.push(sp('media.who', 'pill', { ox: 24, oy: r.h - ph - 24, size: TS.label, fill: BLUE, ink: WHITE, text: up(media.subject.name, 24) }, { z: 24, order: 2, parent: 'media.card' }));
+    // No label, no tag (never a default or a phrase from the voiceover).
+    const label = media.label || '';
+    if (label) out.push(sp('media.label', 'pill', { ox: 24, oy: -ph / 2, size: TS.label, fill: INK, ink: WHITE, text: label, maxW: r.w - 48 }, { z: 24, order: 1, parent: kind === 'cutout' ? 'media.cutout' : 'media.card' }));
+    if (kind === 'presser' && media.subject.name && up(media.subject.name, 24) !== label) out.push(sp('media.who', 'pill', { ox: 24, oy: r.h - ph - 24, size: TS.label, fill: BLUE, ink: WHITE, text: up(media.subject.name, 24) }, { z: 24, order: 2, parent: 'media.card' }));
     return out;
   }
 
@@ -862,11 +915,16 @@
       else geo[k] = v;
     });
     let end = t;
+    // A tag on a window flips after the window has moved (move, then change: never both at once).
+    const tf = el.parent ? t + DUR.m : t;
     if (Object.keys(txt).length) {
-      // A flip: squash shut (in), swap while shut, open (out).
-      addKey(el, t, DUR.xs, 'in', { sy: 0 });
-      addKey(el, t + DUR.xs, 0, 'set', txt, { cover: true });
-      end = addKey(el, t + DUR.xs, DUR.xs, 'out', { sy: 1 });
+      // Colours change while shut, with the text (never a lerp through an off-palette mix).
+      Object.keys(geo).forEach(k => { if (typeof geo[k] === 'string' && HEX.test(geo[k])) { txt[k] = geo[k]; delete geo[k]; } });
+      // A flip (round its vertical axis, scaleX): shut (in), swap while shut, open (out).
+      // The type keeps its size on the scale throughout.
+      addKey(el, tf, DUR.xs, 'in', { sx: 0 });
+      addKey(el, tf + DUR.xs, 0, 'set', txt, { cover: true });
+      end = addKey(el, tf + DUR.xs, DUR.xs, 'out', { sx: 1 });
     }
     if (Object.keys(geo).length) end = Math.max(end, addKey(el, t, mode === 'build' ? DUR.l : DUR.m, mode === 'build' ? 'out' : 'inOut', geo));
     return end;
@@ -927,14 +985,20 @@
       } else {
         morph(el, target, t + (mode === 'beat' ? delay : 0), 'morph');
       }
+      // Purposeful ambient: a highlight keeps pulsing until the beat ends (inOut 640 up, 640 down).
+      if (s.pulse && ctx && ctx.beatEnd) {
+        let at = Math.max(t + DUR.l + DUR.m + delay, el.busy.sc || 0);
+        while (at + 2 * DUR.l <= ctx.beatEnd - DUR.s) { addKey(el, at, DUR.l, 'inOut', { sc: 1.16 }); addKey(el, at + DUR.l, DUR.l, 'inOut', { sc: 1 }); at += 2 * DUR.l + DUR.s; }
+      }
     });
     // Exits (media pictures leave under the new one: a crossfade, not a dip).
     L.els.forEach(el => {
       if (!el.alive || seen.has(el.id) || el.global) return;
       el.alive = false;
       if (el.kind === 'media' && ids.has(el.parent) && specs.some(s => s.kind === 'media' && s.id !== el.id && s.parent === el.parent)) {
-        addKey(el, t + DUR.s, 0, 'set', { alpha: 0 }, { cover: true, exit: true });
-        el.died.push(t + DUR.s);
+        // Kept under the new picture until the window's own move is done (400 ms).
+        addKey(el, t + DUR.m, 0, 'set', { alpha: 0 }, { cover: true, exit: true });
+        el.died.push(t + DUR.m);
         return;
       }
       addKey(el, t, DUR.s, 'in', { alpha: 0, dy: -16 }, { exit: true });
@@ -942,11 +1006,12 @@
     });
   }
 
+  const FRAMING = /^(?:CHAPTER|PART|NUMBER|STEP|EXHIBIT)\s+(?:[A-Z]+|\d+)$/;
   const CONTAINERS = new Set(['panel', 'card', 'field', 'quotecard', 'calendar']);
-  function chapterHeadSpecs(ch) {
+  function chapterHeadSpecs(ch, measure) {
     return [
       sp('head', 'headline', { x: ZONE.left, y: ZONE.headY, w: ZONE.headW, text: ch.headline.toUpperCase(), em: toneHex(ch.tone === 'red' ? 'red' : 'blue') }, { z: 30 }),
-      ...markerSpecs(ch.marker),
+      ...markerSpecs(ch.marker, measure),
     ];
   }
   function zoneOf(layout, which) { return LAYOUTS[layout] ? LAYOUTS[layout][which] || null : null; }
@@ -1027,6 +1092,7 @@
       L.end = ch0.outMs;
       layers.push(L);
       const reveal = ci === 0 ? DUR.s : ch0.inMs + WIPE.half;
+      const cardMemo = {};
       ch.beats.forEach((b, bi) => {
         const beat = beats.find(x => x.id === b.id);
         const main = [b.media && b.media.asset, ...(photos[b.id] || [])].filter(a => a && assets[a])[0] || '';
@@ -1036,30 +1102,42 @@
         const hasMedia = Boolean(media && media.kind !== 'none');
         const layout = chooseLayout({ ...b, media }, hasMedia);
         beatLayout[b.id] = layout;
-        const ctx = { ...ctxBase, beat: b, beatEnd: beat.outMs, words };
+        const ctx = { ...ctxBase, beat: b, beatStart: beat.inMs, beatEnd: beat.outMs, words, cardMemo };
         const mr = zoneOf(layout, 'media');
         let dr = zoneOf(layout, 'module');
         let capY = LAYOUTS[layout].cap;
         // Module alone: as tall as it needs (480-800), the caption under it.
-        if (layout === 'module' && b.module) { const need = moduleNeed(b.module); const h = need >= 600 ? 800 : Math.max(480, need); dr = { ...dr, y: dr.y + Math.round((800 - h) / 2 / 8) * 8, h }; }
-        const specs = [...chapterHeadSpecs(ch)];
+        if (layout === 'module' && b.module) { const need = moduleNeed(b.module); const h = need >= 600 ? 800 : Math.max(360, need); dr = { ...dr, y: dr.y + Math.round((800 - h) / 2 / 8) * 8, h }; }
+        // In the data layout a small module (flow, tally) gets a card its size, centred in the zone.
+        if (layout === 'data' && b.module && ['flow', 'tally'].includes(b.module.type)) { const h = Math.min(dr.h, Math.max(360, moduleNeed(b.module))); dr = { ...dr, y: dr.y + Math.round((dr.h - h) / 2 / 8) * 8, h }; }
+        const specs = [...chapterHeadSpecs(ch, measure)];
         if (hasMedia) specs.push(...mediaSpecs(media, mr, { main, cards: cardAssets }, ctx));
         if (b.module && MOD[b.module.type] && dr) specs.push(...MOD[b.module.type](b.module, dr, ctx));
         const tagZone = dr || mr;
+        // One tag per element: a beat tag that repeats the media window's own tag
+        // (or a framing phrase like "CHAPTER ONE") is not drawn.
+        const mediaTags = hasMedia ? [media.label, media.kind === 'presser' ? 'PRESS CONFERENCE' : '', media.subject && media.subject.name ? up(media.subject.name, 24) : ''].filter(Boolean) : [];
+        if (b.tag && (mediaTags.includes(b.tag.text) || FRAMING.test(b.tag.text))) b = { ...b, tag: null };
         // The tag: a red / blue ES pill, a tab on the zone's top-right edge
         // (the label tag and the module title are tabs on the top-left).
         if (b.tag && tagZone) { const th = PILL(TS.label).h; specs.push(sp('tag', 'pill', { x: tagZone.x + tagZone.w - 24, y: tagZone.y - th / 2, size: TS.label, fill: toneHex(b.tag.tone, 'red'), ink: WHITE, text: b.tag.text, anchor: 'right' }, { z: 34, order: 3, enter: 'pop' })); }
         if (b.stamp) {
           const zr = (b.stamp.at === 'media' ? mr : b.stamp.at === 'module' ? dr : null) || mr || dr || { x: 60, y: 700, w: 960, h: 500 };
-          const sw = measure(b.stamp.text, dFont(TS.caption)) + 56;
-          const shh = CAP * TS.caption + 52;
+          // The stamp's size: the caption step, down the scale until it fits 80% of its zone.
+          const ssz = Object.values(TS).filter(v => v <= TS.caption).sort((p, q) => q - p).find(v => measure(b.stamp.text, dFont(v)) + 56 <= zr.w * 0.8) || TS.body;
+          const sw = measure(b.stamp.text, dFont(ssz)) + 56;
+          const shh = CAP * ssz + 52;
           const key = String(b.stamp.text).split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
           const w = words.find(x => x.beat === b.id && x.w.toLowerCase().replace(/[^a-z0-9]/g, '') === key);
           const at = Math.max(beat.inMs + (bi === 0 ? WIPE.half + DUR.m : DUR.l), Math.min(beat.outMs - 900, w ? w.s : beat.inMs + 1400));
-          // Over the zone's top-right corner, rotated like a rubber stamp.
-          // A media window: its top-right corner. A module: its bottom-right corner.
+          // On a media window: over its top-right corner (it covers picture, not data).
+          // On a module: astride the card's top edge, right side (clear of the data),
+          // left of the beat's tag when there is one.
           const onMedia = zr === mr;
-          specs.push(sp('stamp', 'stamp', { x: zr.x + zr.w - sw / 2 - 40, y: onMedia ? zr.y + shh / 2 + 40 : zr.y + zr.h - shh / 2 - 32, text: b.stamp.text, color: toneHex(b.stamp.tone, 'red'), rot: -8, size: TS.caption }, { z: 40, enter: 'pop', at }));
+          const tagW = b.tag && tagZone === zr ? measure(b.tag.text, dFont(TS.label)) + PILL(TS.label).padLeft + PILL(TS.label).padRight + 32 : 0;
+          const sx = zr.x + zr.w - sw / 2 - 40 - tagW;
+          const sy = onMedia ? zr.y + shh / 2 + 40 : zr.y + 4;
+          specs.push(sp('stamp', 'stamp', { x: sx, y: sy, text: b.stamp.text, color: toneHex(b.stamp.tone, 'red'), rot: -6, size: ssz }, { z: 40, enter: 'pop', at }));
         }
         if (bi === 0) applyScene(L, specs, ci === 0 ? 0 : ch0.inMs, 'cover', reveal, ctx);
         else applyScene(L, specs, beat.inMs, 'beat', 0, ctx);
@@ -1073,7 +1151,7 @@
       const L = newLayer(plan.chapters.length, closeIn);
       L.end = durationMs;
       layers.push(L);
-      const specs = closeSpecs(close, plan, ctxBase);
+      const specs = closeSpecs(close, plan, { ...ctxBase, beat: { id: closeId }, beatStart: closeIn + WIPE.half, beatEnd: durationMs, words });
       applyScene(L, specs, closeIn, 'cover', closeIn + WIPE.half, { ...ctxBase, beatEnd: durationMs });
       addKey(capEl, closeIn, 0, 'set', { y: close.kind === 'yourCall' ? 1500 : 1480 }, { cover: true });
       // Ambient: the options (or the last check, or the CTA) breathe until the end (every beat moves).
@@ -1126,6 +1204,22 @@
     }
     assets['graphics:es'] = { kind: 'graphic', label: 'Type, data modules and captions', rights: { source: 'FrameUp renderer', licence: 'ES-owned graphic', organic: true, paid: true } };
     assets['logo:es'] = { kind: 'logo', label: 'EssentiallySports mark', src: 'assets/brand-logos/essentiallysports-mark.svg', rights: { source: 'EssentiallySports', licence: 'ES brand mark', organic: true, paid: true } };
+    // Per beat, honestly: the longest stretch with no keyframe running and no
+    // moving picture (idleMs, camera aside); moves = idle <= 1.2 s, or the
+    // camera drift is carrying something on screen (media or a module).
+    const allLayers = [...layers];
+    function motionOf(b) {
+      const L = allLayers.find(x => b.inMs >= x.start && b.inMs < x.end) || allLayers[allLayers.length - 1];
+      const spans = [];
+      els.forEach(el => { if (el.layer === L.i) el.keys.forEach(k => { if (k.d > 0 && k.t < b.outMs && k.t + k.d > b.inMs) spans.push([k.t, k.t + k.d]); }); });
+      shots.forEach(sh => { if (sh.layer === L.i && sh.inMs < b.outMs && sh.outMs > b.inMs && assets[sh.asset]) spans.push([sh.inMs, sh.outMs]); });
+      spans.sort((p, q) => p[0] - q[0]);
+      let idle = 0; let at = b.inMs + 80;
+      spans.forEach(([p, q]) => { if (p > at) idle = Math.max(idle, Math.min(p, b.outMs - 40) - at); at = Math.max(at, q); });
+      idle = Math.max(idle, b.outMs - 40 - at);
+      const camera = els.some(el => el.layer === L.i && !NO_CAMERA.test(el.id) && el.kind !== 'anchor' && el.born.some(x => x < b.outMs) && !(el.died.length && Math.max(...el.died) <= b.inMs && !el.alive));
+      return { idleMs: Math.max(0, Math.round(idle)), camera, moves: idle <= 1200 || camera };
+    }
     const size = opts.aspect === '4:5' || plan0.aspect === '4:5' ? [W, 1350] : [W, H];
     const clipCount = new Set(shots.filter(s => s.clip).map(s => s.asset)).size;
     const graphics = beats.map((b, i) => ({ id: `${b.id}g`, beat: b.id, template: b.kind === 'cta' ? `es4-${close.kind}` : 'es4-beat', kind: b.kind, inMs: b.inMs, outMs: b.outMs, index: i, data: { text: beatText(b.src, plan.chapters[b.ci]), module: b.src && b.src.module ? b.src.module.type : '', media: b.src && b.src.media ? b.src.media.kind : '', layout: beatLayout[b.id] || '', chapter: b.chapter } }));
@@ -1137,7 +1231,7 @@
       limits: { maxSeconds: 120, targetSeconds: [80, 100] },
       team: opts.team && opts.team.name ? { name: clean(opts.team.name, 80), colors: (opts.team.colors || []).filter(c => HEX.test(String(c))).slice(0, 2), logo: opts.team.logo || '' } : null,
       captionStyle: 'es4', highlight: BLUE, voice: { mode: ['elevenlabs', 'gateway'].includes(opts.voiceMode) ? opts.voiceMode : 'off' },
-      beats: beats.map(b => ({ id: b.id, kind: b.kind, chapter: b.chapter, inMs: b.inMs, outMs: b.outMs, vo: b.vo, text: beatText(b.src, plan.chapters[b.ci]), module: b.src && b.src.module ? b.src.module.type : '', media: b.src && b.src.media ? b.src.media.kind : '' })),
+      beats: beats.map(b => ({ id: b.id, kind: b.kind, chapter: b.chapter, inMs: b.inMs, outMs: b.outMs, vo: b.vo, ...motionOf(b), text: beatText(b.src, plan.chapters[b.ci]), module: b.src && b.src.module ? b.src.module.type : '', media: b.src && b.src.media ? b.src.media.kind : '' })),
       chapters, wipes, layers: [...layers].map(L => ({ i: L.i, start: L.start, end: L.end })), els,
       tracks: { video: shots, graphics, captions: { style: 'es4', words, cards }, audio },
       assets, clipCount, needsClips: clipCount === 0,
@@ -1159,7 +1253,7 @@
   function beatText(src, ch) {
     if (!src) return '';
     if (src.close) return [src.close.prompt, ...(src.close.options || []).map(o => o.text), src.close.comment, ...(src.close.rows || []).map(r => r.text)].filter(Boolean).join(' · ');
-    return [ch ? ES.plainVo(ch.headline) : '', ...moduleStrings(src.module), src.tag && src.tag.text, src.stamp && src.stamp.text, src.media && src.media.label, ...((src.media && src.media.cards) || []).flatMap(c => [c.name, c.tag, c.sticker])].filter(Boolean).join(' · ');
+    return [ch ? ES.plainVo(ch.headline) : '', ...moduleStrings(src.module, { data: true }), src.tag && src.tag.text, src.stamp && src.stamp.text, src.media && src.media.label, ...((src.media && src.media.cards) || []).flatMap(c => [c.name, c.tag, c.sticker])].filter(Boolean).join(' · ');
   }
 
   function closeSpecs(close, plan, ctx) {
@@ -1260,9 +1354,12 @@
     ctx.globalAlpha *= clamp01(s.alpha == null ? 1 : s.alpha);
     const sc = s.sc == null ? 1 : s.sc;
     const sy = s.sy == null ? 1 : s.sy;
+    const sx = s.sx == null ? 1 : s.sx;
+    // A flip at its shut point draws nothing (no degenerate transform).
+    if (Math.abs(sc * sy) < 0.04 || Math.abs(sc * sx) < 0.04) { ctx.restore(); return; }
     ctx.translate(cx, cy + (s.dy || 0));
     if (s.rot) ctx.rotate((s.rot * Math.PI) / 180);
-    if (sc !== 1 || sy !== 1) ctx.scale(sc, sc * sy);
+    if (sc !== 1 || sy !== 1 || sx !== 1) ctx.scale(sc * sx, sc * sy);
     ctx.translate(-cx, -cy);
     fn();
     ctx.restore();
@@ -1288,7 +1385,7 @@
     ctx.restore();
   }
   function drawPill(ctx, s, M, tl) {
-    const size = s.size || TS.label;
+    const size = fitStep(M, s.text, s.size || TS.label, s.maxW, dFont, true);
     const pm = PILL(size);
     const font = dFont(size);
     const tw = M(s.text, font);
@@ -1298,6 +1395,7 @@
     withState(ctx, s, x + w / 2, s.y + pm.h / 2, () => {
       ctx.fillStyle = s.fill || INK;
       ctx.fillRect(Math.round(x), Math.round(s.y), Math.round(w), Math.round(pm.h));
+      if (s.line) { ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.strokeRect(Math.round(x) + 1.5, Math.round(s.y) + 1.5, Math.round(w) - 3, Math.round(pm.h) - 3); }
       if (s.bubble) { ctx.beginPath(); ctx.moveTo(x + 40, s.y + pm.h - 1); ctx.lineTo(x + 40, s.y + pm.h + 22); ctx.lineTo(x + 66, s.y + pm.h - 1); ctx.closePath(); ctx.fill(); }
       ctx.fillStyle = s.ink || WHITE;
       ctx.font = font;
@@ -1309,9 +1407,9 @@
   }
   function textOf(s) { return s.fmt && typeof s.value === 'number' ? fmtCount(s.fmt, s.value) : String(s.text == null ? '' : s.text); }
   function drawText(ctx, s, M) {
-    const size = s.size || TS.label;
-    const font = s.font === 's' ? sFont(size) : dFont(size);
     const text = textOf(s);
+    const size = fitStep(M, text, s.size || TS.label, s.maxW, s.font === 's' ? sFont : dFont);
+    const font = s.font === 's' ? sFont(size) : dFont(size);
     const w = M(text, font);
     const x = s.align === 'center' ? s.x - w / 2 : s.align === 'right' ? s.x - w : s.x;
     withState(ctx, { ...s, rot: 0 }, x + w / 2, s.y - (CAP * size) / 2, () => {
@@ -1462,12 +1560,13 @@
         const rot = tilt(`${el.layer}${el.id}`, skin) * (el.kind === 'card' && s.media ? 0.5 : 1);
         withState(ctx, { ...s, rot }, s.x + s.w / 2, s.y + s.h / 2, () => {
           ctx.save();
-          if (s.chalk) {
+          if (s.chalk > 0) {
+            // The board morphs: white card <-> chalkboard (chalk 0..1 on inOut).
             paperShadow(ctx, skin);
-            ctx.fillStyle = INK;
+            ctx.fillStyle = mixHex(WHITE, INK, s.chalk);
             ctx.fillRect(s.x, s.y, s.w, s.h);
             noShadow(ctx);
-            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            ctx.strokeStyle = `rgba(255,255,255,${(0.06 * clamp01(s.chalk)).toFixed(3)})`;
             ctx.lineWidth = 2;
             for (let k = 0; k < 14; k += 1) { const yy = s.y + ((k + 0.5) * s.h) / 14; ctx.beginPath(); ctx.moveTo(s.x + 24, yy + Math.sin(k) * 3); ctx.lineTo(s.x + s.w - 24, yy - Math.cos(k) * 3); ctx.stroke(); }
           } else if (el.kind === 'quotecard' && skin === 'scrapbook') {
@@ -1821,7 +1920,16 @@
     const k = four ? (ch - 112) / (1660 - 280) : 1;
     if (four) { ctx.translate((cw - W * k) / 2, 56 - 280 * k); ctx.scale(k, k); }
     const vis = visibleAt(tl, t);
-    vis.list.forEach(x => { if (x.el.kind !== 'anchor') drawEl(ctx, x, tl, env, t, M, helpers); });
+    // The camera: a slow drift of the media and data zones (never the headline,
+    // the marker, the captions or the mark), so no beat ever holds still.
+    const cam = cameraAt(t);
+    vis.list.forEach(x => {
+      if (x.el.kind === 'anchor') return;
+      const fixed = NO_CAMERA.test(x.el.id);
+      if (!fixed) { ctx.save(); ctx.translate(cam.x, cam.y); }
+      drawEl(ctx, x, tl, env, t, M, helpers);
+      if (!fixed) ctx.restore();
+    });
     drawCaptions(ctx, tl, t, M);
     ctx.restore();
     const wipe = wipeAt(tl, t);
@@ -1845,8 +1953,8 @@
   function elBox(x, M) {
     const { el, s } = x;
     switch (el.kind) {
-      case 'pill': { const pm = PILL(s.size || TS.label); const w = M(s.text, dFont(s.size || TS.label)) + pm.padLeft + pm.padRight; let px = s.anchor === 'center' ? s.x - w / 2 : s.anchor === 'right' ? s.x - w : s.x; if (s.minX != null) px = Math.max(s.minX, Math.min((s.maxX || 1e9) - w, px)); return { x: px, y: s.y, w, h: pm.h, text: s.text }; }
-      case 'text': { const size = s.size || TS.label; const w = M(textOf(s), s.font === 's' ? sFont(size) : dFont(size)); const px = s.align === 'center' ? s.x - w / 2 : s.align === 'right' ? s.x - w : s.x; return { x: px, y: s.y - CAP * size, w, h: CAP * size, text: textOf(s) }; }
+      case 'pill': { const z = fitStep(M, s.text, s.size || TS.label, s.maxW, dFont, true); const pm = PILL(z); const w = M(s.text, dFont(z)) + pm.padLeft + pm.padRight; let px = s.anchor === 'center' ? s.x - w / 2 : s.anchor === 'right' ? s.x - w : s.x; if (s.minX != null) px = Math.max(s.minX, Math.min((s.maxX || 1e9) - w, px)); return { x: px, y: s.y, w, h: pm.h, text: s.text }; }
+      case 'text': { const size = fitStep(M, textOf(s), s.size || TS.label, s.maxW, s.font === 's' ? sFont : dFont); const w = M(textOf(s), s.font === 's' ? sFont(size) : dFont(size)); const px = s.align === 'center' ? s.x - w / 2 : s.align === 'right' ? s.x - w : s.x; return { x: px, y: s.y - CAP * size, w, h: CAP * size, text: textOf(s) }; }
       case 'headline': case 'para': { const lay = el.kind === 'headline' ? wrapEm(M, s.text, HEAD_STEPS, s.w, 2, TS.h2) : wrapEm(M, s.text, s.steps || [TS.h2, TS.caption], s.w, s.maxLines || 2, Infinity, s.h || Infinity); return { x: s.x, y: s.y, w: Math.max(0, ...lay.lines.map(l => l.w)), h: lay.lines.length * lay.size * 0.92, text: s.text, fits: lay.fits }; }
       case 'stamp': { const size = s.size || TS.caption; const w = M(s.text, dFont(size)) + 56; const h = CAP * size + 52; return { x: s.x - w / 2, y: s.y - h / 2, w, h, text: s.text }; }
       case 'sticker': { const size = s.size || TS.caption; const pm = PILL(size); const w = M(s.text, dFont(size)) + pm.padLeft + pm.padRight; return { x: s.x - w / 2, y: s.y - pm.h / 2, w, h: pm.h, text: s.text }; }
@@ -1877,12 +1985,11 @@
     if (linear) out.push(issue('motion-linear', 'critical', `${linear} animation${linear > 1 ? 's use' : ' uses'} linear or unnamed easing.`, 'Use ES out, inOut, in (exits) or the spring.'));
     if (bareSet) out.push(issue('motion-cut', 'critical', `${bareSet} element${bareSet > 1 ? 's jump' : ' jumps'} while on screen.`, 'Morph it, or change it under the wipe.'));
     (tl.wipes || []).forEach(w => { if (w.ms !== WIPE.ms) out.push(issue('motion-scale', 'critical', 'A chapter wipe is not 640 ms.', 'Use the slab wipe.')); });
-    // 2. Every beat moves: an animation, a moving picture, or the close's breathing.
+    // 2. Every beat moves (timeline beats carry idleMs / camera / moves, see motionOf):
+    //    nothing on screen to move -> critical; only the camera drift for > 1.2 s -> warning.
     tl.beats.forEach((b, i) => {
-      const L = tl.layers.find(x => b.inMs >= x.start && b.inMs < x.end) || tl.layers[0];
-      const keyMoves = tl.els.some(el => el.layer === L.i && el.keys.some(k => k.d > 0 && k.t < b.outMs && k.t + k.d > b.inMs));
-      const media = tl.tracks.video.some(s => s.layer === L.i && s.inMs < b.outMs && s.outMs > b.inMs && tl.assets[s.asset]);
-      if (!keyMoves && !media) out.push(issue('static-beat', 'critical', `Beat ${i + 1} does not move: no clip, no photo and no module building.`, 'Give it a clip or photo, or a data module that builds.', b.id));
+      if (b.moves === false) out.push(issue('static-beat', 'critical', `Beat ${i + 1} does not move: no clip, no photo and no module.`, 'Give it a clip or photo, or a data module that builds.', b.id));
+      else if (b.idleMs > 1200 && b.kind !== 'cta') out.push(issue('idle-beat', 'warning', `Beat ${i + 1}: only the camera drift moves for ${(b.idleMs / 1000).toFixed(1)} s.`, 'Add a clip, or a module that changes as the voiceover goes.', b.id));
     });
     // 3. Empty media slots; 4. clips.
     tl.els.forEach(el => {
@@ -1930,8 +2037,8 @@
   }
 
   return {
-    MOTION4, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, ease, springAt, curveAt, bezier,
-    MODULE_TYPES, MEDIA_KINDS, LAYOUTS, ZONE, PALETTE, TONE,
+    MOTION4, CAMERA, cameraAt, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, ease, springAt, curveAt, bezier,
+    MODULE_TYPES, MEDIA_KINDS, CLOSE_KINDS, LAYOUTS, ZONE, PALETTE, TONE,
     cleanModule, moduleProblems, moduleStrings, moduleNeed, normalize, toV4, isV4, STRUCTURAL,
     buildTimeline, stateAt, visibleAt, layerAt, wipeAt, frameAt, clipTimes, clipTime, capAt,
     drawFrame, slabPoly, inPoly, textBoxes, checks, approxMeasure, keyWord, countable, fmtCount, mixVal,

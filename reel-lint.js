@@ -295,8 +295,12 @@
     const sourceSet = F.numberSet(`${timeline.corpus || ''} ${extraSources || ''}`);
     if (ES && ES.spelledNumbers) ES.spelledNumbers(`${timeline.corpus || ''} ${extraSources || ''} ${timeline.beats.map(b => b.vo || '').join(' ')}`).forEach(n => sourceSet.add(n));
     F.numbersIn(timeline.beats.map(b => b.vo || '').join(' ')).forEach(n => sourceSet.add(n));
+    // Spoken amounts back their figures: "one in a hundred" -> 100, "under half" -> 50(%).
+    const SPOKEN = { hundred: '100', thousand: '1000', half: '50', dozen: '12', million: '1000000' };
+    timeline.beats.forEach(b => String(b.vo || '').toLowerCase().split(/[^a-z]+/).forEach(w => { if (SPOKEN[w]) sourceSet.add(SPOKEN[w]); }));
     timeline.beats.forEach((beat, index) => {
-      const bad = F.numbersIn(beat.text || '').filter((n, i, a) => a.indexOf(n) === i && !sourceSet.has(n) && !(E4 && E4.STRUCTURAL.has(n)));
+      // Numbers inside team names (49ERS, 76ERS) are names, not figures.
+      const bad = F.numbersIn(String(beat.text || '').replace(/\b\d+(?:ERS|NERS)\b/gi, '')).filter((n, i, a) => a.indexOf(n) === i && !sourceSet.has(n) && !(E4 && E4.STRUCTURAL.has(n)));
       if (bad.length) issues.push(issue('numbers', 'critical', `Beat ${index + 1}: ${bad.join(', ')} ${bad.length > 1 ? 'are' : 'is'} not in the sources.`, 'Fix the number, or add where it comes from under Sources.', beat.id));
     });
     // Rights, and missing assets.
@@ -311,6 +315,7 @@
     if (!timeline.tracks.captions.words.length) issues.push(issue('captions', 'warning', 'No captions: most people watch with the sound off.', 'Add voiceover lines to the beats.'));
     if (timeline.voice.mode === 'off') issues.push(issue('voice', 'info', 'Captions only, no voiceover. Voiceover is what makes a reel count as original on Instagram and Facebook.'));
     if (timeline.timing && timeline.timing.estimate) issues.push(issue('timing', 'info', 'Beat times are estimates (2.6 words a second) until the voiceover is recorded.', 'Record or load the voiceover to lock the beats to it.'));
+    if (timeline.plan && timeline.plan.closeRaw) issues.push(issue('close', 'warning', `"${timeline.plan.closeRaw.kind}" is not a close; it ends on the end card.`, `Use one of: ${(E4 ? E4.CLOSE_KINDS : []).join(', ')}.`));
     if (E4) issues.push(...E4.checks(timeline, { measure: typeof measure === 'function' ? measure : null }));
     const critical = issues.filter(i => i.severity === 'critical').length;
     const warnings = issues.filter(i => i.severity === 'warning').length;

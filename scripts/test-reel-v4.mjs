@@ -177,7 +177,7 @@ test('every key in every reel: a scale duration (160/240/400/640), a named curve
       if (k.c !== 'set' || el.layer === 'g') return;
       const atCover = k.t === 0 || tl.wipes.some(w => w.at === k.t);
       const before = E4.stateAt(el, k.t - 1);
-      const hidden = (before.alpha == null ? 1 : before.alpha) < 0.05 || before.sy < 0.05;
+      const hidden = (before.alpha == null ? 1 : before.alpha) < 0.05 || before.sy < 0.05 || before.sx < 0.05;
       const onlyAlphaToZero = Object.keys(k.p).every(n => n === 'alpha') && k.p.alpha === 0;
       assert.ok(atCover || hidden || onlyAlphaToZero || E4.stateAt(el, k.t - 1).alpha === undefined, `${id} ${el.id}: an instant change at ${k.t} while visible`);
     }));
@@ -202,7 +202,7 @@ function jumps(tl, t, tol = 4) {
       const d1 = Math.abs(s1[n] - s0[n]); const d2 = Math.abs(s2[n] - s1[n]);
       if (d1 > tol || d2 > tol) out.push(`${id}.${n} ${s0[n].toFixed(1)} -> ${s1[n].toFixed(1)} -> ${s2[n].toFixed(1)} at ${t}`);
     });
-    ['sc', 'sy'].forEach(n => { if (typeof s1[n] === 'number' && (Math.abs(s1[n] - s0[n]) > 0.02 || Math.abs(s2[n] - s1[n]) > 0.02)) out.push(`${id}.${n} at ${t}`); });
+    ['sc', 'sy', 'sx'].forEach(n => { if (typeof s1[n] === 'number' && (Math.abs(s1[n] - s0[n]) > 0.02 || Math.abs(s2[n] - s1[n]) > 0.02)) out.push(`${id}.${n} at ${t}`); });
   });
   return out;
 }
@@ -251,8 +251,8 @@ test('matched transitions: inside a chapter the same element morphs (inOut 400),
   assert.ok(mid > 10 && mid < 34, `counts through ${mid}`);
   // Rams r4: the reveal flips "?" -> "35" (in 160, swap while shut, out 160).
   const rv = TL.rams.els.find(e => e.id === 'mod.rv.val');
-  const i0 = rv.keys.findIndex(x => x.c === 'in' && x.p.sy === 0);
-  const flip = rv.keys.slice(i0).filter(x => x.p.sy != null || x.p.text != null).slice(0, 3);
+  const i0 = rv.keys.findIndex(x => x.c === 'in' && x.p.sx === 0);
+  const flip = rv.keys.slice(i0).filter(x => x.p.sx != null || x.p.text != null).slice(0, 3);
   const r4 = TL.rams.beats.find(b => b.id === 'r4');
   const said = TL.rams.tracks.captions.words.find(w => w.beat === 'r4' && /35/.test(w.w));
   assert.equal(rv.keys[i0].t, said.s - 160, 'the "?" flips as the voice says 35');
@@ -303,7 +303,10 @@ test('v4 lint: the six reels pass (no critical); flags off-scale, linear, static
   assert.ok(res.issues.some(i => i.id === 'empty-media'), 'clip beats with no clip are empty slots');
   // A beat with nothing that moves.
   const still = R.buildTimeline({ v: 4, chapters: [{ headline: 'A *B*', beats: [{ id: 'a', vo: 'one two three', module: { type: 'statTiles', tiles: [{ value: 'X', label: 'Y' }] } }, { id: 'b', vo: 'four five six', module: { type: 'statTiles', tiles: [{ value: 'X', label: 'Y' }] } }] }] }, {});
-  assert.ok(E4.checks(still).some(i => i.id === 'static-beat' && i.beat === 'b'));
+  assert.ok(E4.checks(still).some(i => i.id === 'idle-beat' && i.beat === 'b'), 'only the camera moves: flagged');
+  assert.ok(still.beats.find(x => x.id === 'b').idleMs > 1200 && still.beats.find(x => x.id === 'b').moves);
+  const bare = R.buildTimeline({ v: 4, chapters: [{ headline: 'A *B*', beats: [{ id: 'a', vo: 'one two three four five six seven' }] }] }, {});
+  assert.ok(E4.checks(bare).some(i => i.id === 'static-beat' && i.beat === 'a'), 'nothing on screen to move');
 });
 test('brand checks: palette, type scale, safe frame, the mark\'s clear space, one coloured word', () => {
   const tl = build('kittle');
