@@ -28,7 +28,7 @@ const page = `<!doctype html><meta charset="utf-8"><title>reels v4</title>
 <body style="margin:0;background:#888">
 <script src="/video-ads-render.js"></script><script src="/frameup-rules.js"></script><script src="/reel-formats.js"></script><script src="/reel-es-themes.js"></script><script src="/reel-styles.js"></script>
 <script src="/reel-es.js"></script><script src="/reel-es4.js"></script><script src="/reel-timeline.js"></script><script src="/reel-replay.js"></script>
-<script src="/reel-render.js"></script><script src="/reel-lint.js"></script>
+<script src="/reel-render.js"></script><script src="/reel-lint.js"></script><script src="/reel-export.js"></script>
 <script>
 const REELS = ${JSON.stringify(REELS)}; const PICS = ${JSON.stringify(PICTURES)}; const CUTS = ${JSON.stringify(CUTOUTS)}; const OPTS = ${JSON.stringify(OPTS)};
 const mc = document.createElement('canvas').getContext('2d');
@@ -98,6 +98,20 @@ function pixels(id) {
   });
   return res;
 }
+// The MP4 path the page uses (ReelExport.encodeMediabunny, WebCodecs), on the
+// first seconds of a reel across its first wipe: proves the v4 timeline encodes.
+async function mp4(id, seconds) {
+  const MB = await import('https://cdn.jsdelivr.net/npm/mediabunny@1.62.1/+esm');
+  const tl = build(id);
+  const from = Math.max(0, tl.wipes[0].at - seconds * 500);
+  const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1920;
+  const ctx = canvas.getContext('2d');
+  const buf = await ReelExport.encodeMediabunny({ MB, canvas, durationMs: seconds * 1000, fps: 30, draw: t => ReelRender.drawFrame(ctx, tl, from + t, env()), prepare: async t => { ReelRender.clipTimes(tl, from + t); } });
+  const bytes = buf && (buf.byteLength || (buf.buffer && buf.buffer.byteLength) || buf.size || 0);
+  const u8 = new Uint8Array(buf.buffer || buf);
+  let bin = ''; for (let i = 0; i < u8.length; i += 1) bin += String.fromCharCode(u8[i]);
+  return { bytes, b64: btoa(bin), from };
+}
 function lintOf(id) {
   const tl = build(id);
   return ReelLint.lintTimeline(tl, { measure, boxes: null }).issues.filter(i => i.severity !== 'info').map(i => i.severity + ' ' + i.id + ': ' + i.message);
@@ -128,6 +142,9 @@ try {
     const l = await chrome.evaluate(`lintOf(${JSON.stringify(id)})`);
     l.forEach(i => lint.push(`${id}: ${i}`));
     console.log(id, `${(r.dur / 1000).toFixed(1)} s`, `${l.length} lint (non-info)`);
+  }
+  if (args.includes('--mp4')) {
+    try { const r = await chrome.evaluate('mp4("dallas", 4)'); fs.writeFileSync(path.join(out, 'dallas-wipe.mp4'), Buffer.from(r.b64, 'base64')); console.log(`mp4: ${r.bytes} bytes, 4 s from ${r.from} ms (dallas-wipe.mp4)`); } catch (error) { console.log('mp4 failed:', error.message || error); }
   }
   fs.writeFileSync(path.join(out, 'lint.txt'), lint.join('\n') + '\n');
   fs.writeFileSync(path.join(out, 'pixels.txt'), px.join('\n') + '\n');

@@ -807,7 +807,7 @@
         const asset = card.asset || list[i] || '';
         const id = `media.cards.${i}`;
         out.push(sp(id, 'namecard', { x, y: r.y, w, h: r.h, asset, name: card.name, tag: card.tag || '' }, { z: 20, order: i }));
-        if (card.sticker) out.push(sp(`${id}.st`, 'sticker', { ox: w - 36, oy: 56, text: card.sticker, rot: 9, size: TS.caption }, { z: 26, order: i + 3, enter: 'pop', parent: id }));
+        if (card.sticker) { const pm = PILL(TS.caption); const sw = c.measure(card.sticker, dFont(TS.caption)) + pm.padLeft + pm.padRight; out.push(sp(`${id}.st`, 'sticker', { ox: w - sw / 2 - 8, oy: 64, text: card.sticker, rot: 7, size: TS.caption }, { z: 26, order: i + 3, enter: 'pop', parent: id })); }
       });
       return out;
     }
@@ -1847,6 +1847,8 @@
       case 'pill': { const pm = PILL(s.size || TS.label); const w = M(s.text, dFont(s.size || TS.label)) + pm.padLeft + pm.padRight; let px = s.anchor === 'center' ? s.x - w / 2 : s.anchor === 'right' ? s.x - w : s.x; if (s.minX != null) px = Math.max(s.minX, Math.min((s.maxX || 1e9) - w, px)); return { x: px, y: s.y, w, h: pm.h, text: s.text }; }
       case 'text': { const size = s.size || TS.label; const w = M(textOf(s), s.font === 's' ? sFont(size) : dFont(size)); const px = s.align === 'center' ? s.x - w / 2 : s.align === 'right' ? s.x - w : s.x; return { x: px, y: s.y - CAP * size, w, h: CAP * size, text: textOf(s) }; }
       case 'headline': case 'para': { const lay = el.kind === 'headline' ? wrapEm(M, s.text, HEAD_STEPS, s.w, 2, TS.h2) : wrapEm(M, s.text, s.steps || [TS.h2, TS.caption], s.w, s.maxLines || 2, Infinity, s.h || Infinity); return { x: s.x, y: s.y, w: Math.max(0, ...lay.lines.map(l => l.w)), h: lay.lines.length * lay.size * 0.92, text: s.text, fits: lay.fits }; }
+      case 'stamp': { const size = s.size || TS.caption; const w = M(s.text, dFont(size)) + 56; const h = CAP * size + 52; return { x: s.x - w / 2, y: s.y - h / 2, w, h, text: s.text }; }
+      case 'sticker': { const size = s.size || TS.caption; const pm = PILL(size); const w = M(s.text, dFont(size)) + pm.padLeft + pm.padRight; return { x: s.x - w / 2, y: s.y - pm.h / 2, w, h: pm.h, text: s.text }; }
       default: return null;
     }
   }
