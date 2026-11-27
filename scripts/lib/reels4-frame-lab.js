@@ -32,18 +32,21 @@ const hex = c => { if (typeof c !== 'string') return ''; const s = c.trim().toLo
 const TOKENS = Object.assign({ blue: '#0A7DFA', ink: '#121212', paper: '#F1EFEA', white: '#FFFFFF', red: '#E8322B', green: '#1BC47D', yellow: '#FFC52F' }, (ES && ES.TOKENS) || {});
 
 // ── Engine surface (v4 names first, v3 fallbacks) ──
+// Always through ReelRender, as the page and the export do (it routes a v4 plan to the
+// Breakdown engine with its helpers).
 const api = {
-  build: (plan, opts) => (ES4 && ES4.buildTimeline ? ES4.buildTimeline(plan, opts) : R.buildTimeline(plan, opts)),
-  draw: (ctx, tl, t, env) => (ES4 && ES4.drawFrame && tl && tl.v === 4 && !R.drawFrame.__v4 ? ES4.drawFrame(ctx, tl, t, env) : R.drawFrame(ctx, tl, t, env)),
-  clipTimes: (tl, t) => { try { return (ES4 && ES4.clipTimes ? ES4.clipTimes(tl, t) : (R.clipTimes ? R.clipTimes(tl, t) : [])) || []; } catch { return []; } },
+  build: (plan, opts) => R.buildTimeline(plan, opts),
+  draw: (ctx, tl, t, env) => R.drawFrame(ctx, tl, t, env),
+  clipTimes: (tl, t) => { try { return (R.clipTimes ? R.clipTimes(tl, t) : []) || []; } catch { return []; } },
 };
 function motionSpec() {
-  const M = (ES4 && (ES4.MOTION || ES4.motion)) || (ES && (ES.MOTION || ES.motion)) || {};
-  const ease = (ES && ES.ease) || (ES4 && ES4.ease) || M.ease || M.curves || null;
-  const durs = M.durations || M.DURATIONS || M.scale || (ES && ES.DURATIONS) || (ES4 && ES4.DURATIONS) || null;
-  const spring = (ES && ES.spring) || (ES4 && ES4.spring) || M.spring || null;
-  const stamp = M.stamp || (ES4 && ES4.STAMP) || (ES && ES.STAMP) || null;
-  const zones = (ES4 && (ES4.ZONES || ES4.zones)) || (ES && (ES.ZONES || ES.ZONES4)) || null;
+  // v4 names first (ReelES4.MOTION4: CURVES, DURATIONS, SPRING, WIPE), then ReelES.
+  const M = (ES4 && (ES4.MOTION4 || ES4.MOTION)) || (ES && (ES.MOTION4 || ES.MOTION)) || {};
+  const ease = M.CURVES || (ES4 && ES4.CURVES) || (ES && ES.ease) || null;
+  const durs = M.DURATIONS || M.durations || (ES4 && ES4.DURATIONS) || (ES && ES.DURATIONS) || null;
+  const spring = M.SPRING || (ES4 && ES4.SPRING) || (ES && ES.spring) || null;
+  const stamp = M.STAMP || (ES4 && ES4.STAMP) || (ES && ES.STAMP) || null;
+  const zones = ES4 && ES4.ZONE ? { zone: ES4.ZONE, layouts: ES4.LAYOUTS } : null;
   const toV4 = (ES && ES.toV4) || (ES4 && ES4.toV4) || null;
   const flat = v => { const out = []; const walk = x => { if (Number.isFinite(Number(x)) && x !== '' && x !== null && typeof x !== 'boolean') out.push(Number(x)); else if (Array.isArray(x)) x.forEach(walk); else if (x && typeof x === 'object') Object.values(x).forEach(walk); }; walk(v); return out; };
   const curves = {};
@@ -178,13 +181,16 @@ function normalise(tl, plan) {
   const chOfBeat = Object.fromEntries(pBeats.map(b => [b.id, b.chapterId]));
   const beats = (tl.beats || []).map(b => ({ id: b.id, chapterId: b.chapterId || b.chapter || chOfBeat[b.id] || '', inMs: num(b.inMs, b.startMs, b.start), outMs: num(b.outMs, b.endMs, b.end), kind: b.kind || '' })).filter(b => b.inMs != null && b.outMs != null);
   let chapters = Array.isArray(tl.chapters) && tl.chapters.length ? tl.chapters.map(c => ({ id: c.id, inMs: num(c.inMs, c.startMs, c.start), outMs: num(c.outMs, c.endMs, c.end) })) : [];
+  // The close is its own layer after the last wipe: kept apart from the chapters.
   if (!chapters.length) {
     const by = new Map();
     beats.forEach(b => { if (!b.chapterId) return; const c = by.get(b.chapterId) || { id: b.chapterId, inMs: b.inMs, outMs: b.outMs }; c.inMs = Math.min(c.inMs, b.inMs); c.outMs = Math.max(c.outMs, b.outMs); by.set(b.chapterId, c); });
     chapters = [...by.values()].sort((a, b) => a.inMs - b.inMs);
   }
   const wipeSrc = tl.wipes || (tl.transitions || []).filter(x => /wipe|slab/i.test(String(x.kind || x.type || ''))) || [];
-  const wipes = wipeSrc.map(w => ({ from: w.from || w.fromChapter || '', to: w.to || w.toChapter || '', inMs: num(w.inMs, w.startMs, w.start, w.t0), outMs: num(w.outMs, w.endMs, w.end, w.t1), midMs: num(w.midMs, w.mid) })).filter(w => w.inMs != null && w.outMs != null);
+  // ReelES4: { at (the middle), ms, to (chapter index; chapters.length = the close) }.
+  const chId = i => (Number.isInteger(i) ? (chapters[i] ? chapters[i].id : 'close') : i);
+  const wipes = wipeSrc.map(w => { const ms = num(w.ms, w.durMs); const at = num(w.at, w.midMs, w.mid); return { from: Number.isInteger(w.to) ? chId(w.to - 1) : (w.from || ''), to: chId(w.to), inMs: num(w.inMs, w.startMs, at != null && ms != null ? at - ms / 2 : null), outMs: num(w.outMs, w.endMs, at != null && ms != null ? at + ms / 2 : null), midMs: at }; }).filter(w => w.inMs != null && w.outMs != null);
   return { durationMs: tl.durationMs, chapters, beats, wipes, wipesFromEngine: wipes.length > 0, close: tl.close || null, anims: Array.isArray(tl.anims) ? tl.anims.length : (Array.isArray(tl.tweens) ? tl.tweens.length : null) };
 }
 
