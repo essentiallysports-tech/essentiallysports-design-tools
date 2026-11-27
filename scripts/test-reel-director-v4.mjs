@@ -452,6 +452,34 @@ await test('code path on real scripts: no dangling headline end, no credit chapt
   }
 });
 
+await test('code path: one beat per sentence (N sentences -> >= N beats), chapters group them, vo identical', () => {
+  const sentencesOf = t => D.splitCredits(t).spoken.split(/(?<=[.!?…]["”’)*]*)\s+(?=["“(*]?[A-Z0-9$])/).filter(Boolean);
+  const four = 'Dallas was up 21. They lost anyway. Wait. Who do you blame?';
+  for (const length of ['full', 'short']) {
+    const plan = D.scriptToV4(four, { length });
+    const beats = plan.chapters.flatMap(c => c.beats);
+    assert.equal(beats.length, 4, `${length}: 4 sentences -> 4 beats (a two-word line is its own scene)`);
+    assert.deepEqual(beats.map(b => b.vo), ['Dallas was up 21.', 'They lost anyway.', 'Wait.', 'Who do you blame?']);
+    assert.equal(plan.chapters[0].beats.length, 1, 'the hook is the first sentence alone');
+    assert.ok(plan.chapters.length >= 2);
+  }
+  for (const [id, script] of Object.entries(CODE_SCRIPTS)) {
+    for (const length of ['full', 'short']) {
+      const plan = D.scriptToV4(script, { length });
+      const n = sentencesOf(script).length;
+      const beats = plan.chapters.flatMap(c => c.beats);
+      assert.ok(beats.length >= n, `${id}/${length}: ${n} sentences -> ${beats.length} beats`);
+      assert.equal(allVo(plan), D.splitCredits(script).spoken, `${id}/${length}: vo identical`);
+      plan.chapters.slice(1).forEach(c => assert.ok(c.beats.length >= 1));
+    }
+  }
+  // A long sentence splits at a clause, never mid-word.
+  const long = 'He walked to the line with the whole season on it, the crowd on its feet and the coach looking away, and then he missed both free throws in front of everyone who had come to see him win.';
+  const lp = D.scriptToV4(`The night started well. ${long}`, { length: 'full' });
+  assert.ok(lp.chapters.flatMap(c => c.beats).length >= 3);
+  assert.equal(allVo(lp), `The night started well. ${long}`);
+});
+
 await test('code path: chapter cues, fans prompt, change modules, framing labels', () => {
   const dallas = D.scriptToV4(CODE_SCRIPTS.dallas, { esStyle: 'breakdown' });
   assert.deepEqual(dallas.chapters.slice(1).map(c => c.marker), ['1 · THE RUN', '2 · THE THROW', '3 · THE CHOICE']);

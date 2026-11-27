@@ -132,7 +132,9 @@ function splitLong(sentence, max = 24) {
   return [w.slice(0, best + 1).join(' '), ...splitLong(w.slice(best + 1).join(' '), max)];
 }
 // Segments joined with single spaces equal the normalised script exactly.
-function segmentScript(script) {
+// mergeTiny: very short pieces ride with the next one (the AI path's
+// segments); the code path keeps one scene per sentence (mergeTiny false).
+function segmentScript(script, { mergeTiny = true } = {}) {
   const text = normScript(script);
   if (!text) return [];
   const sentences = text.split(/(?<=[.!?…]["”’)*]*)\s+(?=["“(*]?[A-Z0-9$])/).map(s => s.trim()).filter(Boolean);
@@ -144,7 +146,7 @@ function segmentScript(script) {
   const merged = [];
   segs.forEach(s => {
     const last = merged[merged.length - 1];
-    if (last != null && words(last).length < 3) merged[merged.length - 1] = `${last} ${s}`;
+    if (mergeTiny && last != null && words(last).length < 3) merged[merged.length - 1] = `${last} ${s}`;
     else merged.push(s);
   });
   segs = merged;
@@ -589,25 +591,14 @@ function properName(text) {
   close();
   return best.length >= 2 ? best.join(' ') : '';
 }
-function groupBeats(segs, { minWords = 10, maxWords = 30 } = {}) {
-  const beats = [];
-  let cur = [];
-  let n = 0;
-  segs.forEach((s, i) => {
-    const k = words(s).length;
-    if (cur.length && n + k > maxWords && n >= Math.min(minWords, maxWords / 2)) { beats.push(cur); cur = []; n = 0; }
-    cur.push(i); n += k;
-    if (n >= minWords && /[.!?]["”’]*$/.test(s) && n >= maxWords * 0.6) { beats.push(cur); cur = []; n = 0; }
-  });
-  if (cur.length) beats.push(cur);
-  return beats;
-}
 function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = null, team = null, title = '', sport = '', speakSources = false } = {}) {
   const styleId = v4StyleOf(esStyle);
   const L = lengthOf(length);
   const cut = splitCredits(script);
   const text = speakSources ? normScript(String(script || '').replace(URL_RE, ' ')) : cut.spoken;
-  const segs = segmentScript(text);
+  // One beat per sentence (a long one split at a clause), so the page's
+  // per-scene voice and media flows line up with the script's sentences.
+  const segs = segmentScript(text, { mergeTiny: false });
   const r = read || { corpus: text, sport, team };
   let teamName = (team && team.name) || (r.team && r.team.name) || '';
   // No team from the brief: a team nickname in the words ("Jets") names it.
@@ -622,7 +613,6 @@ function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = nul
   const set = sourceNumbers(r.corpus || text);
   const reelSubject = properName(text) || teamName;
   const hookMoment = headlineFromWords(segs[0] || '', 6, { hook: true });
-  const sizes = length === 'short' ? { minWords: 8, maxWords: 22 } : { minWords: 12, maxWords: 30 };
   // The script's own chapter cues ("Chapter one: the run") decide the
   // chapters when there are two or more; else the hook is the first sentence
   // alone and the rest split evenly.
@@ -633,10 +623,10 @@ function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = nul
     chapterGroups = starts.map((st, k) => {
       const end = k + 1 < starts.length ? starts[k + 1] : segs.length;
       const idx = Array.from({ length: end - st }, (_, j) => st + j);
-      return groupBeats(idx.map(i => segs[i]), sizes).map(g => g.map(j => idx[j]));
+      return idx.map(i => [i]);
     });
   } else {
-    const groups = segs.length > 1 ? [[0], ...groupBeats(segs.slice(1), sizes).map(g => g.map(i => i + 1))] : [[0]];
+    const groups = segs.map((_, i) => [i]);
     const rest = groups.slice(1);
     const nCh = Math.max(1, Math.min(L.chapters[1], Math.max(L.chapters[0] - 1, Math.ceil(rest.length / L.beatsPerChapter[1]))));
     const perCh = Math.ceil(rest.length / nCh) || 1;
