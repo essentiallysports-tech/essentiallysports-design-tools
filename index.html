@@ -3456,7 +3456,8 @@ body[data-current-page="faq"] .faq-cta-art img {
   body:is([data-current-page="instagram"], [data-current-page="youtube"]) .brand-logo-control { display: block; }
   .brand-logo-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   /* 44px tall in the inspector: icon + label sit side by side; a chosen logo shows alone. */
-  .brand-logo-option--custom { grid-auto-flow: column; gap: 4px; }
+  .brand-logo-option.brand-logo-option--custom { min-width: 0; gap: 4px; padding: 8px 4px; }
+  .brand-logo-custom-art[hidden] { display: none; }
   .brand-logo-custom-art { display: grid; place-items: center; height: 24px; }
   .brand-logo-custom-art img { width: 24px; height: 24px; object-fit: contain; }
   .brand-logo-custom-label { font: 500 12px/1.2 var(--es-font-ui); white-space: nowrap; }
@@ -8371,7 +8372,7 @@ body[data-current-page="faq"] .faq-cta-art img {
           <img src="assets/brand-logos/essentially-w-mark.svg" alt="">
         </button>
         <button type="button" class="brand-logo-option brand-logo-option--custom" role="radio" aria-checked="false" data-brand-logo="custom" title="Your own square logo" aria-label="Custom logo">
-          <span class="brand-logo-custom-art" data-brand-custom-art aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span>
+          <span class="brand-logo-custom-art" data-brand-custom-art aria-hidden="true" hidden></span>
           <span class="brand-logo-custom-label" data-brand-custom-label>Custom</span>
         </button>
       </div>
@@ -14045,6 +14046,7 @@ function syncBrandLogoControl() {
     img.src = custom.mark.src;
     art.append(img);
   }
+  if (art) art.hidden = !custom;
   if (label) {
     label.hidden = Boolean(custom);
     label.textContent = customBrandPending ? 'Loading' : 'Custom';
