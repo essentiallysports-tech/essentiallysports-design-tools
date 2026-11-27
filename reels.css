@@ -3263,3 +3263,15 @@ body.reels-page .reels-stage-controls .reels-scrub { margin: 0; }
   /* first row already has 12px of its own padding: 4 + 12 = 16 under the sheet head's divider */
   body.reels-page .reels-tool-section { padding-top: var(--es-space-1, 4px); }
 }
+
+/* UX audit P2 (2026-11-28) */
+/* Pill / Text swatches carry a visible caption. */
+.reels-swatch-item { display: inline-grid; justify-items: center; gap: 4px; }
+.reels-swatch-label { color: var(--es-ink-3, #565c67); font: 500 12px/16px var(--es-font-ui, Roboto, sans-serif); }
+/* "0 segments": the badge blue passes 4.5:1 on its pale pill (was 4.28). */
+html:not([data-theme="dark"]) #reels-caption-count { color: #0A62C7; }
+/* Desktop: the stage's Upload Clip is always in view, so the rail does not
+   offer a second one (two identical buttons side by side). */
+@media (min-width: 901px) {
+  .reels-transcript-list:has(> .reels-empty-upload:only-child) { display: none; }
+}

@@ -1777,11 +1777,14 @@
     var textColor = getTextColorForPair(pair, entry);
     var pillLightClass = contrastRatio(pair.background, '#FFFFFF') < 1.2 ? ' is-light' : '';
     var textLightClass = contrastRatio(textColor, '#FFFFFF') < 1.2 ? ' is-light' : '';
+    // Each colour says what it is: a visible "Pill" / "Text" caption, and a
+    // real image role so screen readers read the label (a bare span's
+    // aria-label is ignored). UX audit P2.
     els.paletteRow.innerHTML =
-      '<span class="reels-swatch' + pillLightClass + '" title="Pill ' + escapeHtml(pair.background) + '" aria-label="Pill color">' +
-        '<span class="reels-swatch-inner" style="background:' + escapeHtml(pair.background) + '"></span></span>' +
-      '<span class="reels-swatch' + textLightClass + '" title="Text ' + escapeHtml(textColor) + '" aria-label="Text color">' +
-        '<span class="reels-swatch-inner" style="background:' + escapeHtml(textColor) + '"></span></span>';
+      '<span class="reels-swatch-item"><span class="reels-swatch' + pillLightClass + '" role="img" title="Pill ' + escapeHtml(pair.background) + '" aria-label="Pill colour ' + escapeHtml(pair.background) + '">' +
+        '<span class="reels-swatch-inner" style="background:' + escapeHtml(pair.background) + '"></span></span><span class="reels-swatch-label" aria-hidden="true">Pill</span></span>' +
+      '<span class="reels-swatch-item"><span class="reels-swatch' + textLightClass + '" role="img" title="Text ' + escapeHtml(textColor) + '" aria-label="Text colour ' + escapeHtml(textColor) + '">' +
+        '<span class="reels-swatch-inner" style="background:' + escapeHtml(textColor) + '"></span></span><span class="reels-swatch-label" aria-hidden="true">Text</span></span>';
   }
 
   async function applyIntelligence() {

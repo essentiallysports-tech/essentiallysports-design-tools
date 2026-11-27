@@ -243,6 +243,10 @@
   .login-error.is-success {
     color: var(--es-good);
   }
+  /* A plain notice (session ended, please log in): neither red nor green. */
+  .login-error.is-info {
+    color: var(--es-ink-2);
+  }
   .login-error.is-visible {
     display: block;
   }
@@ -898,6 +902,7 @@
   .login-error-actions:empty { display: none; }
   html[data-theme="dark"] .login-error { color: var(--es-bad-on-dark, #FF8A8A); }
   html[data-theme="dark"] .login-error.is-success { color: var(--es-good-on-dark, #4CC985); }
+  html[data-theme="dark"] .login-error.is-info { color: var(--es-ink-2, #C9CED6); }
   .login-alt { justify-self: center; padding: 0; border: 0; background: transparent; color: var(--es-brand-text, #0A62C7); font: 500 14px/1.3 var(--font-ui); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
   .login-alt:hover { color: var(--accent-hover); }
   .login-alt:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); border-radius: 4px; }
@@ -1075,7 +1080,8 @@
     errorEl.textContent = message || '';
     errorEl.classList.toggle('is-visible', Boolean(message));
     errorEl.classList.toggle('is-success', type === 'success' && Boolean(message));
-    errorEl.setAttribute('role', type === 'success' ? 'status' : 'alert');
+    errorEl.classList.toggle('is-info', type === 'info' && Boolean(message));
+    errorEl.setAttribute('role', type === 'error' ? 'alert' : 'status');
     errorActions.replaceChildren(...actions.map(action => {
       const actionButton = document.createElement('button');
       actionButton.type = 'button';
@@ -1641,7 +1647,7 @@
       return;
     }
     if (params.get('cleared') === '1') {
-      setError('FrameUp’s sign-in data on this browser was cleared. Log in again.', 'success');
+      setError('FrameUp’s sign-in data on this browser was cleared. Log in again.', 'info');
       return;
     }
 
@@ -1658,9 +1664,9 @@
     } else if (reason === 'not-approved') {
       setError('This account is not approved for FrameUp yet. Ask the design team to approve your email.');
     } else if (reason === 'session-expired') {
-      setError('Your session expired. Log in again and we’ll take you back where you were.', 'success');
+      setError('Your session expired. Log in again and we’ll take you back where you were.', 'info');
     } else if (reason === 'no-session') {
-      setError('Please log in to continue.', 'success');
+      setError('Please log in to continue.', 'info');
     }
   }
 

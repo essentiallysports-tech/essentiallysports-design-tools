@@ -184,6 +184,12 @@
     const kind = state.kind || (usedBefore ? 'existing' : 'new');
     const offers = Number(state.offers || 0) + 1;
     await writeState({ kind, offers, offeredAt: new Date().toISOString() });
+    // A dialog the page opened meanwhile (a Gallery post): never open behind
+    // it; offer again on the next page instead (UX audit P2).
+    if (somethingOpen()) {
+      try { sessionStorage.removeItem(OFFER_SESSION_KEY); } catch (error) { /* ignore */ }
+      return true;
+    }
 
     const take = () => { writeState({ welcome: 'taken' }); startTour('welcome'); };
     const never = () => writeState({ welcome: 'never' });

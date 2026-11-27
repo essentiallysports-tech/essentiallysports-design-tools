@@ -645,3 +645,8 @@ html[data-theme="dark"] .fu-picker__item[data-status="started"] .fu-picker__stat
 .fu-picker__item:hover .fu-picker__go, .fu-picker__item:focus-visible .fu-picker__go { background: var(--fu-tile); color: var(--fu-brand-text); }
 .fu-picker__section { margin: var(--es-space-4, 16px) 0 var(--es-space-1, 4px); color: var(--fu-ink-3); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
 .fu-picker__foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--es-space-2, 8px); margin-top: var(--es-space-4, 16px); padding-top: var(--es-space-3, 12px); border-top: 1px solid var(--fu-line); color: var(--fu-ink-3); font-size: 12px; }
+
+/* A corner card never sits under a page's modal (it opened behind the Gallery
+   viewer's backdrop, dimmed and unreachable): it steps aside while a modal
+   dialog is open and comes back when it closes (UX audit P2). */
+body:has(dialog:modal) .fu-tour-toast { visibility: hidden; }

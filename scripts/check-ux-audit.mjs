@@ -456,6 +456,63 @@ const CHECKS = [
       return '';
     },
   },
+  {
+    // P2 polish across pages: Video Ads (Move text on phones, Play / Mute,
+    // Frame before a clip), Reel Captions (one Upload Clip on desktop, labelled
+    // swatches), login (session expired is not green), guidelines kicker.
+    id: 'polish-p2',
+    async run() {
+      if (!await open('/video-ads.html', { width: 375, ready: "document.querySelector('#va-move-text-toggle')", ms: 15000 })) return 'Video Ads never loaded at 375';
+      await sleep(800);
+      const va = await c.evaluate("(() => { const m = document.querySelector('#va-move-text-toggle').getBoundingClientRect(); const p = document.querySelector('#va-play').getBoundingClientRect(); const u = document.querySelector('#va-mute').getBoundingClientRect(); return { moveW: Math.round(m.width), play: Math.round(p.height), mute: Math.round(u.height) }; })()");
+      if (va.moveW > 60) return `Move text is a ${va.moveW}px icon-only bar at 375`;
+      if (va.play !== va.mute) return `Play is ${va.play}px, Mute ${va.mute}px`;
+      if (!await open('/video-ads.html', { width: 1440, ready: "document.querySelector('#va-rail-frame')", ms: 15000 })) return 'Video Ads never loaded';
+      await sleep(600);
+      const frame = await c.evaluate("({ zoom: document.querySelector('#va-zoom').getClientRects().length, note: document.querySelector('.va-rail__noclip')?.getClientRects().length || 0 })");
+      if (frame.zoom || !frame.note) return 'Frame shows zoom controls before a clip exists';
+      if (!await open('/reels.html', { width: 1440, ready: "document.querySelector('#reels-palette-row .reels-swatch')", ms: 15000 })) return 'Reel Captions never showed its swatches';
+      const reels = await c.evaluate("({ uploads: [...document.querySelectorAll('[data-reels-upload-trigger]')].filter(b => b.getClientRects().length).length, labels: [...document.querySelectorAll('#reels-palette-row [role=img]')].map(e => e.getAttribute('aria-label')), captions: [...document.querySelectorAll('#reels-palette-row .reels-swatch-label')].map(e => e.textContent) })");
+      if (reels.uploads !== 1) return `${reels.uploads} Upload Clip buttons on Reel Captions at 1440`;
+      if (reels.labels.length !== 2 || !/Pill/.test(reels.labels[0]) || reels.captions.join() !== 'Pill,Text') return 'Reel Captions swatches are not labelled: ' + JSON.stringify(reels);
+      await c.evaluate("localStorage.removeItem('sb-xtdusejokbhtjlmijdca-auth-token'); true");
+      try {
+        if (!await open('/login.html?reason=session-expired', { ready: "document.querySelector('.login-error.is-visible')", ms: 15000 })) return 'login never showed the session note';
+        const note = await c.evaluate("(() => { const e = document.querySelector('.login-error'); return { cls: e.className, role: e.getAttribute('role') }; })()");
+        if (/is-success/.test(note.cls) || !/is-info/.test(note.cls)) return '"Session expired" is styled as ' + note.cls;
+        if (note.role !== 'status') return '"Session expired" is announced as ' + note.role;
+      } finally {
+        await c.evaluate(FAKE_SESSION);
+      }
+      if (!await open('/index.html#social-guidelines', { ready: "[...document.querySelectorAll('.guidelines-kicker')].some(e => e.getClientRects().length)", ms: 15000 })) return 'guidelines never loaded';
+      await c.evaluate("document.documentElement.setAttribute('data-theme', 'dark'); true");
+      const kicker = await c.evaluate("getComputedStyle([...document.querySelectorAll('.guidelines-kicker')].find(e => e.getClientRects().length)).color");
+      await c.evaluate("document.documentElement.removeAttribute('data-theme'); true");
+      if (kicker === 'rgb(10, 111, 222)') return 'guidelines kicker keeps the 3.9:1 brand blue in dark mode';
+      return '';
+    },
+  },
+  {
+    // P2: the tour offer card opened under the Gallery viewer's backdrop.
+    id: 'tour-toast-under-modal',
+    async run() {
+      SB = { list_frameup_gallery: [200, GALLERY_ROWS.slice(0, 1)] };
+      if (!await open('/gallery.html', { ready: "document.querySelector('.gallery-card:not(.is-skeleton)')", ms: 15000 })) return 'gallery never showed a card';
+      const r = await c.evaluate(`(async () => {
+        const toast = document.createElement('section'); toast.className = 'fu-tour-toast'; toast.textContent = 'Take a tour?'; document.body.appendChild(toast);
+        document.querySelector('.gallery-card:not(.is-skeleton)').click();
+        await new Promise(res => setTimeout(res, 600));
+        const open = getComputedStyle(toast).visibility;
+        document.querySelector('#gallery-viewer').close();
+        await new Promise(res => setTimeout(res, 200));
+        const closed = getComputedStyle(toast).visibility; toast.remove();
+        return { open, closed };
+      })()`);
+      if (r.open !== 'hidden') return 'a tour card stays visible under the open Gallery viewer';
+      if (r.closed !== 'visible') return 'the tour card does not come back after the viewer closes';
+      return '';
+    },
+  },
 ];
 
 let failed = 0; let ran = 0;
