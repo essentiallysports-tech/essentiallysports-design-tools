@@ -357,8 +357,8 @@ for (const w of WIDTHS) {
     expect(cards.filter(c => c.checked === 'true').length === 1, 'exactly one style should be picked');
   });
   await step('Create: the style previews are live (engine previewPlan) and not blank', async () => {
-    const has = await evaluate(`typeof (window.ReelES && window.ReelES.previewPlan) === 'function' || typeof (window.ReelRender && window.ReelRender.previewPlan) === 'function'`);
-    expect(has, 'no previewPlan on ReelES / ReelRender (contract: the cards preview with the engine previewPlan)');
+    const has = await evaluate(`(() => { const S = (window.ReelES && window.ReelES.STYLES) || {}; return ${JSON.stringify(STYLE_IDS)}.every(id => S[id] && S[id].previewPlan && S[id].previewPlan.v === 4) || typeof (window.ReelES && window.ReelES.previewPlan) === 'function'; })()`);
+    expect(has, 'the styles have no v4 previewPlan (ReelES.STYLES[id].previewPlan; contract: the cards preview with the engine previewPlan)');
     const blank = await evaluate(`${STYLE_CARDS}.map(b => b.querySelector('canvas')).filter(Boolean).filter(c => { try { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let lo = 255, hi = 0; for (let i = 0; i < d.length; i += 4 * 97) { const v = d[i] + d[i + 1] + d[i + 2]; lo = Math.min(lo, v); hi = Math.max(hi, v); } return hi - lo < 30; } catch { return false; } }).length`);
     expect(!blank, `${blank} style preview canvas(es) are blank`);
   });
