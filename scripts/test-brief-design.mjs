@@ -67,6 +67,17 @@ const eq = (a, b, message) => { assert.deepEqual(a, b, message); passed += 1; };
   eq(Core.rulesFill('newsletter', 'tag-fi', 'Big NBA night in Phoenix'), { tag: 'NBA' }, 'rules: the sport is the tag');
   eq(Core.rulesFill('newsletter', 'list', 'Top stories', { articles: five.map(a => ({ title: a.text, url: a.url })) }).items.length, 5, 'rules: a list from ES articles');
   eq(Core.rulesFill('newsletter', 'list', 'Top stories', { articles: [] }), null, 'rules: no articles, no list');
+  // Filled without AI in the page (service failure).
+  const local = brief => Object.fromEntries(['instagram', 'newsletter', 'youtube'].map(ws => [ws, Core.localOptions(ws, brief)]));
+  const long = local('Josh Allen 3 TDs as Bills beat Chiefs 30-21 in a wild Sunday night game at Arrowhead');
+  eq(long.instagram[0].template, 'cover', 'local: a Cover from the words');
+  ok(long.instagram[0].lines.every(line => line.length >= 2 && line.length <= 20) && long.instagram[0].lines.length <= 4, 'local: Cover pills within limits');
+  ok(!/\b(?:at|as|the|a)$/i.test(long.instagram[0].lines.at(-1)), 'local: a cut line never ends on a joining word');
+  ok(long.newsletter.some(o => o.template === 'ig-headline-photo') && long.youtube.some(o => o.template === 'variation-1'), 'local: Newsletter and YouTube fills');
+  ok(Object.values(long).flat().every(o => o.source === 'local' && o.label && o.why), 'local: marked as filled without AI');
+  ok(Object.values(local('Supercalifragilisticexpialidocious')).every(list => !list.some(o => o.template !== 'archive-page-fi')), 'local: nothing to fill from one huge word');
+  eq(Core.leadLines('LeBron James drops forty one on the Suns tonight', 12, 2), ['LeBron James', 'drops forty'], 'lead lines keep whole words');
+
   // YouTube (R3).
   const yt = (text, opts) => Core.shortlist(text, 'youtube', opts).map(item => item.value);
   eq(yt('Caitlin Clark is changing the WNBA'), ['variation-1'], 'youtube: one image by default');
@@ -403,6 +414,19 @@ const reset = () => { aiQueue = []; aiCalls = []; photoCalls = []; fetched.lengt
   res = await call({ mode: 'design', workspace: 'youtube', brief: BRIEF });
   ok(!res.body.options.some(o => o.template === 'quote'), 'youtube: an invented quote is refused');
   T.deps.findPhotos = realFind;
+}
+
+{
+  // An unexpected server failure: still a design, from the brief's words.
+  reset();
+  const realCoverage = T.deps.esCoverage;
+  T.deps.esCoverage = async () => ({ get articles() { throw new TypeError('x is undefined'); } });
+  const res = await call({ mode: 'design', workspace: 'instagram', brief: BRIEF });
+  eq(res.status, 200, 'server crash: 200 with a rules design');
+  eq(res.body.engine, 'rules', 'server crash: engine rules');
+  ok(res.body.options[0].template === 'cover' && res.body.notes.some(n => /Filled without AI/.test(n)), 'server crash: a Cover and the note');
+  ok(!/TypeError|undefined/.test(JSON.stringify(res.body)), 'server crash: no internal text in the reply');
+  T.deps.esCoverage = realCoverage;
 }
 
 {

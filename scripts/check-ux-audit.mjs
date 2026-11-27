@@ -5,7 +5,7 @@
 //
 // Run: node scripts/check-ux-audit.mjs   (skips if Chrome isn't installed)
 //   UX_ONLY=gallery   only the checks whose id starts with this
-import { startServer, startChrome, findChrome, FAKE_SESSION, sleep } from './_qa-chrome.mjs';
+import { startServer, startChrome, findChrome, FAKE_SESSION, sleep, ROOT as ROOT_DIR } from './_qa-chrome.mjs';
 
 const CHROME = findChrome();
 if (!CHROME) { console.log('ux audit: skipped (no Chrome found; set CHROME_PATH)'); process.exit(0); }
@@ -510,6 +510,107 @@ const CHECKS = [
       })()`);
       if (r.open !== 'hidden') return 'a tour card stays visible under the open Gallery viewer';
       if (r.closed !== 'visible') return 'the tour card does not come back after the viewer closes';
+      return '';
+    },
+  },
+  // ── Slice 3 (2026-11-29) ───────────────────────────────────────────────
+  {
+    // P1: a reload in Merch lost the line and every design. A draft in this
+    // tab's sessionStorage comes back after a reload (not on a fresh visit),
+    // Start over clears it, and leaving with unpublished designs asks first.
+    id: 'merch-draft-restore',
+    async run() {
+      await c.send('Page.navigate', { url: `${base}/__blank` }); await sleep(150);
+      await c.evaluate("Object.keys(sessionStorage).filter(k => k.startsWith('frameup.merch.draft')).forEach(k => sessionStorage.removeItem(k)); true");
+      if (!await open('/merch.html', { ready: "window.MerchUI && document.querySelector('#mx-text')", ms: 15000 })) return 'Merch never loaded';
+      const made = await c.evaluate(`(async () => {
+        const sl = ms => new Promise(r => setTimeout(r, ms));
+        const t = document.querySelector('#mx-text'); t.focus(); document.execCommand('insertText', false, 'Logo three');
+        await sl(200); document.querySelector('#mx-create').click();
+        for (let i = 0; i < 80 && !(MerchUI.state.concepts.length && !MerchUI.state.making); i++) await sl(250);
+        const third = MerchUI.state.concepts[2]?.id;
+        document.querySelector('#mx-strip [data-pick="' + third + '"]')?.click();
+        await sl(900);
+        return { n: MerchUI.state.concepts.length, sel: MerchUI.state.selected, third };
+      })()`);
+      if (!made.n) return 'no designs were made';
+      if (made.sel !== made.third) return 'could not pick the third design';
+      await c.evaluate('window.__beforeReload = true; true');
+      await c.send('Page.reload');
+      if (!await waitFor("!window.__beforeReload && document.readyState === 'complete' && window.MerchUI && MerchUI.state.step === 'designs' && MerchUI.state.concepts.length", 15000)) return 'after a reload the designs did not come back';
+      const back = await c.evaluate("({ n: MerchUI.state.concepts.length, sel: MerchUI.state.selected, text: document.querySelector('#mx-text').value, note: document.querySelector('#mx-banner').innerText, hidden: document.querySelector('#mx-banner').hidden })");
+      if (back.n !== made.n || back.sel !== made.sel) return `restored ${back.n} designs / picked ${back.sel}, expected ${made.n} / ${made.sel}`;
+      if (back.text !== 'Logo three') return 'the line was not restored: ' + back.text;
+      if (back.hidden || !/Restored your line/.test(back.note)) return 'no "Restored your line" note';
+      // Leaving with designs not in the shop asks first (after a real gesture).
+      await c.evaluate("document.documentElement.setAttribute('data-mx-leave-warn', ''); true");
+      await c.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 5, y: 5, button: 'left', clickCount: 1 });
+      await c.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 5, y: 5, button: 'left', clickCount: 1 });
+      const warns = await c.evaluate("(() => { const e = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; })()");
+      if (!warns) return 'leaving with unpublished designs does not ask first';
+      // Start over clears the draft.
+      await c.evaluate("document.querySelector('#mx-banner [data-start-over]').click(); true");
+      await sleep(500);
+      const cleared = await c.evaluate("({ step: MerchUI.state.step, left: Object.keys(sessionStorage).filter(k => k.startsWith('frameup.merch.draft')).length, warns: (() => { const e = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; })() })");
+      if (cleared.step !== 'content' || cleared.left) return 'Start over did not clear the draft: ' + JSON.stringify(cleared);
+      if (cleared.warns) return 'after Start over leaving still asks';
+      await c.evaluate("document.documentElement.removeAttribute('data-mx-leave-warn'); true");
+      // A fresh visit starts clean even with a draft stored.
+      await c.evaluate(`sessionStorage.setItem(Object.keys(sessionStorage).find(k => k.startsWith('frameup.merch.draft')) || 'frameup.merch.draft.v1:00000000-0000-0000-0000-000000000001', JSON.stringify({ v: 1, at: Date.now(), step: 'designs', text: 'Old line', concepts: [{ id: 'x1', stack: [{ text: 'OLD' }] }], selected: 'x1' })); true`);
+      await c.send('Page.navigate', { url: `${base}/__blank` }); await sleep(150);
+      if (!await open('/merch.html', { ready: "window.MerchUI", ms: 15000 })) return 'Merch never loaded again';
+      await sleep(500);
+      const fresh = await c.evaluate("({ step: MerchUI.state.step, n: MerchUI.state.concepts.length })");
+      if (fresh.step !== 'content' || fresh.n) return 'a fresh visit restored an old draft';
+      await c.evaluate("Object.keys(sessionStorage).filter(k => k.startsWith('frameup.merch.draft')).forEach(k => sessionStorage.removeItem(k)); true");
+      errors.length = 0;
+      return '';
+    },
+  },
+  {
+    // P2: the Reel Captions ruler read "0:01 0:01" (floats added up to 1.999),
+    // the playhead covered the first label (":00"), and after an upload the
+    // left rail was empty.
+    id: 'reels-ruler-and-rail',
+    async run() {
+      await c.send('Page.bringToFront'); // media only loads in a visible tab
+      if (!await open('/reels.html', { ready: "document.querySelector('#reels-file-input')", ms: 15000 })) return 'Reel Captions never loaded';
+      const doc = await c.send('DOM.getDocument', {});
+      const q = await c.send('DOM.querySelector', { nodeId: doc.result.root.nodeId, selector: '#reels-file-input' });
+      await c.send('DOM.setFileInputFiles', { nodeId: q.result.nodeId, files: [ROOT_DIR + '/design-request-banner.webm'] });
+      if (!await waitFor("document.querySelector('video')?.readyState >= 2 && document.querySelector('.reels-tick--major')", 12000)) return 'the clip never loaded';
+      await sleep(800);
+      const r = await c.evaluate(`(() => {
+        const labels = [...document.querySelectorAll('.reels-timeline-ruler .reels-tick--major span, .reels-timeline-ruler .reels-tick-end')];
+        const texts = labels.map(e => e.textContent);
+        const first = labels[0]?.getBoundingClientRect(); const head = document.querySelector('.reels-playhead')?.getBoundingClientRect();
+        const boxes = labels.map(e => e.getBoundingClientRect());
+        return { texts, dup: texts.filter((t, i) => texts.indexOf(t) !== i), overlap: boxes.some((a, i) => boxes.some((b, j) => i < j && a.left < b.right && b.left < a.right)), clear: first && head ? first.left >= head.left + 7 : false, hint: document.querySelector('.reels-empty-hint')?.textContent || '', button: document.querySelector('#reels-upload-btn')?.textContent || '' };
+      })()`);
+      if (r.dup.length) return 'repeated ruler labels: ' + r.texts.join(' ');
+      if (r.overlap) return 'ruler labels overlap: ' + r.texts.join(' ');
+      if (!r.clear) return 'the playhead handle covers the first ruler label';
+      if (!/Auto-caption/.test(r.hint)) return 'the left rail is empty after the upload';
+      if (r.button !== 'Change Clip') return 'the rail still offers "' + r.button + '" with a clip loaded';
+      return '';
+    },
+  },
+  {
+    // P3: Settings showed $0.00 while the sidebar showed this week's spend
+    // (no database row, /api/ai-status has it). And one tours.js key everywhere.
+    id: 'settings-usage-and-keys',
+    async run() {
+      SB = { frameup_my_ai_spend: [200, null] };
+      if (!await open('/ai-page/settings.html', { ready: "document.querySelector('.acc-usage__amount')", ms: 15000 })) return 'Settings usage never rendered';
+      const amount = await c.evaluate("document.querySelector('.acc-usage__amount').innerText");
+      if (!/\$3\.42/.test(amount)) return 'Settings shows ' + amount.replace(/\s+/g, ' ') + ' while /api/ai-status says $3.42';
+      const fs = await import('node:fs');
+      const keys = new Set();
+      for (const dir of ['', 'ai-page/']) for (const f of fs.readdirSync(ROOT_DIR + '/' + dir).filter(n => n.endsWith('.html'))) {
+        const m = fs.readFileSync(ROOT_DIR + '/' + dir + f, 'utf8').match(/tours\/tours\.js\?v=([\w.-]+)/);
+        if (m) keys.add(m[1]);
+      }
+      if (keys.size !== 1) return 'pages load different tours.js versions: ' + [...keys].join(', ');
       return '';
     },
   },

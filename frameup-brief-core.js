@@ -214,6 +214,26 @@
     },
   };
 
+  // The opening words as up to n whole-word lines (the rest is left off):
+  // for headline fills from a long brief.
+  function leadLines(text, maxChars, n) {
+    const out = [];
+    let line = '';
+    for (const word of clean(text).split(' ').filter(Boolean)) {
+      if (word.length > maxChars) break;
+      const next = line ? `${line} ${word}` : word;
+      if (next.length <= maxChars) { line = next; continue; }
+      out.push(line);
+      line = word;
+      if (out.length >= n) { line = ''; break; }
+    }
+    if (line && out.length < n) out.push(line);
+    // A cut line never ends on a small joining word ("… game at").
+    const last = out.length ? out[out.length - 1].replace(/(?:\s+(?:a|an|the|at|as|in|on|of|to|for|and|or|with|by|from))+$/i, '') : '';
+    if (out.length) { if (last) out[out.length - 1] = last; else out.pop(); }
+    return out;
+  }
+
   const templatesFor = workspace => TEMPLATES[workspace] || {};
   const templateOf = (workspace, template) => templatesFor(workspace)[template] || null;
   const labelOf = (workspace, template) => templateOf(workspace, template)?.label || template;
@@ -504,8 +524,8 @@
       case 'archive-page-fi': return { tag: 'QUICK READ' };
       case 'youtube-fi': return /\b(?:video|watch|youtube|clip|highlights?)\b/i.test(words) ? {} : null;
       case 'ig-headline-photo': {
-        const lines = chunkWords(clause, 22, 2);
-        return lines.length ? { line1: lines[0], line2: lines[1] || '' } : null;
+        const lines = chunkWords(clause, 22, 2).length ? chunkWords(clause, 22, 2) : leadLines(clause, 22, 2);
+        return lines.length && lines[0].length >= 2 ? { line1: lines[0], line2: lines[1] || '' } : null;
       }
       case 'list':
       case 'list2': {
@@ -536,9 +556,42 @@
       return lines.length ? { lines } : null;
     }
     const clause = withoutLinks(brief).split(/[,.;:!?"“—\n]/)[0] || '';
-    const pills = chunkWords(clause, 20, 2);
-    return pills.length ? { pills } : null;
+    const pills = chunkWords(clause, 20, 2).length ? chunkWords(clause, 20, 2) : leadLines(clause, 20, 2);
+    return pills.length && pills.every(pill => pill.length >= 2) ? { pills } : null;
   };
+
+  // ─── Filled without AI, in the browser ───────────────────────────────────
+  // When the design service fails outright (a 500, a network error, a time
+  // out), the page still opens a design from the person's own words: the
+  // editor's simplest templates, each held to its limits. -> options (may be []).
+  function localOptions(workspace, brief) {
+    const words = withoutLinks(brief);
+    const clause = (words.split(/[,.;:!?"“—\n]/)[0] || words).trim();
+    const out = [];
+    const add = (template, fields, lines, why) => {
+      if (!lines.length || lines.some(line => !line)) return;
+      out.push({ template, label: labelOf(workspace, template), why, layout: pickLayout(workspace, template, '', out.length), fields, lines, listicle: null, sport: '', team: '', warnings: [], source: 'local' });
+    };
+    if (workspace === 'instagram') {
+      const pills = chunkWords(clause, 16, 4).length ? chunkWords(clause, 16, 4) : leadLines(clause, 20, 4);
+      if (pills.every(pill => pill.length >= 2)) add('cover', { pills }, pills, 'Your words as headline pills');
+      const quote = (String(brief || '').match(/[“"]([^”"]{4,54})[”"]/) || [])[1];
+      const lines = quote ? chunkWords(quote, 18, 3) : [];
+      if (lines.length) add('quote', { lines }, lines, 'Your quote, split into short lines');
+      const timeline = rulesFill('instagram', 'asap-template-1', brief);
+      if (timeline) add('asap-template-1', timeline, [timeline.title, ...timeline.rows], 'Your dates, in order');
+    } else {
+      Object.keys(templatesFor(workspace)).forEach(template => {
+        const own = templateOf(workspace, template);
+        if (own.html || own.quote || own.needs || out.length >= 3) return;
+        const fields = rulesFill(workspace, template, brief);
+        if (!fields) return;
+        const checked = checkFields(workspace, template, fields);
+        if (!checked.error && (checked.lines.length || template === 'youtube-fi')) add(template, checked.fields, checked.lines.length ? checked.lines : [''].filter(Boolean), 'Your words on the template');
+      });
+    }
+    return out.slice(0, 3);
+  }
 
   // ─── The prompt's template list ──────────────────────────────────────────
   // generateShapes: es-generate TEMPLATES (server only) for Generate's ten.
@@ -555,8 +608,8 @@
 
   return {
     VERSION, WORKSPACES, TEMPLATES, REWRITES,
-    clean, within, chunkWords, linksIn, withoutLinks,
+    clean, within, chunkWords, leadLines, linksIn, withoutLinks,
     templatesFor, templateOf, labelOf, layoutsFor, pickLayout,
-    checkFields, shortlist, acceptanceBonus, statsFromRows, outcome, rulesFill, promptTemplates,
+    checkFields, shortlist, acceptanceBonus, statsFromRows, outcome, rulesFill, promptTemplates, localOptions,
   };
 }));
