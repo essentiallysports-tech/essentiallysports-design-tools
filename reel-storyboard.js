@@ -67,6 +67,77 @@
     const words = String(pick).replace(/\*/g, '').trim().split(/\s+/).filter(Boolean);
     return (words[words.length - 1] || '').replace(/[^\w$%'’-]/g, '').toUpperCase().slice(0, 20);
   }
+  // ── Reels v4 (UI) ── chapters, motion and the honest "Ready to post".
+  // A chapter marker in plain words: '1 · THE RUN', '#3' (a countdown chip), '2 of 5'.
+  function markerText(marker, i) {
+    if (!marker) return String(i + 1);
+    if (typeof marker === 'string') return marker;
+    if (marker.kind === 'countdown') return `#${marker.n}`;
+    if (marker.kind === 'progress') return `${marker.i} of ${marker.of}`;
+    return String(i + 1);
+  }
+  // The strip's groups: a v4 plan's chapters (beats matched by id to the flat
+  // list the page edits), else one unnamed group holding every scene.
+  function chaptersOf(plan) {
+    if (!plan) return [];
+    const flat = Array.isArray(plan.beats) ? plan.beats : [];
+    if (!Array.isArray(plan.chapters) || !plan.chapters.length) return [{ id: 'all', n: 0, marker: '', headline: '', tone: '', beats: flat }];
+    const byId = new Map(flat.map(b => [b.id, b]));
+    const seen = new Set();
+    const groups = plan.chapters.map((c, i) => {
+      const beats = (Array.isArray(c.beats) ? c.beats : []).map(b => byId.get(b && b.id) || null).filter(b => b && !seen.has(b.id));
+      beats.forEach(b => seen.add(b.id));
+      return { id: c.id || `c${i + 1}`, n: i + 1, marker: markerText(c.marker, i), headline: String(c.headline || '').replace(/\*/g, '').trim(), tone: c.tone || '', beats };
+    });
+    // Scenes the chapters do not hold (added on the page, the end card) join the chapter before them.
+    flat.forEach((b, k) => {
+      if (seen.has(b.id)) return;
+      const prev = flat.slice(0, k).reverse().find(x => seen.has(x.id));
+      const g = (prev && groups.find(x => x.beats.includes(prev))) || groups[groups.length - 1];
+      if (g) { g.beats.splice(prev ? g.beats.indexOf(prev) + 1 : g.beats.length, 0, b); seen.add(b.id); }
+    });
+    return groups.filter(g => g.beats.length);
+  }
+  // Data blocks animate on their own (counts, bars, dots); hook / statement /
+  // quote type over plain paper does not.
+  const MOTION_BLOCKS = ['number', 'dots', 'compare', 'statTiles', 'dotGrid', 'streak', 'rankTile'];
+  // Does a scene move? media: 'clip' | 'photo' (a verified photo, or your own upload: Ken Burns on its focus box) | ''.
+  // motionOk from ReelSourcing.mediaFor (v4) wins when it is given.
+  function motionOf({ media = '', block = '', module = '', motionOk } = {}) {
+    if (typeof motionOk === 'boolean') return { ok: motionOk, why: motionOk ? (media || (module ? 'module' : 'ok')) : 'static' };
+    if (media === 'clip') return { ok: true, why: 'clip' };
+    if (media === 'photo') return { ok: true, why: 'photo' };
+    if (module || MOTION_BLOCKS.includes(block)) return { ok: true, why: 'module' };
+    return { ok: false, why: 'static' };
+  }
+  const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  // The badge: Draft, Needs clips, N to fix, a static scene, the critic, else Ready to post.
+  //   beats: [{ id, ok }], clipCount, critic: null (did not run) | { pass, score?, notes? },
+  //   critical / warnings: the code checks and the AI review.
+  function readiness({ draft = false, beats = [], clipCount = 0, critic = null, critical = 0, warnings = 0, gated = true } = {}) {
+    const still = beats.filter(b => !b.ok).length;
+    const checks = gated ? [
+      { id: 'motion', ok: !still, label: still ? `${plural(still, 'scene')} with no motion: add a clip, a photo or a data block` : 'Every scene moves', severity: 'critical' },
+      { id: 'clips', ok: clipCount >= 1, label: clipCount ? `${plural(clipCount, 'confirmed clip')}` : 'No confirmed clip yet: a reel needs at least one', severity: 'critical' },
+      { id: 'critic', ok: critic ? critic.pass !== false : true, label: critic ? (critic.pass === false ? 'AI critic: the story needs work' : `AI critic: passed${critic.score != null ? ` (${critic.score}/10)` : ''}`) : 'AI critic did not run (AI is off or capped)', severity: critic ? 'warning' : 'info' },
+    ] : [];
+    let state = 'ready';
+    if (draft) state = 'draft';
+    else if (critical) state = 'fix';
+    else if (gated && clipCount < 1) state = 'clips';
+    else if (gated && still) state = 'motion';
+    else if (gated && critic && critic.pass === false) state = 'critic';
+    const label = {
+      draft: gated && clipCount < 1 ? 'Draft · needs clips' : 'Draft',
+      fix: `${critical} to fix before posting`,
+      clips: 'Needs clips',
+      motion: `${plural(still, 'static scene')}`,
+      critic: 'Critic flagged the story',
+      ready: warnings ? `Ready to post · ${warnings} to review` : 'Ready to post',
+    }[state];
+    const tone = { draft: 'draft', fix: 'bad', clips: 'warn', motion: 'warn', critic: 'warn', ready: 'good' }[state];
+    return { state, label, tone, ready: state === 'ready', still, needsClips: gated && clipCount < 1, checks };
+  }
   const dotsLine = (count, highlight) => {
     const c = Math.max(0, Math.round(Number(count) || 0));
     const h = Math.max(0, Math.min(c, Math.round(Number(highlight) || 0)));
@@ -98,13 +169,13 @@
       // Receipts is motion only: no media, no Swap (unless the person added some).
       const takes = beat => (es() ? ES.takesMedia(beat) && (!(ui.curStyle && ui.curStyle() === 'receipts') || Boolean((state.photos[beat.id] || []).length)) : beat.kind !== 'cta');
       // The cards show the ES safe frame (y 290 to 1650), where every word sits.
-      const CROP = { y: 290, h: 1360 };
-      const thumbSize = () => { const s = (state.timeline && state.timeline.size) || [1080, 1920]; return s[1] === 1350 ? [240, 300] : [240, Math.round(240 * CROP.h / 1080)]; };
+      // Review v4: evenly sized thumbnails of the whole frame (9:16, or 4:5 for the feed size), drawn at 2x.
+      const thumbSize = () => { const s = (state.timeline && state.timeline.size) || [1080, 1920]; return s[1] === 1350 ? [160, 200] : [160, 284]; };
 
       // ── Fields ──
       const field = (id, name, label, value, { max = 120, type = 'text', ph = '', cls = '' } = {}) => `<div class="rm-bf${cls ? ` ${cls}` : ''}"><label class="rm-bf__label" for="${fid(name, id)}">${label}</label><input class="es-input rm-bf__input" id="${fid(name, id)}" data-field="${name}" type="${type}" maxlength="${max}" value="${esc(value == null ? '' : value)}" placeholder="${esc(ph)}"${type === 'number' ? ' inputmode="decimal" step="any"' : ''}></div>`;
-      const chips = (value, label, attr = '') => `<div class="rm-chipset" role="radiogroup" aria-label="${esc(label)}"${attr}>${COLORS.map((c, k) => { const on = c.id === value; const tab = on || (!COLORS.some(x => x.id === value) && k === 0); return `<button class="rm-cchip rm-cchip--${c.id}" type="button" role="radio" aria-checked="${on}" tabindex="${tab ? 0 : -1}" data-sb-color="${c.id}" aria-label="${c.label}" title="${c.label}"></button>`; }).join('')}</div>`;
-      const countOf = (text, max) => { const n = String(text || '').trim().length; return `<span class="rm-count${n > max ? ' is-over' : ''}" data-sb-count="${max}">${n}/${max}</span>`; };
+      const chips = (value, label, attr = '') => `<div class="rm-chipset rm-dots" role="radiogroup" aria-label="${esc(label)}"${attr}>${COLORS.map((c, k) => { const on = c.id === value; const tab = on || (!COLORS.some(x => x.id === value) && k === 0); return `<button class="rm-cchip rm-cchip--${c.id}" type="button" role="radio" aria-checked="${on}" tabindex="${tab ? 0 : -1}" data-sb-color="${c.id}" aria-label="${c.label}" title="${c.label}"></button>`; }).join('')}</div>`;
+      const countOf = (text, max) => { const n = String(text || '').trim().length; return `<span class="rm-count${n > max ? ' is-over' : ''}" data-sb-count="${max}" aria-hidden="true">${n}/${max}</span>`; };
       function rowsHtml(id, key, rows) {
         const def = ROWS[key];
         const Noun = def.noun[0].toUpperCase() + def.noun.slice(1);
@@ -112,13 +183,13 @@
           const del = `<button class="rm-icon-btn rm-icon-btn--sm rm-row__del" type="button" data-sb-del aria-label="Remove ${def.noun} ${k + 1}" title="Remove"${rows.length <= def.min ? ' disabled' : ''}>${ICON.x}</button>`;
           if (key === 'items') {
             return `<div class="rm-row rm-row--bar" data-sb-row>
-              <div class="rm-row__pair"><input class="es-input rm-bf__input" id="rm-es-items-${k}-label-${esc(id)}" data-sb-label type="text" maxlength="28" value="${esc(x.label || '')}" aria-label="Bar ${k + 1} label" placeholder="Label">
+              <div class="rm-row__pair rm-row__pair--bar"><input class="es-input rm-bf__input" id="rm-es-items-${k}-label-${esc(id)}" data-sb-label type="text" maxlength="28" value="${esc(x.label || '')}" aria-label="Bar ${k + 1} label" placeholder="Label">
               <input class="es-input rm-bf__input" id="rm-es-items-${k}-value-${esc(id)}" data-sb-display type="text" maxlength="16" value="${esc(x.display || (x.value == null ? '' : x.value))}" aria-label="Bar ${k + 1} value, as shown" placeholder="$692M"></div>
               <div class="rm-row__meta">${chips(x.color || '', `Bar ${k + 1} colour`)}${del}</div></div>`;
           }
-          return `<div class="rm-row" data-sb-row>
-            <input class="es-input rm-bf__input" id="rm-es-${key}-${k}-${esc(id)}" data-sb-text type="text" maxlength="40" value="${esc(x.text || '')}" aria-label="${Noun} ${k + 1}" placeholder="${esc(def.placeholder)}">
-            <div class="rm-row__meta">${chips(x.color || 'ink', `${Noun} ${k + 1} colour`)}${countOf(x.text, def.chars)}${del}</div></div>`;
+          return `<div class="rm-row rm-row--line" data-sb-row>
+            <span class="rm-field"><input class="es-input rm-bf__input" id="rm-es-${key}-${k}-${esc(id)}" data-sb-text type="text" maxlength="40" value="${esc(x.text || '')}" aria-label="${Noun} ${k + 1}, up to ${def.chars} characters" placeholder="${esc(def.placeholder)}">${countOf(x.text, def.chars)}</span>
+            ${chips(x.color || 'ink', `${Noun} ${k + 1} colour`)}${del}</div>`;
         };
         return `<div class="rm-rows" data-sb-rows="${key}" role="group" aria-label="${def.title}">
           <span class="rm-bf__label">${def.title}</span>
@@ -208,6 +279,9 @@
       }
 
       // ── The strip ──
+      // One line under a thumbnail: the block (or v4 module) and a short title.
+      // About 13 characters fit under an 80px thumbnail at 11px; the type takes its share first.
+      const shortTitle = (words, room = 13) => { const w = String(words || '').replace(/[*]/g, '').replace(/\s+/g, ' ').trim(); return room < 3 ? '' : (w.length > room ? `${w.slice(0, room - 1).trim()}…` : w); };
       function cardHtml(beat, i) {
         const n = beats().length;
         const id = beat.id;
@@ -221,16 +295,28 @@
         const m = mediaOf(beat);
         const words = es() && ES.blockText ? ES.blockText(ES.blockOf(beat)) : (beat.text || '');
         const media = takes(beat) && !end;
-        return `<li class="rm-card${on ? ' is-on' : ''}${end ? ' is-end' : ''}" data-beat="${esc(id)}" data-ri-beat="${esc(id)}" data-kind="${esc(beat.kind)}">
-          <button class="rm-card__face" type="button" data-sb-face draggable="${end ? 'false' : 'true'}" aria-pressed="${on}" aria-label="Scene ${i + 1} of ${n}, ${esc(name)}${media ? `, ${esc(mediaBadge(m))}` : ''}${time ? `, ${time}` : ''}. ${end ? 'Always last.' : 'Alt and an arrow key moves it.'}">
+        const mv = ui.motionOf ? ui.motionOf(beat) : null;
+        const still = Boolean(mv && !mv.ok && !end);
+        return `<li class="rm-card${on ? ' is-on' : ''}${end ? ' is-end' : ''}${still ? ' is-still' : ''}" data-beat="${esc(id)}" data-ri-beat="${esc(id)}" data-kind="${esc(beat.kind)}">
+          <button class="rm-card__face" type="button" data-sb-face draggable="${end ? 'false' : 'true'}" aria-pressed="${on}" aria-label="Scene ${i + 1} of ${n}, ${esc(name)}${media ? `, ${esc(mediaBadge(m))}` : ''}${still ? ', no motion yet' : ''}${time ? `, ${time}` : ''}. ${end ? 'Always last.' : 'Alt and an arrow key moves it.'}" title="${esc(`${name}: ${words || ''}`)}">
             <span class="rm-card__media"><canvas class="rm-card__thumb" width="${tw}" height="${th}" data-sb-thumb aria-hidden="true"></canvas>
               <span class="rm-card__n" aria-hidden="true">${i + 1}</span>
-              ${media ? `<span class="rm-card__badge${m.asset ? (m.verified ? ' is-verified' : '') : ' is-none'}" aria-hidden="true">${esc(mediaBadge(m))}</span>` : ''}</span>
-            <span class="rm-card__body" aria-hidden="true"><span class="rm-card__block">${esc(name)}</span><span class="rm-card__words">${esc(words || '—')}</span></span>
+              ${media ? `<span class="rm-card__badge${m.asset ? (m.clip ? ' is-clip' : (m.verified ? ' is-verified' : '')) : ' is-none'}" aria-hidden="true">${m.asset ? (m.clip ? ICON.film : ICON.image) : ICON.stat}</span>` : ''}
+              ${still ? '<span class="rm-card__still" aria-hidden="true">Static</span>' : ''}</span>
+            <span class="rm-card__label" aria-hidden="true"><b>${esc(name)}</b><span class="rm-card__words">${words && shortTitle(words, 13 - name.length - 3) ? ` · ${esc(shortTitle(words, 13 - name.length - 3))}` : ''}</span></span>
           </button>
-          ${media ? `<button class="rm-card__swap" type="button" data-visual="swap" aria-label="Swap the media for scene ${i + 1}" title="Swap media">${ICON.refresh}<span>Swap</span></button>` : ''}
+          ${media ? `<button class="rm-card__swap" type="button" data-visual="swap" aria-label="Swap the media for scene ${i + 1}" title="Swap media">${ICON.refresh}<span class="es-sr-only">Swap</span></button>` : ''}
           <p class="rm-beat__flag" aria-live="polite"></p>
         </li>`;
+      }
+      // Chapters as groups (a v4 plan); a v3 reel is one group with no heading.
+      function stripHtml() {
+        const all = beats();
+        const groups = chaptersOf(state.plan);
+        const idx = new Map(all.map((b, k) => [b.id, k]));
+        if (groups.length <= 1 && !groups[0]?.headline && !(state.plan && Array.isArray(state.plan.chapters))) return all.map(cardHtml).join('');
+        return groups.map(g => `<li class="rm-chap" data-chap="${esc(g.id)}"><span class="rm-chap__head"><span class="rm-chap__marker${g.tone === 'red' ? ' is-red' : ''}">${esc(g.marker)}</span><span class="rm-chap__title" title="${esc(g.headline)}">${esc(g.headline || `Chapter ${g.n}`)}</span></span>
+          <ol class="rm-chap__beats" aria-label="${esc(`Chapter ${g.n}${g.headline ? `: ${g.headline}` : ''}`)}">${g.beats.map(b => cardHtml(b, idx.get(b.id))).join('')}</ol></li>`).join('');
       }
       // Thumbnails: the real renderer, past the wipe and the entrances.
       function drawThumb(card) {
@@ -244,21 +330,21 @@
         const g = cv.getContext('2d');
         const t = Math.min(b.outMs - 1, Math.max(b.inMs + 1, b.inMs + Math.min((b.outMs - b.inMs) * 0.7, 1800)));
         const k = tw / size[0];
-        const y0 = size[1] === 1350 ? 0 : CROP.y;
         g.save();
-        g.setTransform(k, 0, 0, k, 0, -y0 * k);
+        g.setTransform(k, 0, 0, k, 0, 0);
         try { R.drawFrame(g, tl, t, ui.envFor(tl)); } catch (error) { window.FrameUpErrors?.report?.(error, 'reels storyboard thumb'); }
         g.restore();
       }
       let seen = 0;
       function refresh() {
         if (!state.plan || !state.timeline) return;
-        if (list.children.length !== beats().length) { render(); return; }
-        [...list.children].forEach(card => {
+        const cards = [...list.querySelectorAll('.rm-card')];
+        if (cards.length !== beats().length) { render(); return; }
+        cards.forEach(card => {
           drawThumb(card);
           const beat = beatOf(card.dataset.beat);
           const w = card.querySelector('.rm-card__words');
-          if (beat && w && es() && ES.blockText) w.textContent = ES.blockText(ES.blockOf(beat)) || '—';
+          if (beat && w && es() && ES.blockText) { const nm = ui.beatName(beat); const t = shortTitle(ES.blockText(ES.blockOf(beat)), 13 - nm.length - 3); w.textContent = t ? ` · ${t}` : ''; }
         });
         drawEditorThumb();
         seen = Object.keys(state.images).length;
@@ -276,8 +362,9 @@
       function render() {
         if (!state.plan) { list.innerHTML = ''; if (editorEl) { editorEl.innerHTML = ''; editorEl.hidden = true; } return; }
         if (!beats().some(b => b.id === state.selected)) state.selected = beats()[0]?.id || '';
-        keepFocus(() => { list.innerHTML = beats().map(cardHtml).join(''); renderEditor(); });
+        keepFocus(() => { list.innerHTML = stripHtml(); renderEditor(); });
         refresh();
+        playhead();
       }
       function rerender(id) {
         const card = cardOf(id);
@@ -287,6 +374,36 @@
         drawThumb(cardOf(id));
         drawEditorThumb();
         ctx.renderLint();
+      }
+      // Keeps a card in view inside the strip only (never scrolls the page).
+      function scrollToCard(card) {
+        const box = card && card.closest('.rm-sb__scroll');
+        if (!box) return;
+        const r = card.getBoundingClientRect();
+        const b = box.getBoundingClientRect();
+        const pad = 32;
+        if (r.left < b.left + pad) box.scrollLeft -= (b.left + pad) - r.left;
+        else if (r.right > b.right - pad) box.scrollLeft += r.right - (b.right - pad);
+      }
+      // The playhead: a hairline over the strip at the preview's time.
+      const head = document.getElementById('rm-playhead');
+      let lastLive = '';
+      function playhead(t = state.t) {
+        const tl = state.timeline;
+        const box = list.closest('.rm-sb__scroll');
+        if (!head || !box) return;
+        const b = tl ? tl.beats.find(x => t >= x.inMs && t < x.outMs) || tl.beats[tl.beats.length - 1] : null;
+        const card = b && cardOf(b.id);
+        const media = card && card.querySelector('.rm-card__media');
+        if (!media) { head.hidden = true; return; }
+        const r = media.getBoundingClientRect();
+        const o = box.getBoundingClientRect();
+        const f = Math.max(0, Math.min(1, (t - b.inMs) / Math.max(1, b.outMs - b.inMs)));
+        head.hidden = false;
+        head.style.transform = `translateX(${(r.left - o.left + box.scrollLeft + f * r.width).toFixed(1)}px)`;
+        head.style.top = `${(r.top - o.top + box.scrollTop - 4).toFixed(1)}px`;
+        head.style.height = `${(r.height + 8).toFixed(1)}px`;
+        if (state.playing && b.id !== lastLive) { lastLive = b.id; scrollToCard(card); }
       }
       function select(id, { focus = false } = {}) {
         list.querySelectorAll('.rm-card').forEach(card => {
@@ -298,7 +415,7 @@
         keepFocus(renderEditor);
         const card = cardOf(id);
         if (!card) return;
-        card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        scrollToCard(card);
         if (focus) (editorEl.querySelector('input, textarea') || card.querySelector('[data-sb-face]'))?.focus({ preventScroll: true });
       }
 
@@ -362,24 +479,33 @@
           const type = ES.blockOf(beat).type;
           side = end ? '<span class="rm-meta">The end card is always last.</span>'
             : `<div class="rm-bf rm-scene__block"><label class="rm-bf__label" for="rm-estype-${esc(id)}">Block</label><select class="es-select es-select--sm rm-bf__input" id="rm-estype-${esc(id)}" data-field="es.type">${blockOptions(beat, i).map(t => `<option value="${t}"${t === type ? ' selected' : ''}>${esc(ES.BLOCKS[t].label)}</option>`).join('')}</select></div>`;
-          body = `${!end && takes(beat) ? mediaSection(beat, i) : ''}<div class="rm-beat__fields">${esBody(beat)}</div>`;
+          body = `${!end && takes(beat) ? `<h4 class="rm-insp__h">Media</h4>${mediaSection(beat, i)}` : ''}<h4 class="rm-insp__h">${end ? 'End card' : 'On screen'}</h4><div class="rm-beat__fields">${esBody(beat)}</div>`;
         } else {
           body = `${beat.kind === 'cta' ? '' : ctx.visualCard(beat)}<div class="rm-beat__fields">${ctx.beatFields(beat, i)}</div>`;
         }
         editorEl.dataset.beat = id;
         editorEl.dataset.riBeat = id;
         editorEl.setAttribute('aria-label', `Scene ${i + 1} of ${n}`);
+        const prev = beats()[i - 1];
+        const next = beats()[i + 1];
         editorEl.innerHTML = `<div class="rm-scene__head">
-            <div class="rm-scene__title"><span class="rm-scene__n">Scene ${i + 1}<span class="rm-meta"> of ${n}</span></span><span class="rm-meta">${b ? `${ui.fmtTime(b.inMs)}–${ui.fmtTime(b.outMs)}` : ''}${voiced ? ' · VO ready' : ''}</span></div>
-            ${end ? '' : `<div class="rm-card__tools" role="group" aria-label="Scene ${i + 1}">
-              <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-sb-move="-1" aria-label="Move scene ${i + 1} earlier" title="Move earlier"${canMove(n, i, i - 1, endI) ? '' : ' disabled'}>${ICON.left}</button>
-              <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-sb-move="1" aria-label="Move scene ${i + 1} later" title="Move later"${canMove(n, i, i + 1, endI) ? '' : ' disabled'}>${ICON.chevronRight}</button>
-              <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-remove aria-label="Delete scene ${i + 1}" title="Delete"${n <= 2 ? ' disabled' : ''}>${ICON.trash}</button>
-            </div>`}
+            <div class="rm-scene__title"><span class="rm-scene__n">Scene ${i + 1}<span class="rm-meta"> / ${n}</span></span><span class="rm-meta">${b ? `${ui.fmtTime(b.inMs)}–${ui.fmtTime(b.outMs)}` : ''}${voiced ? ' · VO ready' : ''}</span></div>
+            <div class="rm-scene__nav" role="group" aria-label="Go to scene">
+              <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-sb-go="${prev ? esc(prev.id) : ''}" aria-label="Previous scene" title="Previous scene"${prev ? '' : ' disabled'}>${ICON.left}</button>
+              <button class="rm-icon-btn rm-icon-btn--sm" type="button" data-sb-go="${next ? esc(next.id) : ''}" aria-label="Next scene" title="Next scene"${next ? '' : ' disabled'}>${ICON.chevronRight}</button>
+            </div>
           </div>
+          <div class="rm-scene__body">
           ${side}
           <p class="rm-scene__flag" data-scene-flag hidden></p>
-          ${body}`;
+          ${body}
+          ${end ? '' : `<div class="rm-scene__actions" role="group" aria-label="Scene ${i + 1}">
+              <span class="rm-bf__label">Scene</span>
+              <button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sb-move="-1" aria-label="Move scene ${i + 1} earlier"${canMove(n, i, i - 1, endI) ? '' : ' disabled'}>${ICON.up}<span>Earlier</span></button>
+              <button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sb-move="1" aria-label="Move scene ${i + 1} later"${canMove(n, i, i + 1, endI) ? '' : ' disabled'}>${ICON.down}<span>Later</span></button>
+              <button class="es-btn es-btn--sm es-btn--tertiary rm-scene__del" type="button" data-remove aria-label="Delete scene ${i + 1}"${n <= 2 ? ' disabled' : ''}>${ICON.trash}<span>Delete</span></button>
+            </div>`}
+          </div>`;
         drawEditorThumb();
         if (state.swapOpen === id) fillSwap(id);
       }
@@ -466,6 +592,8 @@
           if (state.swapOpen) ctx.logEvent('visuals', { action: 'swap-open' });
           return;
         }
+        const go = t.closest('[data-sb-go]');
+        if (go) { if (go.dataset.sbGo) { ctx.selectBeat(go.dataset.sbGo, { seek: true }); editorEl.querySelector(`[data-sb-go]:not(:disabled)`)?.focus({ preventScroll: true }); } return; }
         const cand = t.closest('[data-cand]');
         if (cand) { const c = (swapCache.get(id) || [])[Number(cand.dataset.cand)]; if (c) ui.useCandidate(id, c); return; }
         if (t.closest('[data-sb-nomedia]')) { ui.useNoMedia(id); return; }
@@ -570,6 +698,9 @@
 
       // The scene on screen while it plays.
       ctx.on('scene', ({ id }) => { list.querySelectorAll('.rm-card').forEach(card => card.classList.toggle('is-live', card.dataset.beat === id)); });
+      ctx.on('time', ({ t }) => playhead(t));
+      list.closest('.rm-sb__scroll')?.addEventListener('scroll', () => playhead(), { passive: true });
+      if (window.ResizeObserver) new ResizeObserver(() => playhead()).observe(list);
       ctx.on('step', ({ step }) => { if (editorEl) editorEl.hidden = step !== 'edit' || !state.plan; });
       // Photos and clips arrive after the cards are drawn: thumbnails catch up.
       setInterval(() => { if (state.plan && state.step === 'edit' && !document.hidden && Object.keys(state.images).length !== seen) refresh(); }, 1500);
@@ -580,5 +711,5 @@
     else document.addEventListener('reelmaker:ready', event => start((event.detail && event.detail.ctx) || window.ReelMakerCtx), { once: true });
   }
 
-  return { COLORS, ROWS, endIndex, canMove, move, dropIndex, stampWord, dotsLine, attach };
+  return { COLORS, ROWS, endIndex, canMove, move, dropIndex, stampWord, dotsLine, markerText, chaptersOf, motionOf, readiness, MOTION_BLOCKS, attach };
 }));

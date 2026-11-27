@@ -106,6 +106,7 @@
     // Export: one MP4, plus "Also export" (4:5, captions, carousel).
     export45: $('rm-export-45'), export45Text: $('rm-export-45-text'), exportCaptions: $('rm-export-captions'), captionsHost: $('rm-captions-host'), rightsMeta: $('rm-rights-meta'), backText: $('rm-back-text'),
     calm: $('rm-calm'), calmNote: $('rm-calm-note'),
+    ticks: $('rm-ticks'), size: $('rm-size'), sizeText: $('rm-size-text'), findClips: $('rm-findclips'),
     dataStory: $('rm-data-story'), dataReview: $('rm-data-review'), view: $('rm-view'), device: $('rm-device'), transport: $('rm-transport'),
     slidenav: $('rm-slidenav'), slidePos: $('rm-slide-pos'), slideDots: $('rm-slide-dots'), slidePrev: $('rm-slide-prev'), slideNext: $('rm-slide-next'),
     carouselOut: $('rm-carousel-out'), carouselBtn: $('rm-export-carousel'), carouselNote: $('rm-carousel-note'), carouselStatus: $('rm-carousel-status'),
@@ -1096,7 +1097,8 @@
     if (els.makingLive) els.makingLive.textContent = 'Your reel is ready.';
     renderEdit();
     goStep('edit', { focus: true });
-    toast(state.lint && state.lint.ok ? 'Your reel is ready to post. Change any scene in the strip.' : 'Your reel is ready. One thing needs a look before it exports.');
+    const rd = state.ready;
+    toast(rd && rd.state === 'draft' ? 'Your draft is ready. Find clips before it can post.' : rd && rd.needsClips ? 'Your reel is built. It needs at least one clip before it is ready to post.' : rd && rd.still ? 'Your reel is built. Some scenes need motion before it is ready to post.' : (state.lint && state.lint.ok ? 'Your reel is ready to post. Change any scene in the timeline.' : 'Your reel is ready. One thing needs a look before it exports.'));
     logEvent('make', { ms: Date.now() - started, style: styleId(), esStyle: curStyle(), seconds: Math.round(state.timeline.durationMs / 1000), clipShare: clipShare().share, start: startOf(), review: state.review ? (state.review.issues || []).length : -1 });
   }
   els.write.addEventListener('click', makeReel);
@@ -1175,7 +1177,7 @@
     state.versions = null; state.version = 0; state.scene = -1; // ── Reels 2.0: D (interface) ──
     if (!STYLE_IDS.includes(plan.esStyle)) applyStyle(plan, state.esStyle);
     state.esStyle = plan.esStyle;
-    state.review = null; state.swapOpen = '';
+    state.review = null; state.swapOpen = ''; state.motion = {}; state.critic = null;
     loadTeamLogo();
     rebuild();
     renderEdit();
@@ -1524,17 +1526,19 @@
   }
   // The clip loader ReelSourcing uses to sample clips for the judge (shares this page's cache).
   async function sourcingVideo(clip) { const id = await loadClip(clip).catch(() => ''); return id ? state.videos[id] || null : null; }
-  async function fillFromSourcing(plan, beats, { force = false } = {}) {
+  async function fillFromSourcing(plan, beats, { force = false, broaden = false } = {}) {
     for (const beat of beats) { if (state.plan !== plan) return { note: '' }; await componentVisuals(beat).catch(() => {}); }
     const todo = beats.filter(b => b.kind !== 'cta' && (force || !state.photos[b.id]?.length));
     if (!todo.length) return { note: 'Nothing new needed' };
     const durations = {};
     (state.timeline ? state.timeline.beats : []).forEach(b => { durations[b.id] = b.outMs - b.inMs; });
     const usedList = plan.beats.filter(b => !todo.includes(b)).flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean);
-    const out = await SRC().mediaFor(plan, curStyle(), { loadVideo: sourcingVideo, durations, usedClips: usedList, ai: aiOn(), onProgress: text => { if (text && els.makingLive) els.makingLive.textContent = text; } }).catch(() => null);
+    const out = await SRC().mediaFor(plan, curStyle(), { loadVideo: sourcingVideo, durations, usedClips: usedList, ai: aiOn(), ...(broaden ? { broaden: true, ladder: 'broad' } : {}), onProgress: text => { if (text && els.makingLive) els.makingLive.textContent = text; } }).catch(() => null);
     if (state.plan !== plan) return { note: '' };
     if (out && Number(out.cost)) state.spent.clips += Number(out.cost);
     const rows = (out && out.beats) || {};
+    // v4 sourcing: per scene motionOk (clip, Ken Burns photo, or a module that animates) and the reel's clip count.
+    Object.entries(rows).forEach(([id, row]) => { if (row && typeof row.motionOk === 'boolean') state.motion = { ...(state.motion || {}), [id]: { motionOk: row.motionOk } }; });
     const usedClips = new Set(usedList);
     const n = { clip: 0, photo: 0, none: 0 };
     for (const [i, beat] of todo.entries()) {
@@ -1618,13 +1622,13 @@
   }
   function renderSceneEditor() { mods().storyboard?.editor?.(); }
 
-  async function fillVisuals({ only = null, force = false } = {}) {
+  async function fillVisuals({ only = null, force = false, broaden = false } = {}) {
     const plan = state.plan;
     if (!plan) return { note: '' };
     if (!state.timeline) rebuild();
     // ES: media only on the blocks that take it; the rest sit on ES paper.
     const beats = plan.beats.filter(b => (!only || only.includes(b.id)) && (!esOn() || ES.takesMedia(b)));
-    if (srcOn() && !(F.isDataFormat && F.isDataFormat(plan.format))) return fillFromSourcing(plan, beats, { force });
+    if (srcOn() && !(F.isDataFormat && F.isDataFormat(plan.format))) return fillFromSourcing(plan, beats, { force, broaden });
     return legacyFill(plan, beats, { force });
   }
   // Data formats (Game Swing plays keep their matched clip) and the page
@@ -1899,6 +1903,12 @@
     els.beatsMeta.textContent = `${tl.beats.length} scenes · ${sec.toFixed(0)} s`;
     els.stageMeta.textContent = `${F.FORMATS[tl.format].label} · ${sec.toFixed(1)} s · ${(tl.size || [1080, 1920]).join('×')}${tl.timing && tl.timing.estimate ? ' · times estimated' : ''}`;
     els.time.textContent = `${fmtTime(state.t)} / ${fmtTime(tl.durationMs)}`;
+    // Review v4: a tick on the scrubber at every chapter (v4) or scene (v3) start.
+    if (els.ticks) {
+      const starts = chapterStarts(tl);
+      els.ticks.innerHTML = starts.map(x => `<i class="rm-tick${x.chapter ? ' is-chapter' : ''}" style="left:${(x.ms / tl.durationMs * 100).toFixed(2)}%"></i>`).join('');
+    }
+    if (els.sizeText) { els.sizeText.textContent = state.aspect; els.size.setAttribute('aria-label', `Preview size: ${state.aspect === '4:5' ? 'Feed 4:5' : 'Reel 9:16'}. Switch to ${state.aspect === '4:5' ? 'Reel 9:16' : 'Feed 4:5'}`); els.size.hidden = els.aspectSec.hidden; }
     // Beat times in the list.
     els.beats.querySelectorAll('[data-beat]').forEach(li => {
       const b = tl.beats.find(x => x.id === li.dataset.beat);
@@ -1907,6 +1917,54 @@
     });
   }
 
+  // Scrubber ticks: where each chapter starts (v4 plan), else each scene after the first.
+  function chapterStarts(tl) {
+    const plan = state.plan;
+    const SB = window.ReelStoryboardCore;
+    if (plan && Array.isArray(plan.chapters) && plan.chapters.length && SB) {
+      return SB.chaptersOf(plan).slice(1).map(g => { const b = tl.beats.find(x => x.id === (g.beats[0] && g.beats[0].id)); return b ? { ms: b.inMs, chapter: true } : null; }).filter(Boolean);
+    }
+    return tl.beats.slice(1).map(b => ({ ms: b.inMs, chapter: false }));
+  }
+  // ── Review v4: honest readiness ── every scene moves (a confirmed clip, a
+  // verified photo with Ken Burns, or a data block that builds), the reel has
+  // at least one confirmed clip, and a free draft says it is a draft.
+  function beatMotion(beat) {
+    const SB = window.ReelStoryboardCore;
+    if (!SB || !beat) return { ok: true, why: '' };
+    if (ES && ES.blockOf(beat).type === 'endcard') return { ok: true, why: 'end' };
+    const row = state.motion && state.motion[beat.id];
+    const a = state.assets[(state.photos[beat.id] || [])[0]];
+    const media = a ? (a.kind === 'clip' ? 'clip' : ((a.verified || a.kind === 'upload') ? 'photo' : '')) : '';
+    return SB.motionOf({ media, block: ES ? ES.blockOf(beat).type : '', module: beat.module && beat.module.type, motionOk: row && typeof row.motionOk === 'boolean' && !media ? row.motionOk : undefined });
+  }
+  const clipCount = () => (state.plan ? state.plan.beats.filter(b => { const a = state.assets[(state.photos[b.id] || [])[0]]; return a && a.kind === 'clip'; }).length : 0);
+  function readyNow(critical, warnings) {
+    const SB = window.ReelStoryboardCore;
+    const gated = esOn() && Boolean(SB);
+    if (!SB) return null;
+    return SB.readiness({ draft: state.planSource === 'draft', beats: (state.plan ? state.plan.beats : []).map(b => ({ id: b.id, ...beatMotion(b) })), clipCount: clipCount(), critic: state.critic || null, critical, warnings, gated });
+  }
+  // "Find clips": the sourcing again for every scene without a clip, on the broader ladder (player → game → team).
+  async function findClips() {
+    if (!state.plan || state.busy) return;
+    state.busy = 'clips';
+    const btns = [...document.querySelectorAll('[data-find-clips]')];
+    btns.forEach(b => { b.disabled = true; b.querySelector('span') && (b.querySelector('span').textContent = 'Finding clips…'); });
+    const before = clipCount();
+    try {
+      const only = state.plan.beats.filter(b => { const a = state.assets[(state.photos[b.id] || [])[0]]; return !(a && a.kind === 'clip') && (!esOn() || ES.takesMedia(b) || (b.media && b.media.kind && b.media.kind !== 'none')); }).map(b => b.id);
+      await fillVisuals({ only, force: true, broaden: true });
+      const found = clipCount() - before;
+      toast(found > 0 ? `${found} clip${found > 1 ? 's' : ''} found and checked.` : 'No confirmed clip yet. Try a different angle in your words, or upload a clip.', { tone: found > 0 ? '' : 'error' });
+      window.ReelFeedback?.log?.({ event: 'find_clips', reel_id: state.projectId, before: { clips: before }, after: { clips: clipCount() }, style: curStyle() });
+    } finally {
+      state.busy = '';
+      rebuild();
+      renderBeats();
+    }
+  }
+  document.addEventListener('click', event => { if (event.target.closest('[data-find-clips]')) findClips(); });
   // ── Reels Studio v3 (UI) ── the checks are one "Ready to post" badge that
   // expands to the checklist: the ES checks, the AI review and every issue.
   const REVIEW_KIND = { media: 'Picture', fact: 'Fact', text: 'Words', brand: 'Brand' };
@@ -1922,14 +1980,19 @@
     const rvCritical = rvOpen.filter(i => i.severity === 'critical').length;
     const critical = lint.critical + rvCritical;
     const warnings = lint.warnings + rvOpen.length - rvCritical;
-    const tone = critical ? 'bad' : (warnings ? 'warn' : 'good');
+    const rd = readyNow(critical, warnings);
+    state.ready = rd;
+    const tone = rd ? rd.tone : (critical ? 'bad' : (warnings ? 'warn' : 'good'));
     els.ready.dataset.tone = tone;
-    els.readyText.textContent = critical ? `${critical} to fix before posting` : (warnings ? `Ready to post · ${warnings} to review` : 'Ready to post');
+    els.ready.dataset.state = rd ? rd.state : '';
+    els.readyText.textContent = rd ? rd.label : (critical ? `${critical} to fix before posting` : (warnings ? `Ready to post · ${warnings} to review` : 'Ready to post'));
+    if (els.findClips) els.findClips.hidden = !(rd && (rd.needsClips || rd.still));
     // ES: the kit's "Check" result, "Safe frame ✓" when every word is inside it.
     const safeOk = esOn() && !lint.issues.some(i => i.id === 'safe-frame' || i.id === 'safe-zone');
     els.statuslineText.textContent = FLOW.statusLine({ critical: lint.critical, warnings: lint.warnings, seconds: tl ? tl.durationMs / 1000 : 0, usd: totalSpent(), money: isAdmin() ? F.money : (() => '') }).replace(/\s*·\s*$/, '') + (esOn() ? (safeOk ? ' · Safe frame ✓' : ' · Safe frame ✗') : '') + (state.voiceError && state.voiceOn ? ' · voice failed, captions only' : '');
     const row = (ok, label, severity = 'warning', n = 0) => `<li class="rm-check-row${ok ? ' is-ok' : ` is-${severity}`}"><span class="rm-check-row__mark" aria-hidden="true">${ok ? ICON.check : (severity === 'critical' ? ICON.alert : ICON.warn)}</span><span>${esc(label)}${!ok && n > 1 ? ` (${n})` : ''}</span><span class="es-sr-only">${ok ? ', passes' : ', needs a look'}</span></li>`;
-    const rows = esOn() ? ES.checklist(lint.issues).map(r => row(r.ok, r.label, r.severity, r.n)) : [];
+    const rows = rd ? rd.checks.filter(c => c.id !== 'critic' || !rv).map(c => row(c.ok, c.label, c.severity)) : [];
+    if (esOn()) rows.push(...ES.checklist(lint.issues).map(r => row(r.ok, r.label, r.severity, r.n)));
     rows.push(rv ? row(!rvOpen.length, rvOpen.length ? 'AI review: some scenes need a look' : `AI review: pictures match their words, facts are sourced${rv.fixed ? ` (${rv.fixed} fixed for you)` : ''}`, rvCritical ? 'critical' : 'warning', rvOpen.length)
       : row(true, window.ReelSourcing ? 'AI review did not run (AI is off or capped); the code checks above did' : 'Code checks: words, safe frame, captions, rights'));
     els.checklist.innerHTML = rows.join('');
@@ -2614,10 +2677,12 @@
     R.drawFrame(ctx, state.timeline, tDraw, env);
     const d = state.timeline.durationMs;
     els.scrub.value = String(Math.round((state.t / d) * 1000));
+    els.scrub.style.setProperty('--p', `${Math.min(100, (state.t / d) * 100).toFixed(2)}%`);
     const scene = sceneAt(state.t);
     els.scrub.setAttribute('aria-valuetext', A11Y && state.plan ? A11Y.valueText({ t: state.t, index: scene, total: state.plan.beats.length, name: state.plan.beats[scene] ? beatName(state.plan.beats[scene]) : '' }) : fmtTime(state.t));
     els.time.textContent = `${fmtTime(state.t)} / ${fmtTime(d)}`;
     if (scene !== state.scene) { state.scene = scene; emit('scene', { index: scene, id: state.plan && state.plan.beats[scene] ? state.plan.beats[scene].id : '' }); }
+    emit('time', { t: state.t });
   }
   // The scene on screen at t (the beat whose time holds t).
   function sceneAt(t) {
@@ -2739,6 +2804,8 @@
     if (state.plan) { rebuild(); if (!state.lint.ok && state.aspect === '4:5') toast('The 4:5 version needs a fix before it exports. See the quality checks.'); }
     logEvent('edit', { what: 'size', aspect: state.aspect });
   });
+  // The transport's size button flips the same choice as Details › Size.
+  els.size?.addEventListener('click', () => { els.aspect?.querySelector(`[data-aspect="${state.aspect === '4:5' ? '9:16' : '4:5'}"]`)?.click(); renderMeta(); });
   els.target.addEventListener('click', event => {
     const btn = event.target.closest('[data-target]');
     if (!btn) return;
@@ -3084,7 +3151,7 @@
     const lookNote = adoptLook(state.plan, t.style);
     state.look = state.plan.look || 'paper';
     state.esStyle = curStyle();
-    state.review = null; state.swapOpen = '';
+    state.review = null; state.swapOpen = ''; state.motion = {}; state.critic = null;
     if (lookNote) toast(lookNote);
     state.selected = state.plan.beats[0]?.id || '';
     // ── Reels 2.0: C (inputs) ── your uploads come back from this browser first; the ones
@@ -4583,6 +4650,7 @@
     // ── Reels Studio v3 (UI) ── the scene strip and the picked scene's editor (reel-storyboard.js).
     swapCandidates, useCandidate, useNoMedia, mediaKey, curStyle, styleDef, isAdmin, renderSceneEditor, sourcingOn: srcOn,
     edited: () => { rebuildSoon(); editedSoon(); },
+    motionOf: beatMotion,
     voiceSoon, openPhotos, count,
   };
   // Where each add-on module sits in the new interface. A module registers
