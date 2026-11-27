@@ -1,117 +1,1037 @@
 {
   "about": "Reels Studio v3 sample reels (QA lane). Four topics from the team's reference frames, one beat list per style. Blocks use the v3 contract shapes (photoCard, statTiles, dotGrid, streak, rankTile, tagPill, clipLabel + hook, statement, compare, quote, endcard). `media` names an entry in `media` below; scripts/check-reels3-brand.mjs draws each one as a plain SVG stand-in (no photo rights involved). focus boxes are fractions of the image (x, y, w, h), as photo-verify gives them. Numbers come from the reference frames (team research) and Pro Football Reference.",
   "media": {
-    "rodgers-photo": { "kind": "photo", "subject": { "type": "player", "name": "Aaron Rodgers", "team": "Green Bay Packers" }, "figure": { "pose": "bust", "colour": "#203731" }, "focus": { "x": 0.29, "y": 0.09, "w": 0.42, "h": 0.34 } },
-    "rodgers-clip": { "kind": "clip", "subject": { "type": "player", "name": "Aaron Rodgers", "team": "Green Bay Packers", "date": "2011" }, "figure": { "pose": "swing", "colour": "#203731" }, "durationMs": 6000 },
-    "rodgers-clip2": { "kind": "clip", "subject": { "type": "moment", "name": "Rodgers touchdown pass", "team": "Green Bay Packers", "date": "2011" }, "figure": { "pose": "stand", "colour": "#203731" }, "durationMs": 6000 },
-    "packers-clip": { "kind": "clip", "subject": { "type": "team", "name": "Green Bay Packers", "team": "Green Bay Packers", "date": "2011" }, "figure": { "pose": "stand", "colour": "#203731" }, "durationMs": 6000 },
-    "kittle-photo": { "kind": "photo", "subject": { "type": "player", "name": "George Kittle", "team": "San Francisco 49ers" }, "figure": { "pose": "bust", "colour": "#AA0000" }, "focus": { "x": 0.29, "y": 0.09, "w": 0.42, "h": 0.34 } },
-    "kittle-clip": { "kind": "clip", "subject": { "type": "player", "name": "George Kittle", "team": "San Francisco 49ers" }, "figure": { "pose": "stand", "colour": "#AA0000" }, "durationMs": 6000 }
+    "rodgers-photo": {
+      "kind": "photo",
+      "subject": {
+        "type": "player",
+        "name": "Aaron Rodgers",
+        "team": "Green Bay Packers"
+      },
+      "figure": {
+        "pose": "bust",
+        "colour": "#203731"
+      },
+      "focus": {
+        "x": 0.29,
+        "y": 0.09,
+        "w": 0.42,
+        "h": 0.34
+      }
+    },
+    "rodgers-clip": {
+      "kind": "clip",
+      "subject": {
+        "type": "player",
+        "name": "Aaron Rodgers",
+        "team": "Green Bay Packers",
+        "date": "2011"
+      },
+      "figure": {
+        "pose": "swing",
+        "colour": "#203731"
+      },
+      "durationMs": 6000,
+      "focus": {
+        "x": 0.455,
+        "y": 0.235,
+        "w": 0.074,
+        "h": 0.131
+      }
+    },
+    "rodgers-clip2": {
+      "kind": "clip",
+      "subject": {
+        "type": "moment",
+        "name": "Rodgers touchdown pass",
+        "team": "Green Bay Packers",
+        "date": "2011"
+      },
+      "figure": {
+        "pose": "stand",
+        "colour": "#203731"
+      },
+      "durationMs": 6000,
+      "focus": {
+        "x": 0.462,
+        "y": 0.151,
+        "w": 0.076,
+        "h": 0.136
+      }
+    },
+    "packers-clip": {
+      "kind": "clip",
+      "subject": {
+        "type": "team",
+        "name": "Green Bay Packers",
+        "team": "Green Bay Packers",
+        "date": "2011"
+      },
+      "figure": {
+        "pose": "stand",
+        "colour": "#203731"
+      },
+      "durationMs": 6000,
+      "focus": {
+        "x": 0.462,
+        "y": 0.151,
+        "w": 0.076,
+        "h": 0.136
+      }
+    },
+    "kittle-photo": {
+      "kind": "photo",
+      "subject": {
+        "type": "player",
+        "name": "George Kittle",
+        "team": "San Francisco 49ers"
+      },
+      "figure": {
+        "pose": "bust",
+        "colour": "#AA0000"
+      },
+      "focus": {
+        "x": 0.29,
+        "y": 0.09,
+        "w": 0.42,
+        "h": 0.34
+      }
+    },
+    "kittle-clip": {
+      "kind": "clip",
+      "subject": {
+        "type": "player",
+        "name": "George Kittle",
+        "team": "San Francisco 49ers"
+      },
+      "figure": {
+        "pose": "stand",
+        "colour": "#AA0000"
+      },
+      "durationMs": 6000,
+      "focus": {
+        "x": 0.462,
+        "y": 0.151,
+        "w": 0.076,
+        "h": 0.136
+      }
+    }
   },
   "topics": [
     {
       "id": "rodgers-2011-twin",
       "title": "Rodgers' 2011 has no twin",
       "series": "STAT TWIN · EP. 10",
-      "sport": "nfl", "format": "stat",
-      "team": { "name": "Green Bay Packers", "colors": ["#203731", "#FFB612"] },
-      "sources": [{ "title": "Aaron Rodgers 2011 stats", "source": "Pro Football Reference", "url": "https://www.pro-football-reference.com/players/R/RodgAa00.htm" }],
+      "sport": "nfl",
+      "format": "stat",
+      "team": {
+        "name": "Green Bay Packers",
+        "colors": [
+          "#203731",
+          "#FFB612"
+        ]
+      },
+      "sources": [
+        {
+          "title": "Aaron Rodgers 2011 stats",
+          "source": "Pro Football Reference",
+          "url": "https://www.pro-football-reference.com/players/R/RodgAa00.htm"
+        }
+      ],
       "beats": {
-        "hook": { "kind": "hook", "text": "Rodgers' 2011 has no twin", "vo": "Aaron Rodgers' 2011 season still has no *twin*.", "block": { "type": "hook", "kicker": "STAT TWIN · EP. 10", "pills": [{ "text": "RODGERS' 2011", "color": "ink" }, { "text": "HAS NO *TWIN*", "color": "ink" }] } },
-        "hookClip": { "kind": "hook", "text": "Rodgers' 2011 has no twin", "vo": "Aaron Rodgers' 2011 season still has no *twin*.", "media": "rodgers-clip", "block": { "type": "hook", "kicker": "STAT TWIN · EP. 10", "pills": [{ "text": "RODGERS' 2011", "color": "ink" }, { "text": "HAS NO *TWIN*", "color": "ink" }] } },
-        "photo": { "kind": "point", "text": "Aaron Rodgers, 2011", "vo": "Fifteen and one, and the MVP.", "media": "rodgers-photo", "block": { "type": "photoCard", "photo": "rodgers-photo", "label": "2011 · GB", "focus": { "x": 0.29, "y": 0.09, "w": 0.42, "h": 0.34 }, "scan": true } },
-        "clip1": { "kind": "point", "text": "Aaron Rodgers", "vo": "Every week, a new clinic.", "media": "rodgers-clip2", "block": { "type": "clipLabel", "text": "AARON RODGERS" } },
-        "tiles": { "kind": "stat", "text": "45 TD, 6 INT", "vo": "Forty-five touchdowns. Just six interceptions.", "block": { "type": "statTiles", "tiles": [{ "value": "45", "label": "TD", "tone": "blue" }, { "value": "6", "label": "INT", "tone": "ink" }] } },
-        "rank": { "kind": "stat", "text": "122.5 passer rating", "vo": "A 122.5 passer rating, the best ever at the time.", "block": { "type": "rankTile", "kicker": "2011", "rank": "#1", "pos": "PASSER RATING", "chip": "122.5" } },
-        "compare": { "kind": "bars", "text": "TD per interception", "vo": "That is 7.5 touchdowns for every pick. Brady's 2007 was 6.3.", "block": { "type": "compare", "kicker": "TD PER INT", "items": [{ "label": "RODGERS 2011", "value": 7.5, "display": "7.5", "color": "blue" }, { "label": "BRADY 2007", "value": 6.3, "display": "6.3", "color": "ink" }] } },
-        "twin": { "kind": "point", "text": "Closest twin: ???", "vo": "The closest twin? Nobody has matched both numbers.", "block": { "type": "tagPill", "text": "CLOSEST TWIN ???", "tone": "ink" } },
-        "kinetic": { "kind": "point", "text": "No twin", "vo": "No one has come *close*.", "media": "rodgers-clip", "block": { "type": "statement", "lines": [{ "text": "NO ONE", "color": "ink" }, { "text": "COMES *CLOSE*", "color": "ink" }] } },
-        "stamp": { "kind": "point", "text": "MVP", "vo": "MVP, no debate.", "block": { "type": "tagPill", "text": "MVP", "tone": "blue" } },
-        "statement": { "kind": "point", "text": "The bar still stands", "vo": "Thirteen years later the bar still *stands*.", "media": "rodgers-clip2", "block": { "type": "statement", "lines": [{ "text": "THE BAR", "color": "ink" }, { "text": "STILL *STANDS*", "color": "ink" }] } },
-        "end": { "kind": "cta", "text": "", "vo": "", "block": { "type": "endcard" } }
+        "hook": {
+          "kind": "hook",
+          "text": "Rodgers' 2011 has no twin",
+          "vo": "Aaron Rodgers' 2011 season still has no *twin*.",
+          "block": {
+            "type": "hook",
+            "kicker": "STAT TWIN · EP. 10",
+            "pills": [
+              {
+                "text": "RODGERS' 2011",
+                "color": "ink"
+              },
+              {
+                "text": "HAS NO *TWIN*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "hookClip": {
+          "kind": "hook",
+          "text": "Rodgers' 2011 has no twin",
+          "vo": "Aaron Rodgers' 2011 season still has no *twin*.",
+          "media": "rodgers-clip",
+          "block": {
+            "type": "hook",
+            "kicker": "STAT TWIN · EP. 10",
+            "pills": [
+              {
+                "text": "RODGERS' 2011",
+                "color": "ink"
+              },
+              {
+                "text": "HAS NO *TWIN*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "photo": {
+          "kind": "point",
+          "text": "Aaron Rodgers, 2011",
+          "vo": "Fifteen and one, and the MVP.",
+          "media": "rodgers-photo",
+          "block": {
+            "type": "photoCard",
+            "photo": "rodgers-photo",
+            "label": "2011 · GB",
+            "focus": {
+              "x": 0.29,
+              "y": 0.09,
+              "w": 0.42,
+              "h": 0.34
+            },
+            "scan": true
+          }
+        },
+        "clip1": {
+          "kind": "point",
+          "text": "Aaron Rodgers",
+          "vo": "Every week, a new clinic.",
+          "media": "rodgers-clip2",
+          "block": {
+            "type": "clipLabel",
+            "text": "AARON RODGERS"
+          }
+        },
+        "tiles": {
+          "kind": "stat",
+          "text": "45 TD, 6 INT",
+          "vo": "Forty-five touchdowns. Just six interceptions.",
+          "block": {
+            "type": "statTiles",
+            "tiles": [
+              {
+                "value": "45",
+                "label": "TD",
+                "tone": "blue"
+              },
+              {
+                "value": "6",
+                "label": "INT",
+                "tone": "ink"
+              }
+            ]
+          }
+        },
+        "rank": {
+          "kind": "stat",
+          "text": "122.5 passer rating",
+          "vo": "A 122.5 passer rating, the best ever at the time.",
+          "block": {
+            "type": "rankTile",
+            "kicker": "2011",
+            "rank": "#1",
+            "pos": "PASSER RATING",
+            "chip": "122.5"
+          }
+        },
+        "compare": {
+          "kind": "bars",
+          "text": "TD per interception",
+          "vo": "That is 7.5 touchdowns for every pick. Brady's 2007 was 6.3.",
+          "block": {
+            "type": "compare",
+            "kicker": "TD PER INT",
+            "items": [
+              {
+                "label": "RODGERS 2011",
+                "value": 7.5,
+                "display": "7.5",
+                "color": "blue"
+              },
+              {
+                "label": "BRADY 2007",
+                "value": 6.3,
+                "display": "6.3",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "twin": {
+          "kind": "point",
+          "text": "Closest twin: ???",
+          "vo": "The closest twin? Nobody has matched both numbers.",
+          "block": {
+            "type": "tagPill",
+            "text": "CLOSEST TWIN ???",
+            "tone": "ink"
+          }
+        },
+        "kinetic": {
+          "kind": "point",
+          "text": "No twin",
+          "vo": "No one has come *close*.",
+          "media": "rodgers-clip",
+          "block": {
+            "type": "statement",
+            "lines": [
+              {
+                "text": "NO ONE",
+                "color": "ink"
+              },
+              {
+                "text": "COMES *CLOSE*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "stamp": {
+          "kind": "point",
+          "text": "MVP",
+          "vo": "MVP, no debate.",
+          "block": {
+            "type": "tagPill",
+            "text": "MVP",
+            "tone": "blue"
+          }
+        },
+        "statement": {
+          "kind": "point",
+          "text": "The bar still stands",
+          "vo": "Thirteen years later the bar still *stands*.",
+          "media": "rodgers-clip2",
+          "block": {
+            "type": "statement",
+            "lines": [
+              {
+                "text": "THE BAR",
+                "color": "ink"
+              },
+              {
+                "text": "STILL *STANDS*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "end": {
+          "kind": "cta",
+          "text": "",
+          "vo": "",
+          "block": {
+            "type": "endcard"
+          }
+        }
       },
       "styles": {
-        "gametape": ["hookClip", "clip1", "statement", "tiles", "end"],
-        "statcard": ["hook", "photo", "tiles", "rank", "twin", "end"],
-        "receipts": ["hook", "tiles", "compare", "rank", "twin", "end"],
-        "hypecut": ["hookClip", "kinetic", "stamp", "tiles", "clip1", "end"]
+        "gametape": [
+          "hookClip",
+          "clip1",
+          "statement",
+          "tiles",
+          "end"
+        ],
+        "statcard": [
+          "hook",
+          "photo",
+          "tiles",
+          "rank",
+          "twin",
+          "end"
+        ],
+        "receipts": [
+          "hook",
+          "tiles",
+          "compare",
+          "rank",
+          "twin",
+          "end"
+        ],
+        "hypecut": [
+          "hookClip",
+          "kinetic",
+          "stamp",
+          "tiles",
+          "clip1",
+          "end"
+        ]
       }
     },
     {
       "id": "achilles-67",
       "title": "67 Achilles tears",
-      "sport": "nfl", "format": "stat",
+      "sport": "nfl",
+      "format": "stat",
       "team": null,
-      "sources": [{ "title": "NFL Achilles tears and returns (ES research)", "source": "EssentiallySports research", "url": "https://www.essentiallysports.com/" }],
+      "sources": [
+        {
+          "title": "NFL Achilles tears and returns (ES research)",
+          "source": "EssentiallySports research",
+          "url": "https://www.essentiallysports.com/"
+        }
+      ],
       "beats": {
-        "hook": { "kind": "hook", "text": "67 Achilles tears", "vo": "We tracked *67* Achilles tears in the NFL.", "block": { "type": "hook", "pills": [{ "text": "*67*", "color": "ink" }, { "text": "ACHILLES TEARS", "color": "ink" }] } },
-        "hookClip": { "kind": "hook", "text": "67 Achilles tears", "vo": "We tracked *67* Achilles tears in the NFL.", "media": "kittle-clip", "block": { "type": "hook", "pills": [{ "text": "*67*", "color": "ink" }, { "text": "ACHILLES TEARS", "color": "ink" }] } },
-        "dots": { "kind": "dotrank", "text": "67 tears", "vo": "Blue got back to ninety percent. Black came back. Grey never did.", "block": { "type": "dotGrid", "total": 67, "title": "67 ACHILLES TEARS", "groups": [{ "n": 26, "tone": "blue", "label": "BACK TO 90%" }, { "n": 26, "tone": "ink", "label": "RETURNED" }, { "n": 15, "tone": "grey", "label": "DIDN'T RETURN" }] } },
-        "tiles": { "kind": "stat", "text": "52 made it back, 26 back to 90%", "vo": "Fifty-two made it back. Only twenty-six got back to ninety percent.", "block": { "type": "statTiles", "tiles": [{ "value": "52", "label": "MADE IT BACK", "tone": "ink" }, { "value": "26", "label": "BACK TO 90%", "tone": "blue" }] } },
-        "statement": { "kind": "point", "text": "Old level", "vo": "Most never reach their *old* level.", "block": { "type": "statement", "lines": [{ "text": "MOST NEVER", "color": "ink" }, { "text": "REACH THEIR", "color": "ink" }, { "text": "*OLD LEVEL*", "color": "ink" }] } },
-        "compare": { "kind": "bars", "text": "Came back vs didn't", "vo": "Fifty-two returned, fifteen did not.", "block": { "type": "compare", "kicker": "AFTER THE TEAR", "items": [{ "label": "RETURNED", "value": 52, "display": "52", "color": "blue" }, { "label": "DIDN'T", "value": 15, "display": "15", "color": "ink" }] } },
-        "photo": { "kind": "point", "text": "George Kittle", "vo": "George Kittle is the latest.", "media": "kittle-photo", "block": { "type": "photoCard", "photo": "kittle-photo", "label": "GEORGE KITTLE", "focus": { "x": 0.29, "y": 0.09, "w": 0.42, "h": 0.34 }, "scan": false } },
-        "tag": { "kind": "point", "text": "Tore Achilles Jan. 11", "vo": "He tore his Achilles on January 11.", "block": { "type": "tagPill", "text": "TORE ACHILLES · JAN. 11", "tone": "red" } },
-        "clip1": { "kind": "point", "text": "George Kittle", "vo": "George Kittle is the latest.", "media": "kittle-clip", "block": { "type": "clipLabel", "text": "GEORGE KITTLE" } },
-        "kinetic": { "kind": "point", "text": "Half", "vo": "Only *half* hit ninety percent.", "media": "kittle-clip", "block": { "type": "statement", "lines": [{ "text": "ONLY *HALF*", "color": "ink" }, { "text": "HIT 90%", "color": "ink" }] } },
-        "end": { "kind": "cta", "text": "", "vo": "", "block": { "type": "endcard" } }
+        "hook": {
+          "kind": "hook",
+          "text": "67 Achilles tears",
+          "vo": "We tracked *67* Achilles tears in the NFL.",
+          "block": {
+            "type": "hook",
+            "pills": [
+              {
+                "text": "*67*",
+                "color": "ink"
+              },
+              {
+                "text": "ACHILLES TEARS",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "hookClip": {
+          "kind": "hook",
+          "text": "67 Achilles tears",
+          "vo": "We tracked *67* Achilles tears in the NFL.",
+          "media": "kittle-clip",
+          "block": {
+            "type": "hook",
+            "pills": [
+              {
+                "text": "*67*",
+                "color": "ink"
+              },
+              {
+                "text": "ACHILLES TEARS",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "dots": {
+          "kind": "dotrank",
+          "text": "67 tears",
+          "vo": "Blue got back to ninety percent. Black came back. Grey never did.",
+          "block": {
+            "type": "dotGrid",
+            "total": 67,
+            "title": "67 ACHILLES TEARS",
+            "groups": [
+              {
+                "n": 26,
+                "tone": "blue",
+                "label": "BACK TO 90%"
+              },
+              {
+                "n": 26,
+                "tone": "ink",
+                "label": "RETURNED"
+              },
+              {
+                "n": 15,
+                "tone": "grey",
+                "label": "DIDN'T RETURN"
+              }
+            ]
+          }
+        },
+        "tiles": {
+          "kind": "stat",
+          "text": "52 made it back, 26 back to 90%",
+          "vo": "Fifty-two made it back. Only twenty-six got back to ninety percent.",
+          "block": {
+            "type": "statTiles",
+            "tiles": [
+              {
+                "value": "52",
+                "label": "MADE IT BACK",
+                "tone": "ink"
+              },
+              {
+                "value": "26",
+                "label": "BACK TO 90%",
+                "tone": "blue"
+              }
+            ]
+          }
+        },
+        "statement": {
+          "kind": "point",
+          "text": "Old level",
+          "vo": "Most never reach their *old* level.",
+          "block": {
+            "type": "statement",
+            "lines": [
+              {
+                "text": "MOST NEVER",
+                "color": "ink"
+              },
+              {
+                "text": "REACH THEIR",
+                "color": "ink"
+              },
+              {
+                "text": "*OLD LEVEL*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "compare": {
+          "kind": "bars",
+          "text": "Came back vs didn't",
+          "vo": "Fifty-two returned, fifteen did not.",
+          "block": {
+            "type": "compare",
+            "kicker": "AFTER THE TEAR",
+            "items": [
+              {
+                "label": "RETURNED",
+                "value": 52,
+                "display": "52",
+                "color": "blue"
+              },
+              {
+                "label": "DIDN'T",
+                "value": 15,
+                "display": "15",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "photo": {
+          "kind": "point",
+          "text": "George Kittle",
+          "vo": "George Kittle is the latest.",
+          "media": "kittle-photo",
+          "block": {
+            "type": "photoCard",
+            "photo": "kittle-photo",
+            "label": "GEORGE KITTLE",
+            "focus": {
+              "x": 0.29,
+              "y": 0.09,
+              "w": 0.42,
+              "h": 0.34
+            },
+            "scan": false
+          }
+        },
+        "tag": {
+          "kind": "point",
+          "text": "Tore Achilles Jan. 11",
+          "vo": "He tore his Achilles on January 11.",
+          "block": {
+            "type": "tagPill",
+            "text": "TORE ACHILLES · JAN. 11",
+            "tone": "red"
+          }
+        },
+        "clip1": {
+          "kind": "point",
+          "text": "George Kittle",
+          "vo": "George Kittle is the latest.",
+          "media": "kittle-clip",
+          "block": {
+            "type": "clipLabel",
+            "text": "GEORGE KITTLE"
+          }
+        },
+        "kinetic": {
+          "kind": "point",
+          "text": "Half",
+          "vo": "Only *half* hit ninety percent.",
+          "media": "kittle-clip",
+          "block": {
+            "type": "statement",
+            "lines": [
+              {
+                "text": "ONLY *HALF*",
+                "color": "ink"
+              },
+              {
+                "text": "HIT 90%",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "end": {
+          "kind": "cta",
+          "text": "",
+          "vo": "",
+          "block": {
+            "type": "endcard"
+          }
+        }
       },
       "styles": {
-        "gametape": ["hookClip", "clip1", "tiles", "kinetic", "end"],
-        "statcard": ["hook", "tiles", "photo", "tag", "statement", "end"],
-        "receipts": ["hook", "dots", "tiles", "statement", "compare", "end"],
-        "hypecut": ["hookClip", "kinetic", "tag", "tiles", "clip1", "end"]
+        "gametape": [
+          "hookClip",
+          "clip1",
+          "tiles",
+          "kinetic",
+          "end"
+        ],
+        "statcard": [
+          "hook",
+          "tiles",
+          "photo",
+          "tag",
+          "statement",
+          "end"
+        ],
+        "receipts": [
+          "hook",
+          "dots",
+          "tiles",
+          "statement",
+          "compare",
+          "end"
+        ],
+        "hypecut": [
+          "hookClip",
+          "kinetic",
+          "tag",
+          "tiles",
+          "clip1",
+          "end"
+        ]
       }
     },
     {
       "id": "kittle-1-te",
       "title": "George Kittle, #1 TE",
-      "sport": "nfl", "format": "stat",
-      "team": { "name": "San Francisco 49ers", "colors": ["#AA0000", "#B3995D"] },
-      "sources": [{ "title": "PFF tight end grades 2024-25", "source": "PFF", "url": "https://www.pff.com/" }],
+      "sport": "nfl",
+      "format": "stat",
+      "team": {
+        "name": "San Francisco 49ers",
+        "colors": [
+          "#AA0000",
+          "#B3995D"
+        ]
+      },
+      "sources": [
+        {
+          "title": "PFF tight end grades 2024-25",
+          "source": "PFF",
+          "url": "https://www.pff.com/"
+        }
+      ],
       "beats": {
-        "hook": { "kind": "hook", "text": "Kittle is still the #1 TE", "vo": "George Kittle is still the number one *tight end*.", "block": { "type": "hook", "pills": [{ "text": "GEORGE KITTLE", "color": "ink" }, { "text": "STILL *#1*", "color": "ink" }] } },
-        "hookClip": { "kind": "hook", "text": "Kittle is still the #1 TE", "vo": "George Kittle is still the number one *tight end*.", "media": "kittle-clip", "block": { "type": "hook", "pills": [{ "text": "GEORGE KITTLE", "color": "ink" }, { "text": "STILL *#1*", "color": "ink" }] } },
-        "photo": { "kind": "point", "text": "George Kittle", "vo": "Even after the injury.", "media": "kittle-photo", "block": { "type": "photoCard", "photo": "kittle-photo", "label": "GEORGE KITTLE", "focus": { "x": 0.29, "y": 0.09, "w": 0.42, "h": 0.34 }, "scan": true } },
-        "tag": { "kind": "point", "text": "Tore Achilles Jan. 11", "vo": "He tore his Achilles on January 11.", "block": { "type": "tagPill", "text": "TORE ACHILLES · JAN. 11", "tone": "red" } },
-        "tiles": { "kind": "stat", "text": "#1 TE in 2024 and 2025", "vo": "PFF's top tight end in 2024, at 92.6, and again in 2025, at 90.4.", "block": { "type": "statTiles", "tiles": [{ "value": "#1", "label": "TE 2024", "chip": "GRADE 92.6", "tone": "ink" }, { "value": "#1", "label": "TE 2025", "chip": "GRADE 90.4", "tone": "ink" }] } },
-        "rank": { "kind": "stat", "text": "#1 TE 2025", "vo": "Number one again in 2025.", "block": { "type": "rankTile", "kicker": "2025", "rank": "#1", "pos": "TE", "chip": "GRADE 90.4" } },
-        "statement": { "kind": "point", "text": "Tight end in a class of his own", "vo": "Two years running, nobody *close*.", "block": { "type": "statement", "lines": [{ "text": "TWO YEARS", "color": "ink" }, { "text": "NOBODY *CLOSE*", "color": "ink" }] } },
-        "clip1": { "kind": "point", "text": "George Kittle", "vo": "Watch him work.", "media": "kittle-clip", "block": { "type": "clipLabel", "text": "GEORGE KITTLE" } },
-        "kinetic": { "kind": "point", "text": "Still #1", "vo": "Still *number one*.", "media": "kittle-clip", "block": { "type": "statement", "lines": [{ "text": "STILL", "color": "ink" }, { "text": "*#1*", "color": "ink" }] } },
-        "end": { "kind": "cta", "text": "", "vo": "", "block": { "type": "endcard" } }
+        "hook": {
+          "kind": "hook",
+          "text": "Kittle is still the #1 TE",
+          "vo": "George Kittle is still the number one *tight end*.",
+          "block": {
+            "type": "hook",
+            "pills": [
+              {
+                "text": "GEORGE KITTLE",
+                "color": "ink"
+              },
+              {
+                "text": "STILL *#1*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "hookClip": {
+          "kind": "hook",
+          "text": "Kittle is still the #1 TE",
+          "vo": "George Kittle is still the number one *tight end*.",
+          "media": "kittle-clip",
+          "block": {
+            "type": "hook",
+            "pills": [
+              {
+                "text": "GEORGE KITTLE",
+                "color": "ink"
+              },
+              {
+                "text": "STILL *#1*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "photo": {
+          "kind": "point",
+          "text": "George Kittle",
+          "vo": "Even after the injury.",
+          "media": "kittle-photo",
+          "block": {
+            "type": "photoCard",
+            "photo": "kittle-photo",
+            "label": "GEORGE KITTLE",
+            "focus": {
+              "x": 0.29,
+              "y": 0.09,
+              "w": 0.42,
+              "h": 0.34
+            },
+            "scan": true
+          }
+        },
+        "tag": {
+          "kind": "point",
+          "text": "Tore Achilles Jan. 11",
+          "vo": "He tore his Achilles on January 11.",
+          "block": {
+            "type": "tagPill",
+            "text": "TORE ACHILLES · JAN. 11",
+            "tone": "red"
+          }
+        },
+        "tiles": {
+          "kind": "stat",
+          "text": "#1 TE in 2024 and 2025",
+          "vo": "PFF's top tight end in 2024, at 92.6, and again in 2025, at 90.4.",
+          "block": {
+            "type": "statTiles",
+            "tiles": [
+              {
+                "value": "#1",
+                "label": "TE 2024",
+                "chip": "GRADE 92.6",
+                "tone": "ink"
+              },
+              {
+                "value": "#1",
+                "label": "TE 2025",
+                "chip": "GRADE 90.4",
+                "tone": "ink"
+              }
+            ]
+          }
+        },
+        "rank": {
+          "kind": "stat",
+          "text": "#1 TE 2025",
+          "vo": "Number one again in 2025.",
+          "block": {
+            "type": "rankTile",
+            "kicker": "2025",
+            "rank": "#1",
+            "pos": "TE",
+            "chip": "GRADE 90.4"
+          }
+        },
+        "statement": {
+          "kind": "point",
+          "text": "Tight end in a class of his own",
+          "vo": "Two years running, nobody *close*.",
+          "block": {
+            "type": "statement",
+            "lines": [
+              {
+                "text": "TWO YEARS",
+                "color": "ink"
+              },
+              {
+                "text": "NOBODY *CLOSE*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "clip1": {
+          "kind": "point",
+          "text": "George Kittle",
+          "vo": "Watch him work.",
+          "media": "kittle-clip",
+          "block": {
+            "type": "clipLabel",
+            "text": "GEORGE KITTLE"
+          }
+        },
+        "kinetic": {
+          "kind": "point",
+          "text": "Still #1",
+          "vo": "Still *number one*.",
+          "media": "kittle-clip",
+          "block": {
+            "type": "statement",
+            "lines": [
+              {
+                "text": "STILL",
+                "color": "ink"
+              },
+              {
+                "text": "*#1*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "end": {
+          "kind": "cta",
+          "text": "",
+          "vo": "",
+          "block": {
+            "type": "endcard"
+          }
+        }
       },
       "styles": {
-        "gametape": ["hookClip", "clip1", "tiles", "kinetic", "end"],
-        "statcard": ["hook", "photo", "tag", "tiles", "rank", "end"],
-        "receipts": ["hook", "tag", "tiles", "rank", "statement", "end"],
-        "hypecut": ["hookClip", "kinetic", "tag", "tiles", "clip1", "end"]
+        "gametape": [
+          "hookClip",
+          "clip1",
+          "tiles",
+          "kinetic",
+          "end"
+        ],
+        "statcard": [
+          "hook",
+          "photo",
+          "tag",
+          "tiles",
+          "rank",
+          "end"
+        ],
+        "receipts": [
+          "hook",
+          "tag",
+          "tiles",
+          "rank",
+          "statement",
+          "end"
+        ],
+        "hypecut": [
+          "hookClip",
+          "kinetic",
+          "tag",
+          "tiles",
+          "clip1",
+          "end"
+        ]
       }
     },
     {
       "id": "green-bay-2011",
       "title": "2011 Green Bay",
-      "sport": "nfl", "format": "stat",
-      "team": { "name": "Green Bay Packers", "colors": ["#203731", "#FFB612"] },
-      "sources": [{ "title": "2011 Green Bay Packers", "source": "Pro Football Reference", "url": "https://www.pro-football-reference.com/teams/gnb/2011.htm" }],
+      "sport": "nfl",
+      "format": "stat",
+      "team": {
+        "name": "Green Bay Packers",
+        "colors": [
+          "#203731",
+          "#FFB612"
+        ]
+      },
+      "sources": [
+        {
+          "title": "2011 Green Bay Packers",
+          "source": "Pro Football Reference",
+          "url": "https://www.pro-football-reference.com/teams/gnb/2011.htm"
+        }
+      ],
       "beats": {
-        "hook": { "kind": "hook", "text": "2011 Green Bay", "vo": "The 2011 *Packers* were nearly perfect.", "block": { "type": "hook", "pills": [{ "text": "2011", "color": "ink" }, { "text": "*GREEN BAY*", "color": "ink" }] } },
-        "hookClip": { "kind": "hook", "text": "2011 Green Bay", "vo": "The 2011 *Packers* were nearly perfect.", "media": "packers-clip", "block": { "type": "hook", "pills": [{ "text": "2011", "color": "ink" }, { "text": "*GREEN BAY*", "color": "ink" }] } },
-        "photo": { "kind": "point", "text": "Aaron Rodgers 2011", "vo": "Aaron Rodgers ran the show.", "media": "rodgers-photo", "block": { "type": "photoCard", "photo": "rodgers-photo", "label": "2011 · GB", "focus": { "x": 0.29, "y": 0.09, "w": 0.42, "h": 0.34 }, "scan": true } },
-        "tiles": { "kind": "stat", "text": "45 TD, 6 INT, 15-1", "vo": "Forty-five touchdowns, six picks, fifteen and one.", "block": { "type": "statTiles", "tiles": [{ "value": "45", "label": "TD", "tone": "blue" }, { "value": "6", "label": "INT", "tone": "ink" }, { "value": "15-1", "label": "RECORD", "tone": "ink" }] } },
-        "streak": { "kind": "point", "text": "13-0 start", "vo": "Thirteen straight wins before the first loss.", "block": { "type": "streak", "items": "WWWWWWWWWWWWWLWW", "label": "2011 REGULAR SEASON" } },
-        "tag": { "kind": "point", "text": "Lost at KC, week 15", "vo": "The only loss came at Kansas City in week 15.", "block": { "type": "tagPill", "text": "LOST AT KC · WK 15", "tone": "ink" } },
-        "statement": { "kind": "point", "text": "13-0 before the first loss", "vo": "Thirteen and oh before the first *loss*.", "block": { "type": "statement", "lines": [{ "text": "13-0", "color": "ink" }, { "text": "BEFORE THE", "color": "ink" }, { "text": "FIRST *LOSS*", "color": "ink" }] } },
-        "clip1": { "kind": "point", "text": "Green Bay Packers", "vo": "A machine every Sunday.", "media": "packers-clip", "block": { "type": "clipLabel", "text": "GREEN BAY · 2011" } },
-        "clip2": { "kind": "point", "text": "Aaron Rodgers", "vo": "Led by Rodgers.", "media": "rodgers-clip2", "block": { "type": "clipLabel", "text": "AARON RODGERS" } },
-        "kinetic": { "kind": "point", "text": "15-1", "vo": "Fifteen and *one*.", "media": "packers-clip", "block": { "type": "statement", "lines": [{ "text": "*15-1*", "color": "ink" }] } },
-        "end": { "kind": "cta", "text": "", "vo": "", "block": { "type": "endcard" } }
+        "hook": {
+          "kind": "hook",
+          "text": "2011 Green Bay",
+          "vo": "The 2011 *Packers* were nearly perfect.",
+          "block": {
+            "type": "hook",
+            "pills": [
+              {
+                "text": "2011",
+                "color": "ink"
+              },
+              {
+                "text": "*GREEN BAY*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "hookClip": {
+          "kind": "hook",
+          "text": "2011 Green Bay",
+          "vo": "The 2011 *Packers* were nearly perfect.",
+          "media": "packers-clip",
+          "block": {
+            "type": "hook",
+            "pills": [
+              {
+                "text": "2011",
+                "color": "ink"
+              },
+              {
+                "text": "*GREEN BAY*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "photo": {
+          "kind": "point",
+          "text": "Aaron Rodgers 2011",
+          "vo": "Aaron Rodgers ran the show.",
+          "media": "rodgers-photo",
+          "block": {
+            "type": "photoCard",
+            "photo": "rodgers-photo",
+            "label": "2011 · GB",
+            "focus": {
+              "x": 0.29,
+              "y": 0.09,
+              "w": 0.42,
+              "h": 0.34
+            },
+            "scan": true
+          }
+        },
+        "tiles": {
+          "kind": "stat",
+          "text": "45 TD, 6 INT, 15-1",
+          "vo": "Forty-five touchdowns, six picks, fifteen and one.",
+          "block": {
+            "type": "statTiles",
+            "tiles": [
+              {
+                "value": "45",
+                "label": "TD",
+                "tone": "blue"
+              },
+              {
+                "value": "6",
+                "label": "INT",
+                "tone": "ink"
+              },
+              {
+                "value": "15-1",
+                "label": "RECORD",
+                "tone": "ink"
+              }
+            ]
+          }
+        },
+        "streak": {
+          "kind": "point",
+          "text": "13-0 start",
+          "vo": "Thirteen straight wins before the first loss.",
+          "block": {
+            "type": "streak",
+            "items": "WWWWWWWWWWWWWLWW",
+            "label": "2011 REGULAR SEASON"
+          }
+        },
+        "tag": {
+          "kind": "point",
+          "text": "Lost at KC, week 15",
+          "vo": "The only loss came at Kansas City in week 15.",
+          "block": {
+            "type": "tagPill",
+            "text": "LOST AT KC · WK 15",
+            "tone": "ink"
+          }
+        },
+        "statement": {
+          "kind": "point",
+          "text": "13-0 before the first loss",
+          "vo": "Thirteen and oh before the first *loss*.",
+          "block": {
+            "type": "statement",
+            "lines": [
+              {
+                "text": "13-0",
+                "color": "ink"
+              },
+              {
+                "text": "BEFORE THE",
+                "color": "ink"
+              },
+              {
+                "text": "FIRST *LOSS*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "clip1": {
+          "kind": "point",
+          "text": "Green Bay Packers",
+          "vo": "A machine every Sunday.",
+          "media": "packers-clip",
+          "block": {
+            "type": "clipLabel",
+            "text": "GREEN BAY · 2011"
+          }
+        },
+        "clip2": {
+          "kind": "point",
+          "text": "Aaron Rodgers",
+          "vo": "Led by Rodgers.",
+          "media": "rodgers-clip2",
+          "block": {
+            "type": "clipLabel",
+            "text": "AARON RODGERS"
+          }
+        },
+        "kinetic": {
+          "kind": "point",
+          "text": "15-1",
+          "vo": "Fifteen and *one*.",
+          "media": "packers-clip",
+          "block": {
+            "type": "statement",
+            "lines": [
+              {
+                "text": "*15-1*",
+                "color": "ink"
+              }
+            ]
+          }
+        },
+        "end": {
+          "kind": "cta",
+          "text": "",
+          "vo": "",
+          "block": {
+            "type": "endcard"
+          }
+        }
       },
       "styles": {
-        "gametape": ["hookClip", "clip1", "clip2", "tiles", "end"],
-        "statcard": ["hook", "photo", "tiles", "streak", "tag", "end"],
-        "receipts": ["hook", "tiles", "streak", "statement", "tag", "end"],
-        "hypecut": ["hookClip", "kinetic", "tag", "tiles", "clip2", "end"]
+        "gametape": [
+          "hookClip",
+          "clip1",
+          "clip2",
+          "tiles",
+          "end"
+        ],
+        "statcard": [
+          "hook",
+          "photo",
+          "tiles",
+          "streak",
+          "tag",
+          "end"
+        ],
+        "receipts": [
+          "hook",
+          "tiles",
+          "streak",
+          "statement",
+          "tag",
+          "end"
+        ],
+        "hypecut": [
+          "hookClip",
+          "kinetic",
+          "tag",
+          "tiles",
+          "clip2",
+          "end"
+        ]
       }
     }
   ]
