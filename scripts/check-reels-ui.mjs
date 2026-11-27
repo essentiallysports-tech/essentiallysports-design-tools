@@ -84,7 +84,7 @@ const PHOTOS = ['/how-step-choose.webp', '/how-step-content.webp', '/how-step-ex
 const BRIEF = 'Dallas blew a 21-point lead and lost to the Eagles on a 59-yard field goal with 0:02 left. Their pass rate went from 47% to 57%; on 4th and 1 they dropped back and were sacked for -9. Source: ESPN play-by-play.';
 
 // ─── Stubbed API ─────────────────────────────────────────────────────────────
-const scenario = { trends: 'ok', config: 'ok', slow: 0, planDelay: 0, planFrom: 'fixture', clips: 'ok', critic: 'pass' };
+const scenario = { trends: 'ok', config: 'ok', slow: 0, planDelay: 0, planFrom: 'fixture', clips: 'ok', critic: 'pass', motion: 'ok' };
 const calls = []; // { path, mode, body } for every /api call
 const findClipCalls = [];
 const isFind = (pathname, body) => /find/i.test(String(body?.mode || '')) || body?.findClips === true || body?.retry === true || Boolean(body?.broaden) || (pathname === '/api/video-ads' && /find|search|clips/i.test(String(body?.mode || '')));
@@ -103,13 +103,13 @@ function sceneMedia(body) {
     let pick;
     if (wants === 'none') pick = { kind: 'none', ref: '', why: 'module beat' };
     else if (clips.length) { pick = { kind: 'clip', ref: clips[0].url, segment: { inSec: 0.4, outSec: 4.4 }, why: 'qa' }; clipCount++; } else pick = { kind: 'photo', ref: photos[0].url, kenBurns: true, why: 'no clip: verified photo with Ken Burns' };
-    return { beatId: b.id, chapterId: b.chapterId, block: b.block || null, module: b.module || null, kind: wants, wants, subject: { ...subject, key: String(subject.name || '').toLowerCase() }, clips, photos, pick, motionOk: true, segment: clips[0]?.segment || null };
+    return { beatId: b.id, chapterId: b.chapterId, block: b.block || null, module: b.module || null, kind: wants, wants, subject: { ...subject, key: String(subject.name || '').toLowerCase() }, clips, photos, pick, motionOk: !(scenario.motion === 'static' && i === 1), ...(scenario.motion === 'static' && i === 1 ? { motionWhy: 'a still photo with no Ken Burns and no module' } : {}), segment: clips[0]?.segment || null };
   });
   return {
     ok: true, esStyle: style, cost: 0, costs: { clips: 0, photos: 0 }, capped: { clips: false, photos: false },
     judge: { ready: true, maxClips: 24, perCall: 4, maxUsdPerReel: 0.03, threshold: { relevance: 7, moment: 5 } },
     judgeQueue: [], subjects: [{ key: 'dak prescott', label: 'Dak Prescott', moment: '4th and 1' }],
-    beats: out, clipCount, needsClips: clipCount === 0, motionOk: true,
+    beats: out, clipCount, needsClips: clipCount === 0, motionOk: scenario.motion !== 'static',
     ...(clipCount === 0 ? { actions: [{ id: 'find-clips', label: 'Find clips' }], reasons: ['no confirmed clip'] } : {}),
   };
 }
@@ -692,6 +692,21 @@ for (const w of WIDTHS) {
   });
   await audit('review-critic-fail', w);
   scenario.critic = 'pass';
+
+  // A beat that does not move keeps the badge from passing (clips and critic fine).
+  await load();
+  Object.assign(scenario, { clips: 'ok', critic: 'pass', motion: 'static' });
+  await step('Ready gate: a static beat (motionOk false) is not Ready to post and names the beat', async () => {
+    await makeReel({ style: 'breakdown' });
+    await sleep(1500);
+    const t = await readyText();
+    expect(!READY_RE.test(t), `the badge says "${t}" though a beat does not move`);
+    await click('#rm-ready'); await sleep(200);
+    const list = await checklistText();
+    expect(/mov|static|motion|still/i.test(list + ' ' + t), `the motion problem is not shown: "${t}" / ${list}`);
+  });
+  await audit('review-static-beat', w);
+  scenario.motion = 'ok';
 
   // Every style makes a reel in its own style; Short makes a short plan (first width only).
   if (first) {
