@@ -338,7 +338,7 @@ for (const w of WIDTHS) {
   await audit('review', w);
   await step('Review: Ready to post badge, expands to the checklist', async () => {
     expect(await visible('#rm-ready'), 'no Ready badge (#rm-ready)');
-    await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready').textContent)`, 6000, '"Ready to post"').catch(async e => { throw new Error(e.message + ' (badge: "' + (await evaluate(`document.querySelector('#rm-ready').textContent.trim()`)) + '"; checklist: ' + (await evaluate(`[...document.querySelectorAll('#rm-issues li, #rm-checklist li')].map(l => l.textContent.trim()).slice(0, 4).join(' / ')`)) + ')'); });
+    await waitFor(`/ready to post|needs clips|draft/i.test(document.querySelector('#rm-ready').textContent)`, 6000, 'the review badge').then(async () => { const t = await evaluate(`document.querySelector('#rm-ready').textContent`); if (/ready to post/i.test(t)) throw new Error('a draft with no confirmed clip says "Ready to post": ' + t.trim()); }).catch(async e => { throw new Error(e.message + ' (badge: "' + (await evaluate(`document.querySelector('#rm-ready').textContent.trim()`)) + '"; checklist: ' + (await evaluate(`[...document.querySelectorAll('#rm-issues li, #rm-checklist li')].map(l => l.textContent.trim()).slice(0, 4).join(' / ')`)) + ')'); });
     await must('#rm-ready');
     await waitFor(`document.querySelector('#rm-ready').getAttribute('aria-expanded') === 'true' && ${SHOWN}(document.querySelector('#rm-lint'))`, 2000, 'the checklist');
     expect(await evaluate(`document.querySelectorAll('#rm-checklist li').length`) >= 3, 'the checklist has fewer than 3 rows');
@@ -448,7 +448,7 @@ for (const w of WIDTHS) {
       await step(`style ${id}: Make my reel → Review`, async () => {
         await makeReel({ style: id });
         expect((await ctx('c.state.plan.esStyle')) === id, `plan.esStyle ${await ctx('c.state.plan.esStyle')}`);
-        await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 6000, '"Ready to post"');
+        await waitFor(`/ready to post|needs clips|draft/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 6000, 'the review badge');
         const sm = calls.find(c => c.mode === 'scene-media');
         expect(!sm || v3Style(sm.body) === id, `scene-media esStyle ${sm && sm.body.esStyle}`);
       });
