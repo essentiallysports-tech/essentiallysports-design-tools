@@ -6,13 +6,18 @@
  *     current: 'assets/logos/nba/lal.webp', // highlights the current pick
  *     query: 'Lakers',                // optional starting search
  *     league: 'nba',                  // optional starting chip
- *     onPick(choice) {}               // { src, name, id, colors, league, source: 'library'|'upload' }
+ *     onPick(choice) {}               // { src, name, id, colors, league, source: 'library'|'custom'|'upload', customId }
  *     onRemove() {}                   // optional: shows "Remove logo"
+ *     only: 'custom',                 // optional: just "My logos" + Upload (Custom brand logo)
  *   });
  *
- * Library logos come from logo-library.js (FrameUpLogos). Uploads stay in this
- * browser (IndexedDB, one list per signed-in user) and show under "My uploads";
- * recents and favourites are per user too (localStorage).
+ * Library logos come from logo-library.js (FrameUpLogos). "My logos" is the
+ * person's own saved library (frameup-custom-logos.js: Supabase table + private
+ * bucket, square crop on upload; this tab only until that migration runs). A
+ * custom pick hands back a 1024 px PNG data URL, so it draws and exports like
+ * any upload. Older uploads kept in this browser (IndexedDB) still show there,
+ * marked "This browser". Recents, favourites and the last source used are per
+ * user (localStorage).
  * The pure helpers are exported under FrameUpLogoPicker.helpers for tests.
  * UMD: window.FrameUpLogoPicker in the browser, module.exports under Node.
  */
@@ -59,7 +64,7 @@
     const chips = [{ id: 'all', label: 'All' }];
     if (c.recent) chips.push({ id: 'recent', label: 'Recent' });
     if (c.favorites) chips.push({ id: 'favorites', label: 'Favorites' });
-    chips.push({ id: 'uploads', label: 'My uploads' });
+    chips.push({ id: 'uploads', label: 'My logos' });
     (leagues || []).forEach(league => chips.push({ id: league.id, label: league.short || league.label, title: league.label }));
     return chips;
   }
@@ -190,7 +195,10 @@
   let el = null;
   let opts = null;
   let lastFocus = null;
-  const view = { query: '', chip: 'all', dark: false, uploads: [] };
+  const view = { query: '', chip: 'all', dark: false, uploads: [], only: '' };
+  // "My logos" (frameup-custom-logos.js): status idle | loading | ready | error.
+  const mine = { status: 'idle', logos: [], mode: '', note: '', editing: '', confirming: '', busy: '' };
+  const customApi = () => root.FrameUpCustomLogos && root.FrameUpCustomLogos.store ? root.FrameUpCustomLogos : null;
 
   function build() {
     // A modal <dialog> sits in the top layer, above toasts and popovers, and
@@ -218,13 +226,14 @@
         </div>
         <div class="flp__chips" role="toolbar" aria-label="Filter by league" data-flp-chips></div>
         <p class="flp__status" role="status" aria-live="polite" data-flp-status></p>
+        <p class="es-callout flp__session" data-flp-session hidden></p>
         <div class="flp__grid" data-flp-grid></div>
         <footer class="flp__foot">
-          <p class="flp__note">Team logos are for editorial use. Name badges (F1, ATP, WTA) are not official marks: upload the real one if you have it.</p>
+          <p class="flp__note" data-flp-note>Team logos are for editorial use. Name badges (F1, ATP, WTA) are not official marks: upload the real one if you have it.</p>
           <div class="flp__actions">
             <button type="button" class="es-btn es-btn--sm es-btn--danger" data-flp-remove hidden>Remove logo</button>
             <button type="button" class="es-btn es-btn--sm" data-flp-upload>${ICON.upload}Upload logo</button>
-            <input type="file" accept="${UPLOAD_TYPES.join(',')}" hidden data-flp-file>
+            <input type="file" accept="${UPLOAD_TYPES.join(',')},.svg" hidden data-flp-file>
           </div>
         </footer>
       </section>`;
