@@ -10,7 +10,7 @@
   <script src="frameup-errors.js?v=20261121-rel2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261121-rel2"></script>
-  <script src="frameup-track.js?v=20261125-tracking"></script>
+  <script src="frameup-track.js?v=20261129-exports"></script>
   <script>
     window.ESAuth?.requireAuth(`generate.html${window.location.search}${window.location.hash}`);
   </script>
@@ -67,7 +67,7 @@
 <script src="frameup-assets.js?v=20261121-rel" defer></script>
 <script src="generate-focus.js?v=20261122-rel" defer></script>
 <script src="generate-assistant.js?v=20261125-framing" defer></script>
-<script src="generate-creative.js?v=20261125-gentrack" defer></script>
+<script src="generate-creative.js?v=20261129-exports" defer></script>
 <script src="frameup-learning.js?v=20261122-rel" defer></script><!-- gen4-learning: export / shuffle capture -->
   <style>
     html:not([data-theme="dark"]) body.gen-body { background: #fff; }
@@ -2406,7 +2406,7 @@
           try {
             await (await renderer()).exportSpec(spec);
             track('design_exported', designEvent(spec, { score: spec.review?.score ?? null, fixApplied: Boolean(spec.critique?.applied) }));
-            window.FrameUpTrack?.track?.('export', { tool: 'generate', action: 'image', label: (spec.lines || []).join(' ') || spec.title || spec.label, meta: { template: spec.label || spec.postType, look: 'templates' } });
+            window.FrameUpTrack?.exported?.({ tool: 'generate', format: 'png', dest: 'download', label: (spec.lines || []).join(' ') || spec.title || spec.label, template: spec.label || spec.postType, thumb: card.querySelector('img'), meta: { look: 'templates' } });
             // "Posted it?" card + export event (frameup-posted.js).
             window.FrameUpPosted?.exported?.({ source: 'generate', title: (spec.lines || []).join(' ') || spec.title || spec.label, template: spec.label || spec.postType, style: spec.postType, brand: 'essentiallysports', aiMade: 'generate' });
             // Say it worked, then bring the results summary back.
@@ -2675,7 +2675,7 @@
           const name = `frameup-${(lastBrief || 'set').split(/\s+/).slice(0, 5).join(' ')}`;
           const result = await api.exportSet(specs, name);
           specs.forEach(spec => track('design_exported', designEvent(spec, { set: specs.length, score: spec.review?.score ?? null })));
-          window.FrameUpTrack?.track?.('export', { tool: 'generate', action: 'zip', label: result.filename, meta: { count: result.count, kind: 'set' } });
+          window.FrameUpTrack?.exported?.({ tool: 'generate', format: 'zip', dest: 'download', label: result.filename, count: result.count, template: 'Carousel set', thumb: [...els.grid.querySelectorAll('.gen-card')].find(c => c._spec === specs[0])?.querySelector('img'), meta: { kind: 'set' } });
           window.FrameUpPosted?.exported?.({ source: 'generate', title: `${result.count}-design set: ${versionText(specs[0].postType, specs[0]).slice(0, 80)}`, template: 'Carousel set', style: specs.map(spec => spec.postType).join(','), brand: 'essentiallysports', aiMade: 'generate' });
           setSummary(`<span>${window.FrameUpMotion ? window.FrameUpMotion.check() : ''}<strong>${result.count} designs downloaded</strong> as ${esc(result.filename)}.</span>`);
         } catch (error) {

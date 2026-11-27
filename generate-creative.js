@@ -848,7 +848,7 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
     G().setSummary(`<span><strong>${type === 'image/jpeg' ? 'JPEG' : 'PNG'} downloaded</strong> · ${scene.size.w} × ${scene.size.h}</span>`);
-    window.FrameUpTrack?.track?.('export', { tool: 'generate', action: type === 'image/jpeg' ? 'jpg' : 'png', label: card._dir.name || scene.archetypeName, meta: { look: 'creative', template: scene.archetype, size: `${scene.size.w}x${scene.size.h}` } });
+    window.FrameUpTrack?.exported?.({ tool: 'generate', format: type === 'image/jpeg' ? 'jpg' : 'png', dest: 'download', label: card._dir.name || scene.archetypeName, width: scene.size.w, height: scene.size.h, bytes: blob.size, template: scene.archetypeName || scene.archetype, thumb: canvas, meta: { look: 'creative', file: filename } });
     // Gallery record (the editor frame has dashboard-data.js loaded).
     try {
       await Promise.race([G().renderer?.(), new Promise(resolve => setTimeout(resolve, 8000))]).catch(() => {});

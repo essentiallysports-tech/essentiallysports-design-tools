@@ -302,8 +302,9 @@ test('newsletterExportInfo never throws and sends nothing personal', () => {
 test('Newsletter exports send the new metadata; only tracking calls use it', () => {
   const download = block(INDEX, 'function downloadImage() {');
   assert.match(download, /\.\.\.\(activeWorkspace === 'newsletter' \? \{\s*\.\.\.newsletterExportInfo\(\),\s*format: \/png\/i\.test\(workspace\.exportType\) \? 'PNG' : 'JPEG',\s*\} : \{\}\)/);
-  assert.match(INDEX, /action: 'image-link', label: name, meta: \{ size: `\$\{plan\.width\}x\$\{plan\.height\}`, \.\.\.\(activeWorkspace === 'newsletter' \? newsletterTrackMeta\(\) : \{\}\) \}/);
-  assert.match(INDEX, /action: 'widget-html', label: activeNewsletterAsset \|\| 'widget', meta: \{ brand: utmContext\.brand, \.\.\.newsletterTrackMeta\(\), format: 'HTML' \}/);
+  // Both go through FrameUpTrack.exported (Dashboard -> Exports): size from width / height.
+  assert.match(INDEX, /format: 'image-link', dest: 'link', label: name, width: plan\.width, height: plan\.height,[^\n]*meta: \{ \.\.\.\(activeWorkspace === 'newsletter' \? newsletterTrackMeta\(\) : \{\}\)/);
+  assert.match(INDEX, /format: 'widget-html', dest: 'clipboard', label: NEWSLETTER_ASSET_TYPES\?\.\[activeNewsletterAsset\]\?\.label \|\| activeNewsletterAsset \|\| 'widget',[^\n]*meta: \{ brand: utmContext\.brand, \.\.\.newsletterTrackMeta\(\), format: 'HTML' \}/);
   // Used nowhere else: drawing, file names and copied HTML are untouched.
   const uses = [...INDEX.matchAll(/newsletter(ExportInfo|TrackMeta)\(\)/g)].length;
   assert.equal(uses, 6, 'two definitions, newsletterTrackMeta calling newsletterExportInfo, and the three tracking calls');

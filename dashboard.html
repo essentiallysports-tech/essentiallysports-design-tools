@@ -10,8 +10,8 @@
   <script src="frameup-errors.js?v=20261121-rel2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261121-rel2"></script>
-  <script src="frameup-track.js?v=20261125-tracking"></script>
-  <script src="dashboard-data.js?v=20261121-nl"></script>
+  <script src="frameup-track.js?v=20261129-exports"></script>
+  <script src="dashboard-data.js?v=20261129-exports"></script>
   <script src="dashboard-people.js?v=20261120-rel3"></script>
   <script src="ai-usage-summary.js?v=20261118-rel1"></script>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -470,8 +470,10 @@
 <script src="frameup-posted.js?v=20261125-tracking"></script>
 <script src="frameup-impact-view.js?v=20261121-rel2"></script>
 <link rel="stylesheet" href="frameup-usage.css?v=20261125-tracking">
-<script src="frameup-usage.js?v=20261125-tracking"></script>
+<script src="frameup-usage.js?v=20261129-exports"></script>
 <script src="frameup-usage-view.js?v=20261125-tracking"></script>
+<link rel="stylesheet" href="frameup-exports.css?v=20261129-exports">
+<script src="frameup-exports-view.js?v=20261129-exports"></script>
 <link rel="stylesheet" href="frameup-newsletter-view.css?v=20261121-nl">
 <script src="frameup-newsletter-stats.js?v=20261121-nl"></script>
 <script src="frameup-newsletter-view.js?v=20261121-nl"></script>
@@ -775,9 +777,11 @@
             <div class="access-request-list" id="access-request-list"></div>
           </section>
 
+          <section class="dov exports-view" id="exports-view" data-view-section="designs" aria-labelledby="exports-title" hidden></section>
+
           <section class="panel export-review-shell" data-view-section="designs" data-dashboard-panel="designs">
             <div class="panel-head">
-              <div><h2 class="panel-title">Exports</h2><p class="panel-subtitle">Every editor export, newest first, for review. Downloads, copies and links from every tool are under Usage.</p></div>
+              <div><h2 class="panel-title">Editor exports for review</h2><p class="panel-subtitle">Social Media, YouTube and Newsletter editor exports with full previews, newest first. Every tool’s exports are listed above.</p></div>
             </div>
             <div id="designs-table"></div>
           </section>

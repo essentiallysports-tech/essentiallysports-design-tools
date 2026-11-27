@@ -2253,7 +2253,7 @@
     setStatus(els.exportStatus, format.ext === 'mp4'
       ? 'Downloaded ' + filename
       : 'Downloaded ' + filename + ' — this browser can\'t encode MP4 directly, so it fell back to WebM.', 'good');
-    if (window.FrameUpTrack) window.FrameUpTrack.track('export', { tool: 'reels', action: format.ext, label: filename, meta: { template: 'Captioned reel' } });
+    if (window.FrameUpTrack && window.FrameUpTrack.exported) window.FrameUpTrack.exported({ tool: 'reels', format: format.ext, dest: 'download', label: filename, bytes: blob.size, seconds: els.video.duration, width: els.video.videoWidth, height: els.video.videoHeight, template: 'Captioned reel', thumb: els.video });
     // "Posted it?" card + export event (frameup-posted.js).
     if (window.FrameUpPosted && window.FrameUpPosted.exported) {
       window.FrameUpPosted.exported({ source: 'reels', title: filename, template: 'Captioned reel', style: 'captions', brand: 'essentiallysports', filename: filename });
@@ -2270,7 +2270,7 @@
     link.href = url;
     link.download = 'es-reels-captions.srt';
     link.click();
-    if (window.FrameUpTrack) window.FrameUpTrack.track('download', { tool: 'reels', action: 'srt', label: 'es-reels-captions.srt', meta: { count: state.captions.length } });
+    if (window.FrameUpTrack && window.FrameUpTrack.exported) window.FrameUpTrack.exported({ tool: 'reels', format: 'srt', dest: 'download', label: 'es-reels-captions.srt', bytes: blob.size, template: 'Captions file', meta: { lines: state.captions.length } });
   }
 
   function postJson(url, payload) {
