@@ -106,7 +106,8 @@
       const dur = beat.outMs - beat.inMs;
       if (dur > LIMITS.beatMaxMs) issues.push(issue('pacing', 'warning', `Beat ${index + 1} holds for ${(dur / 1000).toFixed(1)} s.`, 'Split it: one idea per beat.', beat.id));
       (RULES && RULES.BANNED ? RULES.BANNED : []).forEach(rule => {
-        if (rule.re.test(`${beat.text} ${beat.vo}`)) issues.push(issue('style', 'warning', `Beat ${index + 1}: ${rule.why}.`, 'Rewrite the line in the ES voice.', beat.id));
+        // A rank ("#1 TE") is not a hashtag.
+        if (rule.re.test(`${beat.text} ${beat.vo}`.replace(/#\d+\b/g, ''))) issues.push(issue('style', 'warning', `Beat ${index + 1}: ${rule.why}.`, 'Rewrite the line in the ES voice.', beat.id));
       });
     });
     const last = timeline.beats[timeline.beats.length - 1];

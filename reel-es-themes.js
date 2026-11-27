@@ -75,6 +75,8 @@
     data: { id: 'data', pillBoxed: true, pillStep: 'h1', statementStep: 'h1', statementBoxed: false, numberStep: 'statXL', kickerFill: 'blue', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'lower' }, director: 'Data-led: at least two of number / dots / compare, each with a kicker; statements only to set up or land a figure.' },
     minimal: { id: 'minimal', pillBoxed: false, pillStep: 'h1', statementStep: 'display', statementBoxed: false, numberStep: 'statXL', kickerFill: 'ink', kickerBoxed: false, whoBoxed: false, ctaPanel: false, media: { hook: 'lower', statement: 'lower' }, director: 'Minimal: at most two pills on the hook, no stamp, statements of one or two lines; let one figure or one quote carry the reel.' },
     bold: { id: 'bold', pillBoxed: true, pillStep: 'display', statementStep: 'display', statementBoxed: true, numberStep: 'statXL', kickerFill: 'blue', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'lower' }, director: 'Bold: pills and lines of 10 characters or fewer so they draw at full size; two lines beat three.' },
+    // Hype Cut: Bold's big boxed type, over full-frame clips.
+    hype: { id: 'hype', pillBoxed: true, pillStep: 'display', statementStep: 'display', statementBoxed: true, numberStep: 'statXL', kickerFill: 'blue', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'full' }, director: 'Hype Cut: one to three words a line, big and boxed, over the clip.' },
     // Game Tape: the clip carries the scene, boxed words sit over it.
     tape: { id: 'tape', pillBoxed: true, pillStep: 'h1', statementStep: 'h1', statementBoxed: true, numberStep: 'statXL', kickerFill: 'ink', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'full' }, director: 'Game Tape: the clip is the story; short boxed words over it.' },
   };
@@ -188,6 +190,12 @@
     ground: 'paper', surface: 'paper', scenes: { quote: 'ink' },
     roles: { text: 'ink', accent: 'blue', pillFill: 'ink', pillInk: 'white', pillAlt: 'blue', captionFill: 'ink', captionInk: 'white', captionEmphasis: 'yellow', mark: 'blue', wipe: ['blue', 'ink'], dotBase: 'ink', grain: 0.05 },
     pill: 'boxed', caption: { box: 'hug', emphasis: 'text' }, layout: 'tape', motion: 'standard', internal: true,
+  };
+  LOOKS.hype = {
+    id: 'hype', label: 'Hype Cut', blurb: 'Big boxed type over clips, a faster pace.',
+    ground: 'paper', surface: 'paper', scenes: { quote: 'ink' },
+    roles: { text: 'ink', accent: 'blue', pillFill: 'ink', pillInk: 'white', pillAlt: 'blue', captionFill: 'ink', captionInk: 'white', captionEmphasis: 'yellow', mark: 'blue', wipe: ['ink', 'blue'], dotBase: 'ink', grain: 0.05 },
+    pill: 'big', caption: { box: 'hug', emphasis: 'text' }, layout: 'hype', motion: 'punchy', internal: true,
   };
   const LOOK_IDS = ['paper', 'ink', 'blue', 'team', 'photo', 'data', 'minimal', 'bold'];
   const DEFAULT_LOOK = 'paper';
@@ -395,7 +403,7 @@
     },
     hypecut: {
       id: 'hypecut', label: 'Hype Cut', blurb: 'Fast kinetic type over clips, stamps and quick stat pops.',
-      look: 'bold', blocks: ['hook', 'statement', 'tagPill', 'statTiles', 'clipLabel', 'endcard'],
+      look: 'hype', blocks: ['hook', 'statement', 'tagPill', 'statTiles', 'clipLabel', 'endcard'],
       order: ['hook', 'statement', 'clipLabel', 'statement', 'statTiles', 'endcard'], max: { statTiles: 2 },
       media: { clips: 0.6, photos: 0.2, clipsMin: 0 }, pacing: { hookMs: 2400, beatMinMs: 1400, beatMaxMs: 2600, tailMs: 120 },
       motion: 'punchy', kinetic: true, voice: { tone: 'hype' }, music: 'hype',
