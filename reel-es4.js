@@ -483,10 +483,10 @@
     const x0 = a.x + 24;
     const x1 = a.x + a.w - 24;
     const X = v => x0 + ((v - m.min) / (m.max - m.min)) * (x1 - x0);
-    out.push(sp('mod.nl.axis', 'line', { x1: x0, y1: ay, x2: x1, y2: ay, stroke: INK, lw: 6 }, { from: { p: 0 }, enter: 'fade' }));
+    out.push(sp('mod.nl.axis', 'line', { x1: x0, y1: ay, x2: x1, y2: ay, stroke: INK, lw: 8 }, { from: { p: 0 }, enter: 'fade' }));
     [m.min, m.max].forEach((v, i) => {
-      out.push(sp(`mod.nl.tick${i}`, 'line', { x1: X(v), y1: ay - 18, x2: X(v), y2: ay + 18, stroke: INK, lw: 6 }, { order: 1 }));
-      out.push(sp(`mod.nl.tl${i}`, 'text', { x: X(v), y: ay + 18 + 16 + CAP * TS.body, size: TS.body, font: 's', color: INK, align: 'center', text: String(v) }, { order: 1 }));
+      out.push(sp(`mod.nl.tick${i}`, 'line', { x1: X(v), y1: ay - 24, x2: X(v), y2: ay + 24, stroke: INK, lw: 8 }, { order: 1 }));
+      out.push(sp(`mod.nl.tl${i}`, 'text', { x: X(v), y: ay + 24 + 20 + CAP * TS.label, size: TS.label, color: INK, align: 'center', text: v > 0 && m.min < 0 ? `+${v}` : String(v) }, { order: 1 }));
     });
     const sorted = m.marks.map((k, i) => ({ ...k, i, x: X(Math.max(m.min, Math.min(m.max, k.value))) })).sort((p, q) => p.x - q.x);
     sorted.forEach((k, j) => {
@@ -494,8 +494,8 @@
       k.below = below;
       const key = `mod.nl.m.${k.label}`;
       const ph = PILL(TS.label).h;
-      out.push(sp(`${key}.dot`, 'dot', { x: k.x, y: ay, r: 22, fill: toneHex(k.tone, 'blue'), stroke: WHITE, lw: 6 }, { order: 2 + j, enter: 'pop', from: { x: X(m.min) } }));
-      out.push(sp(`${key}.pill`, 'pill', { x: k.x, y: below ? ay + 80 : ay - 40 - ph, size: TS.label, fill: toneHex(k.tone, 'blue'), ink: WHITE, text: k.label, anchor: 'center', minX: a.x, maxX: a.x + a.w }, { order: 2 + j, enter: 'pop', from: { x: X(m.min) } }));
+      out.push(sp(`${key}.dot`, 'dot', { x: k.x, y: ay, r: 30, fill: toneHex(k.tone, 'blue'), stroke: WHITE, lw: 6 }, { order: 2 + j, enter: 'pop', from: { x: X(m.min) } }));
+      out.push(sp(`${key}.pill`, 'pill', { x: k.x, y: below ? ay + 88 : ay - 52 - PILL(TS.caption).h, size: TS.caption, fill: toneHex(k.tone, 'blue'), ink: WHITE, text: k.label, anchor: 'center', minX: a.x, maxX: a.x + a.w }, { order: 2 + j, enter: 'pop', from: { x: X(m.min) } }));
     });
     if (m.caption) out.push(sp('mod.nl.cap', 'text', { x: a.x + a.w / 2, y: a.y + CAP * TS.label + 8, size: TS.label, color: INK, align: 'center', text: m.caption }, { order: 1 }));
     return out;
@@ -667,20 +667,21 @@
   MOD.tally = (m, r) => {
     const out = [panel(r)];
     const a = inner(r);
-    const mh = Math.min(140, a.h - 120);
-    const step = 30;
-    const groupW = 4 * step + 40;
     const groups = Math.ceil(m.n / 5);
-    const perRow = Math.max(1, Math.floor((a.w - 220) / groupW));
-    const x0 = a.x + 8;
-    const y0 = a.y + 8;
+    const step = 40;
+    const groupW = 4 * step + 64;
+    const perRow = Math.max(1, Math.min(groups, Math.floor((a.w - 240) / groupW)));
+    const rowsN = Math.ceil(groups / perRow);
+    const mh = Math.min(200, (a.h - (rowsN - 1) * 24) / rowsN);
+    const x0 = a.x + 16;
+    const y0 = a.y + (a.h - (rowsN * mh + (rowsN - 1) * 24)) / 2;
     for (let i = 0; i < m.n; i += 1) {
       const g = Math.floor(i / 5);
       const k = i % 5;
       const gx = x0 + (g % perRow) * groupW;
       const gy = y0 + Math.floor(g / perRow) * (mh + 24);
-      const p = k < 4 ? { x1: gx + k * step, y1: gy, x2: gx + k * step, y2: gy + mh } : { x1: gx - 14, y1: gy + mh * 0.8, x2: gx + 3 * step + 14, y2: gy + mh * 0.2 };
-      out.push(sp(`mod.tally.${i}`, 'line', { ...p, stroke: k < 4 ? INK : BLUE, lw: 10, cap: 1 }, { z: 14, order: i, from: { p: 0 }, enter: 'fade' }));
+      const p = k < 4 ? { x1: gx + k * step, y1: gy, x2: gx + k * step, y2: gy + mh } : { x1: gx - 20, y1: gy + mh * 0.78, x2: gx + 3 * step + 20, y2: gy + mh * 0.22 };
+      out.push(sp(`mod.tally.${i}`, 'line', { ...p, stroke: k < 4 ? INK : BLUE, lw: 14, cap: 1 }, { z: 14, order: i, from: { p: 0 }, enter: 'fade' }));
     }
     void groups;
     out.push(sp('mod.tally.n', 'text', { x: a.x + a.w, y: a.y + CAP * TS.display + 8, size: TS.display, color: BLUE, align: 'right', text: String(m.n), value: m.n, fmt: { pre: '', post: '', dec: 0 } }, { z: 14, order: 1, from: { value: 0 } }));
@@ -731,14 +732,15 @@
     for (let k = 0; k < 6; k += 1) m.edges.forEach(([x, y]) => { if (depth[x] != null && (depth[y] == null || depth[y] < depth[x] + 1) && depth[x] < 5) depth[y] = depth[x] + 1; });
     m.nodes.forEach(n => { if (depth[n.id] == null) depth[n.id] = 0; });
     const levels = Math.max(...Object.values(depth)) + 1;
-    const ph = PILL(TS.label).h;
+    const FS = TS.caption;
+    const ph = PILL(FS).h;
     const rowGap = levels > 1 ? (a.h - ph) / (levels - 1) : 0;
     const pos = {};
     for (let lv = 0; lv < levels; lv += 1) {
       const row = m.nodes.filter(n => depth[n.id] === lv);
       row.forEach((n, i) => { pos[n.id] = { x: a.x + ((i + 0.5) * a.w) / row.length, y: a.y + (levels > 1 ? lv * rowGap : (a.h - ph) / 2), lv }; });
     }
-    m.nodes.forEach(n => out.push(sp(`mod.fl.${n.id}`, 'pill', { x: pos[n.id].x, y: pos[n.id].y, size: TS.label, fill: toneHex(n.tone, 'ink'), ink: WHITE, text: n.text, anchor: 'center', minX: a.x, maxX: a.x + a.w }, { z: 16, order: pos[n.id].lv * 2, enter: 'pop' })));
+    m.nodes.forEach(n => out.push(sp(`mod.fl.${n.id}`, 'pill', { x: pos[n.id].x, y: pos[n.id].y, size: FS, fill: toneHex(n.tone, 'ink'), ink: WHITE, text: n.text, anchor: 'center', minX: a.x, maxX: a.x + a.w }, { z: 16, order: pos[n.id].lv * 2, enter: 'pop' })));
     m.edges.forEach(([x, y], i) => out.push(sp(`mod.fl.e${i}`, 'line', { x1: pos[x].x, y1: pos[x].y + ph + 10, x2: pos[y].x, y2: pos[y].y - 12, stroke: INK, lw: 5, dash: 1, head: 1 }, { z: 14, order: pos[x].lv * 2 + 1, from: { p: 0 }, enter: 'fade' })));
     void c;
     return out;
@@ -1161,7 +1163,9 @@
     const ph = PILL(TS.label).h;
     if (close.kind === 'yourCall') {
       out.push(sp('close.prompt', 'para', { x: ZONE.left, y: 560, w: 960, h: 300, text: close.prompt, color: INK, steps: [TS.h1, TS.h2], maxLines: 2, align: 'center', em: BLUE, emLast: 1 }, { z: 30 }));
-      close.options.forEach((o, i) => out.push(sp(`close.opt.${i}`, 'button', { x: 120, y: 900 + i * 196, w: 840, h: 164, fill: toneHex(o.tone, i ? 'blue' : 'red'), text: o.text, size: TS.h2 }, { z: 30, order: i, from: { alpha: 0, sc: 0.9 } })));
+      // Both options at one size (the biggest step both fit).
+      const size = [TS.h2, TS.caption].find(z => close.options.every(o => ctx.measure(o.text, dFont(z)) <= 840 - 96)) || TS.caption;
+      close.options.forEach((o, i) => out.push(sp(`close.opt.${i}`, 'button', { x: 120, y: 900 + i * 196, w: 840, h: 164, fill: toneHex(o.tone, i ? 'blue' : 'red'), text: o.text, size }, { z: 30, order: i, from: { alpha: 0, sc: 0.9 } })));
       if (close.comment) out.push(sp('close.comment', 'pill', { x: 540, y: 1330, size: TS.label, fill: INK, ink: WHITE, text: close.comment, anchor: 'center', bubble: 1 }, { z: 30, order: 3, from: { alpha: 0 } }));
     } else if (close.kind === 'checklist') {
       out.push(sp('close.prompt', 'para', { x: ZONE.left, y: 440, w: 840, h: 200, text: close.prompt, color: INK, steps: [TS.h1, TS.h2], maxLines: 2 }, { z: 30 }));
@@ -1681,7 +1685,7 @@
       }
       case 'button': withState(ctx, s, s.x + s.w / 2, s.y + s.h / 2, () => {
         ctx.save(); paperShadow(ctx, 'clean'); ctx.fillStyle = s.fill; ctx.fillRect(s.x, s.y, s.w, s.h); ctx.restore();
-        const size = tSize(M, s.text, [s.size || TS.h2, TS.caption], s.w - 64);
+        const size = tSize(M, s.text, [s.size || TS.h2, TS.caption], s.w - 96);
         ctx.font = dFont(size); ctx.fillStyle = WHITE; ctx.textAlign = 'center';
         ctx.fillText(s.text, s.x + s.w / 2, s.y + s.h / 2 + (CAP * size) / 2);
         ctx.textAlign = 'left';
