@@ -74,8 +74,8 @@
     bars: 'bars', versus: 'versus', dotrank: 'dotrank', chips: 'chips', steps: 'steps', tiles: 'tiles', roles: 'roles', mystery: 'mystery',
   };
 
-  // 8-pt grid inside the safe zone. Light styles use one column x 88-992.
-  const GRID = { unit: 8, left: 88, right: 992, top: 288, captionTop: 1336, captionBottom: 1512, bottom: 1560 };
+  // v3: there is one grid, the ES frame (reel-es.js GRID). The second grid
+  // this file kept for the retired styles is gone.
 
   // The ES brand layer (reel-es.js TOKENS) every style draws with.
   const BRAND = { blue: '#0A7DFA', ink: '#121212', paper: '#F1EFEA', green: '#1BC47D', red: '#E8322B', yellow: '#FFC52F' };
@@ -187,7 +187,10 @@
   const currentStyle = id => (STYLE_IDS.includes(id) ? id : 'es');
   // The house style for news reels (ES video team, 2026-11-21).
   const DEFAULT_STYLE = 'es';
-  const get = id => STYLES[id] || STYLES.classic;
+  // Reels Studio v3: the four styles (Game Tape, Stat Card, Receipts, Hype
+  // Cut, reel-es-themes.js STYLES) all draw on the ES engine.
+  const V3_STYLES = ['gametape', 'statcard', 'receipts', 'hypecut'];
+  const get = id => STYLES[id] || (V3_STYLES.includes(id) ? STYLES.es : STYLES.classic);
 
   // ─── Elements for the data formats (Phase 0 contract) ─────────────────────
   // project-docs/reels-formats-contract.md §4. The overlay and card pieces the
@@ -374,7 +377,7 @@
   }
 
   return {
-    STYLES, STYLE_IDS, LEGACY_STYLE_IDS, isLegacy, currentStyle, withLook, DEFAULT_STYLE, BRAND, ES_LAYOUTS, legacySuggestStyle, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, GRID, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
+    STYLES, STYLE_IDS, LEGACY_STYLE_IDS, isLegacy, currentStyle, withLook, DEFAULT_STYLE, BRAND, ES_LAYOUTS, legacySuggestStyle, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, V3_STYLES, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
     ELEMENTS, ELEMENT_IDS, ELEMENT_TOKENS, FORMAT_STYLES, elementTokens, elementBox, drawPlaceholder,
   };
 }));

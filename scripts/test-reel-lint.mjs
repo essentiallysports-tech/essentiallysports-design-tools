@@ -62,9 +62,9 @@ test('hook: no claim on screen in the first 2 s is critical; a non-hook opener w
   assert.ok(ids(lintOf(late).res).includes('warning:hook'));
 });
 
-test('safe zone: a box outside x 65-1015 / y 270-1580 is critical', () => {
+test('safe zone: a box outside x 40-1040 (the ES frame\'s sides, one grid) / y 270-1580 is critical', () => {
   const { tl } = lintOf(GOOD);
-  const boxes = [{ beat: 'b1', role: 'text', text: 'WIDE', x: 40, y: 900, w: 1000, h: 80 }];
+  const boxes = [{ beat: 'b1', role: 'text', text: 'WIDE', x: 30, y: 900, w: 1020, h: 80 }];
   const res = L.lintTimeline(tl, { boxes });
   assert.ok(ids(res).includes('critical:safe-zone'));
   const low = L.lintTimeline(tl, { boxes: [{ beat: 'b1', role: 'caption', text: 'LOW', x: 200, y: 1560, w: 200, h: 60 }] });

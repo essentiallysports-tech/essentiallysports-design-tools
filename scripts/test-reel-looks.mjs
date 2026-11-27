@@ -360,7 +360,9 @@ await test('every look draws differently from Paper and from each other, on the 
   const ops = (v, story, i) => { const tl = build(story, v); return R.layoutGraphic(measure, tl.tracks.graphics[i], tl); };
   const pill = v => ops(v, 'quote', 0).find(o => o.role === 'pill');
   assert.ok(pill({ id: 'bold' }).size > pill({ id: 'paper' }).size * 1.2);
-  assert.ok(pill({ id: 'bold' }).size <= 160);
+  // v3: Bold's pills are the Display step of the one type scale.
+  assert.equal(pill({ id: 'bold' }).size, E.TYPE_SCALE.display);
+  assert.ok(E.onScale(pill({ id: 'paper' }).size));
   assert.ok(!pill({ id: 'minimal' }).fill && pill({ id: 'paper' }).fill === 'ink');
   const st = ops({ id: 'photo' }, 'photo', 1);
   assert.deepEqual(st.find(o => o.type === 'media'), { type: 'media', role: 'media', x: 0, y: 0, w: 1080, h: 1920 });
@@ -370,7 +372,7 @@ await test('every look draws differently from Paper and from each other, on the 
   // A red line on ES blue would not read: it sits on an ink plate, inside the column.
   const plated = ops({ id: 'blue' }, 'quote', 2).find(o => o.text === 'MONDAY.');
   assert.deepEqual([plated.color, plated.fill, plated.plated], ['red', 'ink', true]);
-  assert.ok(E.hugBox(plated.x, plated.y, plated.w, plated.size).x >= 60 - 0.5);
+  assert.ok((plated.box || E.hugBox(plated.x, plated.y, plated.w, plated.size)).x >= 60 - 0.5);
   assert.ok(!ops({ id: 'paper' }, 'quote', 2).find(o => o.text === 'MONDAY.').fill, 'Paper keeps the kit pairing');
   // Motion presets reach the entrance and the stagger.
   assert.equal(TH.resolve('minimal').motion.enterMs, 450);
@@ -532,7 +534,7 @@ await test('data formats: default to ES, and their overlay elements are re-skinn
 await test('director: ES_SPEC has one line per layout preset; the plan carries the look through', () => {
   Object.values(TH.LAYOUTS).forEach(l => { assert.ok(l.director && l.director.length < 220, l.id); assert.ok(D.ES_SPEC.includes(`- ${l.director}`), `${l.id} line in ES_SPEC`); });
   assert.match(D.ES_SPEC, /- Data-led: at least two of number \/ dots \/ compare/);
-  assert.equal(D.ES_SPEC.split('\n').filter(l => /^- (Standard|Photo-led|Data-led|Minimal|Bold):/.test(l)).length, Object.keys(TH.LAYOUTS).length);
+  assert.equal(D.ES_SPEC.split('\n').filter(l => /^- (Standard|Photo-led|Data-led|Minimal|Bold|Game Tape):/.test(l)).length, Object.keys(TH.LAYOUTS).length);
   assert.equal(D.lookRequest('data'), 'LOOK: Data-led. Follow the Data-led line above.');
   assert.equal(D.lookRequest('ink'), 'LOOK: Ink. Follow the Standard line above.');
   assert.equal(D.lookRequest('nope'), '');

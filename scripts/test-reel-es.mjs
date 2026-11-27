@@ -81,9 +81,9 @@ await test('ES Reels is the default style for news reels; the other looks stay p
 });
 
 // ─── Blocks ──────────────────────────────────────────────────────────────
-await test('blocks: the seven blocks with exactly their fields; anything else is dropped', () => {
-  assert.deepEqual(E.BLOCK_TYPES, ['hook', 'statement', 'number', 'dots', 'compare', 'quote', 'endcard']);
-  assert.deepEqual(E.BLOCKS.hook.fields, ['media', 'pills', 'stamp']);
+await test('blocks: the seven kit blocks (plus the v3 blocks) with exactly their fields; anything else is dropped', () => {
+  assert.deepEqual(E.BLOCK_TYPES, ['hook', 'statement', 'number', 'dots', 'compare', 'quote', 'endcard', 'photoCard', 'statTiles', 'dotGrid', 'streak', 'rankTile', 'tagPill', 'clipLabel']);
+  assert.deepEqual(E.BLOCKS.hook.fields, ['media', 'pills', 'stamp', 'kicker']);
   assert.deepEqual(E.BLOCKS.statement.fields, ['lines', 'media', 'top']);
   assert.deepEqual(E.BLOCKS.number.fields, ['value', 'prefix', 'suffix', 'label', 'kicker', 'color']);
   assert.deepEqual(E.BLOCKS.dots.fields, ['count', 'highlight', 'label', 'note']);
@@ -155,7 +155,8 @@ await test('layout: boxed pills hug their glyphs on the 60 px column; statements
   const tl = build(STAT);
   const hook = R.layoutGraphic(measure, tl.tracks.graphics[0], tl);
   const pill = hook.find(o => o.role === 'pill');
-  const box = E.hugBox(pill.x, pill.y, pill.w, pill.size);
+  // v3: boxed words are the FrameUp ES pill (op.box from pillMetrics).
+  const box = pill.box;
   assert.equal(Math.round(box.x), 60, 'box on the column');
   assert.equal(Math.round(box.y), 480, 'hook pills start below the mark\'s clear space');
   assert.equal(pill.fill, 'ink');
@@ -167,7 +168,7 @@ await test('layout: boxed pills hug their glyphs on the 60 px column; statements
   assert.equal(st[1].color, 'blue');
   assert.ok(Math.abs(st[0].track + st[0].size * 0.01) < 1e-9, '-0.01em tracking');
   // The tilted stamp's box (axis-aligned) is bigger than its upright box.
-  const r = E.rotatedBox(stamp); const u = E.hugBox(stamp.x, stamp.y, stamp.w, stamp.size);
+  const r = E.rotatedBox(stamp); const u = stamp.box;
   assert.ok(r.h > u.h && r.w < u.w + 60);
 });
 
@@ -340,9 +341,11 @@ const ids = res => res.issues.filter(i => i.severity !== 'info').map(i => `${i.s
 await test('lint: clean sample reels pass every rule; the checklist reads "Safe frame ✓"', () => {
   [STAT, SCALE].forEach(p => assert.deepEqual(ids(lintOf(p)), []));
   const rows = E.checklist(lintOf(STAT).issues);
-  // Reels 2.0: the checklist gained the look row (on brand and readable).
-  assert.equal(rows.length, 9);
+  // Reels 2.0: the checklist gained the look row (on brand and readable);
+  // v3 adds scale, boxes, slots, elements, pills and style.
+  assert.equal(rows.length, 15);
   assert.equal(rows[8].id, 'look');
+  assert.deepEqual(rows.slice(9).map(r => r.id), ['scale', 'boxes', 'slots', 'elements', 'pills', 'style']);
   assert.ok(rows.every(r => r.ok));
   assert.equal(rows[0].label, 'Safe frame');
 });
@@ -458,7 +461,8 @@ await test('director: the ES style asks for blocks with exactly their fields; bl
   // The prompt names every block and its fields.
   const req = D._test ? null : null; void req;
   const src = require('node:fs').readFileSync(new URL('../netlify/functions/_reel-director.js', import.meta.url), 'utf8');
-  E.BLOCK_TYPES.forEach(t => assert.ok(src.includes(`"type":"${t}"`), `prompt shows ${t}`));
+  // The kit's seven blocks (the v3 blocks' JSON shapes are the director lane's).
+  E.BLOCK_TYPES.filter(t => !E.BLOCKS[t].v3).forEach(t => assert.ok(src.includes(`"type":"${t}"`), `prompt shows ${t}`));
 });
 
 console.log(process.exitCode ? '\nReel ES tests failed.' : `\nAll ${passed} reel ES tests passed.`);

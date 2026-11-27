@@ -3,7 +3,8 @@
 // engine for six sample stories at 9:16 and 4:5, one digest per sampled frame.
 // It was generated from the engine BEFORE looks existed (commit 9ba7412), so
 // test-reel-looks.mjs can prove that a reel with no look, and the Paper look,
-// still draw exactly what they drew then. Re-run only when Paper is changed on
+// still draw exactly what they drew then. Regenerated 2026-11-27 for Reels
+// Studio v3 (one type scale, FrameUp pills), on purpose. Re-run only when Paper is changed on
 // purpose:  node scripts/lib/reel-looks-golden.mjs
 import { createRequire } from 'node:module';
 import { writeFileSync } from 'node:fs';
