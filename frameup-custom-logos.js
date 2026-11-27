@@ -657,6 +657,14 @@
   function onCropKey(event) {
     const s = cropSession;
     if (!s) return;
+    // Esc closes only this dialog. Handled here (not the native cancel) so the
+    // logo picker underneath, opened in the same gesture, stays open.
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!s.busy) endCrop(null);
+      return;
+    }
     if (event.key === 'Tab') {
       const nodes = focusables();
       if (!nodes.length) return;

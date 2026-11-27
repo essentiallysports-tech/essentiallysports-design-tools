@@ -257,8 +257,8 @@ ok(db.rows.length === 0, 'row deleted');
 ok(log.some(l => l[0] === 'storage' && l[1] === 'DELETE' && /-thumb\.png/.test(l[3])), 'files removed from storage');
 await click('[data-flp-close]');
 
-// ─── 3. Custom brand logo (SVG) on a Cover post ──────────────────────────
-await setPostType('cover');
+// ─── 3. Custom brand logo (SVG) on a Tweet post (its corner logo always draws) ──
+await setPostType('twitter-quote');
 await sleep(300);
 ok(await ev("document.querySelectorAll('[data-brand-logo]').length === 4"), 'brand logo has a 4th Custom option');
 await click('[data-brand-logo="custom"]');
@@ -282,7 +282,7 @@ await shot('05-brand-custom-light');
 
 // ─── 4. Reload: brand logo comes back from storage ───────────────────────
 await load();
-await setPostType('cover');
+await setPostType('twitter-quote');
 await until("activeBrandLogo === 'custom' && Boolean(BRAND_LOGOS.custom)", 'custom brand logo restored after reload');
 ok(log.some(l => l[0] === 'storage' && l[1] === 'GET' && !/-thumb/.test(l[2])), 'restored with an authenticated download');
 await sleep(500);
@@ -301,7 +301,8 @@ await until("document.querySelector('dialog.fcl')?.open", 'crop dialog in dark')
 await sleep(200);
 await shot('07-crop-dark');
 ok((await ev(AUDIT_DIALOG('dialog.fcl'))).length === 0, 'crop audit dark: ' + (await ev(AUDIT_DIALOG('dialog.fcl'))).join('; '));
-await key('Escape');
+await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
 await until("!document.querySelector('dialog.fcl')?.open", 'Esc cancels the crop');
 ok(await ev("document.querySelector('dialog.flp').open"), 'picker still open after cancelling the crop');
 await click('[data-flp-close]');
