@@ -30,6 +30,9 @@ const RULES = require('../../frameup-rules.js');
 // Required when called, so tests can swap modules (and no load-time cycle).
 const gateway = () => require('./_ai-gateway.js');
 const D = () => require('./_reel-director.js');
+// The v3 engine's whole-phrase logic (phraseFor, DANGLE): headlines are
+// complete phrases that never end on a word that leads into the next.
+const ES = () => require('../../reel-es.js');
 
 // ─── Styles, lengths, pacing ─────────────────────────────────────────────
 const V4_STYLES = {
@@ -95,6 +98,29 @@ const unsourced = (fields, set, allowed = new Set()) => {
   return out;
 };
 
+// ─── Credits: "Source: …", "Via …", URLs are not spoken and never a chapter ─
+const CREDIT_START = /^(?:sources?|via|credits?|data|stats?|photos?|h\/t|hat tip)\s*[:\-–—]\s*/i;
+const URL_RE = /\(?\bhttps?:\/\/[^\s)]+\)?|\bwww\.[^\s)]+/gi;
+// script -> { spoken, credits: ['Pro Football Reference'], links: [url] }.
+// A credit runs from "Source(s):", "Credit(s):", "Data:", "Via:" (at a line or
+// sentence start) to the end of its line; a bare "Via X" (<= 6 words) only at the end.
+function splitCredits(script) {
+  const links = [];
+  const credits = [];
+  // Metadata lines ("Sport: Golf", "Tags: …") are neither spoken nor credits.
+  const kept = String(script == null ? '' : script).replace(/\r/g, '').split('\n').filter(line => !/^\s*(?:sport|league|team|tags?|topic|format|style|length)\s*:/i.test(line)).map(line => {
+    let text = line.replace(URL_RE, m => { links.push(m.replace(/^\(|\)$/g, '')); return ' '; });
+    const at = text.search(/(?:^|(?<=[.!?]["”’)]*)\s+)(?:(?:sources?|credits?|data|stats?|photos?)\s*:|via\s*[:\-–—])\s*\S/i);
+    if (at >= 0) { credits.push(text.slice(at).trim().replace(CREDIT_START, '').replace(/[.\s]+$/, '')); text = text.slice(0, at); }
+    const bareVia = text.match(/(?:^|(?<=[.!?]["”’)]*)\s+)[Vv]ia\s+([A-Z@][^.!?,]{1,60})[.]?\s*$/);
+    if (bareVia && words(bareVia[1]).length <= 6) { credits.push(bareVia[1].trim()); text = text.slice(0, bareVia.index); }
+    return text;
+  });
+  return { spoken: normScript(kept.join('\n')), credits: credits.filter(Boolean).map(c => str(c, 80)), links: [...new Set(links)].slice(0, 6) };
+}
+const isCreditText = t => CREDIT_START.test(String(t || '').trim());
+const sourceLineOf = credits => (credits.length ? up(`SOURCE: ${credits.join(' · ')}`, 90) : '');
+
 // ─── Script → segments (code) ────────────────────────────────────────────
 function splitLong(sentence, max = 24) {
   const w = words(sentence);
@@ -110,7 +136,10 @@ function segmentScript(script) {
   const text = normScript(script);
   if (!text) return [];
   const sentences = text.split(/(?<=[.!?…]["”’)*]*)\s+(?=["“(*]?[A-Z0-9$])/).map(s => s.trim()).filter(Boolean);
-  let segs = sentences.flatMap(s => splitLong(s));
+  // A claim then its proof ("…has no twin: 45 touchdowns, …") splits at the
+  // colon, so the claim and the proof can be separate beats.
+  const atColon = s0 => { const m = s0.match(/^(.{12,}?[^\d\s]):\s+(.+)$/); return m && words(m[1]).length >= 4 && words(m[2]).length >= 4 ? [`${m[1]}:`, m[2]] : [s0]; };
+  let segs = sentences.flatMap(atColon).flatMap(s => splitLong(s));
   // Very short pieces ride with the next one ("Wait." + the sentence).
   const merged = [];
   segs.forEach(s => {
@@ -119,6 +148,8 @@ function segmentScript(script) {
     else merged.push(s);
   });
   segs = merged;
+  // A spoken credit ("Source: …") never stands alone: it rides with the line before.
+  for (let i = segs.length - 1; i > 0; i -= 1) if (isCreditText(segs[i])) segs.splice(i - 1, 2, `${segs[i - 1]} ${segs[i]}`);
   // Too many: neighbours merge (shortest pair first) until under the cap.
   while (segs.length > MAX_SEGMENTS) {
     let at = 0;
@@ -323,32 +354,44 @@ const shapeTag = raw => {
   const text = r ? up(r.text, 28) : '';
   return text ? { text, tone: tone(r.tone, 'red', ['red', 'blue', 'ink']) } : null;
 };
-// One *marked* word (or short phrase) per headline; with none, code marks the
-// number, else the longest word.
+// One *marked* word per headline; with none, code marks a figure that is not
+// a year, else the payoff word (the last key word). A headline never ends on
+// a word that leads into the next ("…STILL HAS NO").
+const YEAR = /^(?:19|20)\d\d$/;
+const WEAK = new Set(['still', 'even', 'also', 'just', 'only', 'ever', 'never', 'again', 'more', 'most', 'much', 'many', 'every', 'there', 'here', 'they', 'them', 'some', 'same', 'does', 'did', 'done', 'gets', 'got', 'made', 'make', 'said', 'says']);
+const bareLow = w => String(w || '').toLowerCase().replace(/^[^a-z0-9$#]+|[^a-z0-9%]+$/g, '');
+const END_BAD = new Set(['he', 'she', 'it', 'they', 'we', 'i', 'you', 'whether', 'whose', 'not', 'no', 'also', 'still', 'just']);
+const isDangle = w => ES().DANGLE.has(bareLow(plain(w))) || END_BAD.has(bareLow(plain(w)));
+function trimDangleWords(list) {
+  const out = list.slice();
+  while (out.length > 1 && isDangle(out[out.length - 1])) out.pop();
+  while (out.length > 1 && /^(?:and|but|so|then|or)$/.test(bareLow(plain(out[0])))) out.shift();
+  return out;
+}
+function markIndex(w) {
+  const fig = w.findIndex(x => /\d/.test(x) && !YEAR.test(bareLow(x)));
+  if (fig >= 0) return fig;
+  let best = -1;
+  w.forEach((x, i) => { const b = bareLow(x); if (b.length >= 4 && !isDangle(x) && !WEAK.has(b) && !STOP.has(b)) best = i; });
+  if (best >= 0) return best;
+  return w.reduce((b, x, i) => (bareLow(x).length > bareLow(w[b]).length ? i : b), 0);
+}
 function shapeHeadline(raw, fallbackWords = '') {
   let text = up(raw, 60).replace(/\*{2,}/g, '*');
+  if (isCreditText(plain(text))) text = '';
   if (!plain(text).trim()) text = up(fallbackWords, 60);
+  if ((text.match(/\*/g) || []).length % 2) text = text.replace(/\*/g, '');
+  text = trimDangleWords(words(text).map(x => x.replace(/[,;:]+$/, ''))).join(' ').replace(/[,;:.!?—–-]+$/, '');
   const marks = text.match(/\*[^*]+\*/g) || [];
   if (marks.length > 1) { let seen = false; text = text.replace(/\*([^*]+)\*/g, (all, inner) => { if (seen) return inner; seen = true; return all; }); }
   if (!marks.length) {
-    const w = words(text);
-    if (!w.length) return '';
-    let at = w.findIndex(x => /\d/.test(x));
-    if (at < 0) at = w.reduce((best, x, i) => (x.replace(/[^A-Z0-9]/g, '').length > w[best].replace(/[^A-Z0-9]/g, '').length ? i : best), 0);
-    w[at] = `*${w[at].replace(/[.,!?:;]+$/, '')}*${(w[at].match(/[.,!?:;]+$/) || [''])[0]}`;
-    text = w.join(' ');
+    const list = words(text);
+    if (!list.length) return '';
+    const at = markIndex(list);
+    list[at] = `*${list[at].replace(/[.,!?:;]+$/, '')}*${(list[at].match(/[.,!?:;]+$/) || [''])[0]}`;
+    text = list.join(' ');
   }
   return text.replace(/\*\s*\*/g, '').trim();
-}
-function headlineFromWords(vo, max = 6) {
-  const sentences = plain(vo).replace(/[“”"]/g, '').split(/(?<=[.!?])\s/);
-  const first = sentences.find(x => words(x).length >= 3) || sentences[0] || '';
-  const w = words(first);
-  // Cut at the first clause break when it leaves 3+ words, else at max.
-  const brk = w.findIndex((x, i) => i >= 2 && i < max && /[,;:—–]$/.test(x));
-  let out = w.slice(0, brk >= 0 ? brk + 1 : max);
-  while (out.length > 2 && STOP.has(out[out.length - 1].replace(/[^A-Za-z]/g, '').toLowerCase())) out = out.slice(0, -1);
-  return out.join(' ').replace(/[,;:.!?—–]+$/, '');
 }
 function shapeClose(raw, { team = '', sourceSet, question = '' } = {}) {
   const r = raw && typeof raw === 'object' ? raw : {};
@@ -374,45 +417,176 @@ function markerFor(styleId, i, of, label = '') {
 }
 
 // ─── Code-only path ($0): the script as v4 chapters ──────────────────────
-const NUM_LABEL = /((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?(?:-(?:\d+))?)\s+((?:[A-Za-z’'-]+\s?){1,2})/;
 const STOP = new Set(['the', 'a', 'an', 'of', 'in', 'on', 'to', 'and', 'for', 'with', 'at', 'by', 'as', 'is', 'was', 'are', 'were', 'that', 'than']);
-function tilesFrom(vo) {
-  const tiles = [];
-  const w = words(plain(vo));
+// Words that never name a figure (pronouns, helpers, wh-words, modals).
+const FUNCTION = new Set(['he', 'she', 'it', 'they', 'we', 'i', 'you', 'him', 'her', 'them', 'us', 'his', 'their', 'whether', 'will', 'would', 'not', 'no', 'yes', 'here', 'there', 'who', 'what', 'which', 'why', 'how', 'did', 'does', 'do', 'had', 'has', 'have', 'been', 'being', 'went', 'lost', 'won', 'got', 'had', 'each', 'every', 'such', 'those', 'these', 'this', 'that']);
+const NOT_LABEL = new Set(['up', 'down', 'off', 'out', 'just', 'only', 'about', 'nearly', 'almost', 'over', 'under', 'more', 'less', 'still', 'even', 'also', 'then', 'now', 'all', 'straight', 'total', 'career', 'minus', 'plus']);
+// A script's own chapter cues ("Chapter one: the run", "Number three: …").
+const CUE = /^(?:chapter|part|number|no\.|reason)\s+(one|two|three|four|five|six|1|2|3|4|5|6)\s*[:.,–—-]\s*(.*)$/i;
+const FIG = /^\$?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:%|[KMB])?\+?$|^\d+-\d+(?:-\d+)?$/i;
+const SEASON = /^(?:19|20)\d\d(?:-\d\d(?:\d\d)?)?$/;
+const punctEnd = w => /[,;:.!?)”"']$/.test(w);
+const bareFig = w => String(w || '').replace(/^[(“"'‘]+/, '').replace(/[,;:.!?)”"'’]+$/, '');
+const labelWord = w => { const b = bareLow(w); return b && /^[a-z’'-]+$/.test(b) && !isDangle(b) && !STOP.has(b) && !NOT_LABEL.has(b) && !FUNCTION.has(b) && !/^(?:and|but|or|so|while|because|whether)$/.test(b); };
+const verbish = w => /(?:ing|ed)$/i.test(bareLow(w));
+const BREAK_BEFORE = /^(?:after|before|while|since|when|whose|who|which|whether|because|for|with|in|on|at|by|from|to|about|as|and|but|or|so|than|like|into|over|under|during|against)$/;
+// The phrase cut to maxChars at a natural break (before a lead-in word or
+// after punctuation), never ending on a lead-in word.
+function fitPhrase(list, maxChars = 48) {
+  const clean = list.map(x => x.replace(/[,;:]+$/, ''));
+  if (clean.join(' ').length <= maxChars) return trimDangleWords(clean);
+  let best = 0;
+  for (let k = 2; k < list.length; k += 1) {
+    if (clean.slice(0, k).join(' ').length > maxChars) break;
+    if (BREAK_BEFORE.test(bareLow(list[k])) || punctEnd(list[k - 1])) best = k;
+  }
+  if (!best) { best = 1; while (best < clean.length && clean.slice(0, best + 1).join(' ').length <= maxChars) best += 1; }
+  return trimDangleWords(clean.slice(0, best));
+}
+// A framing label at the start ("Press conference:", "Rumour:") becomes a tag.
+function leadLabel(text) {
+  const m = plain(text).match(/^([A-Z][A-Za-z’' -]{2,22}):\s+(\S.*)$/);
+  return m && words(m[1]).length <= 2 ? { label: up(m[1], 20), rest: m[2] } : null;
+}
+// The chapter's headline in code: its strongest complete phrase (the v3
+// engine's phraseFor: the whole sentence when it fits, else its best clause);
+// the hook's is its first sentence (the claim), cut at a natural break.
+function headlineFromWords(vo, maxWords = 9, { hook = false } = {}) {
+  let text = plain(vo).replace(/[“”"]/g, '');
+  const lead = leadLabel(text);
+  if (lead) text = lead.rest;
+  const cue = text.match(CUE);
+  if (cue && words(cue[2]).length >= 2) text = cue[2];
+  const sentences = text.split(/(?<=[.!?])\s+/).filter(x => !isCreditText(x));
+  if (hook) return fitPhrase(words((sentences[0] || text).replace(/[.!?:]+$/, '')), 56).join(' ');
+  const body = sentences.join(' ') || text;
+  let list = [];
+  try { list = ES().phraseFor(body, { maxWords, maxChars: 48 }); } catch { list = []; }
+  if (!list.length) list = words(body);
+  return fitPhrase(list, 48).join(' ').replace(/[,;:.!?—–]+$/, '');
+}
+// Figures in a beat's words, each with the noun phrase that names it:
+// "45 touchdowns" -> 45 / TOUCHDOWNS, "a 122.5 passer rating" -> 122.5 /
+// PASSER RATING, "a 15-1 record" -> 15-1 / RECORD, "win probability was 97%"
+// -> 97% / WIN PROBABILITY, "11 under par" -> 11 / UNDER PAR, "minus nine
+// yards" -> -9 / YARDS. Years and seasons are never stats; nor a chapter cue's
+// number. A figure with no clean label is left out (no filler labels).
+function figuresOf(vo) {
+  const w = words(plain(vo).replace(/[“”"]/g, ''));
+  const out = [];
+  const skipNext = new Set();
   w.forEach((x, i) => {
-    if (tiles.length >= 3) return;
-    const m = x.match(/^((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?(?:-\d+)?)[,.;:]?$/);
-    if (!m) return;
-    const content = y => y && !STOP.has(y.toLowerCase()) && !/^(just|only|about|nearly|over|under|was|his|her|their|its)$/i.test(y);
+    if (skipNext.has(i)) return;
+    let value = bareFig(x);
+    let spelled = false;
+    if (!FIG.test(value)) {
+      const sp = ES().spelledNumber ? ES().spelledNumber(x) : null;
+      if (!sp || sp.ordinal) return;
+      value = String(sp.value); spelled = true;
+    }
+    if (SEASON.test(value)) return;
+    if (i > 0 && /^(?:chapter|part|number|no\.|reason)$/i.test(bareLow(w[i - 1]))) return;
+    if (w[i + 1] && /^-/.test(w[i + 1])) return;
+    if (/-(?:yard|point|game|man|year)/i.test(x)) return; // "59-yard": an adjective, said with its noun
+    if (i > 0 && bareLow(w[i - 1]) === 'minus') value = `-${value}`;
+    // A qualifier stays with its figure: "under 20 points" -> <20, "more than 4" -> >4.
+    const q1 = bareLow(w[i - 1]); const q2 = `${bareLow(w[i - 2])} ${q1}`;
+    if (!/^(?:under|over)$/.test(bareLow(w[i + 1]))) {
+      if (q1 === 'under' || q2 === 'fewer than' || q2 === 'less than') value = `<${value}`;
+      else if (q1 === 'over' || q2 === 'more than') value = `>${value}`;
+    }
+    // A share of a total: "7 of 10 games" -> 7/10 GAMES (the total is no tile of its own).
+    if (/^of$/i.test(bareLow(w[i + 1])) && FIG.test(bareFig(w[i + 2] || '')) && !punctEnd(x)) { value = `${value}/${bareFig(w[i + 2])}`; skipNext.add(i + 2); x = w[i + 2]; i += 2; }
+    if (skipNext.has(i) && !value.includes('/')) return;
+    let j0 = i + 1;
+    if (w[j0] && /^percent[,.;:!?]*$/i.test(w[j0])) { value = `${value}%`; j0 += 1; }
     const after = [];
-    if (!/[.,;:!?]$/.test(x)) {
-      for (const raw of w.slice(i + 1, i + 6)) {
-        const y = raw.replace(/[^A-Za-z’'-]/g, '');
-        if (!content(y)) { if (after.length) break; continue; }
-        after.push(y);
-        if (after.length >= 2 || /[.,;:!?]$/.test(raw)) break;
+    if (!punctEnd(x) && !(j0 > i + 1 && punctEnd(w[j0 - 1]))) {
+      if (w[j0] && /^(?:under|over)$/i.test(w[j0]) && /^par\b/i.test(w[j0 + 1] || '')) { after.push(w[j0], 'par'); }
+      else {
+        for (let j = j0; j < w.length && after.length < 2; j += 1) {
+          const y = w[j];
+          if (!after.length && /^(?:straight|consecutive|such|more|total|career|other)$/i.test(bareLow(y)) && !punctEnd(y)) continue;
+          if (FIG.test(bareFig(y)) || !labelWord(y)) break;
+          after.push(bareFig(y));
+          if (punctEnd(y)) break;
+        }
       }
     }
-    const before = after.length ? [] : w.slice(Math.max(0, i - 4), i).map(y => y.replace(/[^A-Za-z’'-]/g, '')).filter(content).slice(-2);
-    const label = (after.length ? after : before).join(' ');
-    if (/^(19|20)\d\d$/.test(m[1]) && !label) return;
-    tiles.push({ value: m[1], label: up(label, 16) || 'TOTAL', tone: tiles.length ? 'ink' : 'blue' });
+    let label = after;
+    let from = false;
+    if (!label.length) {
+      // The noun phrase before it ("win probability was 97%", "pass rate went
+      // from 47"): skip helper words back, never across punctuation; no verbs.
+      let j = i - 1;
+      let skipped = 0;
+      while (j >= 0 && skipped < 2 && !punctEnd(w[j]) && !labelWord(w[j]) && !FIG.test(bareFig(w[j]))) { if (/^from$/i.test(bareLow(w[j]))) from = true; j -= 1; skipped += 1; }
+      if (j >= 0 && (punctEnd(w[j]) || !labelWord(w[j]))) j = -1; // never across a sentence or clause end
+      const before = [];
+      while (j >= 0 && before.length < 2 && labelWord(w[j]) && !verbish(w[j])) { before.unshift(bareFig(w[j])); if (j > 0 && punctEnd(w[j - 1])) break; j -= 1; }
+      label = before;
+    }
+    const text = up(label.join(' '), 16);
+    const fromTo = i > 0 && /^from$/i.test(bareLow(w[i - 1]));
+    if (!label.length || words(text).length !== label.length) { if (!fromTo && !(i > 1 && /^to$/i.test(bareLow(w[i - 1])))) return; }
+    const kind = /%$/.test(value) ? 'pct' : /^\d+-\d+/.test(value) ? 'record' : /\.\d/.test(value) ? 'rate' : 'count';
+    out.push({ value: value.toUpperCase(), label: label.length ? text : '', kind, index: i, spelled, from: fromTo || from, to: i > 0 && /^to$/i.test(bareLow(w[i - 1])) });
   });
-  return tiles.length ? { type: 'statTiles', tiles } : null;
+  // "from 13 wins to 20": the second figure takes the first one's label.
+  out.forEach((f, k) => { if (!f.label && f.to && out[k - 1] && out[k - 1].label) f.label = out[k - 1].label; });
+  return out.filter(f => f.label);
 }
-// The longest run of capitalised words that is not the start of a sentence word alone.
+// The module a beat's claim needs (code): a change ("from 47 to 57 percent",
+// "from 13 wins to 20") or two percentages -> compare; otherwise up to 3 stat
+// tiles, the strongest (a record, a rate, the first count), in spoken order.
+function moduleFor(vo, set) {
+  const figs = figuresOf(vo).filter(f => f.spelled || !unsourced([f.value.replace(/^[-<>]/, '')], set).length);
+  if (!figs.length) return null;
+  const k = figs.findIndex((f, i) => f.to && i > 0);
+  if (k > 0) {
+    const a = figs[k - 1]; const b = figs[k];
+    const unit = /%$/.test(b.value) && !/%$/.test(a.value) ? '%' : '';
+    return { type: 'compare', from: { value: `${a.value}${unit}`, label: a.label }, to: { value: b.value, label: b.label } };
+  }
+  const pcts = figs.filter(f => f.kind === 'pct');
+  if (pcts.length >= 2) return { type: 'compare', from: { value: pcts[0].value, label: pcts[0].label }, to: { value: pcts[1].value, label: pcts[1].label } };
+  const score = (f, i) => (f.kind === 'record' ? 3 : 0) + (f.kind === 'rate' || f.kind === 'pct' ? 2 : 0) + (i === 0 ? 1.5 : 1);
+  const best = figs.map((f, i) => ({ f, s: score(f, i), i })).sort((a, b) => b.s - a.s || a.i - b.i).slice(0, 3).sort((a, b) => a.i - b.i).map(x => x.f);
+  return { type: 'statTiles', tiles: best.map((f, i) => ({ value: f.value, label: f.label, tone: i === 0 ? 'blue' : 'ink' })) };
+}
+// The close, from the script's own argument (code only, no new facts):
+// "Cowboys fans, your call" -> the prompt; the hook's claim from its key word
+// ("still has no twin") -> option one, against "NOT BUYING IT".
+const CLAIM_KEY = /^(?:still|no|never|nobody|only|most|best|worst|first|last|longest|shortest|biggest|record|every|again)$/i;
+function claimOption(hook) {
+  const w = words(plain(hook).replace(/[“”"]/g, '').replace(/[.!?:;,]+$/, ''));
+  const at = w.findIndex(x => CLAIM_KEY.test(bareLow(x)));
+  if (at < 0) return 'AGREE';
+  const list = fitPhrase(w.slice(at), 22);
+  const out = up(list.join(' '), 22);
+  return words(out).length >= 2 && out.length <= 22 && !/\d/.test(out) && !isDangle(list[list.length - 1]) ? out : 'AGREE';
+}
+function fansPrompt(text) {
+  const m = plain(text).match(/\b((?:[A-Z][A-Za-z.'’-]+\s){0,2}[A-Z][A-Za-z.'’-]+)\s+fans,?\s+(?:it'?s\s+)?your\s+call\b/);
+  return m ? up(`${m[1]} FANS: YOUR CALL`, 34) : '';
+}
+// The longest run of capitalised words (a name), possessives dropped.
 function properName(text) {
-  const w = words(plain(text).replace(/[“”"()]/g, ' '));
+  // A spoken credit ("Source: Pro Football Reference") names no subject.
+  const w = words(plain(text).replace(/\b(?:sources?|credits?|data|photos?|via)\s*:.*$/i, '').replace(/[“”"()]/g, ' '));
+  const capWord = y => { const b = String(y || '').replace(/[,.!?;:]+$/, '').replace(/[’']s?$/, ''); return /^[A-Z][A-Za-z’'.-]+$/.test(b) && /[a-z]/.test(b); };
   let best = [];
   let run = [];
+  const close = () => { if (run.length > best.length) best = run; run = []; };
   w.forEach((x, i) => {
-    const bare = x.replace(/[,.!?;:]+$/, '');
+    const bare = x.replace(/[,.!?;:]+$/, '').replace(/[’']s?$/, '');
     const sentenceStart = i === 0 || /[.!?:]$/.test(w[i - 1]);
-    const cap = /^[A-Z][a-z’'.-]+$/.test(bare) && !sentenceStart;
-    if (cap) run.push(bare); else { if (run.length > best.length) best = run; run = []; }
-    if (cap && bare !== x) { if (run.length > best.length) best = run; run = []; }
+    // A sentence's first word counts when a capitalised word follows ("Aaron Rodgers'"), never "The".
+    const cap = capWord(x) && (!sentenceStart || capWord(w[i + 1])) && !(run.length === 0 && /^(?:the|a|an|number|chapter|part|rumour|rumor|press)$/i.test(bare));
+    if (cap) run.push(bare); else close();
+    if (cap && /[,.!?;:]$/.test(x)) close();
   });
-  if (run.length > best.length) best = run;
+  close();
   return best.length >= 2 ? best.join(' ') : '';
 }
 function groupBeats(segs, { minWords = 10, maxWords = 30 } = {}) {
@@ -428,55 +602,112 @@ function groupBeats(segs, { minWords = 10, maxWords = 30 } = {}) {
   if (cur.length) beats.push(cur);
   return beats;
 }
-function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = null, team = null, title = '', sport = '' } = {}) {
+function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = null, team = null, title = '', sport = '', speakSources = false } = {}) {
   const styleId = v4StyleOf(esStyle);
   const L = lengthOf(length);
-  const text = normScript(script);
+  const cut = splitCredits(script);
+  const text = speakSources ? normScript(String(script || '').replace(URL_RE, ' ')) : cut.spoken;
   const segs = segmentScript(text);
   const r = read || { corpus: text, sport, team };
-  const teamName = (team && team.name) || (r.team && r.team.name) || '';
+  let teamName = (team && team.name) || (r.team && r.team.name) || '';
+  // No team from the brief: a team nickname in the words ("Jets") names it.
+  if (!teamName) {
+    for (const x of words(plain(text))) {
+      const b = x.replace(/[^A-Za-z]/g, '');
+      if (!/^[A-Z][a-z]{2,}s$/.test(b)) continue;
+      const hit = D().teamInfo(b, r.sport || sport);
+      if (hit && hit.name && hit.name.toLowerCase().endsWith(` ${b.toLowerCase()}`)) { teamName = hit.name; team = team || hit; break; }
+    }
+  }
   const set = sourceNumbers(r.corpus || text);
   const reelSubject = properName(text) || teamName;
-  const hookMoment = headlineFromWords(segs[0] || '', 6);
-  const groups = groupBeats(segs, length === 'short' ? { minWords: 8, maxWords: 22 } : { minWords: 12, maxWords: 30 });
-  // The hook is the first beat alone; the rest split evenly into chapters.
-  const rest = groups.slice(1);
-  const nCh = Math.max(1, Math.min(L.chapters[1], Math.max(L.chapters[0] - 1, Math.ceil(rest.length / L.beatsPerChapter[1]))));
-  const perCh = Math.ceil(rest.length / nCh) || 1;
-  const chapterGroups = [groups.slice(0, 1)];
-  for (let i = 0; i < rest.length; i += perCh) chapterGroups.push(rest.slice(i, i + perCh));
-  // A closing question alone in its chapter rides with the chapter before.
-  if (chapterGroups.length > 2 && chapterGroups[chapterGroups.length - 1].length === 1) chapterGroups[chapterGroups.length - 2].push(...chapterGroups.pop());
+  const hookMoment = headlineFromWords(segs[0] || '', 6, { hook: true });
+  const sizes = length === 'short' ? { minWords: 8, maxWords: 22 } : { minWords: 12, maxWords: 30 };
+  // The script's own chapter cues ("Chapter one: the run") decide the
+  // chapters when there are two or more; else the hook is the first sentence
+  // alone and the rest split evenly.
+  const cues = segs.map((s, i) => (CUE.test(plain(s)) ? i : -1)).filter(i => i > 0);
+  let chapterGroups;
+  if (cues.length >= 2) {
+    const starts = [0, ...cues];
+    chapterGroups = starts.map((st, k) => {
+      const end = k + 1 < starts.length ? starts[k + 1] : segs.length;
+      const idx = Array.from({ length: end - st }, (_, j) => st + j);
+      return groupBeats(idx.map(i => segs[i]), sizes).map(g => g.map(j => idx[j]));
+    });
+  } else {
+    const groups = segs.length > 1 ? [[0], ...groupBeats(segs.slice(1), sizes).map(g => g.map(i => i + 1))] : [[0]];
+    const rest = groups.slice(1);
+    const nCh = Math.max(1, Math.min(L.chapters[1], Math.max(L.chapters[0] - 1, Math.ceil(rest.length / L.beatsPerChapter[1]))));
+    const perCh = Math.ceil(rest.length / nCh) || 1;
+    chapterGroups = [groups.slice(0, 1)];
+    for (let i = 0; i < rest.length; i += perCh) chapterGroups.push(rest.slice(i, i + perCh));
+    // A closing line alone in its chapter rides with the chapter before.
+    if (chapterGroups.length > 2 && chapterGroups[chapterGroups.length - 1].length === 1) chapterGroups[chapterGroups.length - 2].push(...chapterGroups.pop());
+  }
   let bn = 0;
+  chapterGroups = chapterGroups.filter(g => g.length);
   const of = chapterGroups.length;
-  const chapters = chapterGroups.filter(g => g.length).map((g, ci) => {
-    const beats = g.map(idx => {
+  const chapters = chapterGroups.map((g, ci) => {
+    const allVo = g.map(idx => idx.map(i => segs[i]).join(' ')).join(' ');
+    const cue = plain(segs[g[0][0]]).match(CUE);
+    let phrase = headlineFromWords(allVo, ci === 0 ? 9 : 7, { hook: ci === 0 });
+    const beats = g.map((idx, bi) => {
       bn += 1;
       const vo = idx.map(i => segs[i]).join(' ');
       const beat = { id: `b${bn}`, vo };
-      const mod = tilesFrom(vo);
-      if (mod && !unsourced(moduleClaims(mod), set).length) beat.module = mod;
+      let mod = shapeModule(moduleFor(vo, set));
+      if (mod && unsourced(moduleClaims(mod), set).length) mod = null;
+      if (mod) beat.module = mod;
+      const lead = bi === 0 ? leadLabel(vo) : null;
+      if (lead) beat.tag = { text: lead.label, tone: /rumou?r|unconfirmed|report/i.test(lead.label) ? 'red' : 'ink' };
       const name = properName(vo);
       const subjectRaw = name ? { type: 'player', name } : (reelSubject ? { type: reelSubject === teamName ? 'team' : 'player', name: reelSubject, team: teamName } : { type: 'moment', name: hookMoment, team: teamName });
-      beat.media = shapeMedia({ kind: beat.module && !name ? 'none' : 'clip', subject: subjectRaw }, { read: r, team: teamName, vo });
+      // A data beat keeps the subject on screen (a verified photo, Ken Burns)
+      // beside its module; with no subject the module carries it alone.
+      let kind = beat.module ? (name ? 'clip' : (reelSubject ? 'photo' : 'none')) : 'clip';
+      if (lead && /press|presser|interview|media day/i.test(lead.label)) kind = 'presser';
+      beat.media = shapeMedia({ kind, subject: subjectRaw }, { read: r, team: teamName, vo });
+      // The window's label tag names who is on screen (never the vo's first words).
+      const who = beat.media.subject && ['player', 'team'].includes(beat.media.subject.type) ? beat.media.subject.name : '';
+      if (who && beat.media.kind !== 'none' && !beat.media.label) beat.media.label = up(who, 22);
       return beat;
     });
-    const head = shapeHeadline('', headlineFromWords(beats[0].vo, ci === 0 ? 7 : 5));
-    const ch = { id: `c${ci + 1}`, headline: head, tone: 'blue', beats };
-    const mk = markerFor(styleId, ci, of, '');
+    // A headline that only repeats the chapter's own tiles says nothing new:
+    // the reel's subject "IN NUMBERS" instead (a summary, no new facts).
+    const shown = new Set(beats.flatMap(b => (b.module ? moduleClaims(b.module) : [])).flatMap(f => F.numbersIn(f)));
+    const said = F.numbersIn(phrase);
+    if (ci > 0 && said.length && said.every(n => shown.has(n))) phrase = reelSubject ? `${String(reelSubject).split(' ').pop()} IN NUMBERS` : 'THE NUMBERS';
+    else {
+      // A tile the headline already shows is not said twice; a beat left
+      // with no module and no media asks for a clip (ensureMotion).
+      const inHead = sourceNumbers(phrase);
+      beats.forEach(b => {
+        if (!b.module || b.module.type !== 'statTiles') return;
+        const tiles = b.module.tiles.filter(t => !F.numbersIn(t.value).every(n => inHead.has(n)));
+        if (tiles.length) b.module = { ...b.module, tiles: tiles.map((t, k) => ({ ...t, tone: k === 0 ? 'blue' : 'ink' })) };
+        else { delete b.module; if (b.media.kind === 'none' || b.media.kind === 'photo') b.media = { ...b.media, kind: 'clip' }; }
+      });
+    }
+    const ch = { id: `c${ci + 1}`, headline: shapeHeadline('', phrase), tone: 'blue', beats };
+    const mk = of <= 2 && !cue && V4_STYLES[styleId].marker === 'numbered' ? undefined : markerFor(styleId, ci, of, cue ? words(cue[2]).slice(0, 2).join(' ').replace(/[,.;:]+$/, '') : '');
     if (mk !== undefined) ch.marker = mk;
     return ch;
   });
   const last = segs[segs.length - 1] || '';
+  const prompt = fansPrompt(text);
+  const question = /\?["”’]*$/.test(last) ? plain(last) : '';
+  const optionA = claimOption(segs[0] || '');
   const plan = {
     v: 4, style: 'es', esStyle: styleId, skin: V4_STYLES[styleId].skin, length: L.id,
-    title: str(title, 120) || plain(headlineFromWords(segs[0] || '', 9)),
+    title: str(title, 120) || plain(headlineFromWords(segs[0] || '', 9, { hook: true })),
     sport: sport || r.sport || '', team: team || r.team || null,
     chapters,
-    close: shapeClose({}, { team: teamName, sourceSet: set, question: /\?["”’]*$/.test(last) ? plain(last) : '' }),
-    script: { text, locked: true },
+    close: shapeClose({ prompt: prompt || (teamName ? '' : 'YOUR CALL'), options: optionA === 'AGREE' ? ['AGREE', 'DISAGREE'] : [optionA, 'NOT BUYING IT'], comment: question ? '' : 'COMMENT: AGREE OR NOT?' }, { team: teamName, sourceSet: set, question }),
+    script: { text, locked: true, ...(cut.credits.length ? { credits: cut.credits } : {}), ...(cut.links.length ? { links: cut.links } : {}) },
     pacing: pacingOf(text, L.id),
   };
+  if (cut.credits.length) plan.sourceLine = sourceLineOf(cut.credits);
   ensureMotion(plan, []);
   return plan;
 }
@@ -734,14 +965,22 @@ function readV4({ script, topic = '', trend = null, facts = '', sport = '' }) {
   read.sources = [str(topic, 1200), trend ? [trend.title, ...(trend.related || []).map(r => r.title), trend.why].filter(Boolean).join('\n') : '', str(facts, 4000)].filter(Boolean).join('\n');
   return read;
 }
-async function runDirectorV4({ script = '', topic = '', trend = null, facts = '', sport = '', esStyle = 'breakdown', length = 'full', tier = 'standard', steer = '', lessons = [], current = null, track = null, timeoutMs = 24000, startedAt = Date.now(), budgetMs = 50000, now = () => Date.now() } = {}) {
-  const text = normScript(script);
+async function runDirectorV4({ script = '', topic = '', trend = null, facts = '', sport = '', esStyle = 'breakdown', length = 'full', tier = 'standard', steer = '', lessons = [], current = null, track = null, speakSources = false, timeoutMs = 24000, startedAt = Date.now(), budgetMs = 50000, now = () => Date.now() } = {}) {
+  // Credits ("Source: …", "Via …", URLs) are not spoken: they become the source line.
+  const cut = splitCredits(script);
+  const text = speakSources ? normScript(String(script || '').replace(URL_RE, ' ')) : cut.spoken;
+  const credit = plan => {
+    if (cut.credits.length) { plan.sourceLine = sourceLineOf(cut.credits); plan.script.credits = cut.credits; }
+    if (cut.links.length) plan.script.links = cut.links;
+    return plan;
+  };
+  topic = [str(topic, 2400), cut.credits.length ? `Source: ${cut.credits.join('; ')}` : ''].filter(Boolean).join('\n');
   const styleId = v4StyleOf(esStyle);
   const L = lengthOf(length);
   const read = readV4({ script: text, topic, trend, facts, sport });
   const segs = segmentScript(text);
   const result = { plan: null, read, model: '', cost: 0, source: 'code', issues: [], escalated: false, scriptNotes: [] };
-  const code = () => scriptToV4(text, { esStyle: styleId, length: L.id, read, team: read.team, title: trend ? trend.title : '', sport: read.sport });
+  const code = () => scriptToV4(script, { esStyle: styleId, length: L.id, read, team: read.team, title: trend ? trend.title : '', sport: read.sport, speakSources });
   let api;
   try { api = gateway(); } catch { api = null; }
   if (!api || !api.gatewayConfigured() || segs.length < 2) return { ...result, plan: code(), reason: segs.length < 2 ? 'short' : 'off' };
@@ -770,7 +1009,7 @@ async function runDirectorV4({ script = '', topic = '', trend = null, facts = ''
     if (!best) return { ...result, plan: code(), reason: api.isBudgetError(error) ? 'budget' : 'error' };
   }
   if (!best || !best.plan.chapters.length || !voMatchesScript(best.plan)) return { ...result, plan: code(), reason: 'weak', issues: best ? best.issues : [] };
-  return { ...result, plan: best.plan, model: best.model, source: result.escalated && /sonnet/.test(best.model) ? 'director-sonnet' : 'director', issues: best.issues, weak: best.weak, scriptNotes: best.scriptNotes };
+  return { ...result, plan: credit(best.plan), model: best.model, source: result.escalated && /sonnet/.test(best.model) ? 'director-sonnet' : 'director', issues: best.issues, weak: best.weak, scriptNotes: best.scriptNotes };
 }
 
 // Revise: the director again with the editor's note and the current plan.
@@ -954,6 +1193,7 @@ async function draftScript({ topic = '', trend = null, facts = '', length = 'ful
 
 module.exports = {
   V4_STYLES, V4_IDS, v4StyleOf, LENGTHS, WPM, MAX_SCRIPT_CHARS, MODULE_SPEC, MODULE_TYPES, MEDIA_KINDS, BUILTIN_SHAPES, CRITIC_KEYS, REVISE_PRESETS_V4,
+  splitCredits, figuresOf, moduleFor, claimOption, headlineFromWords, isCreditText,
   segmentScript, normScript, pacingOf, spelledNumbers, sourceNumbers, shapeModule, moduleClaims, shapeMedia, shapeHeadline, shapeClose, markerFor,
   scriptToV4, ensureMotion, structureOf, referenceShapes, setReferencePlans, v4System, directorRequestV4, lessonsLines, validateV4, voMatchesScript, flattenV4,
   readV4, runDirectorV4, reviseV4, codeCritique, applyFix, critiqueV4, CRITIQUE_CACHE, CRITIC_SYSTEM, draftScript, SCRIPT_SYSTEM,

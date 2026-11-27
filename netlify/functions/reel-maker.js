@@ -324,7 +324,10 @@ async function plan(body, track, gates) {
 const linksOf = raw => (Array.isArray(raw) ? raw : []).slice(0, 6).map(u => String(u && u.url || u || '').trim()).filter(u => /^https:\/\/[^\s"'<>]{1,400}$/.test(u));
 const lintV4 = (plan, corpus) => { try { return lintPlan(director.flattenV4(plan), { corpus }); } catch { return null; } };
 async function planV4(body, track, gates, { loadLessons = lessonsApi.loadLessons } = {}) {
-  const script = String(body.script == null ? '' : body.script).replace(/\s+/g, ' ').trim();
+  const rawScript = String(body.script == null ? '' : body.script).replace(/\r/g, '').slice(0, director.MAX_SCRIPT_CHARS + 400);
+  const script = rawScript.replace(/\s+/g, ' ').trim();
+  // Credits ("Source: …", "Via …", URLs) are not spoken unless the person asks.
+  const speakSources = body.speakSources === true;
   if (F.wordCount(script) < 6) return { ok: false, status: 400, reason: 'need-script', error: 'Paste or write your script first: a sentence or two at least. It is read word for word.' };
   if (script.length > director.MAX_SCRIPT_CHARS) return { ok: false, status: 413, reason: 'too-long', error: 'That script is longer than a reel. Keep it under about 500 words.' };
   const trend = readTrend(body.trend);
@@ -337,7 +340,7 @@ async function planV4(body, track, gates, { loadLessons = lessonsApi.loadLessons
   const steer = clean(body.steer, 300);
   const blocked = gates.free ? 'free' : gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : ''));
   const lessons = blocked ? [] : await loadLessons({ style: esStyle, token: track && track.token }).catch(() => []);
-  const key = planKey(['v4', script, trend?.id || trend?.title || '', topic, links, esStyle, length, tier, steer, sport, Boolean(body.factCheck), lessons.map(l => l.lesson)]);
+  const key = planKey(['v4', rawScript, speakSources, trend?.id || trend?.title || '', topic, links, esStyle, length, tier, steer, sport, Boolean(body.factCheck), lessons.map(l => l.lesson)]);
   const hit = PLAN_CACHE.get(key);
   if (hit && Date.now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: 0, costs: { director: 0, factCheck: 0 } };
   let facts = null;
@@ -348,12 +351,15 @@ async function planV4(body, track, gates, { loadLessons = lessonsApi.loadLessons
   let result;
   if (blocked) {
     const read = director.readV4({ script, topic, trend, sport });
-    result = { plan: director.scriptToV4(script, { esStyle, length, read, team: read.team, title: trend ? trend.title : '', sport: read.sport }), read, source: 'code', cost: 0, model: '', issues: [], scriptNotes: [] };
+    result = { plan: director.scriptToV4(rawScript, { esStyle, length, read, team: read.team, title: trend ? trend.title : '', sport: read.sport, speakSources }), read, source: 'code', cost: 0, model: '', issues: [], scriptNotes: [] };
   } else {
-    result = await director.runDirectorV4({ script, topic, trend, facts: facts?.text || '', sport, esStyle, length, tier, steer, lessons, track });
+    result = await director.runDirectorV4({ script: rawScript, topic, trend, facts: facts?.text || '', sport, esStyle, length, tier, steer, lessons, track, speakSources });
   }
   const corpus = result.read.corpus;
-  const sources = [{ type: 'script', title: 'Your script' }, ...sourcesOf(trend, topic, facts).filter(x => x.type !== 'brief'), ...(topic ? [{ type: 'brief', title: 'Your notes' }] : []), ...links.map(url => ({ type: 'link', title: url, url }))].slice(0, 16);
+  // Credits and links written into the script ("Source: …", URLs) join the sources.
+  const said = result.plan.script || {};
+  const allLinks = [...new Set([...links, ...linksOf(said.links)])];
+  const sources = [{ type: 'script', title: 'Your script' }, ...(said.credits || []).map(c => ({ type: 'credit', title: c })), ...sourcesOf(trend, topic, facts).filter(x => x.type !== 'brief'), ...(topic ? [{ type: 'brief', title: 'Your notes' }] : []), ...allLinks.map(url => ({ type: 'link', title: url, url }))].slice(0, 16);
   result.plan.sources = sources;
   const value = {
     ok: true, v: 4, plan: result.plan, source: result.source, reason: blocked || result.reason || '',

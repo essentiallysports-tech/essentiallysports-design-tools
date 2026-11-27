@@ -378,6 +378,107 @@ await test('draftScript ("Need a script?"): one Haiku call; lines with unsourced
   assert.ok(out.issues.some(i => /412/.test(i)));
 });
 
+// ─── The code path ($0) on real scripts (integration review, 2026-11-27) ──
+const RODGERS = "Aaron Rodgers' 2011 season still has no twin: 45 touchdowns, 6 interceptions, a 122.5 passer rating and a 15-1 record. Source: Pro Football Reference";
+const CODE_SCRIPTS = {
+  rodgers: RODGERS,
+  golf: 'Scottie Scheffler wins the Masters by 4 strokes for his 3rd major title, shooting 11 under par on Sunday. Only the 4th player to win 3 majors before turning 30 since 1980.\nSport: Golf',
+  f1: 'Max Verstappen takes pole in Brazil after starting the weekend 17th in practice. McLaren had been fastest in every session. He beat Lando Norris by 0.084 seconds.',
+  rumour: "Rumour: Real Madrid are preparing a January bid for Liverpool's Ibrahima Konaté, whose contract runs out in June. Three clubs have asked about him. Liverpool have offered a new deal twice and he has not signed. Sources: The Athletic, Marca (unconfirmed).",
+  presser: "Press conference: Jets head coach asked three times whether he will call plays after a 2-8 start. He said 'we'll evaluate everything' each time. The Jets have scored under 20 points in 7 of 10 games. Owner meets with the GM on Tuesday.",
+  wemby: 'Victor Wembanyama has 5+ blocks in 9 straight games, the longest streak since 1985-86. The Spurs are 7-2 in those games. No other player has more than 4 such games this season.',
+  clark: 'Caitlin Clark set the WNBA single-season assist record with 337 assists, passing the old mark of 316. She did it in 40 games. The Fever went from 13 wins to 20.',
+  dallas: "Dallas was up 21. They lost on a 59-yard field goal with two seconds left. Everyone blames the fourth down. It wasn't the fourth down. Chapter one: the run. Dallas stopped running with the lead. Their pass rate went from 47 to 57 percent. Chapter two: the throw. Fourth and one, they dropped back, sacked for minus nine. Chapter three: the choice. Backing off is a choice. Cowboys fans, your call.",
+  liberty: 'Three reasons the Liberty win it all again. Number three: the bench, best net rating in the league. Number two: Sabrina Ionescu in the fourth quarter. Number one: Breanna Stewart. Check, check, check. Liberty fans, your call.',
+};
+const ESR = require('../reel-es.js');
+const lastWord = h => String(h).replace(/\*/g, '').trim().split(/\s+/).pop().toLowerCase().replace(/[^a-z0-9%'-]/g, '');
+const BAD_END = new Set([...ESR.DANGLE, 'he', 'she', 'they', 'whether', 'no', 'not']);
+const tilesOf = plan => plan.chapters.flatMap(c => c.beats).filter(b => b.module && b.module.type === 'statTiles').flatMap(b => b.module.tiles);
+
+await test('code path: the Rodgers script -> hook + payoff + close; whole-phrase headline; credit is the source line; noun-phrase tiles, no year', () => {
+  const plan = D.scriptToV4(RODGERS, { esStyle: 'breakdown', length: 'short' });
+  const spoken = "Aaron Rodgers' 2011 season still has no twin: 45 touchdowns, 6 interceptions, a 122.5 passer rating and a 15-1 record.";
+  assert.equal(allVo(plan), spoken, 'vo identical to the spoken script');
+  assert.equal(plan.script.text, spoken);
+  assert.deepEqual(plan.script.credits, ['Pro Football Reference']);
+  assert.equal(plan.sourceLine, 'SOURCE: PRO FOOTBALL REFERENCE');
+  assert.equal(plan.chapters.length, 2, 'hook chapter + payoff chapter');
+  assert.equal(plan.chapters[0].headline, "AARON RODGERS' 2011 SEASON STILL HAS NO *TWIN*");
+  assert.ok(!plan.chapters.some(c => /SOURCE|REFERENCE/.test(c.headline)));
+  assert.deepEqual(tilesOf(plan).map(t => `${t.value} ${t.label}`), ['45 TOUCHDOWNS', '122.5 PASSER RATING', '15-1 RECORD']);
+  assert.equal(plan.chapters[0].beats[0].media.kind, 'clip');
+  assert.equal(plan.chapters[0].beats[0].media.subject.name, 'Aaron Rodgers');
+  assert.deepEqual(plan.close.options.map(o => o.text), ['STILL HAS NO TWIN', 'NOT BUYING IT']);
+  assert.equal(plan.close.prompt, 'YOUR CALL');
+  // Spoken on request: the credit stays in the vo, never a headline or a beat of its own.
+  const spokenToo = D.scriptToV4(RODGERS, { length: 'short', speakSources: true });
+  assert.equal(allVo(spokenToo), RODGERS);
+  assert.ok(!spokenToo.chapters.some(c => /SOURCE|REFERENCE/.test(c.headline)));
+  assert.ok(!spokenToo.chapters.flatMap(c => c.beats).some(b => /^Source:/.test(b.vo)));
+});
+
+await test('splitCredits: "Source(s):", "Via", URLs and metadata lines are not spoken', () => {
+  assert.deepEqual(D.splitCredits('Big night for Lamar. Via ESPN Stats & Info.\nhttps://x.com/a/1'), { spoken: 'Big night for Lamar.', credits: ['ESPN Stats & Info'], links: ['https://x.com/a/1'] });
+  assert.equal(D.splitCredits('He signed. Sources: The Athletic, Marca.\nSport: Soccer').spoken, 'He signed.');
+  assert.equal(D.splitCredits('Via a trade, the Jets got him.').spoken, 'Via a trade, the Jets got him.', 'a sentence starting "Via a trade," is speech');
+});
+
+await test('code path on real scripts: no dangling headline end, no credit chapter, no year tiles, noun-phrase labels, motion, vo identical', () => {
+  for (const [id, script] of Object.entries(CODE_SCRIPTS)) {
+    for (const esStyle of D.V4_IDS) {
+      const plan = D.scriptToV4(script, { esStyle, length: id === 'rodgers' || id === 'f1' ? 'short' : 'full' });
+      const where = `${id}/${esStyle}`;
+      assert.equal(allVo(plan), D.splitCredits(script).spoken, `${where}: vo identical`);
+      plan.chapters.forEach(c => {
+        assert.ok(!BAD_END.has(lastWord(c.headline)), `${where}: "${c.headline}" ends on a lead-in word`);
+        assert.ok(!/^\s*(?:SOURCES?|VIA|CREDIT)/.test(c.headline.replace(/\*/g, '')), `${where}: a credit headline`);
+        assert.equal((c.headline.match(/\*[^*]+\*/g) || []).length, 1, `${where}: one marked word in ${c.headline}`);
+        assert.ok(c.headline.replace(/\*/g, '').length <= 60, `${where}: ${c.headline} fits`);
+      });
+      plan.chapters.flatMap(c => c.beats).forEach(b => {
+        assert.ok((b.media && b.media.kind !== 'none') || b.module, `${where}: ${b.id} moves`);
+        assert.ok(!/^(?:Sources?|Via)\b/.test(b.vo), `${where}: a credit beat`);
+      });
+      tilesOf(plan).forEach(t => {
+        assert.ok(!/^(?:19|20)\d\d(?:-\d\d)?$/.test(t.value), `${where}: year tile ${t.value}`);
+        const lw = t.label.toLowerCase().split(/\s+/);
+        assert.ok(t.label && !BAD_END.has(lw[lw.length - 1]), `${where}: label "${t.label}"`);
+        assert.ok(!lw.some(x => /^(?:still|season|he|she|they|whether|total|chapter|number)$/.test(x)), `${where}: label "${t.label}" is not a noun phrase`);
+      });
+      assert.equal(plan.close.kind, 'yourCall');
+      assert.equal(plan.close.options.length, 2);
+    }
+  }
+});
+
+await test('code path: chapter cues, fans prompt, change modules, framing labels', () => {
+  const dallas = D.scriptToV4(CODE_SCRIPTS.dallas, { esStyle: 'breakdown' });
+  assert.deepEqual(dallas.chapters.slice(1).map(c => c.marker), ['1 · THE RUN', '2 · THE THROW', '3 · THE CHOICE']);
+  assert.equal(dallas.close.prompt, 'COWBOYS FANS: YOUR CALL');
+  const cmp = dallas.chapters[1].beats.find(b => b.module && b.module.type === 'compare');
+  assert.deepEqual(cmp.module.from, { value: '47%', label: 'PASS RATE' });
+  assert.equal(cmp.module.to.value, '57%');
+  const liberty = D.scriptToV4(CODE_SCRIPTS.liberty, { esStyle: 'casefile' });
+  assert.deepEqual(liberty.chapters.slice(1).map(c => c.marker.n), [3, 2, 1]);
+  assert.equal(liberty.close.prompt, 'LIBERTY FANS: YOUR CALL');
+  const clark = D.scriptToV4(CODE_SCRIPTS.clark, { length: 'short' });
+  const c2 = clark.chapters.flatMap(c => c.beats).find(b => b.module && b.module.type === 'compare').module;
+  assert.deepEqual([c2.from.value, c2.to.value, c2.to.label], ['13', '20', 'WINS']);
+  const presser = D.scriptToV4(CODE_SCRIPTS.presser, { esStyle: 'hotseat' });
+  assert.equal(presser.chapters[0].beats[0].media.kind, 'presser');
+  assert.deepEqual(presser.chapters[0].beats[0].tag, { text: 'PRESS CONFERENCE', tone: 'ink' });
+  assert.ok(!/PRESS CONFERENCE/.test(presser.chapters[0].headline));
+  const rumour = D.scriptToV4(CODE_SCRIPTS.rumour, { esStyle: 'casefile' });
+  assert.equal(rumour.chapters[0].beats[0].tag.tone, 'red');
+  assert.match(rumour.sourceLine, /THE ATHLETIC/);
+  const wemby = D.figuresOf(CODE_SCRIPTS.wemby);
+  assert.ok(!wemby.some(f => /1985/.test(f.value)));
+  assert.deepEqual(wemby.map(f => `${f.value} ${f.label}`).slice(0, 2), ['5+ BLOCKS', '9 GAMES']);
+  assert.deepEqual(D.figuresOf('Their win probability was 97%.').map(f => f.label), ['WIN PROBABILITY']);
+  assert.deepEqual(D.figuresOf('He lost 7-6, 3-6, 7-6 after the quote ended."').map(f => f.label), [], 'no label across a clause end');
+});
+
 // ─── Learning loop ───────────────────────────────────────────────────────
 function feedbackRows(n, style = 'breakdown') {
   return Array.from({ length: n }, (_, i) => ({
