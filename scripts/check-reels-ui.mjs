@@ -784,7 +784,7 @@ for (const w of WIDTHS) {
         expect(p.esStyle === id && p.v === 4, `plan ${JSON.stringify(p)}`);
         const pl = calls.find(c => c.mode === 'plan');
         expect(lengthOf(pl.body) === len, `the plan request length is "${lengthOf(pl.body)}" (picked ${len})`);
-        await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 8000, '"Ready to post"').catch(async e => { throw new Error(`${e.message} (badge "${await readyText()}"; checklist: ${(await checklistText()).slice(0, 300)})`); });
+        await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 8000, '"Ready to post"').catch(async e => { throw new Error(`${e.message} (badge "${await readyText()}"; open rows: ${(await checklistText()).split(' / ').filter(r => !/passes$/i.test(r)).join(' / ').slice(0, 300)})`); });
         const sm = calls.find(c => c.mode === 'scene-media');
         expect(!sm || v4Style(sm.body) === id, `scene-media esStyle ${sm && sm.body.esStyle}`);
       });
