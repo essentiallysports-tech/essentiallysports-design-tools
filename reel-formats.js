@@ -428,7 +428,12 @@
   // cards, a headshot), then to the shortest beats.
   //   beats: [{ id, kind, visual, durMs }]  ->  { mode: { id: 'clip'|'image'|'design' }, clipMs, totalMs, share }
   const STILL_FIRST = { quote: 3, versus: 3, rank: 1 };
-  function planVisualMix(beats, { target = 0.8, clipsAvailable = Infinity } = {}) {
+  // Reels Studio v3: each style's clip share (ReelES.STYLES[id].media.clips).
+  // Stat Card and Receipts draw no clips: their scenes are photos or graphics.
+  const STYLE_CLIP_SHARE = { gametape: 0.9, statcard: 0, receipts: 0, hypecut: 0.6 };
+  const visualMixFor = styleId => (Object.prototype.hasOwnProperty.call(STYLE_CLIP_SHARE, styleId) ? STYLE_CLIP_SHARE[styleId] : 0.8);
+  function planVisualMix(beats, { target: target0 = 0.8, clipsAvailable = Infinity, style = '' } = {}) {
+    const target = style ? visualMixFor(style) : target0;
     const list = (beats || []).map(b => ({ id: b.id, kind: b.kind, visual: b.visual || '', durMs: Math.max(0, Number(b.durMs) || 0) }));
     const mode = {};
     const eligible = [];
@@ -562,7 +567,7 @@
     DATA_KINDS, ALL_KINDS, SLIDE_KINDS, SOURCE_KINDS, OUTPUTS, DATA_FORMATS, DATA_FORMAT_IDS, ALL_FORMAT_IDS, DATA_ROUTES,
     isDataFormat, formatKinds, suggestDataFormat, formatCostOptions,
     routeFormat, numbersIn, numberSet, normNumber, unsourcedNumbers, structuralNumbers, numberFields, planNumberFields, unsourcedPlanNumbers,
-    planVisualMix, scenePrompt, colorWord,
+    planVisualMix, visualMixFor, STYLE_CLIP_SHARE, scenePrompt, colorWord,
     MUSIC_FILES, musicTracks,
     words, wordCount, estimateVoMs, estimateCost, money, statsIn, sentences, trimWords, fallbackPlan,
   };

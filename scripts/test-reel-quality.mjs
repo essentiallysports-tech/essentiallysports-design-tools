@@ -160,7 +160,9 @@ await test('captions: an 820 px measure, clear of the like / share rail', () => 
     tl.tracks.captions.cards.forEach(card => R.layoutCaption(measure, card, tl).ops.forEach(op => {
       const x0 = op.box ? op.box.x : op.x;
       const x1 = op.box ? op.box.x + op.box.w : op.x + op.w;
-      assert.ok(x0 >= (1080 - R.CAPTION_W) / 2 - 31 && x1 <= (1080 + R.CAPTION_W) / 2 + 31, `${style} caption ${x0}-${x1}`);
+      // v3: ES captions sit on the column (x 60); the right edge keeps clear of the like / share rail.
+      const left = S.STYLES[style].engine === 'es' ? 60 - 0.5 : (1080 - R.CAPTION_W) / 2 - 31;
+      assert.ok(x0 >= left && x1 <= (1080 + R.CAPTION_W) / 2 + 31, `${style} caption ${x0}-${x1}`);
     }));
   });
 });

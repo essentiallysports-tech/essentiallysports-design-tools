@@ -11,6 +11,13 @@
 //             two numbers and a comparison, "1 in 2,500", a quoted line).
 //
 // Pure: loads in the browser (window.ReelRecipes) and in Node (tests).
+//
+// Reels Studio v3 (2026-11-27): recipes are RETIRED. The four styles
+// (ReelES.STYLES: Game Tape, Stat Card, Receipts, Hype Cut) are the only
+// story shapes offered. Each recipe now names the style it opens in
+// (RECIPES[id].style, styleFor), and applyStyle(plan, styleId) reshapes a
+// plan to a style's block order by the same honest code ($0, no word
+// changed). The recipe API stays for saved reels and older callers.
 (function (root, factory) {
   const ES = typeof module === 'object' && module.exports ? require('./reel-es.js') : root.ReelES;
   const api = factory(ES);
@@ -69,6 +76,9 @@
     },
   };
   const RECIPE_IDS = Object.keys(RECIPES);
+  // Every retired recipe on its v3 style (ReelES.legacyStyle says the same).
+  Object.values(RECIPES).forEach(r => { r.style = ES && ES.legacyStyle ? ES.legacyStyle('', r.id, {}) : 'receipts'; r.retired = true; });
+  const styleFor = (recipeId, plan = {}) => (ES && ES.legacyStyle ? ES.legacyStyle('', recipeId, plan) : 'receipts');
   const get = id => RECIPES[id] || null;
   const list = () => RECIPE_IDS.map(id => RECIPES[id]);
 
@@ -229,5 +239,31 @@
     return { plan: out, notes, changed };
   }
 
-  return { RECIPES, RECIPE_IDS, LOOK_IDS, get, list, validate, directorSteer, planRequest, suggest, applyRecipe, candidates, rankOf, markedWord };
+  // ─── v3: a style as a preset (code only, $0) ─────────────────────────────
+  // The style's blocks become the slots a scene may move into: a scene keeps
+  // its block when the style allows it, else takes the first block the style
+  // allows that its own line can honestly fill, else a statement. Words never
+  // change. Blocks the style cannot use are noted.
+  function applyStyle(plan, styleId) {
+    if (!ES || !ES.getStyle || !plan || !Array.isArray(plan.beats)) return { plan, notes: [], changed: [] };
+    const style = ES.getStyle(styleId);
+    const out = clone(plan);
+    const notes = [];
+    const changed = [];
+    const allowed = new Set(style.blocks);
+    const last = out.beats.length - 1;
+    out.beats.forEach((beat, i) => {
+      if (!beat.block) setBlock(beat, ES.blockOf(beat));
+      const was = typeOf(beat);
+      if (allowed.has(was) || (i === last && was === 'endcard')) return;
+      const can = candidates(beat, i === 0);
+      const pick = Object.keys(can).find(t => allowed.has(t) && t !== was) || (allowed.has('statement') ? 'statement' : null);
+      if (pick && can[pick]) { setBlock(beat, can[pick]); changed.push(beat.id); } else notes.push(`Scene ${i + 1} (${ES.BLOCKS[was].label}) is not a ${style.label} block; it is kept as it is.`);
+    });
+    out.esStyle = style.id;
+    delete out.recipe;
+    return { plan: out, notes, changed };
+  }
+
+  return { RECIPES, RECIPE_IDS, LOOK_IDS, get, list, validate, directorSteer, planRequest, suggest, applyRecipe, candidates, rankOf, markedWord, styleFor, applyStyle };
 }));

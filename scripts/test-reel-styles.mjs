@@ -222,4 +222,48 @@ test('withLook / elementTokens(style, element, look): the ES style wears the loo
 });
 
 
+// ─── Reels Studio v3: the four styles ───────────────────────────────────
+const E = require('../reel-es.js');
+test('v3: exactly four styles with their ids, labels and API; one ES engine draws them all', () => {
+  assert.deepEqual(E.STYLE_IDS, ['gametape', 'statcard', 'receipts', 'hypecut']);
+  assert.deepEqual(E.STYLE_IDS.map(id => E.STYLES[id].label), ['Game Tape', 'Stat Card', 'Receipts', 'Hype Cut']);
+  E.STYLE_IDS.forEach(id => {
+    const st = E.STYLES[id];
+    ['id', 'label', 'blurb', 'blocks', 'order', 'media', 'pacing', 'motion', 'voice', 'music', 'previewPlan', 'look'].forEach(k => assert.ok(st[k] != null, `${id}.${k}`));
+    assert.ok(st.blocks.every(b => E.BLOCK_TYPES.includes(b)), `${id} blocks`);
+    assert.ok(st.order.every(b => st.blocks.includes(b)), `${id} order uses its own blocks`);
+    assert.equal(st.order[0], 'hook'); assert.equal(st.order[st.order.length - 1], 'endcard');
+    assert.ok(st.media.clips >= 0 && st.media.clips <= 1 && st.media.photos >= 0 && st.media.photos <= 1);
+    assert.equal(S.get(id).engine, 'es', `${id} draws on the ES engine`);
+    assert.deepEqual(E.themes.validateLook(E.themes.LOOKS[st.look]), [], `${id} look ${st.look}`);
+    assert.equal(F.visualMixFor(id), st.media.clips, `${id} clip share agrees with reel-formats`);
+    // The preview plan builds and lints clean.
+    const tl = R.buildTimeline(st.previewPlan, { style: id, corpus: JSON.stringify(st.previewPlan) });
+    assert.equal(tl.reelStyle, id);
+    assert.equal(tl.look, st.look);
+  });
+  assert.deepEqual(E.STYLES.receipts.media, { clips: 0, photos: 0, clipsMin: 0 }, 'Receipts needs no footage');
+  assert.ok(E.STYLES.gametape.media.clipsMin >= 0.8);
+  assert.ok(E.STYLES.hypecut.pacing.beatMinMs < E.STYLES.receipts.pacing.beatMinMs, 'Hype Cut is faster');
+  assert.equal(S.GRID, undefined, 'one grid: reel-styles keeps no second GRID');
+});
+test('v3: old looks and recipes open in the closest style', () => {
+  const m = (look, recipe, plan) => E.legacyStyle(look, recipe, plan);
+  ['data', 'Data-led', 'stat-drop', 'Stat drop', 'Money story', 'versus'].forEach(x => assert.equal(m(x, '') === 'receipts' || m('', x) === 'receipts', true, x));
+  assert.equal(m('photo'), 'statcard'); assert.equal(m('Photo-led'), 'statcard');
+  ['bold', 'countdown', 'hype'].forEach(x => assert.equal(m(x), 'hypecut', x));
+  ['paper', 'ink', 'blue', 'team', 'minimal', 'quote', 'explainer'].forEach(x => {
+    assert.equal(m(x, '', { beats: [] }), 'receipts', x);
+    assert.equal(m(x, '', { beats: [{ clip: 'c1' }] }), 'gametape', `${x} with clips`);
+  });
+  assert.equal(E.styleOf({ esStyle: 'gametape', style: 'es', look: 'data' }), 'gametape', 'plan.esStyle first (SOURCING stores it there)');
+  assert.equal(E.styleOf({ reelStyle: 'statcard', look: 'data' }), 'statcard');
+  assert.equal(E.styleOf({ style: 'hypecut' }), 'hypecut');
+  assert.equal(E.styleOf({ style: 'es', look: 'bold' }), 'hypecut');
+  assert.equal(E.styleOf({}), 'receipts');
+  // An old reel keeps drawing in its look; it opens in the closest style.
+  const tl = R.buildTimeline({ format: 'explainer', look: 'ink', beats: [{ id: 'b1', kind: 'hook', text: 'Old reel here', vo: 'Old reel.' }] }, { style: 'es' });
+  assert.equal(tl.look, 'ink'); assert.equal(tl.reelStyle, 'receipts');
+});
+
 console.log(process.exitCode ? '\nReel styles tests failed.' : `\nAll ${passed} reel styles tests passed.`);

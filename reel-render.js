@@ -69,7 +69,9 @@
   const W = 1080;
   const H = 1920;
   const FPS = 30;
-  const SAFE = { left: 65, right: 1015, top: 270, bottom: 1580 };
+  // v3 (one grid): the sides follow the ES safe frame (40 px); the older
+  // top and bottom band stays for the retired styles and the data formats.
+  const SAFE = { left: 40, right: 1040, top: 270, bottom: 1580 };
   const MARGIN = 84; // text column x 84–996, inside the safe zone
   const COL = W - 2 * MARGIN;
   const ZONE = { graphicTop: 360, graphicBottom: 1250, captionBaseline: 1500, captionTop: 1330 };
@@ -171,9 +173,55 @@
 
   // Caption cards: 1–3 words for hype ('highlight'), up to 6 on two short
   // lines for 'box'. A card ends at punctuation or a pause, never mid-beat.
-  function captionCards(words, { style = 'highlight', maxWords, maxChars } = {}) {
+  // v3 (ES captions): cards follow phrases. Words are split into phrases at
+  // punctuation, a beat change or a pause; each phrase is cut into cards of
+  // 1-3 words so no card ends on a word that leads into the next ("to",
+  // "his", "on") and lone words are rare: "26 GOT BACK / TO 90%." rather than
+  // "BACK, 26 GOT".
+  const CARD_LEAD = new Set(['the', 'a', 'an', 'to', 'of', 'in', 'on', 'at', 'for', 'and', 'but', 'or', 'with', 'by', 'his', 'her', 'their', 'its', 'our', 'your', 'my', 'from', 'as', 'than', 'that', 'into']);
+  function phraseCards(words, mw, mc) {
+    const bare = w => String(w || '').toLowerCase().replace(/[^a-z0-9']/g, '');
+    const phrases = [];
+    let cur = [];
+    words.forEach((word, i) => {
+      const prev = words[i - 1];
+      if (cur.length && (prev.beat !== word.beat || word.s - prev.e > 350)) { phrases.push(cur); cur = []; }
+      cur.push(i);
+      // "Jan. 11", "No. 1", "St. Louis": an abbreviation's full stop is not a phrase end.
+      const next = words[i + 1];
+      const abbr = /^(?:[A-Z][a-z]{0,3}|[A-Z])\.$/.test(word.w) && next && next.beat === word.beat && /^[\dA-Z]/.test(next.w);
+      if (/[.!?;:,]$/.test(word.w) && !abbr) { phrases.push(cur); cur = []; }
+    });
+    if (cur.length) phrases.push(cur);
+    const out = [];
+    phrases.forEach(ph => {
+      const n = ph.length;
+      const best = new Array(n + 1).fill(null);
+      best[0] = { cost: 0, cuts: [] };
+      for (let i = 1; i <= n; i += 1) {
+        for (let k = 1; k <= Math.min(mw, i); k += 1) {
+          const from = i - k;
+          if (!best[from]) continue;
+          const ids = ph.slice(from, i);
+          const chars = ids.reduce((a, j) => a + words[j].w.length, 0) + k - 1;
+          if (chars > mc && k > 1) continue;
+          const last = bare(words[ids[ids.length - 1]].w);
+          const cost = best[from].cost + 1 + (k === 1 && n > 1 ? 1.5 : 0) + (i < n && CARD_LEAD.has(last) ? 3 : 0);
+          if (!best[i] || cost < best[i].cost) best[i] = { cost, cuts: [...best[from].cuts, ids] };
+        }
+      }
+      (best[n] ? best[n].cuts : ph.map(j => [j])).forEach(ids => out.push({ s: words[ids[0]].s, e: words[ids[ids.length - 1]].e, words: ids, beat: words[ids[0]].beat }));
+    });
+    out.forEach((c, i) => {
+      const next = out[i + 1];
+      c.e = next && next.beat === c.beat && next.s - c.e < 600 ? next.s : c.e + 220;
+    });
+    return out;
+  }
+  function captionCards(words, { style = 'highlight', maxWords, maxChars, phrases = false } = {}) {
     const mw = maxWords || (style === 'box' ? 6 : 3);
     const mc = maxChars || (style === 'box' ? 34 : 20);
+    if (phrases) return phraseCards(words, mw, mc);
     const cards = [];
     let card = null;
     words.forEach((word, index) => {
@@ -369,9 +417,27 @@
     return hosts.length ? `Source: ${hosts.slice(0, 3).join(', ')}` : '';
   }
 
+  // The point a picture is framed on: its verified head, else the centre of
+  // its focus box, else the upper third (the old fixed crop).
+  function focusPoint(asset) {
+    const a = asset || {};
+    const hd = Array.isArray(a.head) ? { x: a.head[0], y: a.head[1] } : a.head;
+    const ok = v => Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 1;
+    if (hd && ok(hd.x) && ok(hd.y)) return [Number(hd.x), Number(hd.y)];
+    const f = Array.isArray(a.focus) ? { x: a.focus[0], y: a.focus[1], w: a.focus[2], h: a.focus[3] } : a.focus;
+    if (f && ok(f.x) && ok(f.y) && ok(f.w) && ok(f.h)) return [Number(f.x) + Number(f.w) / 2, Number(f.y) + Number(f.h) * 0.3];
+    return [0.5, 0.32];
+  }
   function buildTimeline(plan, opts = {}) {
     const fmt = F.FORMATS[plan && plan.format] ? plan.format : 'explainer';
     const style = S.get(opts.style || (plan && plan.style));
+    // Reels Studio v3: the reel's style (Game Tape, Stat Card, Receipts, Hype
+    // Cut). Passed as opts.style / opts.reelStyle, or read from the plan (an
+    // old plan opens in the closest style).
+    const E0 = style.engine === 'es' ? getES() : null;
+    const v3Id = [opts.esStyle, opts.reelStyle, opts.style, plan && plan.esStyle, plan && plan.reelStyle, plan && plan.style].find(id => E0 && E0.isStyle && E0.isStyle(id)) || '';
+    const reelStyle = E0 && E0.styleOf ? (v3Id || E0.styleOf(plan || {})) : '';
+    const pacing = reelStyle && v3Id ? E0.getStyle(reelStyle).pacing : null;
     // Data formats (Game Swing, Moment Replay, Archive) build a v2 timeline:
     // the data block, beat refs and the data beat kinds. News formats take
     // the v1 path below unchanged (byte-identical output, contract §8).
@@ -418,9 +484,9 @@
       const last = index === list.length - 1;
       // Data plans (reel-data.js) carry holdMs: the beat's designed hold.
       const hold = dm && Number(raw.holdMs) > 0 ? Math.max(1200, Math.min(7000, Math.round(Number(raw.holdMs)))) : 0;
-      const min = Math.max(hold, (dm && DATA_MIN_MS[kind]) || 0, ES && kind === 'hook' ? 3000 : 0) || F.PACE.beatMinMs[kind] || F.PACE.beatMinMs.default;
+      const min = Math.max(hold, (dm && DATA_MIN_MS[kind]) || 0, ES && kind === 'hook' ? (pacing ? pacing.hookMs : 3000) : 0, ES && pacing && kind !== 'hook' ? pacing.beatMinMs : 0) || F.PACE.beatMinMs[kind] || F.PACE.beatMinMs.default;
       // ES: the reel ends 3 s after the end card starts.
-      const dur = isEnd ? ES.LIMITS.endcardMs : Math.max(min, voMs ? lead + voMs + (last ? F.PACE.endTailMs : F.PACE.tailMs) : min);
+      const dur = isEnd ? ES.LIMITS.endcardMs : Math.max(min, voMs ? lead + voMs + (last ? F.PACE.endTailMs : (pacing ? pacing.tailMs : F.PACE.tailMs)) : min);
       const beat = {
         id, kind, inMs: t, outMs: t + dur,
         text: clean(raw.text, 120), vo, emphasis: clean(raw.emphasis, 40),
@@ -461,7 +527,8 @@
           })() : null,
           // Push-ins only, at most +8% (rule: <= 10%); a repeated photo punches
           // in tighter on a different focus instead of repeating the move.
-          motion: ES ? { from: ES.MOTION.driftFrom, to: asset && isClip(asset) ? 1.03 : ES.MOTION.driftTo, focus: [0.5, 0.32], drift: [0, 0] } : asset && isClip(asset) ? { from: 1.0, to: 1.03, focus: [0.5, 0.42], drift: [0, 0] } : sameAgain
+          // ES: the drift is centred on the face (photo-verify's head / focus box), not a fixed point.
+          motion: ES ? { from: ES.MOTION.driftFrom, to: asset && isClip(asset) ? 1.03 : ES.MOTION.driftTo, focus: focusPoint(assets[asset]), drift: [0, 0] } : asset && isClip(asset) ? { from: 1.0, to: 1.03, focus: [0.5, 0.42], drift: [0, 0] } : sameAgain
             ? { from: 1.1, to: 1.16, focus: [odd ? 0.42 : 0.58, 0.34], drift: [odd ? 0.06 : -0.06, 0.02] }
             : { from: 1.0, to: 1.08, focus: [0.5, 0.36], drift: [odd ? -0.05 : 0.05, -0.03] },
         });
@@ -539,14 +606,17 @@
     }
 
     const highlight = accessibleHighlight(team ? team.colors : []);
-    const cards = captionCards(words, captionStyle === 'es' ? { style: 'highlight', maxWords: 3, maxChars: 22 } : { style: captionStyle === 'box' ? 'box' : 'highlight' });
+    const cards = captionCards(words, captionStyle === 'es' ? { style: 'highlight', maxWords: 3, maxChars: 22, phrases: true } : { style: captionStyle === 'box' ? 'box' : 'highlight' });
     const sx = plan && plan.strip && plan.strip.value ? { label: clean(plan.strip.label, 32), value: clean(plan.strip.value, 14), of: clean(plan.strip.of, 14), note: clean(plan.strip.note, 48), tone: plan.strip.tone === 'good' ? 'good' : 'bad' } : null;
     const out = {
       v: 1, fps: FPS, size: [W, H], durationMs,
       format: fmt, tag: F.FORMATS[fmt].tag, sport: clean(plan && plan.sport, 12), title: clean(plan && plan.title, 140),
       style: style.id, limits: { maxSeconds: style.seconds.max, targetSeconds: style.seconds.target },
       // The ES look (reel-es-themes.js): the person's pick, the plan's, else Paper.
-      ...(style.engine === 'es' && getES() ? { look: getES().themes.lookId(opts.look || (plan && plan.look)) } : {}),
+      // v3: a reel built in one of the four styles draws with that style's
+      // look; an old reel keeps its look and opens in the closest style.
+      ...(style.engine === 'es' && getES() ? { look: getES().themes.lookId(v3Id && !opts.look ? getES().themes.lookForReelStyle(reelStyle) : (opts.look || (plan && plan.look))) } : {}),
+      ...(reelStyle ? { reelStyle, esStyle: reelStyle } : {}),
       eyebrow: clean(plan && plan.eyebrow, 48), series: plan && plan.series && plan.series.tag ? { tag: clean(plan.series.tag, 28) } : null,
       strip: style.chrome.strip ? sx : null,
       team, highlight, captionStyle, voice: { mode: voiceMode },
@@ -673,7 +743,7 @@
     return { ops, height, bottom: top + height };
   }
   const upperMeasure = measure => (text, f) => measure(String(text).toUpperCase(), f);
-  const ES_TEMPLATES = new Set(['es-hook', 'es-statement', 'es-number', 'es-dots', 'es-compare', 'es-quote', 'es-endcard']);
+  const ES_TEMPLATES = new Set(['es-hook', 'es-statement', 'es-number', 'es-dots', 'es-compare', 'es-quote', 'es-endcard', 'es-photoCard', 'es-statTiles', 'es-dotGrid', 'es-streak', 'es-rankTile', 'es-tagPill', 'es-clipLabel']);
 
   // Ops for one graphic. Boxes: every op has x, y (baseline), w, size, so a
   // box is [x, y - size*CAP, w, size*CAP] (what the lint checks against SAFE).
@@ -1238,7 +1308,7 @@
   // The ES video system: the mark on the hook (the first scene) and the end card only.
   function showsMark(timeline, g) {
     if (!g) return false;
-    if (isEs(timeline)) return getES().MARK_BLOCKS.has((g.data && g.data.block && g.data.block.type) || '');
+    if (isEs(timeline)) return getES().showsMark ? getES().showsMark(g) : getES().MARK_BLOCKS.has((g.data && g.data.block && g.data.block.type) || '');
     const list = (timeline && timeline.tracks && timeline.tracks.graphics) || [];
     return END_TEMPLATES.has(g.template) || g.inMs === 0 || g === list[0] || (list[0] && g.id === list[0].id);
   }
@@ -1256,7 +1326,9 @@
   }
 
   // ─── Styled engine (explainer, series, countdown; components in classic) ─
-  const G = S.GRID;
+  // One grid (v3): the ES frame from reel-es.js. The retired styles keep
+  // their own caption band (captionTop / captionBottom) inside it.
+  const G = (() => { const E = getES(); const g = E && E.GRID ? E.GRID : { unit: 8, left: 60, right: 1020, top: 300, bottom: 1640 }; return { unit: g.unit, left: g.left, right: g.right, top: g.top, bottom: g.bottom, captionTop: 1336, captionBottom: 1512 }; })();
   const CW = G.right - G.left; // 904
   const snap = v => Math.round(v / G.unit) * G.unit;
   const CHART_LAYOUTS = new Set(['stat-hero', 'bars', 'versus', 'dotrank', 'chips', 'tiles', 'roles', 'mystery']);

@@ -106,7 +106,8 @@
       const dur = beat.outMs - beat.inMs;
       if (dur > LIMITS.beatMaxMs) issues.push(issue('pacing', 'warning', `Beat ${index + 1} holds for ${(dur / 1000).toFixed(1)} s.`, 'Split it: one idea per beat.', beat.id));
       (RULES && RULES.BANNED ? RULES.BANNED : []).forEach(rule => {
-        if (rule.re.test(`${beat.text} ${beat.vo}`)) issues.push(issue('style', 'warning', `Beat ${index + 1}: ${rule.why}.`, 'Rewrite the line in the ES voice.', beat.id));
+        // A rank ("#1 TE") is not a hashtag.
+        if (rule.re.test(`${beat.text} ${beat.vo}`.replace(/#\d+\b/g, ''))) issues.push(issue('style', 'warning', `Beat ${index + 1}: ${rule.why}.`, 'Rewrite the line in the ES voice.', beat.id));
       });
     });
     const last = timeline.beats[timeline.beats.length - 1];
@@ -210,6 +211,14 @@
       // v2 (data formats): a beat's own refs back the numbers it shows.
       const set = v2 && Array.isArray(beat.refs) && beat.refs.length ? new Set([...sourceSet, ...R.provenanceNumbers(timeline, beat.refs)]) : wholeData;
       const bad = F.unsourcedNumbers(beat, set, timeline.format);
+      // v3 blocks (tiles, dot grid, rank tiles, tags, card labels): every
+      // number they draw needs a source too. A year in a label ("2011 · GB")
+      // and a rank ("#1") are checked like any other number.
+      const vb = beat.block && ES && ES.BLOCKS[beat.block.type] && ES.BLOCKS[beat.block.type].v3 ? beat.block : null;
+      if (vb) {
+        const shown = [...ES.blockStrings(vb), ...(vb.type === 'dotGrid' ? [vb.total, ...(vb.groups || []).map(g => g.n)] : [])];
+        F.numbersIn(shown.join(' ')).forEach(n => { if (!set.has(n) && !bad.includes(n)) bad.push(n); });
+      }
       if (bad.length) issues.push(issue('numbers', 'critical', `Beat ${index + 1}: ${bad.join(', ')} ${bad.length > 1 ? 'are' : 'is'} not in the sources.`, 'Fix the number, or add where it comes from under Sources.', beat.id));
     });
     const planBad = F.unsourcedPlanNumbers({ eyebrow: timeline.eyebrow, series: timeline.series, strip: timeline.strip }, wholeData);
