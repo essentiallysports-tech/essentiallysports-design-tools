@@ -77,6 +77,15 @@ async function waitFor(expr, ms = 6000) {
   return false;
 }
 
+async function key(name) {
+  const k = { Tab: [9, 'Tab'], Enter: [13, 'Enter'], Escape: [27, 'Escape'] }[name];
+  await c.send('Input.dispatchKeyEvent', { type: 'keyDown', key: name, code: k[1], windowsVirtualKeyCode: k[0], text: name === 'Enter' ? '\r' : undefined });
+  await c.send('Input.dispatchKeyEvent', { type: 'keyUp', key: name, code: k[1], windowsVirtualKeyCode: k[0] });
+  await sleep(150);
+  return c.evaluate("(() => { const a = document.activeElement; return { tag: a.tagName, cls: String(a.className || ''), text: (a.getAttribute('aria-label') || a.textContent || '').trim().slice(0, 60) }; })()");
+}
+const focusStart = "(() => { document.body.setAttribute('tabindex', '-1'); document.body.focus(); document.body.removeAttribute('tabindex'); return true; })()";
+
 // ── Checks ────────────────────────────────────────────────────────────────
 const GALLERY_ROWS = [
   { id: '00000000-0000-4000-8000-000000000001', title: 'Scheffler wins again', workspace: 'Social Media', workspace_variant: 'Cover', team_or_league: 'PGA Tour', creator_name: 'Priya Shah', exported_at: new Date(Date.now() - 3600e3).toISOString(), output_size: '1080x1350', has_design: true },
@@ -170,6 +179,30 @@ const CHECKS = [
       await waitFor("/No trending moment for this sport/.test(document.body.innerText)", 6000);
       const after = await c.evaluate("document.body.innerText");
       if (!/No trending moment for this sport/.test(after)) return 'empty trends no longer say "No trending moment"';
+      return '';
+    },
+  },
+  {
+    // Keyboard users tabbed through ~20 sidebar links before the work on every
+    // page. The first Tab stop is now "Skip to main content".
+    id: 'skip-link',
+    async run() {
+      for (const [url, expectTag] of [['/generate.html', 'MAIN'], ['/gallery.html', 'MAIN'], ['/index.html#instagram', 'DIV']]) {
+        if (!await open(url, { ready: "document.querySelector('.es-skip-link') && document.querySelector('.es-sidebar')", ms: 15000 })) return `${url}: no skip link`;
+        await sleep(500);
+        await c.evaluate(focusStart);
+        const first = await key('Tab');
+        if (!/es-skip-link/.test(first.cls)) return `${url}: first Tab stop is ${first.tag}.${first.cls} "${first.text}", not the skip link`;
+        const shown = await c.evaluate("(() => { const r = document.querySelector('.es-skip-link').getBoundingClientRect(); return r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight; })()");
+        if (!shown) return `${url}: the focused skip link is off screen`;
+        const before = await c.evaluate("document.querySelector('.app')?.className || ''");
+        const landed = await key('Enter');
+        if (landed.tag !== expectTag) return `${url}: Enter on the skip link went to ${landed.tag}.${landed.cls} "${landed.text}"`;
+        const after = await c.evaluate("document.querySelector('.app')?.className || ''");
+        if (before !== after) return `${url}: the Enter that followed the skip link also pressed a control (${before} -> ${after})`;
+        const next = await key('Tab');
+        if (/es-sidebar|es-skip-link/.test(next.cls)) return `${url}: Tab after skipping went back into the navigation`;
+      }
       return '';
     },
   },
