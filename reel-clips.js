@@ -31,19 +31,27 @@
   // (2026-11-18, $0.75 in / $3.75 out per 1M), strong on frames and sports
   // scenes, about $0.01 per reel for 8 clips x 3 frames. Claude Haiku 5.5
   // ($0.10 / $0.50, vision) is the fallback when Gemini fails.
+  // Reels v3: up to 24 candidates per reel (was 8), 4 per call, capped at
+  // $0.03 a reel (24 x 3 frames ~ $0.030 on Gemini 3.8 Flash).
   const JUDGE = {
     model: 'google/gemini-3.8-flash',
     fallback: 'anthropic/claude-haiku-5.5',
-    maxUsdPerReel: 0.10,
-    maxClips: 8,
-    perCall: 3, // clips per request (keeps a request well under the body cap)
+    maxUsdPerReel: 0.03,
+    maxClips: 24,
+    perCall: 4, // clips per request (4 x 3 small JPEGs ~ 160-240 KB; the mode allows 320 KB)
     framesPerClip: 3,
     frameWidth: 320,
     tokensPerFrame: 260, // Gemini counts a small image at ~258 tokens; Claude ~(w*h)/750
     promptTokens: 900,
-    outTokensPerClip: 170,
+    outTokensPerClip: 120,
     cacheDays: 7,
   };
+  // The relevance gate (Reels v3): a clip goes on a scene only when the judge
+  // confirms its subject (relevance >= 7 of 10) and, when the scene names a
+  // moment, the moment (>= 5), and it is real footage (not a graphic or a
+  // studio segment). No gate pass, no clip: the scene takes a verified photo
+  // or an infographic block instead.
+  const GATE = { relevance: 7, moment: 5, badKinds: ['graphic-or-text', 'studio-talk'] };
   const PRICES = {
     'google/gemini-3.8-flash': { input: 0.75, output: 3.75 },
     'google/gemini-3.5-flash-lite': { input: 0.30, output: 2.50 },
@@ -63,12 +71,209 @@
   // The players or teams the beat is about: its photo query, versus names,
   // rank name and words of its text; the reel's team as a backstop.
   function subjectFor(beat = {}, plan = {}) {
-    const team = plan.team && plan.team.name ? String(plan.team.name) : '';
-    const named = [beat.photo, beat.name, ...(Array.isArray(beat.versus) ? beat.versus.map(v => v && v.name !== '?' ? (v.photo || v.name) : '') : [])].filter(Boolean).map(String);
-    const players = named.filter(n => !team || norm(n) !== norm(team));
-    const terms = [...new Set([...named.flatMap(tokens), ...tokens(beat.text).slice(0, 6)])];
-    const key = norm(players[0] || team || beat.text || '').slice(0, 40) || 'reel';
-    return { key, terms, team, teamTerms: tokens(team), players };
+    // Reels v3: the director's per-scene subject leads when there is one.
+    const sub = beat.subject && typeof beat.subject === 'object' && beat.subject.name ? subjectOfBeat(beat, plan) : null;
+    const team = sub && sub.team ? sub.team : (plan.team && plan.team.name ? String(plan.team.name) : '');
+    const named = [sub && sub.type === 'player' ? sub.name : '', beat.photo, beat.name, ...(Array.isArray(beat.versus) ? beat.versus.map(v => v && v.name !== '?' ? (v.photo || v.name) : '') : [])].filter(Boolean).map(String);
+    const players = [...new Set(named.filter(n => !team || norm(n) !== norm(team)))];
+    const terms = [...new Set([...named.flatMap(tokens), ...tokens(sub && sub.moment).slice(0, 4), ...tokens(beat.text).slice(0, 6)])];
+    const key = sub ? sub.key : (norm(players[0] || team || beat.text || '').slice(0, 40) || 'reel');
+    return { key, terms, team, teamTerms: tokens(team), players, ...(sub ? { type: sub.type, name: sub.name, moment: sub.moment || '', date: sub.date || '' } : {}) };
+  }
+
+  // ─── Reels v3: styles, scene subjects, the relevance gate ───────────────
+  const STYLE_IDS = ['gametape', 'statcard', 'receipts', 'hypecut'];
+  // What media each style puts on its scenes (ENGINE's ReelES.STYLES decides
+  // the blocks; this is only the sourcing side). order: what to try, in turn.
+  const STYLE_MEDIA = {
+    gametape: { clips: 1, photos: 1, order: ['clip', 'photo'] },
+    hypecut: { clips: 1, photos: 1, order: ['clip', 'photo'] },
+    statcard: { clips: 0, photos: 1, order: ['photo'] },
+    receipts: { clips: 0, photos: 0, order: [] },
+  };
+  // Blocks that carry a picture, and which kind ('any' = the style's order).
+  const MEDIA_BLOCKS = { hook: 'any', statement: 'any', tagPill: 'any', clipLabel: 'clip', photoCard: 'photo' };
+  // Contract legacy map: look / recipe -> style.
+  const LEGACY = {
+    receipts: ['data', 'data-led', 'stat drop', 'stat-drop', 'statdrop', 'money story', 'money', 'versus', 'paper', 'ink', 'blue', 'team', 'minimal', 'quote', 'explainer'],
+    statcard: ['photo', 'photo-led'],
+    hypecut: ['bold', 'countdown', 'hype'],
+  };
+  const lc = v => String(v == null ? '' : v).trim().toLowerCase();
+  function legacyStyle(look = '', recipe = '', plan = null) {
+    const hasClips = Boolean(plan && Array.isArray(plan.beats) && plan.beats.some(b => b && (b.visual === 'clip' || (b.block && b.block.type === 'clipLabel'))));
+    for (const v of [lc(recipe), lc(look)]) {
+      if (!v) continue;
+      if (LEGACY.statcard.includes(v)) return 'statcard';
+      if (LEGACY.hypecut.includes(v)) return 'hypecut';
+      if (LEGACY.receipts.includes(v)) {
+        const plain = ['paper', 'ink', 'blue', 'team', 'minimal', 'quote', 'explainer'].includes(v);
+        return plain && hasClips ? 'gametape' : 'receipts';
+      }
+    }
+    return hasClips ? 'gametape' : 'receipts';
+  }
+  // The reel's style: ENGINE's ReelES.styleOf when loaded, else the plan's own.
+  function styleOf(plan = {}, wanted = '') {
+    if (STYLE_IDS.includes(lc(wanted))) return lc(wanted);
+    const p = plan || {};
+    const ES = (typeof self !== 'undefined' && self.ReelES) || null;
+    if (ES && typeof ES.styleOf === 'function') { try { const id = ES.styleOf(p); if (STYLE_IDS.includes(id)) return id; } catch { /* fall through */ } }
+    if (STYLE_IDS.includes(p.esStyle)) return p.esStyle;
+    if (STYLE_IDS.includes(p.style)) return p.style;
+    return legacyStyle(p.look, p.recipe, p);
+  }
+
+  const SUBJECT_TYPES = ['player', 'team', 'moment', 'game'];
+  const cleanText = (v, n) => String(v == null ? '' : v).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+  const subjectKey = sub => norm(sub && sub.name).slice(0, 40) || 'reel';
+  // A scene's subject: the director's (cleaned), else derived from the beat's
+  // photo query, names and the reel's team. -> { type, name, team, date, moment, key }
+  function subjectOfBeat(beat = {}, plan = {}) {
+    const raw = beat.subject && typeof beat.subject === 'object' ? beat.subject : null;
+    const reelTeam = plan.team && plan.team.name ? String(plan.team.name) : '';
+    let name = raw ? cleanText(raw.name, 60) : '';
+    let type = raw && SUBJECT_TYPES.includes(raw.type) ? raw.type : '';
+    const team = raw ? cleanText(raw.team, 60) || reelTeam : reelTeam;
+    if (!name) {
+      const block = beat.block || {};
+      const named = [block.photo, beat.photo, beat.name].map(v => cleanText(v, 60)).filter(Boolean);
+      name = named[0] || team || '';
+      type = name && team && norm(name) === norm(team) ? 'team' : (name ? 'player' : 'moment');
+      if (!name) name = cleanText(plan.title || beat.text, 60);
+    }
+    if (!type) type = team && norm(name) === norm(team) ? 'team' : 'player';
+    const out = { type, name, team: type === 'team' ? name : team };
+    const date = raw ? cleanText(raw.date, 20) : '';
+    const moment = raw ? cleanText(raw.moment, 60) : '';
+    if (date) out.date = date;
+    if (moment) out.moment = moment;
+    out.key = subjectKey(out);
+    return out;
+  }
+  // What a beat wants on screen in this style: 'clip', 'photo' or 'none'.
+  function wantsFor(beat = {}, style = 'gametape') {
+    const media = STYLE_MEDIA[style] || STYLE_MEDIA.gametape;
+    if (!media.order.length) return 'none';
+    const type = beat.block && beat.block.type ? beat.block.type : (beat.kind === 'hook' ? 'hook' : (['context', 'point', 'payoff'].includes(beat.kind) ? 'statement' : ''));
+    const takes = MEDIA_BLOCKS[type];
+    if (!takes || beat.kind === 'cta') return 'none';
+    if (takes === 'any') return media.order[0];
+    if (takes === 'clip') return media.clips ? 'clip' : (media.photos ? 'photo' : 'none');
+    return media.photos ? 'photo' : 'none';
+  }
+  const relOf = (j, key) => (j && j.relevance && Number.isFinite(j.relevance[key]) ? j.relevance[key] : null);
+  const momOf = (j, key) => (j && j.moment && Number.isFinite(j.moment[key]) ? j.moment[key] : null);
+  // The judge confirmed this clip for this subject.
+  function passesGate(judgement, subject = {}, gate = GATE) {
+    if (!judgement) return false;
+    if ((gate.badKinds || []).includes(judgement.kind)) return false;
+    const rel = relOf(judgement, subject.key);
+    if (rel == null || rel < gate.relevance) return false;
+    if (subject.moment) { const m = momOf(judgement, subject.key); if (m == null || m < gate.moment) return false; }
+    return true;
+  }
+  // Only when no judge can run (AI off, free mode): the post must name the
+  // player in full, or be the team's own official post (strict; never a
+  // keyword hit on one word).
+  function textGate(clip = {}, sub = {}) {
+    const players = Array.isArray(sub.players) ? sub.players : [];
+    const subject = { ...sub, name: sub.name || players[0] || sub.team || '', type: sub.type || (players.length ? 'player' : 'team') };
+    if (!subject.name) return false;
+    const text = ` ${norm([clip.text, ...(clip.players || [])].join(' '))} `;
+    const source = clip.source || clip.sourceKind;
+    const trusted = ['official', 'league', 'media'].includes(source) || clip.trusted === true;
+    if (!trusted) return false;
+    if (subject.type === 'team') {
+      const tagged = (clip.teams || []).some(t => norm(t) === norm(subject.name));
+      return source === 'official' && tagged;
+    }
+    const parts = tokens(subject.name);
+    if (parts.length < 2) return false;
+    return text.includes(` ${parts.join(' ')} `);
+  }
+  // The clips worth judging, best first, taking turns between the scenes so
+  // every scene's best candidates are judged before a 2nd-best of another.
+  //   scenes: [{ beatId, subject, clips }]   judged: (url, key) -> bool
+  function judgeQueue(scenes = [], { cap = JUDGE.maxClips, judged = () => false } = {}) {
+    const lists = scenes.map(s => (s.clips || []).filter(c => c && c.url && !judged(c.url, s.subject && s.subject.key))
+      .map(c => ({ c, score: heuristicScore(c, subjectFor({ subject: s.subject }, {})).score }))
+      .sort((a, b) => b.score - a.score).map(x => x.c));
+    const out = new Map();
+    for (let round = 0; out.size < cap && lists.some(l => l.length > round); round += 1) {
+      lists.forEach((list, i) => {
+        const c = list[round];
+        if (!c || out.size >= cap && !out.has(c.url)) return;
+        const e = out.get(c.url) || { url: c.url, beatIds: [], keys: [] };
+        if (!e.beatIds.includes(scenes[i].beatId)) e.beatIds.push(scenes[i].beatId);
+        const key = scenes[i].subject && scenes[i].subject.key;
+        if (key && !e.keys.includes(key)) e.keys.push(key);
+        out.set(c.url, e);
+      });
+    }
+    return [...out.values()].slice(0, cap);
+  }
+  // An infographic block for a scene with no relevant picture.
+  function fallbackBlock(beat = {}) {
+    const b = beat.block || {};
+    const words = cleanText(beat.text, 90);
+    if (beat.stat && /\d/.test(String(beat.stat.value || ''))) return { type: 'statTiles', tiles: [{ value: cleanText(beat.stat.value, 16), label: cleanText(beat.stat.label, 24), tone: 'blue' }] };
+    if (b.type === 'hook' && Array.isArray(b.pills)) return { ...b, media: undefined };
+    if (b.type === 'statement' && Array.isArray(b.lines)) { const out = { ...b }; delete out.media; return out; }
+    if (b.type === 'tagPill' && b.text) return { type: 'tagPill', text: b.text, tone: b.tone || 'ink' };
+    const text = cleanText(b.text || b.label || words, 90);
+    const lines = [];
+    let line = '';
+    text.split(' ').filter(Boolean).forEach(w => { if (!line) line = w; else if (`${line} ${w}`.length <= 14) line = `${line} ${w}`; else { lines.push(line); line = w; } });
+    if (line) lines.push(line);
+    const kept = lines.slice(0, 3).map(t => t.toUpperCase());
+    return { type: 'statement', lines: kept.map((t, i) => ({ text: t, color: i === kept.length - 1 && kept.length > 1 ? 'blue' : 'ink' })) };
+  }
+  // One pick per scene. scenes: [{ beatId, subject, wants, clips, photos, durMs }]
+  //   opts: { judgements, samples, judgeTimes, judgeAvailable, used:Set(clip urls), usedPhotos:Set }
+  // -> { [beatId]: { kind: 'clip'|'photo'|'none', clip?, segment?, relevance?, gate?, photo?, fallback?, why, candidates } }
+  function gatedPicks(scenes = [], { judgements = {}, samples = {}, judgeTimes = {}, judgeAvailable = true, used = new Set(), usedPhotos = new Set(), gate = GATE } = {}) {
+    const out = {};
+    const uses = new Map([...used].map(u => [u, 1]));
+    const photoUses = new Set(usedPhotos);
+    const J = url => { const j = judgements[url]; return j ? (typeof j.actionAt === 'function' ? j : withActionAt(j, judgeTimes[url] || [])) : null; };
+    // Scenes with a named player choose first.
+    const order = scenes.map((s, i) => ({ s, i })).sort((a, b) => ((b.s.subject && b.s.subject.type === 'player') - (a.s.subject && a.s.subject.type === 'player')) || a.i - b.i);
+    order.forEach(({ s }) => {
+      const subject = { ...subjectFor({ subject: s.subject }, {}), key: s.subject ? s.subject.key : 'reel' };
+      const ok = (s.clips || []).filter(c => c && c.url).map(clip => {
+        const j = J(clip.url);
+        const judged = Boolean(j && relOf(j, subject.key) != null);
+        const pass = judged ? passesGate(j, subject, gate) : (!judgeAvailable && textGate(clip, subject));
+        if (!pass) return null;
+        const sc = judgedScore(clip, subject, j);
+        const reused = uses.get(clip.url) || 0;
+        return { clip, score: sc.score - reused * 30, reused, relevance: judged ? relOf(j, subject.key) : null, moment: judged ? momOf(j, subject.key) : null, gate: judged ? 'judge' : 'text' };
+      }).filter(Boolean).sort((a, b) => b.score - a.score);
+      const photos = (s.photos || []).filter(p => p && p.verified === true && p.url);
+      const candidates = [...ok.map(x => ({ kind: 'clip', clip: x.clip, relevance: x.relevance, gate: x.gate })), ...photos.map(p => ({ kind: 'photo', photo: p }))];
+      const tryClip = () => {
+        const pick = ok.find(x => !x.reused) || null; // never the same clip on two scenes by default
+        if (!pick) return null;
+        const clipSec = (Number(pick.clip.durationMs) || 6000) / 1000;
+        const beatSec = Math.max(0.5, (Number(s.durMs) || 2500) / 1000);
+        const sm = (samples[pick.clip.url] || []).map((x, k) => ({ ...x, action: J(pick.clip.url) ? J(pick.clip.url).actionAt(k, x.t) : undefined }));
+        uses.set(pick.clip.url, (uses.get(pick.clip.url) || 0) + 1);
+        return { kind: 'clip', clip: pick.clip, segment: bestSegment(sm, beatSec, clipSec), relevance: pick.relevance, moment: pick.moment, gate: pick.gate, why: pick.gate === 'judge' ? `judge confirmed ${subject.name || 'the subject'} (${pick.relevance}/10)` : `post names ${subject.name}` };
+      };
+      const tryPhoto = () => {
+        const p = photos.find(x => !photoUses.has(x.sourceUrl || x.url)) || null;
+        if (!p) return null;
+        photoUses.add(p.sourceUrl || p.url);
+        return { kind: 'photo', photo: p, why: `verified photo of ${subject.name || 'the subject'}` };
+      };
+      let pick = null;
+      if (s.wants === 'clip') pick = tryClip() || tryPhoto();
+      else if (s.wants === 'photo') pick = tryPhoto();
+      if (!pick) pick = { kind: 'none', fallback: s.beat ? fallbackBlock(s.beat) : null, why: s.wants === 'none' ? 'no media in this style' : 'no relevant clip or verified photo' };
+      out[s.beatId] = { ...pick, candidates };
+    });
+    return out;
   }
 
   // ─── Free ranking (always on; the only ranking when AI is off) ──────────
@@ -169,7 +374,10 @@
   // ─── Assignment (one clip per beat, no reuse while others are free) ────
   //   beats: [{ id, durMs, ...plan beat }]
   //   opts: { judgements: { [url]: judgement }, samples: { [url]: [{t, motion, action}] }, used: Set(urls already on other beats) }
-  function assign(pool, beats, plan = {}, { judgements = {}, samples = {}, judgeTimes = {}, used = new Set(), minScore = 18 } = {}) {
+  // Reels v3: gated. A judged clip must pass the relevance gate for the
+  // beat's subject; an unjudged one only the strict text gate. Nothing that
+  // fails goes on a beat (no "best of the rest", no keyword fallback).
+  function assign(pool, beats, plan = {}, { judgements = {}, samples = {}, judgeTimes = {}, used = new Set(), minScore = 18, gate = GATE } = {}) {
     const out = {};
     const J = url => { const j = judgements[url]; return j ? (typeof j.actionAt === 'function' ? j : withActionAt(j, judgeTimes[url] || [])) : null; };
     const uses = new Map([...used].map(u => [u, 1]));
@@ -177,7 +385,10 @@
     const order = [...(beats || [])].map((beat, i) => ({ beat, i, subject: subjectFor(beat, plan) }))
       .sort((a, b) => (b.subject.players.length - a.subject.players.length) || (a.i - b.i));
     order.forEach(({ beat, subject }) => {
-      const ranked = (pool || []).map(clip => {
+      const ranked = (pool || []).filter(clip => {
+        const j = J(clip.url);
+        return j && relOf(j, subject.key) != null ? passesGate(j, subject, gate) : textGate(clip, subject);
+      }).map(clip => {
         const s = judgedScore(clip, subject, J(clip.url));
         const reused = uses.get(clip.url) || 0;
         // Reuse costs a lot: a free clip that is nearly as good wins.
@@ -218,6 +429,8 @@
     const action = (Array.isArray(raw.action) ? raw.action : []).slice(0, Math.max(1, frameCount)).map(v => clampN(v, 0, 10, 5));
     const relevance = {};
     if (raw.relevance && typeof raw.relevance === 'object') Object.entries(raw.relevance).slice(0, 12).forEach(([k, v]) => { relevance[norm(k).slice(0, 40)] = clampN(v, 0, 10, 0); });
+    const moment = {};
+    if (raw.moment && typeof raw.moment === 'object') Object.entries(raw.moment).slice(0, 12).forEach(([k, v]) => { moment[norm(k).slice(0, 40)] = clampN(v, 0, 10, 0); });
     const list = (v, n) => (Array.isArray(v) ? v : []).map(x => String(x || '').replace(/\s+/g, ' ').trim().slice(0, 40)).filter(Boolean).slice(0, n);
     return {
       kind: KINDS.includes(raw.kind) ? raw.kind : 'other',
@@ -226,6 +439,7 @@
       quality: clampN(raw.quality, 0, 10, 5),
       action,
       relevance,
+      moment,
       textOverlay: raw.textOverlay === true,
       note: String(raw.note || '').replace(/\s+/g, ' ').slice(0, 80),
     };
@@ -320,5 +534,5 @@
     return { samples, frames, times: frameTimes };
   }
 
-  return { JUDGE, PRICES, KINDS, KIND_FIT, SOURCE_FIT, subjectFor, heuristicScore, judgedScore, motionEnergy, bestSegment, preselect, assign, validateJudgement, withActionAt, judgeCost, reelJudgeEstimate, makeCache, sampleClip, norm };
+  return { JUDGE, GATE, PRICES, KINDS, KIND_FIT, SOURCE_FIT, STYLE_IDS, STYLE_MEDIA, MEDIA_BLOCKS, styleOf, legacyStyle, subjectOfBeat, subjectKey, wantsFor, passesGate, textGate, judgeQueue, gatedPicks, fallbackBlock, subjectFor, heuristicScore, judgedScore, motionEnergy, bestSegment, preselect, assign, validateJudgement, withActionAt, judgeCost, reelJudgeEstimate, makeCache, sampleClip, norm };
 }));

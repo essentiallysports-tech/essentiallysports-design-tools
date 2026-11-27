@@ -222,11 +222,11 @@ await test('ranking (AI off): the clip about the beat\'s player, fresh, official
   assert.ok(ranked.find(r => r[0] === 'old')[1] < ranked[0][1] - 15);
 });
 
-await test('assign: one clip per beat, no reuse while a fitting clip is free; each beat gets its own best clip', () => {
+await test('assign (v3, gated): each beat gets its own relevant clip; a beat no clip is about gets none (no fallback)', () => {
   const out = C.assign(POOL, BEATS, PL);
   assert.equal(out.b1.clip.url, 'https://x.com/mahomes');
   assert.equal(out.b2.clip.url, 'https://x.com/kelce');
-  assert.ok(out.b3 && !['https://x.com/mahomes', 'https://x.com/kelce'].includes(out.b3.clip.url), 'no reuse');
+  assert.equal(out.b3, undefined, 'no unjudged crowd clip for "The Chiefs offense": no random fallback');
   assert.ok(/about Patrick Mahomes/.test(out.b1.why));
   const one = C.assign([POOL[1]], BEATS.slice(0, 2).map(b => ({ ...b, photo: 'Patrick Mahomes' })), PL, { samples: { [POOL[1].url]: Array.from({ length: 9 }, (_, i) => ({ t: i, motion: 0.5 })) } });
   assert.ok(/reused/.test(one.b2.why));
