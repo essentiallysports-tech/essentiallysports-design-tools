@@ -34,8 +34,10 @@ const gatewayModule = () => require('./_ai-gateway.js');
 const PHOTO_FEATURE = 'reels-photo-verify';
 const REVIEW_FEATURE = 'reels-review';
 const LIMITS = {
-  scenes: 14,
-  subjects: 6, // clip / photo searches per reel
+  scenes: 32, // v4 reels run 80-100 s in chapters
+  subjects: 8, // clip subjects per reel (each walks the ladder)
+  photoSubjects: 8, // photo searches per reel (subjects, cards, teams)
+  budgetMs: 44000, // the whole scene-media call (reel-maker runs in 60 s)
   liveSearches: 2, // paid live clip searches per reel (the rest: library + free sources)
   visionSubjects: 2, // photo vision checks per reel (Sonnet, ~$0.015 each at 6 photos; verdicts cached 7 days per photo)
   visionPhotos: 6, // photos per vision check (Generate uses 12; a scene needs one good photo)
@@ -65,8 +67,11 @@ function defaultDeps() {
     findPhotos: (args, ctx) => require('./_asset-service.js').findPhotos(args, ctx),
     verifyWithVision: (subject, photos, opts) => require('./_photo-verify.js').verifyWithVision(subject, photos, opts),
     judgeCache: require('./_reel-clip-judge.js').CACHE,
+    confirmed: require('./_reel-clip-confirmed.js'),
     teams: require('../../video-ads-teams.js'),
     gateway: gatewayModule(),
+    now: () => Date.now(),
+    log: line => console.log(line),
   };
 }
 
@@ -76,7 +81,7 @@ function trackedGateway(gateway, feature) {
   return { ...gateway, aiText: args => gateway.aiText({ ...args, track: { ...(args && args.track), feature } }) };
 }
 
-const CLIP_FIELDS = ['url', 'handle', 'text', 'variants', 'durationMs', 'source', 'sourceKind', 'platform', 'teams', 'players', 'postedAt', 'ageHours', 'shortSide', 'via', 'subjectHit', 'trust', 'quality'];
+const CLIP_FIELDS = ['url', 'handle', 'text', 'variants', 'durationMs', 'source', 'sourceKind', 'platform', 'teams', 'players', 'postedAt', 'ageHours', 'shortSide', 'via', 'subjectHit', 'trust', 'quality', 'rung', 'confirmed'];
 const slimClip = c => Object.fromEntries(CLIP_FIELDS.filter(k => c[k] !== undefined).map(k => [k, c[k]]));
 function photoOut(p) {
   return {
@@ -87,8 +92,7 @@ function photoOut(p) {
   };
 }
 
-// The search one subject needs: its team (one search per team, shared by
-// every scene of that team) or, with no team, the moment as a query.
+// The search one subject needs (v3 helper, kept for the old tests / callers).
 function searchKey(subject, sport, teams) {
   const teamName = subject.type === 'team' ? subject.name : subject.team;
   const team = teamName && teams && teams.findTeam ? teams.findTeam(teamName, sport) : null;
@@ -99,12 +103,63 @@ const subjectHitLocal = (clip, subject) => {
   if (!name) return false;
   return ` ${C.norm([clip.text, ...(clip.players || [])].join(' '))} `.includes(` ${name} `);
 };
+const isPerson = sub => sub && (sub.type === 'player' || sub.type === 'person');
+
+// One subject's clip candidates: the confirmed library first (free, already
+// judged), then the retry ladder (player+moment -> player+game -> team+game
+// -> team), one find-clips call per rung, until a rung gives enough.
+//   -> { clips, cost, rungs: [{ rung, n, cost, ms, error? }], reason }
+async function clipsForSubject(sub, wants, { deps, sport, track, exclude, claimLive, refundLive, deadlineAt, now }) {
+  const pool = new Map();
+  const tried = [];
+  let cost = 0;
+  const keep = (c, rung, extra = {}) => {
+    if (!c || !c.url || exclude.has(c.url) || pool.has(c.url)) return;
+    if (!Array.isArray(c.variants) || !c.variants.length || AWAY_VIA.includes(c.via)) return;
+    pool.set(c.url, { ...slimClip(c), subjectHit: subjectHitLocal(c, sub), rung, ...extra });
+  };
+  // 1. Confirmed library.
+  try {
+    const keys = deps.confirmed ? deps.confirmed.keysFor(sub, { sport }) : [];
+    const rows = keys.length ? await withTimeout(deps.confirmed.read(keys, { kind: wants === 'presser' ? 'presser' : 'clip', token: track && track.token }), 2500, []) : [];
+    (rows || []).forEach(r => keep({ ...r.clip, url: r.url }, 'library', { confirmed: { relevance: r.relevance, moment: r.moment, segment: r.segment, rank: r.rank, kind: r.kind, key: r.key } }));
+  } catch { /* the library never blocks a search */ }
+  const enough = () => {
+    const list = [...pool.values()];
+    if (list.filter(c => c.confirmed).length >= 2) return true;
+    return isPerson(sub) ? list.filter(c => c.subjectHit).length >= 2 : list.length >= 4;
+  };
+  if (enough()) return { clips: [...pool.values()], cost, rungs: [{ rung: 'library', n: pool.size }], reason: '' };
+  if (!sport) return { clips: [...pool.values()], cost, rungs: tried, reason: pool.size ? '' : 'no-sport' };
+  // 2. The ladder.
+  for (const step of C.ladderFor(sub, wants, { now: now() })) {
+    const left = deadlineAt - now();
+    if (left < 4000) { tried.push({ rung: step.rung, n: 0, error: 'deadline' }); break; }
+    const live = claimLive();
+    const started = now();
+    const res = await withTimeout(deps.findClips({ mode: 'find-clips', sport, subject: { type: isPerson(sub) ? 'player' : (sub.type === 'game' || sub.type === 'moment' ? 'moment' : sub.type), name: sub.name, team: sub.team || '', moment: sub.moment || '' }, ...step.body },
+      { ...(track || {}), freeOnly: !live, deadlineAt: deadlineAt - 1500 }), Math.min(LIMITS.searchMs, left - 1000), null);
+    const spent = res && res.ok ? Number(res.cost) || 0 : 0;
+    if (live && !spent) refundLive(); // library / cached answer: the live slot is not used up
+    cost += spent;
+    const before = pool.size;
+    if (res && res.ok) (res.clips || []).forEach(c => keep(c, step.rung));
+    tried.push({ rung: step.rung, n: pool.size - before, cost: money(spent), ms: now() - started, ...(res ? (res.ok ? {} : { error: clean(res.error || 'failed', 60) }) : { error: 'timeout' }), ...(live ? { live: true } : {}) });
+    if (enough()) break;
+  }
+  const reason = pool.size ? '' : (tried.some(t => t.error === 'deadline') ? 'deadline' : tried.length && tried.every(t => t.error === 'timeout') ? 'timeout' : 'no-candidates');
+  return { clips: [...pool.values()], cost, rungs: tried, reason };
+}
 
 async function sceneMedia(body = {}, ctx = {}) {
   const deps = { ...defaultDeps(), ...(ctx.deps || {}) };
+  const now = deps.now || (() => Date.now());
+  const started = now();
+  const deadlineAt = started + (Number(ctx.budgetMs) || LIMITS.budgetMs);
   const plan = body.plan && typeof body.plan === 'object' ? body.plan : null;
-  if (!plan || !Array.isArray(plan.beats) || !plan.beats.length) return { ok: false, status: 400, error: 'There is no reel to find pictures for yet.' };
-  const style = C.styleOf(plan, body.esStyle || (C.STYLE_IDS.includes(body.style) ? body.style : ''));
+  const allBeats = plan ? C.beatsOf(plan) : [];
+  if (!plan || !allBeats.length) return { ok: false, status: 400, error: 'There is no reel to find pictures for yet.' };
+  const style = C.styleOf(plan, body.esStyle || body.style || '');
   const exclude = new Set((Array.isArray(body.exclude) ? body.exclude : []).map(u => clean(u, 400)).filter(Boolean));
   const track = ctx.track || null;
   const aiAllowed = ctx.aiAllowed !== false;
@@ -112,46 +167,58 @@ async function sceneMedia(body = {}, ctx = {}) {
   const capped = { clips: false, photos: false };
   const costs = { clips: 0, photos: 0 };
 
-  const scenes = plan.beats.slice(0, LIMITS.scenes).map((beat, i) => {
-    const b = beat && typeof beat === 'object' ? beat : {};
+  const scenes = allBeats.slice(0, LIMITS.scenes).map(b => {
     const subject = C.subjectOfBeat(b, plan);
-    return { beatId: clean(b.id, 40) || `b${i + 1}`, beat: b, block: b.block ? b.block.type || '' : '', subject, wants: C.wantsFor(b, style), durMs: Number(b.durMs) || 0, clips: [], photos: [] };
+    const media = b.media && typeof b.media === 'object' ? b.media : {};
+    const kind = C.MEDIA_KINDS.includes(media.kind) ? media.kind : '';
+    const cards = kind === 'cards' ? (Array.isArray(media.cards) ? media.cards : []).slice(0, 4).map(c => ({ name: clean(c && c.name, 60), ...(c && c.tag ? { tag: clean(c.tag, 30) } : {}), ...(c && c.sticker ? { sticker: clean(c.sticker, 16) } : {}), photos: [] })).filter(c => c.name) : [];
+    return {
+      beatId: clean(b.id, 40), beat: b, block: b.block ? b.block.type || '' : '', module: b.module ? b.module.type || '' : '', kind, subject, wants: C.wantsFor(b, style),
+      durMs: Number(b.durMs) || 0, clips: [], photos: [], teamPhotos: [], cards, noClipReason: '',
+    };
   });
-  const uniq = list => [...new Map(list.map(s => [s.subject.key, s.subject])).values()];
-  // Clip subjects (only where the style wants a clip, and the sport has clips).
-  const clipSubjects = sport ? uniq(scenes.filter(s => s.wants === 'clip')).slice(0, LIMITS.subjects) : [];
-  if (sport && uniq(scenes.filter(s => s.wants === 'clip')).length > LIMITS.subjects) capped.clips = true;
-  // Photo subjects: photo scenes, and clip scenes (their fallback).
-  const photoSubjects = uniq(scenes.filter(s => s.wants === 'photo' || s.wants === 'clip')).slice(0, LIMITS.subjects);
-
-  // ── Clips: one search per team / query, ranked per subject ──
-  const searches = new Map();
-  clipSubjects.forEach(sub => {
-    const key = searchKey(sub, sport, deps.teams);
-    if (!searches.has(key)) searches.set(key, { key, subject: sub, subjects: [] });
-    searches.get(key).subjects.push(sub);
-  });
+  const groupKey = s => `${s.wants === 'presser' ? 'p' : 'c'}|${s.subject.key}`;
+  // ── Clips: per subject, confirmed library + the ladder ──
+  const clipScenes = scenes.filter(s => s.wants === 'clip' || s.wants === 'presser');
+  const groups = [...new Map(clipScenes.map(s => [groupKey(s), { key: groupKey(s), sub: s.subject, wants: s.wants }])).values()];
+  if (groups.length > LIMITS.subjects) capped.clips = true;
   let live = 0;
-  const clipWork = [...searches.values()].map(async search => {
-    const freeOnly = !aiAllowed || live >= LIMITS.liveSearches;
-    if (!freeOnly) live += 1; else if (aiAllowed) capped.clips = true;
-    const res = await withTimeout(deps.findClips({ mode: 'find-clips', sport, subject: search.subject }, { ...(track || {}), freeOnly }), LIMITS.searchMs, null);
-    if (!res || !res.ok) return;
-    costs.clips += Number(res.cost) || 0;
-    const pool = (res.clips || []).filter(c => c && c.url && Array.isArray(c.variants) && c.variants.length && !AWAY_VIA.includes(c.via) && !exclude.has(c.url));
-    search.subjects.forEach(sub => {
-      const ranked = pool.map(c => ({ ...slimClip(c), subjectHit: subjectHitLocal(c, sub) })).sort((a, b) => b.subjectHit - a.subjectHit).slice(0, LIMITS.clipsPerScene);
-      scenes.filter(s => s.wants === 'clip' && s.subject.key === sub.key).forEach(s => { s.clips = ranked; });
-    });
+  const claimLive = () => { if (!aiAllowed) return false; if (live >= LIMITS.liveSearches) { capped.clips = true; return false; } live += 1; return true; };
+  const refundLive = () => { live = Math.max(0, live - 1); };
+  const ladders = {};
+  const clipWork = groups.slice(0, LIMITS.subjects).map(async g => {
+    const res = await clipsForSubject(g.sub, g.wants, { deps, sport, track, exclude, claimLive, refundLive, deadlineAt, now });
+    costs.clips += res.cost;
+    ladders[g.key] = res.rungs;
+    const rungOrder = r => (r === 'library' ? -1 : C.RUNGS.indexOf(r));
+    const ranked = res.clips.sort((a, b) => (Boolean(b.confirmed) - Boolean(a.confirmed)) || (b.subjectHit - a.subjectHit) || (rungOrder(a.rung) - rungOrder(b.rung))).slice(0, LIMITS.clipsPerScene);
+    scenes.filter(s => groupKey(s) === g.key).forEach(s => { s.clips = ranked; s.noClipReason = res.reason; });
   });
+  scenes.filter(s => (s.wants === 'clip' || s.wants === 'presser') && !groups.slice(0, LIMITS.subjects).some(g => g.key === groupKey(s))).forEach(s => { s.noClipReason = 'subject-cap'; });
 
   // ── Photos: verified only ──
+  // Who needs one, most important first: photo / cutout / cards beats, then
+  // beats that would not move without a picture (the motion rule), then the
+  // fallback for clip beats, then the teams (the last rung of the photo ladder).
   const photoGateway = deps.gateway && deps.gateway.gatewayConfigured && deps.gateway.gatewayConfigured() ? trackedGateway(deps.gateway, PHOTO_FEATURE) : null;
-  const names = photoSubjects.filter(s => s.type === 'player').map(s => s.name);
-  const photoWork = photoSubjects.map(async (sub, i) => {
-    const vision = aiAllowed && photoGateway && i < LIMITS.visionSubjects;
-    if (aiAllowed && photoGateway && i >= LIMITS.visionSubjects) capped.photos = true;
-    const args = sub.type === 'player'
+  const needsMotion = s => s.wants === 'none' && !C.hasAnimatedModule(s.beat) && s.kind !== 'none';
+  const wantPhoto = [];
+  const addPhoto = (sub, why) => { if (sub && sub.name && !wantPhoto.some(w => w.sub.key === sub.key && w.sub.type === sub.type)) wantPhoto.push({ sub, why }); };
+  scenes.filter(s => s.wants === 'photo' && s.kind !== 'cards').forEach(s => addPhoto(s.subject, 'photo'));
+  scenes.filter(s => s.kind === 'cards').forEach(s => s.cards.forEach(c => addPhoto(C.subjectOfBeat({ subject: { type: 'player', name: c.name } }, plan), 'card')));
+  scenes.filter(needsMotion).forEach(s => addPhoto(s.subject, 'motion'));
+  clipScenes.forEach(s => addPhoto(s.subject, 'fallback'));
+  const teamNames = [...new Set([plan.team && plan.team.name, ...scenes.map(s => s.subject.team)].map(t => clean(t, 60)).filter(Boolean))].slice(0, 2);
+  teamNames.forEach(t => addPhoto({ type: 'team', name: t, team: t, key: C.subjectKey({ name: t }) }, 'team'));
+  const photoSubjects = wantPhoto.slice(0, LIMITS.photoSubjects);
+  if (wantPhoto.length > LIMITS.photoSubjects) capped.photos = true;
+  const names = photoSubjects.filter(w => isPerson(w.sub)).map(w => w.sub.name);
+  const photosByKey = new Map();
+  let visionUsed = 0;
+  const photoWork = photoSubjects.map(async ({ sub }) => {
+    const vision = aiAllowed && photoGateway && visionUsed < LIMITS.visionSubjects;
+    if (vision) visionUsed += 1; else if (aiAllowed && photoGateway) capped.photos = true;
+    const args = isPerson(sub)
       ? { person: sub.name, sport: plan.sport || '', teams: sub.team ? [sub.team] : [], others: names.filter(n => n !== sub.name), count: LIMITS.photosPerSubject }
       : sub.type === 'team' ? { team: sub.name, query: sub.name, sport: plan.sport || '', count: LIMITS.photosPerSubject }
         : { query: sub.name, team: sub.team || '', sport: plan.sport || '', count: LIMITS.photosPerSubject };
@@ -159,60 +226,191 @@ async function sceneMedia(body = {}, ctx = {}) {
       email: track && track.email, token: track && track.token, gated: true,
       deps: { verify: vision ? (subject, photos, opts) => deps.verifyWithVision(subject, photos, { ...opts, max: Math.min(Number(opts && opts.max) || LIMITS.visionPhotos, LIMITS.visionPhotos), gateway: photoGateway }) : null, vision: null },
     };
-    const res = await withTimeout(deps.findPhotos(args, photoCtx), LIMITS.photoMs, null);
+    const res = await withTimeout(deps.findPhotos(args, photoCtx), Math.max(3000, Math.min(LIMITS.photoMs, deadlineAt - now())), null);
     if (!res || res.ok === false) return;
     costs.photos += Number(res.cost) || 0;
-    const verified = (res.photos || []).filter(p => p && p.verified === true && (p.url || p.src) && p.sourceUrl && !exclude.has(p.sourceUrl) && !exclude.has(p.url)).map(photoOut);
-    scenes.filter(s => (s.wants === 'photo' || s.wants === 'clip') && s.subject.key === sub.key).forEach(s => { s.photos = verified; });
+    photosByKey.set(`${sub.type === 'team' ? 'team' : 'x'}|${sub.key}`, (res.photos || []).filter(p => p && p.verified === true && (p.url || p.src) && p.sourceUrl && !exclude.has(p.sourceUrl) && !exclude.has(p.url)).map(photoOut));
   });
   await Promise.all([...clipWork, ...photoWork]);
+  const photosOf = sub => photosByKey.get(`x|${sub.key}`) || (sub.type === 'team' ? photosByKey.get(`team|${sub.key}`) : null) || [];
+  scenes.forEach(s => {
+    s.photos = photosOf(s.subject);
+    const team = clean(s.subject.team || (plan.team && plan.team.name), 60);
+    s.teamPhotos = team ? photosByKey.get(`team|${C.subjectKey({ name: team })}`) || [] : [];
+    s.cards.forEach(c => { c.photos = photosByKey.get(`x|${C.subjectKey({ name: c.name })}`) || []; });
+  });
 
   // ── Judgements: what the browser sent (validated) + this server's cache ──
   const judgements = {};
   const sent = body.judgements && typeof body.judgements === 'object' ? body.judgements : {};
   Object.entries(sent).slice(0, 60).forEach(([url, raw]) => { const j = C.validateJudgement(raw); if (j) judgements[clean(url, 400)] = j; });
-  const now = Date.now();
+  const t = now();
   scenes.forEach(s => s.clips.forEach(c => {
     if (judgements[c.url]) return;
     const hit = deps.judgeCache && deps.judgeCache.get(c.url);
-    if (hit && now - hit.at < 6 * 3600e3) judgements[c.url] = hit.j;
+    if (hit && t - hit.at < 6 * 3600e3) judgements[c.url] = hit.j;
   }));
   const gw = deps.gateway;
   const judgeAvailable = Boolean(aiAllowed && gw && gw.gatewayConfigured && gw.gatewayConfigured() && !(gw.featureDisabled && gw.featureDisabled('reels-clip-judge')));
   const picks = C.gatedPicks(scenes, { judgements, judgeAvailable });
   const judgedFor = (url, key) => Boolean(judgements[url] && judgements[url].relevance && key in judgements[url].relevance);
-  const judgeQueue = judgeAvailable ? C.judgeQueue(scenes.filter(s => s.wants === 'clip'), { judged: judgedFor }) : [];
+  const confirmedUrls = new Set(scenes.flatMap(s => s.clips.filter(c => c.confirmed).map(c => c.url)));
+  const judgeQueue = judgeAvailable ? C.judgeQueue(clipScenes, { judged: (url, key) => confirmedUrls.has(url) || judgedFor(url, key) }) : [];
 
-  const subjects = uniq(scenes).map(s => ({ key: s.key, label: s.name, ...(s.moment ? { moment: s.moment } : {}), type: s.type }));
+  const subjects = [...new Map(scenes.map(s => [`${s.wants === 'presser' ? 'p' : 'c'}|${s.subject.key}`, s])).values()]
+    .map(s => ({ key: s.subject.key, label: s.subject.name, type: s.subject.type, ...(s.subject.team ? { team: s.subject.team } : {}), ...(s.subject.date ? { date: s.subject.date } : {}), ...(s.subject.moment ? { moment: s.subject.moment } : {}), wants: s.wants }))
+    .filter((s, i, a) => a.findIndex(x => x.key === s.key) === i);
+  const picksById = {};
   const beats = scenes.map(s => {
-    const p = picks[s.beatId] || { kind: 'none' };
+    const p = picks[s.beatId] || { kind: 'none', failures: [] };
+    picksById[s.beatId] = p;
+    const motion = C.motionFor(s.beat, p);
     const j = url => judgements[url];
     return {
-      beatId: s.beatId, block: s.block, wants: s.wants, subject: s.subject,
+      beatId: s.beatId, ...(s.beat.chapterId ? { chapterId: s.beat.chapterId } : {}), block: s.block, module: s.module, kind: s.kind || s.wants, wants: s.wants, subject: s.subject,
       clips: s.clips.map(c => {
         const jj = j(c.url);
-        const rel = jj && jj.relevance && Number.isFinite(jj.relevance[s.subject.key]) ? jj.relevance[s.subject.key] : null;
+        const rel = jj && jj.relevance && Number.isFinite(jj.relevance[s.subject.key]) ? jj.relevance[s.subject.key] : (c.confirmed ? c.confirmed.relevance : null);
         const mom = jj && jj.moment && Number.isFinite(jj.moment[s.subject.key]) ? jj.moment[s.subject.key] : null;
-        const pass = rel != null ? C.passesGate(jj, s.subject) : (!judgeAvailable && C.textGate(c, s.subject));
-        return { ...c, relevance: rel, moment: mom, judged: rel != null, gate: pass ? (rel != null ? 'judge' : 'text') : '', score: C.judgedScore(c, C.subjectFor({ subject: s.subject }, plan), jj || null).score };
+        const want = s.wants === 'presser' ? 'presser' : 'clip';
+        const pass = jj && jj.relevance && s.subject.key in jj.relevance ? C.passesGate(jj, s.subject, C.GATE, want) : (c.confirmed ? true : (!judgeAvailable && C.textGate(c, s.subject, want)));
+        return { ...c, relevance: rel, moment: mom, judged: Boolean(jj), gate: pass ? (jj ? 'judge' : c.confirmed ? 'library' : 'text') : '', score: C.judgedScore(c, C.subjectFor({ subject: s.subject }, plan), jj || null).score };
       }),
-      photos: s.photos,
+      photos: s.photos, teamPhotos: s.teamPhotos, ...(s.cards.length ? { cards: s.cards } : {}),
       pick: {
         kind: p.kind,
-        ref: p.kind === 'clip' ? p.clip.url : p.kind === 'photo' ? p.photo.url : '',
+        ref: (p.kind === 'clip' || p.kind === 'presser') ? p.clip.url : (p.kind === 'photo' || p.kind === 'cutout') ? p.photo.url : '',
         ...(p.segment ? { segment: p.segment } : {}),
-        ...(p.kind === 'clip' ? { relevance: p.relevance, moment: p.moment, gate: p.gate } : {}),
-        ...(p.kind === 'none' && s.wants !== 'none' ? { fallback: p.fallback } : {}),
+        ...((p.kind === 'clip' || p.kind === 'presser') ? { relevance: p.relevance, moment: p.moment, gate: p.gate, ...(p.rung ? { rung: p.rung } : {}) } : {}),
+        ...(p.kenBurns ? { kenBurns: p.kenBurns } : {}),
+        ...(p.cards ? { cards: p.cards } : {}),
+        ...(p.cutout ? { cutout: true } : {}),
+        ...(p.kind === 'none' && p.fallback ? { fallback: p.fallback } : {}),
         why: p.why || '',
       },
+      motion, motionOk: motion !== 'none', failures: p.failures || [],
+      ladder: ladders[groupKey(s)] || [],
     };
   });
+  const summary = C.motionSummary({ beats: scenes.map(s => s.beat) }, picksById);
+  const stats = C.sourcingStats({ beats: scenes.map(s => s.beat) }, picksById);
   const cost = costs.clips + costs.photos;
+  const ms = now() - started;
+  if (deps.log) {
+    try { deps.log(`reels-sourcing ${JSON.stringify({ style, sport: plan.sport || '', beats: stats.beats, clip: stats.clip, photo: stats.photo, module: stats.module, none: stats.none, failures: stats.failures, rungs: stats.rungs, cost: money(cost), ms, liveSearches: live })}`); } catch { /* logging never breaks sourcing */ }
+  }
   return {
-    ok: true, esStyle: style, beats, judgeQueue, subjects,
+    ok: true, v: 4, esStyle: style, beats, judgeQueue, subjects,
+    clipCount: summary.clipCount, needsClips: summary.needsClips, motionOk: summary.motionOk, actions: summary.actions, stats, ms,
     judge: { ready: judgeAvailable, maxClips: C.JUDGE.maxClips, perCall: C.JUDGE.perCall, maxUsdPerReel: C.JUDGE.maxUsdPerReel, threshold: { relevance: C.GATE.relevance, moment: C.GATE.moment } },
     cost: money(cost), costs: { clips: money(costs.clips), photos: money(costs.photos) }, capped,
   };
+}
+
+// ─── Confirmed-clip library: judge results + people's choices ───────────
+// Clips that pass the gate for a subject are kept per subject key with their
+// best segment (clip-judge mode). Only trusted clips whose files sit on a
+// trusted media host are stored; relevance comes from our own judge.
+//   clips: the judge request's clips ({ url, handle, text, meta? })
+//   subjects: [{ key, label, type, team?, date?, moment?, wants? }]
+async function confirmJudged({ clips = [], subjects = [], judgements = {}, sport = '' } = {}, { deps: injected } = {}) {
+  const store = (injected && injected.confirmed) || require('./_reel-clip-confirmed.js');
+  const TRUST = (injected && injected.trust) || require('./_clip-trust.js');
+  const subs = (Array.isArray(subjects) ? subjects : []).slice(0, 12).map(s => ({ key: C.norm(s && s.key).slice(0, 40), name: clean(s && s.label, 60), type: ['player', 'person', 'team', 'game', 'moment'].includes(s && s.type) ? s.type : 'player', team: clean(s && s.team, 60), date: clean(s && s.date, 20), moment: clean(s && s.moment, 60), wants: s && s.wants === 'presser' ? 'presser' : 'clip' })).filter(s => s.key && s.name);
+  const entries = [];
+  (Array.isArray(clips) ? clips : []).slice(0, C.JUDGE.perCall).forEach(raw => {
+    const url = clean(raw && raw.url, 400);
+    const j = judgements[url];
+    const meta = raw && raw.meta && typeof raw.meta === 'object' ? raw.meta : null;
+    if (!j || !meta) return;
+    const variants = (Array.isArray(meta.variants) ? meta.variants : []).filter(v => v && TRUST.mediaHostTrusted(String(v.url || '')));
+    if (!variants.length) return;
+    const platform = clean(meta.platform, 24) || 'x';
+    const handle = clean(meta.handle || (raw && raw.handle), 40);
+    subs.forEach(sub => {
+      if (!C.passesGate(j, sub, C.GATE, sub.wants)) return;
+      const trusted = TRUST.isTrusted({ platform, handle, url, mediaUrl: platform === 'x' ? '' : variants[0].url, purpose: sub.wants === 'presser' ? 'presser' : '' });
+      if (!trusted) return;
+      store.keysFor(sub, { sport }).forEach(key => entries.push({
+        key, url, kind: sub.wants, sport, relevance: j.relevance[sub.key], moment: j.moment && Number.isFinite(j.moment[sub.key]) ? j.moment[sub.key] : null, segment: j.segment || null,
+        clip: { ...meta, url, handle, platform, variants, text: clean(meta.text || (raw && raw.text), 280) },
+      }));
+    });
+  });
+  if (!entries.length) return { written: 0 };
+  return store.confirm(entries);
+}
+
+// ─── Same-origin clip proxy (the browser's fallback) ────────────────────
+// The browser downloads clip files straight from the trusted video CDNs
+// (CORS *). When that fails (a CDN without CORS, a 403 to the browser, a
+// network policy), it asks this proxy for the file in chunks of at most
+// PROXY.chunk bytes (a Vercel response is capped at 4.5 MB; base64 adds a
+// third). Allow-listed hosts only: _clip-trust.js MEDIA_HOSTS plus the exact
+// hosts in CLIPS_MEDIA_HOSTS, https on 443, every redirect re-checked.
+const PROXY = { chunk: 3 * 1024 * 1024, timeoutMs: 15000, maxRedirects: 3 };
+function proxyHostAllowed(raw, env = process.env) {
+  let u;
+  try { u = new URL(String(raw)); } catch { return false; }
+  if (u.protocol !== 'https:' || u.username || u.password || (u.port && u.port !== '443')) return false;
+  const TRUST = require('./_clip-trust.js');
+  const extra = String(env.CLIPS_MEDIA_HOSTS || '').split(',').map(h => h.trim().toLowerCase()).filter(Boolean);
+  return TRUST.mediaHostTrusted(u.toString()) || extra.includes(u.hostname.toLowerCase());
+}
+async function clipProxy(body = {}, { fetchImpl = fetch, env = process.env } = {}) {
+  let url = clean(body.url, 800);
+  if (!proxyHostAllowed(url, env)) return { ok: false, status: 400, error: 'That file is not on a trusted video host.' };
+  const start = Math.max(0, Math.floor(Number(body.start) || 0));
+  const end = start + PROXY.chunk - 1;
+  let response = null;
+  try {
+    for (let hop = 0; hop <= PROXY.maxRedirects; hop += 1) {
+      response = await fetchImpl(url, { headers: { Range: `bytes=${start}-${end}`, 'User-Agent': 'FrameUp/1.0 (+https://frameup.essentiallysports.com)' }, redirect: 'manual', signal: AbortSignal.timeout(PROXY.timeoutMs) });
+      if (![301, 302, 303, 307, 308].includes(response.status)) break;
+      const next = response.headers.get('location');
+      const target = next ? new URL(next, url).toString() : '';
+      if (!target || !proxyHostAllowed(target, env)) return { ok: false, status: 502, reason: 'redirect', error: 'The video host redirected somewhere untrusted.' };
+      url = target;
+    }
+  } catch (error) {
+    return { ok: false, status: 504, reason: 'timeout', error: 'The video host did not answer.' };
+  }
+  if (!response || ![200, 206].includes(response.status)) {
+    const status = response ? response.status : 0;
+    return { ok: false, status: status === 404 || status === 410 ? 404 : 502, reason: status === 404 || status === 410 ? 'dead' : 'upstream', upstream: status, error: 'The clip file could not be fetched.' };
+  }
+  const type = response.headers.get('content-type') || 'video/mp4';
+  if (!/video|octet-stream|binary|mp4/i.test(type)) return { ok: false, status: 502, reason: 'type', error: 'That is not a video file.' };
+  // Read at most one chunk, even when the host ignored the Range header.
+  const parts = [];
+  let size = 0;
+  const reader = response.body && response.body.getReader ? response.body.getReader() : null;
+  if (reader) {
+    while (size < PROXY.chunk) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(Buffer.from(value));
+      size += value.length;
+    }
+    try { await reader.cancel(); } catch { /* already closed */ }
+  } else {
+    const buf = Buffer.from(await response.arrayBuffer());
+    parts.push(buf); size = buf.length;
+  }
+  let bytes = Buffer.concat(parts);
+  const range = response.status === 206 ? String(response.headers.get('content-range') || '') : '';
+  const m = range.match(/bytes\s+(\d+)-(\d+)\/(\d+|\*)/);
+  let from = m ? Number(m[1]) : 0;
+  let total = m && m[3] !== '*' ? Number(m[3]) : Number(response.headers.get('content-length')) || 0;
+  if (!m && start > 0) {
+    // The host sent the whole file from byte 0: skip to the asked start.
+    bytes = bytes.subarray(Math.min(bytes.length, start));
+    from = start;
+  }
+  bytes = bytes.subarray(0, PROXY.chunk);
+  if (!bytes.length) return { ok: false, status: 416, reason: 'no-range', error: 'The video host does not serve parts of the file.' };
+  if (!total) total = from + bytes.length;
+  return { ok: true, bytes, from, to: from + bytes.length - 1, total, type: type.split(';')[0] };
 }
 
 // ─── Review ─────────────────────────────────────────────────────────────
@@ -271,10 +469,10 @@ function codeReview(planIn, { picks = {}, corpus = '', style = '' } = {}) {
     const block = beat.block && typeof beat.block === 'object' ? beat.block : null;
     // ── media ──
     const pick = picks[id];
-    if (pick && pick.kind === 'clip') {
+    if (pick && (pick.kind === 'clip' || pick.kind === 'presser')) {
       const judgedOk = pick.gate === 'judge' && Number(pick.relevance) >= C.GATE.relevance && (pick.moment == null || Number(pick.moment) >= C.GATE.moment);
       if (!judgedOk && pick.gate !== 'text') add(id, 'media', 'critical', 'This clip was not confirmed to show the scene\'s subject.', 'repick', false);
-    } else if (pick && pick.kind === 'photo' && pick.verified !== true) {
+    } else if (pick && (pick.kind === 'photo' || pick.kind === 'cutout') && pick.verified !== true) {
       add(id, 'media', 'critical', 'This photo is not verified to show the subject.', 'repick', false);
     }
     // ── blocks we do not know draw as unknown boxes ──
@@ -333,11 +531,13 @@ function codeReview(planIn, { picks = {}, corpus = '', style = '' } = {}) {
     // ── banned wording ──
     RULES.BANNED.forEach(rule => { if (rule.re.test(`${beat.text} ${beat.vo}`)) add(id, 'text', 'warn', rule.why, 'rewrite', false); });
   });
-  // Game Tape is video-first: most media scenes should carry a clip.
-  if (style === 'gametape') {
+  // Video-first (Game Tape, and every v4 style): the motion rule wants at
+  // least one confirmed clip in the reel (flagged, never blocked here).
+  if (style === 'gametape' || C.STYLE_IDS.includes(style)) {
     const media = beats.filter(b => picks[b.id] && picks[b.id].kind !== undefined);
-    const clips = media.filter(b => picks[b.id].kind === 'clip').length;
-    if (media.length >= 3 && clips / media.length < 0.5) add('', 'media', 'warn', `Only ${clips} of ${media.length} scenes have a relevant clip; the rest use verified photos or graphics.`, 'none', false);
+    const clips = media.filter(b => ['clip', 'presser'].includes(picks[b.id].kind)).length;
+    if (style === 'gametape' && media.length >= 3 && clips / media.length < 0.5) add('', 'media', 'warn', `Only ${clips} of ${media.length} scenes have a relevant clip; the rest use verified photos or graphics.`, 'none', false);
+    else if (media.length >= 2 && !clips) add('', 'media', 'warn', 'No scene has a confirmed clip yet: find clips before export.', 'find-clips', false);
   }
   plan.beats = beats;
   return { plan, issues };
@@ -354,7 +554,7 @@ function reviewRequest(plan, picks, corpus) {
   const lines = (plan.beats || []).map((b, i) => {
     const id = b.id || `b${i + 1}`;
     const p = picks[id] || {};
-    const pic = p.kind === 'clip' ? `clip: "${clean(p.note || p.text, 120)}"${p.relevance != null ? ` (judge ${p.relevance}/10)` : ''}` : p.kind === 'photo' ? `photo: "${clean(p.note || p.caption || p.title, 120)}"` : 'graphic only';
+    const pic = (p.kind === 'clip' || p.kind === 'presser') ? `${p.kind}: "${clean(p.note || p.text, 120)}"${p.relevance != null ? ` (judge ${p.relevance}/10)` : ''}` : (p.kind === 'photo' || p.kind === 'cutout') ? `photo: "${clean(p.note || p.caption || p.title, 120)}"` : 'graphic only';
     const block = b.block && b.block.type ? b.block.type : b.kind;
     return `- ${id} [${block}] subject: ${clean(b.subject && b.subject.name, 60) || '-'} | text: "${clean(b.text, 90)}" | vo: "${clean(b.vo, 220)}" | picture: ${pic}`;
   });
@@ -369,7 +569,7 @@ async function review(body = {}, ctx = {}) {
   Object.entries(picksIn).slice(0, 40).forEach(([id, p]) => {
     if (!p || typeof p !== 'object') return;
     picks[clean(id, 40)] = {
-      kind: ['clip', 'photo', 'none'].includes(p.kind) ? p.kind : 'none', ref: clean(p.ref, 400),
+      kind: ['clip', 'presser', 'photo', 'cutout', 'cards', 'none'].includes(p.kind) ? p.kind : 'none', ref: clean(p.ref, 400),
       relevance: Number.isFinite(Number(p.relevance)) && p.relevance !== null ? Number(p.relevance) : null,
       moment: Number.isFinite(Number(p.moment)) && p.moment !== null ? Number(p.moment) : null,
       gate: ['judge', 'text'].includes(p.gate) ? p.gate : '', verified: p.verified === true, note: clean(p.note, 160),
@@ -425,4 +625,4 @@ async function review(body = {}, ctx = {}) {
   return { ok: true, ready, issues: issues.slice(0, 40), plan, cost: money(cost), model, esStyle: style };
 }
 
-module.exports = { sceneMedia, review, codeReview, reviewRequest, REVIEW_SYSTEM, PHOTO_FEATURE, REVIEW_FEATURE, LIMITS, v3BlockStrings, unsourcedIn, _test: { searchKey, trackedGateway, photoOut, wrapLines, stripNumber } };
+module.exports = { sceneMedia, confirmJudged, clipsForSubject, clipProxy, proxyHostAllowed, PROXY, review, codeReview, reviewRequest, REVIEW_SYSTEM, PHOTO_FEATURE, REVIEW_FEATURE, LIMITS, v3BlockStrings, unsourcedIn, _test: { searchKey, trackedGateway, photoOut, wrapLines, stripNumber } };

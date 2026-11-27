@@ -36,11 +36,12 @@ const SYSTEM = [
   'You judge short sports video clips for an EssentiallySports vertical reel.',
   'For each clip you get its post text and a few frames in time order.',
   'Report only what the frames and the post text show. Name a player only when a jersey name or number, a caption or the post text identifies them; otherwise leave players empty. Never guess.',
-  'Answer with JSON only: {"clips":[{"i":0,"kind":"game-action|highlight-replay|celebration|practice|press-conference|interview|crowd-stadium|graphic-or-text|studio-talk|other","teams":["..."],"players":["..."],"quality":0-10,"action":[0-10 per frame],"relevance":{"<subject key>":0-10},"moment":{"<subject key>":0-10},"textOverlay":true|false,"note":"<= 10 words"}]}',
+  'Answer with JSON only: {"clips":[{"i":0,"kind":"game-action|highlight-replay|celebration|practice|press-conference|interview|crowd-stadium|graphic-or-text|studio-talk|other","teams":["..."],"players":["..."],"quality":0-10,"action":[0-10 per frame],"relevance":{"<subject key>":0-10},"moment":{"<subject key>":0-10},"segment":{"start":seconds,"end":seconds},"textOverlay":true|false,"note":"<= 10 words"}]}',
   'quality: sharp, well framed, no big watermark, letterbox or burned-in text = high.',
   'action: how much sport is happening in that frame (a play, a catch, a run, a celebration = high; a scoreboard, a talking head, a logo slate = low).',
   'relevance: for every subject key given, how well this clip shows that subject (the named player or team on screen = 8-10; the right team but another player = 5-6; unrelated = 0-2). Be strict: a clip is used on a scene only at 7 or more.',
   'moment: for every subject that names a moment, how well the clip shows THAT moment (the season, the play, the injury, the game named); 0 when it shows something else, 5 when unclear. Omit subjects without a moment.',
+  'segment: the best part of the clip for the subject, in seconds, using the frame times given (e.g. the frames around the play or the answer). Omit when unsure.',
 ].join('\n');
 
 function priceOf(model) { return C.PRICES[model] || C.PRICES[C.JUDGE.model]; }
@@ -87,14 +88,27 @@ async function judgeClips({ clips = [], subjects = [], budgetUsd = C.JUDGE.maxUs
     url: clean(c && c.url, 300), text: clean(c && c.text, 280), handle: clean(c && c.handle, 40),
     frames: (Array.isArray(c && c.frames) ? c.frames : []).filter(f => typeof f === 'string' && f.length <= MAX_FRAME_CHARS && DATA_URL.test(f)).slice(0, C.JUDGE.framesPerClip + 1),
     times: (Array.isArray(c && c.times) ? c.times : []).map(Number).filter(Number.isFinite).slice(0, C.JUDGE.framesPerClip + 1),
+    // v4: the clip's length and the beat's, for the best segment.
+    durationSec: Math.max(0, Math.min(600, Number(c && c.durationMs) / 1000 || 0)),
+    wantSec: Math.max(0.5, Math.min(30, Number(c && c.wantMs) / 1000 || 2.5)),
   })).filter(c => /^https:\/\//.test(c.url) && c.frames.length);
+  // v4: every judgement carries the best segment inside its clip ({start,end}
+  // seconds): the model's when it gave one inside the clip, else the window
+  // of the beat's length around the frame with the most action.
+  const withSegment = (j, clip) => {
+    if (!j) return j;
+    const len = clip.durationSec || 0;
+    const own = j.segment && (!len || j.segment.end <= len + 0.5) ? j.segment : null;
+    const seg = own ? { ...own, ...(len && len < clip.wantSec - 0.05 ? { short: true } : {}) } : C.judgeSegment(j.action, clip.times, len, clip.wantSec);
+    return seg ? { ...j, segment: seg } : j;
+  };
   if (!list.length) return { ok: false, status: 400, error: 'No clip frames to judge.' };
 
   const judgements = {};
   const todo = [];
   list.forEach(c => {
     const hit = CACHE.get(c.url);
-    if (hit && now() - hit.at < TTL_MS && subs.every(s => s.key in hit.j.relevance && (!s.moment || s.key in (hit.j.moment || {})))) judgements[c.url] = hit.j;
+    if (hit && now() - hit.at < TTL_MS && subs.every(s => s.key in hit.j.relevance && (!s.moment || s.key in (hit.j.moment || {})))) judgements[c.url] = withSegment(hit.j, c);
     else todo.push(c);
   });
   if (!todo.length) return { ok: true, judgements, cost: 0, model: '', cached: list.length, skipped: 0 };
@@ -119,7 +133,7 @@ async function judgeClips({ clips = [], subjects = [], budgetUsd = C.JUDGE.maxUs
       parsed.clips.forEach(row => {
         const clip = todo[Number(row && row.i)];
         if (!clip) return;
-        const j = C.validateJudgement(row, clip.frames.length);
+        const j = withSegment(C.validateJudgement(row, clip.frames.length), clip);
         if (!j) return;
         judgements[clip.url] = j;
         CACHE.set(clip.url, { at: now(), j });

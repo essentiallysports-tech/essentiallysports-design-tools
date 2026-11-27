@@ -434,6 +434,23 @@
     return { motionOk: Object.values(beats).every(b => b.motionOk), clipCount, needsClips, beats, actions };
   }
 
+  // What a reel's sourcing achieved (logged per reel, shown to admins):
+  // clip / photo / module / none shares, failure reasons, ladder rungs used.
+  function sourcingStats(plan = {}, picks = {}) {
+    const st = { beats: 0, clip: 0, photo: 0, module: 0, none: 0, shares: {}, failures: {}, rungs: {}, gates: {} };
+    beatsOf(plan).forEach(beat => {
+      const p = picks[beat.id] || null;
+      const m = motionFor(beat, p);
+      st.beats += 1;
+      st[m === 'clip' ? 'clip' : m === 'kenburns' ? 'photo' : m === 'module' ? 'module' : 'none'] += 1;
+      ((p && p.failures) || []).forEach(r => { st.failures[r] = (st.failures[r] || 0) + 1; });
+      if (p && p.rung) st.rungs[p.rung] = (st.rungs[p.rung] || 0) + 1;
+      if (p && p.gate) st.gates[p.gate] = (st.gates[p.gate] || 0) + 1;
+    });
+    ['clip', 'photo', 'module', 'none'].forEach(k => { st.shares[k] = st.beats ? Math.round((st[k] / st.beats) * 100) / 100 : 0; });
+    return st;
+  }
+
   // One pick per scene. scenes: [{ beatId, beat, subject, wants, kind, clips, photos, teamPhotos, cards, durMs }]
   //   opts: { judgements, samples, judgeTimes, judgeAvailable, judgeFailed, used:Set(clip urls), usedPhotos:Set }
   //   judgeFailed: the judge stopped (error / 429 / cap) -> unjudged clips may
@@ -789,5 +806,5 @@
     return { samples, frames, times: frameTimes };
   }
 
-  return { JUDGE, GATE, PRICES, KINDS, KIND_FIT, SOURCE_FIT, STYLE_IDS, V3_STYLE_IDS, STYLE_MEDIA, MEDIA_BLOCKS, MEDIA_KINDS, KIND_WANTS, V4_MODULES, ANIMATED_BLOCKS, RUNGS, PRESSER_KINDS, PRESSER_WORDS, v4Of, beatsOf, hasAnimatedModule, kenBurnsFor, judgeSegment, segmentOut, olderWindowHours, ladderFor, motionFor, motionSummary, styleOf, legacyStyle, subjectOfBeat, subjectKey, wantsFor, passesGate, textGate, judgeQueue, gatedPicks, fallbackBlock, subjectFor, heuristicScore, judgedScore, motionEnergy, bestSegment, preselect, assign, validateJudgement, withActionAt, judgeCost, reelJudgeEstimate, makeCache, sampleClip, norm };
+  return { JUDGE, GATE, PRICES, KINDS, KIND_FIT, SOURCE_FIT, STYLE_IDS, V3_STYLE_IDS, STYLE_MEDIA, MEDIA_BLOCKS, MEDIA_KINDS, KIND_WANTS, V4_MODULES, ANIMATED_BLOCKS, RUNGS, PRESSER_KINDS, PRESSER_WORDS, v4Of, beatsOf, hasAnimatedModule, kenBurnsFor, judgeSegment, segmentOut, olderWindowHours, ladderFor, motionFor, motionSummary, sourcingStats, styleOf, legacyStyle, subjectOfBeat, subjectKey, wantsFor, passesGate, textGate, judgeQueue, gatedPicks, fallbackBlock, subjectFor, heuristicScore, judgedScore, motionEnergy, bestSegment, preselect, assign, validateJudgement, withActionAt, judgeCost, reelJudgeEstimate, makeCache, sampleClip, norm };
 }));

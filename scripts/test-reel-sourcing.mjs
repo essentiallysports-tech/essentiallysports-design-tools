@@ -50,9 +50,11 @@ function mockDeps({ clipsByKey = {}, photosBy = {}, calls = {} } = {}) {
   return {
     teams: require('../video-ads-teams.js'),
     judgeCache: new Map(),
+    confirmed: { keysFor: () => [], read: async () => [] },
+    log: () => {},
     gateway: { gatewayConfigured: () => true, featureDisabled: () => false, aiText: async args => { calls.verifyGateways.push(args.track && args.track.feature); return { text: '{}', cost: 0.01 }; } },
     findClips: async (body, track) => {
-      calls.find.push({ subject: body.subject.name, freeOnly: Boolean(track.freeOnly) });
+      calls.find.push({ subject: body.subject.name, freeOnly: Boolean(track.freeOnly), query: body.query || '', team: body.team || '' });
       const key = body.subject.type === 'team' ? body.subject.name : body.subject.team || body.subject.name;
       return { ok: true, clips: clipsByKey[key] || [], cost: track.freeOnly ? 0 : 0.03 };
     },
@@ -76,16 +78,24 @@ await test('subjects: the director\'s per-scene subject wins; else derived from 
   assert.equal(C.subjectFor(PLAN.beats[0], PLAN).key, 'aaron rodgers', 'the old picker reads the same key');
 });
 
-await test('styles: the four ids; legacy looks / recipes map per the contract; media policy per style', () => {
-  assert.deepEqual(C.STYLE_IDS, ['gametape', 'statcard', 'receipts', 'hypecut']);
-  assert.equal(C.styleOf({ esStyle: 'hypecut' }), 'hypecut');
-  assert.equal(C.styleOf({ style: 'statcard' }), 'statcard');
-  assert.equal(C.styleOf({ recipe: 'Data-led' }), 'receipts');
-  assert.equal(C.styleOf({ recipe: 'Stat drop' }), 'receipts');
-  assert.equal(C.styleOf({ look: 'photo' }), 'statcard');
-  assert.equal(C.styleOf({ look: 'bold' }), 'hypecut');
-  assert.equal(C.styleOf({ look: 'paper' }), 'receipts');
-  assert.equal(C.styleOf({ look: 'paper', beats: [{ visual: 'clip' }] }), 'gametape');
+await test('styles (v4): the four new ids; v3 ids and old looks / recipes map per the contract; media policy per style', () => {
+  assert.deepEqual(C.STYLE_IDS, ['breakdown', 'casefile', 'outlier', 'hotseat']);
+  assert.equal(C.styleOf({ esStyle: 'hotseat' }), 'hotseat');
+  assert.equal(C.styleOf({ esStyle: 'hypecut' }), 'breakdown');
+  assert.equal(C.styleOf({ esStyle: 'gametape' }), 'breakdown');
+  assert.equal(C.styleOf({ style: 'statcard' }), 'breakdown');
+  assert.equal(C.styleOf({ esStyle: 'receipts', beats: [{ block: { type: 'dotGrid' } }] }), 'outlier', 'receipts with a dot grid -> The Outlier');
+  assert.equal(C.styleOf({ recipe: 'Data-led' }), 'breakdown');
+  assert.equal(C.styleOf({ look: 'photo' }), 'breakdown');
+  assert.equal(C.styleOf({ look: 'paper', beats: [{ visual: 'clip' }] }), 'breakdown');
+  assert.equal(C.legacyStyle('bold'), 'hypecut', 'the v3 legacy map still reads old looks');
+  assert.equal(C.wantsFor(PLAN.beats[1], 'breakdown'), 'clip');
+  assert.equal(C.wantsFor(PLAN.beats[2], 'breakdown'), 'none', 'an animating data block carries the scene');
+  assert.equal(C.wantsFor({ kind: 'point', media: { kind: 'presser', subject: { type: 'person', name: 'Eric DeCosta' } } }, 'breakdown'), 'presser');
+  assert.equal(C.wantsFor({ kind: 'point', subject: { type: 'person', name: 'Eric DeCosta' } }, 'hotseat'), 'presser', 'Hot Seat: people get pressers');
+  assert.equal(C.wantsFor({ kind: 'point', media: { kind: 'cards' } }, 'breakdown'), 'photo');
+  assert.equal(C.wantsFor({ kind: 'point', module: { type: 'scatter' } }, 'outlier'), 'none');
+  // v3 policies stay readable for old callers.
   assert.equal(C.wantsFor(PLAN.beats[1], 'gametape'), 'clip');
   assert.equal(C.wantsFor(PLAN.beats[2], 'gametape'), 'none', 'data blocks carry no media');
   assert.equal(C.wantsFor(PLAN.beats[0], 'statcard'), 'photo');
@@ -191,9 +201,13 @@ await test('scene-media: one search per team (shared by its scenes), photos only
   });
   const res = await SRC.sceneMedia({ plan: PLAN }, { deps, aiAllowed: true, track: { email: 'e', token: 't' } });
   assert.equal(res.ok, true);
-  assert.equal(res.esStyle, 'gametape');
+  assert.equal(res.esStyle, 'breakdown', 'gametape maps to Breakdown');
   assert.deepEqual(res.beats.map(b => b.wants), ['clip', 'clip', 'none', 'clip', 'none']);
-  assert.equal(calls.find.length, 2, 'Rodgers and the Packers share one Packers search; Kittle gets his own');
+  // The ladder: Rodgers player+moment -> player+game -> team+game -> team (only one clip names him);
+  // Kittle player+game -> team; the Packers scene the team rung.
+  assert.deepEqual(calls.find.filter(c => c.subject === 'Aaron Rodgers').map(c => c.query || `team:${c.team}`), ['Aaron Rodgers 2011 season', 'Aaron Rodgers highlights', 'Green Bay Packers 2011 season', 'team:Green Bay Packers']);
+  assert.deepEqual(calls.find.filter(c => c.subject === 'George Kittle').map(c => c.query || `team:${c.team}`), ['George Kittle highlights', 'team:San Francisco 49ers']);
+  assert.ok(res.beats[0].ladder.length === 4 && res.beats[0].ladder[0].rung === 'player+moment');
   const b1 = res.beats[0];
   assert.equal(b1.subject.name, 'Aaron Rodgers');
   assert.ok(!b1.clips.some(c => c.url === AWAY.url), 'widened other-team clips never reach a scene');
@@ -206,6 +220,9 @@ await test('scene-media: one search per team (shared by its scenes), photos only
   assert.ok(res.judgeQueue.length >= 3 && res.judgeQueue.length <= 24);
   assert.equal(res.beats[3].pick.kind, 'none');
   assert.equal(res.beats[3].pick.fallback.type, 'statement', 'no picture: an infographic block');
+  assert.equal(res.beats[3].motionOk, false, 'a static statement with no picture fails the motion rule');
+  assert.equal(res.needsClips, true);
+  assert.equal(res.actions[0].action, 'find-clips');
   assert.ok(calls.verifyGateways.length && calls.verifyGateways.every(f => f === 'reels-photo-verify'), 'photo vision logged as a Reels feature');
   assert.equal(calls.maxPhotos, 6, 'at most 6 photos per vision check');
   assert.equal(res.judge.threshold.relevance, 7);
@@ -231,8 +248,8 @@ await test('scene-media: live clip search for at most 2 subjects, vision for at 
   const plan = { ...PLAN, beats: ['Aaron Rodgers|Green Bay Packers', 'George Kittle|San Francisco 49ers', 'Josh Allen|Buffalo Bills', 'Patrick Mahomes|Kansas City Chiefs', 'Lamar Jackson|Baltimore Ravens'].map((x, i) => ({ id: `b${i + 1}`, kind: i ? 'point' : 'hook', text: x, block: { type: i ? 'statement' : 'hook' }, subject: { type: 'player', name: x.split('|')[0], team: x.split('|')[1] } })) };
   const calls = {};
   const res = await SRC.sceneMedia({ plan }, { deps: mockDeps({ calls }), aiAllowed: true });
-  assert.equal(calls.find.filter(c => !c.freeOnly).length, 2);
-  assert.equal(calls.find.filter(c => c.freeOnly).length, 3);
+  assert.equal(calls.find.filter(c => !c.freeOnly).length, 2, 'at most 2 paid live searches a reel, whatever the ladder');
+  assert.ok(calls.find.filter(c => c.freeOnly).length >= 3, 'the other rungs: library + free sources');
   assert.equal(calls.photos.filter(c => c.vision).length, 2);
   assert.equal(res.capped.clips, true);
   assert.equal(res.capped.photos, true);
@@ -244,17 +261,15 @@ await test('scene-media: live clip search for at most 2 subjects, vision for at 
   assert.equal(res2.judge.ready, false);
 });
 
-await test('scene-media: Receipts takes no media (no search, no photo, $0); Stat Card wants photos, no clips', async () => {
+await test('scene-media (v4): old Receipts / Stat Card plans map to Breakdown and get clips; a verified photo carries Ken Burns', async () => {
   const calls = {};
-  const res = await SRC.sceneMedia({ plan: { ...PLAN, esStyle: 'receipts' } }, { deps: mockDeps({ calls }), aiAllowed: true });
-  assert.equal(calls.find.length + calls.photos.length, 0);
-  assert.ok(res.beats.every(b => b.wants === 'none' && b.pick.kind === 'none' && !b.pick.fallback));
-  assert.equal(res.cost, 0);
-  const sc = {};
-  const res2 = await SRC.sceneMedia({ plan: PLAN, esStyle: 'statcard' }, { deps: mockDeps({ calls: sc, photosBy: { 'Aaron Rodgers': [photo('rodgers', true)] } }), aiAllowed: true });
-  assert.equal(sc.find.length, 0);
-  assert.equal(res2.beats[0].pick.kind, 'photo');
-  assert.equal(res2.beats[0].pick.ref, photo('rodgers', true).url);
+  const res = await SRC.sceneMedia({ plan: { ...PLAN, esStyle: 'receipts' } }, { deps: mockDeps({ calls, photosBy: { 'Aaron Rodgers': [photo('rodgers', true)] } }), aiAllowed: true });
+  assert.equal(res.esStyle, 'breakdown');
+  assert.ok(calls.find.length > 0, 'no more all-paper reels');
+  assert.equal(res.beats[0].pick.kind, 'photo');
+  assert.ok(res.beats[0].pick.kenBurns && res.beats[0].pick.kenBurns.to.w < 1, 'Ken Burns on the focus box');
+  assert.equal(res.beats[0].motion, 'kenburns');
+  assert.equal(res.beats[2].motion, 'module', 'the stat tiles animate by themselves');
 });
 
 // ─── Review ──────────────────────────────────────────────────────────────
@@ -394,7 +409,7 @@ await test('handler: scene-media and review answer for a signed-in user; free mo
     const call = async body => { const r = await handler({ httpMethod: 'POST', headers: { authorization: 'Bearer good' }, body: JSON.stringify(body) }); return { status: r.statusCode, body: JSON.parse(r.body) }; };
     const sm = await call({ mode: 'scene-media', plan: { ...PLAN, esStyle: 'receipts' } });
     assert.equal(sm.status, 200);
-    assert.equal(sm.body.esStyle, 'receipts');
+    assert.equal(sm.body.esStyle, 'breakdown');
     assert.equal(sm.body.beats.length, 5);
     const rv = await call({ mode: 'review', plan: PLAN, picks: {}, corpus: CORPUS });
     assert.equal(rv.status, 200);
