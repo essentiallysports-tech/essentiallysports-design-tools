@@ -1415,29 +1415,6 @@
       return id;
     } catch { return ''; }
   }
-  async function stillChain(beat, used) {
-    const plan = state.plan;
-    // Game Swing: a play beat shows the team that made the play (beat.photo
-    // names it), never the winner's photo or tile by default.
-    const game = plan.format === 'gameswing' ? state.data.game : null;
-    const own = game && beat.kind === 'play' ? [game.teams.home, game.teams.away].find(t => t.name === beat.photo) : null;
-    const team = own ? { name: own.name, colors: own.colors || [] } : plan.team;
-    if (beat.visual === 'logo-tile' && team && await teamTile(beat.id, team)) return 'tile';
-    if (beat.visual === 'scene' && await aiScene(beat)) return 'scene';
-    const queries = own ? [beat.photo] : [beat.photo, team?.name, [F.SPORTS.find(x => x.id === plan.sport)?.label, team?.short || ''].join(' ').trim()].filter(Boolean);
-    for (const q of [...new Set(queries)]) {
-      const list = await searchPhotos(q);
-      const pick = list.find(p => !used.has(p.id) && (!p.width || p.width >= 600)) || list.find(p => !used.has(p.id));
-      if (pick) { used.add(pick.id); await usePhoto(beat.id, pick, { quiet: true }); state.visualSrc[beat.id] = beat.visual === 'headshot' ? 'headshot' : 'photo'; return 'photo'; }
-    }
-    // ES Reels: with no photo the scene sits on ES paper (on brand); no
-    // gradient team tile or designed background is filled in for it.
-    if (esOn()) { if (beat.visual === 'scene' && await aiScene(beat)) return 'scene'; setVisual(beat.id, [], 'paper'); return 'paper'; }
-    if (team && await teamTile(beat.id, team)) return 'tile';
-    if (beat.visual === 'scene' && await aiScene(beat)) return 'scene';
-    setVisual(beat.id, [designAsset()], 'design');
-    return 'design';
-  }
   // Component pictures: versus headshots and tile logos.
   async function componentVisuals(beat) {
     for (const [i, v] of (beat.versus || []).entries()) {
@@ -1655,7 +1632,6 @@
   // the ES image pool / team graphic chain only when the module is missing.
   async function legacyFill(plan, beats, { force = false } = {}) {
     const usedClips = new Set(plan.beats.flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean));
-    const usedPhotos = new Set(Object.values(state.photos).flat());
     const swingPlay = b => plan.format === 'gameswing' && b.kind === 'play';
     const rest = [];
     let n = 0;
@@ -1671,7 +1647,8 @@
       }
       if (done) continue;
       if (srcOn()) { rest.push(beat); continue; }
-      await stillChain(beat, usedPhotos);
+      // No sourcing module: the scene stays an infographic (never an unchecked photo).
+      setVisual(beat.id, [], 'paper');
       n += 1;
       if (n % 2 === 0) { rebuild(); renderBeats(); }
     }
