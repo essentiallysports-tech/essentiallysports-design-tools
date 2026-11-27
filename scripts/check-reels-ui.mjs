@@ -106,6 +106,7 @@ const v4Style = body => body.esStyle || (STYLE_IDS.includes(body.style) ? body.s
 // (reel-clips gatedPicks) passes them without the judge, as the SOURCING lane's library does.
 function sceneMedia(body) {
   const style = v4Style(body);
+  if (scenario.clips === 'none-once') { scenario.clips = 'none'; scenario.flipNext = true; } else if (scenario.flipNext) { scenario.clips = 'ok'; scenario.flipNext = false; }
   const clipsOn = scenario.clips === 'ok';
   const beats = allBeats(body.plan || {}).filter(b => !(b.kind === 'cta' || b.block?.type === 'endcard'));
   let clipCount = 0;
@@ -222,7 +223,7 @@ await evaluate(FAKE_SESSION);
 
 // The client feedback hook: wrap ReelFeedback.log (fire-and-forget) so every event is seen even
 // when it is batched or sent with sendBeacon. Events land in window.__qaFeedback.
-const FEEDBACK_HOOK = `(() => { window.__qaFeedback = window.__qaFeedback || []; const wrap = () => { const F = window.ReelFeedback; if (!F || typeof F.log !== 'function' || F.log.__qa) return false; const orig = F.log; F.log = function (evt) { try { window.__qaFeedback.push(JSON.parse(JSON.stringify(evt || {}))); } catch { window.__qaFeedback.push({ event: String(evt && evt.event) }); } return orig.apply(this, arguments); }; F.log.__qa = true; return true; }; if (!wrap()) { let n = 0; const t = setInterval(() => { if (wrap() || ++n > 100) clearInterval(t); }, 100); } return 1; })()`;
+const FEEDBACK_HOOK = `(() => { window.__qaFeedback = window.__qaFeedback || []; const wrap = () => { const F = window.ReelFeedback; if (!F || typeof F.log !== 'function' || F.log.__qa) return false; const orig = F.log; F.log = function (evt) { try { window.__qaFeedback.push(JSON.parse(JSON.stringify(evt || {}))); } catch { window.__qaFeedback.push({ event: String(evt && evt.event) }); } return orig.apply(this, arguments); }; F.log.__qa = true; return true; }; const wrapX = () => { const T = window.FrameUpTrack; if (!T || typeof T.exported !== 'function' || T.exported.__qa) return false; const o = T.exported; window.__qaExported = window.__qaExported || []; const ex = function (d) { try { window.__qaExported.push(JSON.parse(JSON.stringify(d || {}))); } catch {} return o.apply(T, arguments); }; ex.__qa = true; window.FrameUpTrack = Object.assign({}, T, { exported: ex }); return true; }; /* FrameUpTrack is frozen: the page gets a copy with exported() wrapped */ wrapX(); setTimeout(wrapX, 1500); if (!wrap()) { let n = 0; const t = setInterval(() => { if (wrap() || ++n > 100) clearInterval(t); }, 100); } return 1; })()`;
 async function load(q = '') {
   await evaluate(`(() => { try { for (const k of Object.keys(localStorage)) if (/reel/i.test(k)) localStorage.removeItem(k); sessionStorage.clear(); sessionStorage.setItem('frameup.tours.offered', '1'); } catch {} return 1; })()`);
   await send('Page.navigate', { url: `${base}/reel-maker.html${q}` });
@@ -665,23 +666,36 @@ for (const w of WIDTHS) {
     expect(r.target, 'no Organic / Paid toggle (#rm-target)');
     expect(r.rights, 'no rights summary');
   });
+  await step('Paid ad', async () => { await must('#rm-target [data-target="paid"]'); await waitFor(`document.querySelector('#rm-target [data-target="paid"]').getAttribute('aria-checked') === 'true'`, 2000, 'paid picked'); });
+  await audit('export-paid', w);
   if (first) {
+    // MP4 export on a short test reel (one beat + the close): headless Chrome encodes frame by frame.
+    await load();
+    Object.assign(scenario, { clips: 'ok', critic: 'pass', motion: 'ok' });
+    await step('Export: a one-sentence script makes a short reel', async () => {
+      await makeReel({ style: 'hotseat', length: 'short', text: 'Lamar Jackson is the perfect cover for Eric DeCosta.' });
+      await must('#rm-next');
+      await waitFor(`${SHOWN}(document.querySelector('#rm-pane-export'))`, 4000, 'Export step');
+    });
     await step('Export MP4 (and the export feedback event)', async () => {
+      // Headless Chrome encodes frame by frame: allow 10x the reel's length + 30 s.
+      const reelMs = Number(await ctx('(c.state.timeline && c.state.timeline.durationMs) || 0')) || 90000;
+      const exportMs = Math.round(reelMs * 10 + 30000);
       await must('#rm-export');
-      await waitFor(`!document.querySelector('#rm-files')?.hidden || /fail|cancel|fix/i.test(document.querySelector('#rm-export-status')?.textContent || '')`, 150000, 'exported file row').catch(async e => { throw new Error(e.message + ' (status: "' + (await evaluate(`(document.querySelector('#rm-export-status')?.textContent || '') + '" gate: "' + (document.querySelector('#rm-gate')?.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 200)`)) + '")'); });
+      await waitFor(`!document.querySelector('#rm-files')?.hidden || /fail|cancel|fix/i.test(document.querySelector('#rm-export-status')?.textContent || '')`, exportMs, `exported file row (${Math.round(exportMs / 1000)} s for a ${Math.round(reelMs / 1000)} s reel)`).catch(async e => { throw new Error(e.message + ' (status: "' + (await evaluate(`(document.querySelector('#rm-export-status')?.textContent || '') + '" gate: "' + (document.querySelector('#rm-gate')?.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 200)`)) + '")'); });
       const st = await evaluate(`document.querySelector('#rm-export-status').textContent`);
       expect(/^Exported/.test(st), `export said: ${st}`);
       await expectFeedback('export', 'Export');
+      const ex = await evaluate('window.__qaExported || []');
+      expect(ex.some(e => e.tool === 'reels-studio' && /mp4|webm/i.test(String(e.format || ''))), `FrameUpTrack.exported() did not fire for the MP4 (${JSON.stringify(ex).slice(0, 160)})`);
     });
     await sleep(900);
     await audit('export-done', w);
   }
-  await step('Paid ad', async () => { await must('#rm-target [data-target="paid"]'); await waitFor(`document.querySelector('#rm-target [data-target="paid"]').getAttribute('aria-checked') === 'true'`, 2000, 'paid picked'); });
-  await audit('export-paid', w);
 
   // The Ready to post gate: no clip → not ready → "Find clips" → ready.
   await load();
-  Object.assign(scenario, { clips: 'none', critic: 'pass' });
+  Object.assign(scenario, { clips: 'none-once', critic: 'pass' }); // later sourcing calls (Find clips) find them
   await step('Ready gate: a reel with no confirmed clip is not Ready to post and offers Find clips', async () => {
     await makeReel({ style: 'hotseat' });
     await sleep(1500);
@@ -770,7 +784,7 @@ for (const w of WIDTHS) {
         expect(p.esStyle === id && p.v === 4, `plan ${JSON.stringify(p)}`);
         const pl = calls.find(c => c.mode === 'plan');
         expect(lengthOf(pl.body) === len, `the plan request length is "${lengthOf(pl.body)}" (picked ${len})`);
-        await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 8000, '"Ready to post"');
+        await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 8000, '"Ready to post"').catch(async e => { throw new Error(`${e.message} (badge "${await readyText()}"; open rows: ${(await checklistText()).split(' / ').filter(r => !/passes$/i.test(r)).join(' / ').slice(0, 300)})`); });
         const sm = calls.find(c => c.mode === 'scene-media');
         expect(!sm || v4Style(sm.body) === id, `scene-media esStyle ${sm && sm.body.esStyle}`);
       });
