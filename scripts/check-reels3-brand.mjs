@@ -23,6 +23,8 @@
 // failing boxes outlined in red) and <topic>-<style>.json (the per-frame findings).
 // Before the v3 engine lands (no ReelES.STYLES) the reels are drawn in today's ES style
 // with the new blocks mapped to old ones, and the run reports "engine v3 not present".
+// The style rides on plan.esStyle (as the director writes it); REELS3_REELSTYLE=1 also sets plan.reelStyle
+// (the engine's own field) to see each style drawn while the two disagree.
 // Run: node scripts/check-reels3-brand.mjs   (skips without Chrome). REELS3_ONLY=receipts limits styles.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -96,6 +98,7 @@ if (!(await page.evaluate(`Boolean(window.ReelRender && window.ReelES)`).catch((
 const HARNESS = String.raw`(() => {
 const R = window.ReelRender, ES = window.ReelES, L = window.ReelLint, FR = window.FrameUpRules;
 const V3 = Boolean(ES && ES.STYLES && typeof ES.STYLES === 'object');
+const ALSO_REELSTYLE = Boolean(window.__QA_REELSTYLE);
 const W = 1080, H = 1920;
 const measureCtx = document.createElement('canvas').getContext('2d');
 const measure = (text, font) => { measureCtx.font = font; return measureCtx.measureText(text).width; };
@@ -217,8 +220,8 @@ function build(fix, topic, styleId) {
     if (raw.block && raw.block.photo && fix.media[raw.block.photo] && !assets[raw.block.photo]) { const m = fix.media[raw.block.photo]; assets[raw.block.photo] = { kind: 'photo', url: '/__qa/media/' + raw.block.photo + '.svg', verified: true, focus: m.focus, head: { x: m.focus.x + m.focus.w / 2, y: m.focus.y + m.focus.h / 2 }, rights: { source: 'QA stand-in (SVG)', licence: 'QA fixture, no rights needed', organic: true, paid: true } }; photos[key] = [raw.block.photo]; }
     return V3 ? raw : downgrade(raw);
   });
-  const plan = { title: topic.title, format: topic.format || 'stat', sport: topic.sport, style: V3 ? styleId : 'es', ...(V3 ? { reelStyle: styleId } : {}), sourceLine: 'Source: ' + ((topic.sources || [])[0]?.source || 'ES'), sources: topic.sources, team: topic.team || undefined, beats };
-  const opts = { style: V3 ? styleId : 'es', ...(V3 ? { reelStyle: styleId } : {}), photos, assets, team: topic.team || undefined, sources: topic.sources };
+  const plan = { title: topic.title, format: topic.format || 'stat', sport: topic.sport, style: 'es', ...(V3 ? { esStyle: styleId } : {}), ...(V3 && ALSO_REELSTYLE ? { reelStyle: styleId } : {}), sourceLine: 'Source: ' + ((topic.sources || [])[0]?.source || 'ES'), sources: topic.sources, team: topic.team || undefined, beats };
+  const opts = { style: 'es', ...(V3 ? { esStyle: styleId } : {}), photos, assets, team: topic.team || undefined, sources: topic.sources };
   return { plan, opts, assets };
 }
 
@@ -404,13 +407,14 @@ async function renderReel(fix, topicId, styleId, opts2 = {}) {
   // The engine's own checks, for the lint-gap cross-check.
   let lint = null;
   try { if (L && L.lintTimeline) { const boxes = R.allBoxes ? R.allBoxes(measure, tl) : null; const r = L.lintTimeline(tl, { boxes, measure, extraSources: topic.facts || '' }); lint = { critical: r.critical, warnings: r.warnings, ids: [...new Set(r.issues.map(i => i.id || i.code || i.kind || ''))].filter(Boolean), criticals: r.issues.filter(i => i.severity === 'critical').map(i => (i.id || i.code || '') + ': ' + String(i.message || '').slice(0, 140)) }; } } catch (e) { lint = { error: e.message }; }
-  return { v3: V3, style: tl.style, durationMs: tl.durationMs, frames, lint, sheet: opts2.sheet ? sheet.toDataURL('image/png') : '' };
+  return { v3: V3, style: tl.style, reelStyle: tl.reelStyle || '', durationMs: tl.durationMs, frames, lint, sheet: opts2.sheet ? sheet.toDataURL('image/png') : '' };
 }
 
 window.QA3 = { V3, loadMedia, renderReel, scaleSteps, styles: () => (V3 ? Object.fromEntries(Object.entries(ES.STYLES).map(([k, v]) => [k, { id: v && v.id, label: v && v.label, blocks: v && v.blocks }])) : null), hasPillMetrics: Boolean(FR && FR.pillMetrics) };
 return true;
 })()`;
 
+if (process.env.REELS3_REELSTYLE) await page.evaluate('window.__QA_REELSTYLE = true');
 await page.evaluate(HARNESS);
 const loaded = await page.evaluate(`QA3.loadMedia(${JSON.stringify(FIX.media)})`);
 const v3 = await page.evaluate('QA3.V3');
@@ -432,6 +436,7 @@ for (const topic of FIX.topics) {
     const r = await page.evaluate(`QA3.renderReel(window.__FIX || (window.__FIX = ${JSON.stringify(FIX)}), ${JSON.stringify(topic.id)}, ${JSON.stringify(style)}, { sheet: ${Boolean(SHEETS)}, guides: true })`);
     const tag = `${topic.id}/${style}`;
     if (r.error) { failures.push(`${tag}: ${r.error}`); continue; }
+    if (v3 && r.reelStyle !== style) failures.push(`${tag}: the engine drew it as "${r.reelStyle || '?'}" (plan.esStyle = ${style}, plan.style = 'es': the engine does not read plan.esStyle)`);
     const bad = r.frames.filter(f => f.issues.length);
     const byRule = {};
     r.frames.forEach(f => f.issues.forEach(i => { byRule[i.rule] = (byRule[i.rule] || 0) + 1; }));

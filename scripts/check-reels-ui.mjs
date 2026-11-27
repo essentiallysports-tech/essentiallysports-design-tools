@@ -19,7 +19,7 @@
 //            Captions, Details (#rm-voice, #rm-captions, #rm-details).
 //   Export   one Export button (#rm-export) plus "Also export" (#rm-also: 4:5,
 //            captions, carousel), Organic / Paid, the rights summary.
-// Also: every style makes a reel (plan.style is the style id), script mode keeps
+// Also: every style makes a reel (plan.esStyle is the style id; plan.style stays 'es'), script mode keeps
 // the words, trends empty / error, free mode and the server-offline draft.
 // Every state is audited in light and dark (scripts/lib/reels-ui-audit.js):
 // doubled borders, empty bands, clipped text, horizontal scroll, misaligned
@@ -60,17 +60,21 @@ const CLIP = { url: 'https://x.com/NFL/status/1855000000000000001', handle: 'NFL
 const PHOTOS = ['/how-step-choose.webp', '/how-step-content.webp', '/how-step-export.webp', '/how-step-format.webp', '/how-step-review.webp', '/login-artwork.webp'];
 const BRIEF = "Aaron Rodgers' 2011 season still has no twin: 45 touchdowns, 6 interceptions, a 122.5 passer rating and a 15-1 record. Source: Pro Football Reference.";
 
-// scene-media (contract): per beat a subject, judged clips, verified photos and a pick.
+// scene-media (scratchpad reels3-sourcing-api.md): per beat a subject, judged clips, verified photos and a pick.
+const v3Style = body => body.esStyle || (STYLE_IDS.includes(body.style) ? body.style : '') || body.plan?.esStyle || 'receipts';
 function sceneMedia(body) {
-  const style = body.style || body.plan?.style || 'receipts';
+  const style = v3Style(body);
   const beats = (body.plan?.beats || []).filter(b => !(b.kind === 'cta' || b.block?.type === 'endcard'));
   return {
-    ok: true, style, cost: 0,
+    ok: true, esStyle: style, cost: 0, costs: { clips: 0, photos: 0 }, capped: { clips: false, photos: false },
+    judge: { ready: true, maxClips: 24, perCall: 4, maxUsdPerReel: 0.03, threshold: { relevance: 7, moment: 5 } },
+    judgeQueue: [], subjects: [{ key: 'aaron rodgers', label: 'Aaron Rodgers', moment: '45 TD season' }],
     beats: beats.map((b, i) => {
-      const clips = [0, 1].map(k => ({ ...CLIP, url: `${CLIP.url.slice(0, -1)}${i}${k}`, text: `Clip ${k + 1} for scene ${i + 1}`, relevance: 0.9 - k * 0.1, judged: true }));
-      const photos = [0, 1, 2].map(k => ({ id: `ph-${i}-${k}`, url: PHOTOS[(i + k) % PHOTOS.length], proxyUrl: PHOTOS[(i + k) % PHOTOS.length], verified: true, focus: { x: 0.3, y: 0.1, w: 0.4, h: 0.3 }, head: { x: 0.35, y: 0.1, w: 0.3, h: 0.25 }, credit: 'ES', title: `Photo ${k + 1}` }));
-      const kind = style === 'receipts' ? 'none' : (style === 'statcard' ? 'photo' : 'clip');
-      return { beatId: b.id, subject: { type: 'player', name: 'Aaron Rodgers', team: 'Green Bay Packers', date: '2011' }, clips: style === 'receipts' ? [] : clips, photos: style === 'receipts' ? [] : photos, pick: kind === 'none' ? { kind: 'none', ref: null } : { kind, ref: kind === 'clip' ? clips[0].url : photos[0].id } };
+      const clips = [0, 1].map(k => ({ ...CLIP, url: `${CLIP.url.slice(0, -1)}${i}${k}`, text: `Aaron Rodgers clip ${k + 1} for scene ${i + 1}`, relevance: 9 - k, moment: 8 - k, judged: true, gate: 'judge', score: 90 - k }));
+      const photos = [0, 1, 2].map(k => ({ url: PHOTOS[(i + k) % PHOTOS.length], sourceUrl: `https://www.essentiallysports.com/photo-${i}-${k}`, verified: true, focus: { x: 0.3, y: 0.1, w: 0.4, h: 0.3 }, head: { x: 0.5, y: 0.22 }, kind: 'photo', title: `Photo ${k + 1}`, credit: 'ES', rights: { source: 'ES', licence: 'ES image pool', organic: true, paid: false } }));
+      const wants = style === 'receipts' ? 'none' : (style === 'statcard' ? 'photo' : 'clip');
+      const pick = wants === 'none' ? { kind: 'none', ref: '', fallback: null, why: 'Receipts never gets media' } : { kind: wants, ref: wants === 'clip' ? clips[0].url : photos[0].url, ...(wants === 'clip' ? { segment: { inSec: 0.4, outSec: 4.4 } } : {}), why: 'qa' };
+      return { beatId: b.id, block: b.block || null, wants, subject: { type: 'player', name: 'Aaron Rodgers', team: 'Green Bay Packers', date: '2011', key: 'aaron rodgers' }, clips: style === 'receipts' ? [] : clips, photos: style === 'receipts' ? [] : photos, pick };
     }),
   };
 }
@@ -92,11 +96,11 @@ async function reelApi(body) {
   if (mode === 'plan') {
     if (scenario.planDelay) await sleep(scenario.planDelay);
     const r = await server_.plan(body, { email: 'qa@essentiallysports.com' }, free ? { free: true } : { off: true });
-    if (r.plan && body.style && !r.plan.style) r.plan.style = body.style;
+    if (r.plan && body.esStyle && !r.plan.esStyle) r.plan.esStyle = body.esStyle;
     return { status: r.ok ? 200 : (r.status || 502), body: free ? { ...r, mode: 'free', reason: 'user-limit' } : r };
   }
   if (mode === 'scene-media') { if (scenario.planDelay) await sleep(scenario.planDelay / 2); return { status: 200, body: sceneMedia(body) }; }
-  if (mode === 'review') return { status: 200, body: { ok: true, issues: [], fixed: null, cost: 0 } };
+  if (mode === 'review') return { status: 200, body: { ok: true, ready: true, issues: [], plan: body.plan, cost: 0, model: 'qa' } };
   if (mode === 'revise') {
     if (free) return { status: 200, body: { ok: true, skipped: true } };
     const plan = JSON.parse(JSON.stringify(body.plan || {}));
@@ -198,7 +202,7 @@ const behaviour = [];
 async function step(name, fn) { try { await fn(); } catch (error) { behaviour.push(`${name}: ${error.message}`); } }
 const ctx = expr => evaluate(`(() => { const c = window.ReelMakerCtx || window.ReelMakerPage; return ${expr}; })()`);
 const STYLE_CARDS = `[...document.querySelectorAll('#rm-styles4 [role="radio"]')]`;
-const pickStyle = id => evaluate(`(() => { const b = ${STYLE_CARDS}.find(x => x.dataset.style === ${JSON.stringify(id)}); if (!b) return false; b.click(); return b.getAttribute('aria-checked') === 'true'; })()`);
+const pickStyle = id => evaluate(`(() => { const b = ${STYLE_CARDS}.find(x => (x.dataset.style4 || x.dataset.style) === ${JSON.stringify(id)}); if (!b) return false; b.click(); return b.getAttribute('aria-checked') === 'true'; })()`);
 const inReview = `${SHOWN}(document.querySelector('#rm-pane-edit')) && !document.querySelector('#rm-pane-edit').hidden`;
 async function makeReel({ style = 'statcard', text = BRIEF, script = false } = {}) {
   await pickStyle(style);
@@ -236,7 +240,7 @@ for (const w of WIDTHS) {
     expect(await evaluate(`document.querySelector('#rm-make').matches('.es-btn--primary')`), 'Make my reel is not the primary button');
   });
   await step('Create: four style cards with a preview and one line', async () => {
-    const cards = await evaluate(`${STYLE_CARDS}.map(b => ({ id: b.dataset.style, text: b.textContent.replace(/\\s+/g, ' ').trim(), preview: Boolean(b.querySelector('canvas, video, img')), checked: b.getAttribute('aria-checked'), shown: ${SHOWN}(b) }))`);
+    const cards = await evaluate(`${STYLE_CARDS}.map(b => ({ id: b.dataset.style4 || b.dataset.style, text: b.textContent.replace(/\\s+/g, ' ').trim(), preview: Boolean(b.querySelector('canvas, video, img')), checked: b.getAttribute('aria-checked'), shown: ${SHOWN}(b) }))`);
     expect(cards.length === 4, `${cards.length} style cards`);
     expect(cards.map(c => c.id).join() === STYLE_IDS.join(), `style ids: ${cards.map(c => c.id).join()}`);
     cards.forEach((c, i) => {
@@ -260,7 +264,7 @@ for (const w of WIDTHS) {
     await pickStyle('gametape');
     await evaluate(`(${STYLE_CARDS}[0].focus(), 1)`);
     await press('ArrowRight');
-    const r = await evaluate(`({ on: ${STYLE_CARDS}.find(b => b.getAttribute('aria-checked') === 'true')?.dataset.style, focus: document.activeElement?.dataset?.style, tabs: ${STYLE_CARDS}.map(b => b.tabIndex) })`);
+    const r = await evaluate(`({ on: (x => x && (x.dataset.style4 || x.dataset.style))(${STYLE_CARDS}.find(b => b.getAttribute('aria-checked') === 'true')), focus: document.activeElement?.dataset?.style4 || document.activeElement?.dataset?.style, tabs: ${STYLE_CARDS}.map(b => b.tabIndex) })`);
     expect(r.on === 'statcard' && r.focus === 'statcard', `after ArrowRight: picked ${r.on}, focus ${r.focus}`);
     expect(r.tabs.filter(t => t === 0).length === 1, `roving tabindex: ${r.tabs}`);
   });
@@ -316,8 +320,8 @@ for (const w of WIDTHS) {
   scenario.planDelay = 0;
   await step('… then Review', async () => { await waitFor(inReview, 40000, 'the Review step'); });
   await step('Review: plan has the picked style; Review is the current step', async () => {
-    const st = await ctx(`c.state.plan && c.state.plan.style`);
-    expect(st === 'statcard', `plan.style is ${st}`);
+    const st = await ctx(`c.state.plan && c.state.plan.esStyle`);
+    expect(st === 'statcard', `plan.esStyle is ${st}`);
     expect(await evaluate(`document.querySelector('#rm-steps [data-step="edit"]').getAttribute('aria-current') === 'step'`), 'Review is not the current step');
   });
   await step('Review: scene media came from the sourcing pass (scene-media + review)', async () => {
@@ -325,7 +329,7 @@ for (const w of WIDTHS) {
     expect(modes.includes('scene-media'), `no scene-media call (calls: ${[...new Set(modes)].join(',')})`);
     expect(modes.includes('review'), `no review call (calls: ${[...new Set(modes)].join(',')})`);
     const sm = calls.find(c => c.mode === 'scene-media');
-    expect(sm.body.style === 'statcard', `scene-media sent style ${sm.body.style}`);
+    expect(v3Style(sm.body) === 'statcard', `scene-media sent esStyle ${sm.body.esStyle} / style ${sm.body.style}`);
   });
   await scrollTop();
   await audit('review', w);
@@ -349,7 +353,7 @@ for (const w of WIDTHS) {
     expect(n >= 1, 'no Swap control on any scene');
     const before = await ctx(`(() => { const b = c.state.plan.beats.find(x => (c.state.photos[x.id] || []).length); return b ? { id: b.id, media: c.state.photos[b.id][0] } : null; })()`);
     await evaluate(`(${SWAP}[0].click(), 1)`);
-    const CAND = `[...document.querySelectorAll('#rm-scenes [data-candidate], #rm-scene-edit [data-candidate], dialog[open] [data-candidate], [data-swap-pick], [role="listbox"] [role="option"]')].filter(e => ${SHOWN}(e))`;
+    const CAND = `[...document.querySelectorAll('#rm-scenes [data-candidate], #rm-scene-edit [data-candidate], dialog[open] [data-candidate], [data-swap-pick], [data-swap-list] button, [role="listbox"] [role="option"]')].filter(e => ${SHOWN}(e))`;
     await waitFor(`${CAND}.length >= 1`, 4000, 'swap candidates ([data-candidate], [data-swap-pick] or listbox options)');
     await audit('review-swap-open', w);
     await evaluate(`(() => { const list = ${CAND}; const pick = list.find(e => e.getAttribute('aria-selected') !== 'true' && e.getAttribute('aria-checked') !== 'true') || list[list.length - 1]; pick.click(); return 1; })()`);
@@ -366,7 +370,7 @@ for (const w of WIDTHS) {
     await waitFor(`(window.ReelMakerCtx.state.plan.beats[0].text || '') === '45 TD. 6 INT.'`, 6000, 'the revised plan');
     const rv = calls.find(c => c.mode === 'revise');
     expect(rv && /45 TD/.test(rv.body.instruction), `revise instruction: ${rv && rv.body.instruction}`);
-    expect((await ctx('c.state.plan.style')) === 'statcard', 'revise dropped the style');
+    expect((await ctx('c.state.plan.esStyle')) === 'statcard', 'revise dropped the style (plan.esStyle)');
   });
   await audit('review-revised', w);
   await step('Review: exactly three folds: Voice & music, Captions, Details', async () => {
@@ -440,10 +444,10 @@ for (const w of WIDTHS) {
       await load();
       await step(`style ${id}: Make my reel → Review`, async () => {
         await makeReel({ style: id });
-        expect((await ctx('c.state.plan.style')) === id, `plan.style ${await ctx('c.state.plan.style')}`);
+        expect((await ctx('c.state.plan.esStyle')) === id, `plan.esStyle ${await ctx('c.state.plan.esStyle')}`);
         await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 6000, '"Ready to post"');
         const sm = calls.find(c => c.mode === 'scene-media');
-        expect(!sm || sm.body.style === id, `scene-media style ${sm && sm.body.style}`);
+        expect(!sm || v3Style(sm.body) === id, `scene-media esStyle ${sm && sm.body.esStyle}`);
       });
       await scrollTop();
       await audit(`review-style-${id}`, w);
