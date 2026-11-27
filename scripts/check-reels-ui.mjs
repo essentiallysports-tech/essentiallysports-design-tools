@@ -103,14 +103,15 @@ function sceneMedia(body) {
     let pick;
     if (wants === 'none') pick = { kind: 'none', ref: '', why: 'module beat' };
     else if (clips.length) { pick = { kind: 'clip', ref: clips[0].url, segment: { inSec: 0.4, outSec: 4.4 }, why: 'qa' }; clipCount++; } else pick = { kind: 'photo', ref: photos[0].url, kenBurns: true, why: 'no clip: verified photo with Ken Burns' };
-    return { beatId: b.id, chapterId: b.chapterId, block: b.block || null, module: b.module || null, kind: wants, wants, subject: { ...subject, key: String(subject.name || '').toLowerCase() }, clips, photos, pick, motionOk: !(scenario.motion === 'static' && i === 1), ...(scenario.motion === 'static' && i === 1 ? { motionWhy: 'a still photo with no Ken Burns and no module' } : {}), segment: clips[0]?.segment || null };
+    return { motion: wants === 'none' ? 'module' : (clips.length ? 'clip' : 'kenburns'), failures: [], ladder: [{ rung: 'player+moment', n: clips.length, cost: 0, ms: 5 }], beatId: b.id, chapterId: b.chapterId, block: b.block || null, module: b.module || null, kind: wants, wants, subject: { ...subject, key: String(subject.name || '').toLowerCase() }, clips, photos, pick, motionOk: !(scenario.motion === 'static' && i === 1), ...(scenario.motion === 'static' && i === 1 ? { motionWhy: 'a still photo with no Ken Burns and no module' } : {}), segment: clips[0]?.segment || null };
   });
   return {
     ok: true, esStyle: style, cost: 0, costs: { clips: 0, photos: 0 }, capped: { clips: false, photos: false },
     judge: { ready: true, maxClips: 24, perCall: 4, maxUsdPerReel: 0.03, threshold: { relevance: 7, moment: 5 } },
     judgeQueue: [], subjects: [{ key: 'dak prescott', label: 'Dak Prescott', moment: '4th and 1' }],
     beats: out, clipCount, needsClips: clipCount === 0, motionOk: scenario.motion !== 'static',
-    ...(clipCount === 0 ? { actions: [{ id: 'find-clips', label: 'Find clips' }], reasons: ['no confirmed clip'] } : {}),
+    v: 4, stats: { clips: clipCount }, ms: 5,
+    actions: clipCount === 0 ? [{ action: 'find-clips', id: 'find-clips', beatIds: out.filter(x => ['clip', 'presser'].includes(x.kind)).map(x => x.beatId), label: 'Find clips' }] : [],
   };
 }
 
@@ -145,6 +146,11 @@ async function reelApi(pathname, body) {
     return { status: r.ok ? 200 : (r.status || 502), body: free ? { ...r, mode: 'free', reason: 'user-limit' } : r };
   }
   if (mode === 'scene-media' || (mode && /media|clips/i.test(mode) && pathname === '/api/reel-maker')) { if (scenario.planDelay) await sleep(scenario.planDelay / 2); return { status: 200, body: sceneMedia(body) }; }
+  // SOURCING lane modes: clip-rank (kept / swapped clips) and clip-proxy (video bytes, the CORS fallback).
+  if (mode === 'clip-rank') return { status: 200, body: { ok: true, rank: body.delta || 0 } };
+  // The mocked clips are same-origin (no CORS failure), so the proxy should not be needed; it is recorded if it is.
+  if (mode === 'clip-proxy') return { status: 206, type: 'video/webm', body: '' };
+  if (mode === 'critique' && scenario.critic === 'error') return { status: 502, body: { ok: false, error: 'The critic is unavailable right now.' } };
   if (mode === 'script-draft') return { status: 200, body: { ok: true, script: BRIEF.replace(/ Source:.*$/, ''), cost: 0 } };
   if (mode === 'critique') {
     const pass = scenario.critic === 'pass';
@@ -691,6 +697,7 @@ for (const w of WIDTHS) {
     await sleep(800);
     const t = await readyText();
     expect(!READY_RE.test(t), `the badge says "${t}" though the critic failed`);
+    expect(/critic flagged|to fix/i.test(t), `the badge does not say "Critic flagged" / "N to fix": "${t}"`);
     await click('#rm-ready'); await sleep(200);
     const list = await checklistText();
     expect(/hook|21-point|critic|fix/i.test(list + ' ' + t), `the critic's fix is not shown: "${t}" / ${list}`);
@@ -709,9 +716,19 @@ for (const w of WIDTHS) {
     await click('#rm-ready'); await sleep(200);
     const list = await checklistText();
     expect(/mov|static|motion|still/i.test(list + ' ' + t), `the motion problem is not shown: "${t}" / ${list}`);
+    expect(/\d+ static scene|static|to fix/i.test(t), `the badge does not count the static scene ("N static scenes"): "${t}"`);
   });
   await audit('review-static-beat', w);
   scenario.motion = 'ok';
+
+  // The critic did not run (an error): that row does not block Ready to post.
+  await load();
+  Object.assign(scenario, { clips: 'ok', critic: 'error', motion: 'ok' });
+  await step('Ready gate: a critic that did not run does not block Ready to post', async () => {
+    await makeReel({ style: 'hotseat' });
+    await waitFor(`/^\s*ready to post/i.test((document.querySelector('#rm-ready')?.textContent || '').trim())`, 8000, '"Ready to post" with the critic down').catch(async e => { throw new Error(`${e.message} (badge "${await readyText()}"; checklist: ${await checklistText()})`); });
+  });
+  scenario.critic = 'pass';
 
   // Every style makes a reel in its own style; Short makes a short plan (first width only).
   if (first) {
