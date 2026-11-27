@@ -595,6 +595,25 @@ const CHECKS = [
       return '';
     },
   },
+  {
+    // P3: Settings showed $0.00 while the sidebar showed this week's spend
+    // (no database row, /api/ai-status has it). And one tours.js key everywhere.
+    id: 'settings-usage-and-keys',
+    async run() {
+      SB = { frameup_my_ai_spend: [200, null] };
+      if (!await open('/ai-page/settings.html', { ready: "document.querySelector('.acc-usage__amount')", ms: 15000 })) return 'Settings usage never rendered';
+      const amount = await c.evaluate("document.querySelector('.acc-usage__amount').innerText");
+      if (!/\$3\.42/.test(amount)) return 'Settings shows ' + amount.replace(/\s+/g, ' ') + ' while /api/ai-status says $3.42';
+      const fs = await import('node:fs');
+      const keys = new Set();
+      for (const dir of ['', 'ai-page/']) for (const f of fs.readdirSync(ROOT_DIR + '/' + dir).filter(n => n.endsWith('.html'))) {
+        const m = fs.readFileSync(ROOT_DIR + '/' + dir + f, 'utf8').match(/tours\/tours\.js\?v=([\w.-]+)/);
+        if (m) keys.add(m[1]);
+      }
+      if (keys.size !== 1) return 'pages load different tours.js versions: ' + [...keys].join(', ');
+      return '';
+    },
+  },
 ];
 
 let failed = 0; let ran = 0;
