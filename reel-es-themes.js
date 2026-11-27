@@ -358,10 +358,12 @@
   //   verified clip / photo; clipsMin is the floor a Game Tape reel needs.
   //   pacing: beat lengths in ms (the voiceover still sets the real length).
   //   previewPlan: a small plan the style cards loop (reference topics, no media).
-  const STYLE_IDS = ['gametape', 'statcard', 'receipts', 'hypecut'];
-  const DEFAULT_STYLE = 'receipts';
+  // v4 (2026-11-27): these four are RETIRED. They stay as data (V3_STYLES)
+  // so a reel saved in one still opens; legacyStyle() maps each to a v4 style.
+  const V3_STYLE_IDS = ['gametape', 'statcard', 'receipts', 'hypecut'];
+  const V3_DEFAULT_STYLE = 'receipts';
   const ep = (beats, extra = {}) => ({ format: 'explainer', style: 'es', sourceLine: 'Source: Pro Football Reference', ...extra, beats: beats.map((b, i) => ({ id: `b${i + 1}`, vo: '', emphasis: '', photo: '', ...b })) });
-  const STYLES = {
+  const V3_STYLES = {
     gametape: {
       id: 'gametape', label: 'Game Tape', blurb: 'Video-first: verified game clips with short type over them.',
       look: 'tape', blocks: ['hook', 'clipLabel', 'statement', 'statTiles', 'tagPill', 'endcard'],
@@ -415,10 +417,104 @@
       ]),
     },
   };
+  const isV3Style = id => V3_STYLE_IDS.includes(id);
+  const getV3Style = id => V3_STYLES[isV3Style(id) ? id : V3_DEFAULT_STYLE];
+
+  // ─── Reels Studio v4: the four "breakdown" styles ───────────────────────
+  // One Breakdown engine (reel-es4.js: chapters -> beats -> zones) draws all
+  // four; a style is the story shape the director writes, the skin it wears,
+  // the modules it leans on and how it closes. Same ES type scale, pills,
+  // grid, colours, mark and motion in every one.
+  //   shape: the chapter pattern the director follows.
+  //   modules: the data modules the style reaches for first.
+  //   close: 'yourCall' (two-option fan vote) or 'checklist'.
+  //   media / pacing / voice / music: as in v3 (sourcing and pacing read them).
+  //   blocks / order / max: the v3 blocks a plain script still lands on
+  //   (reel-recipes applyStyle and scriptToPlan read them before toV4).
+  const V4_BLOCKS = ['hook', 'statement', 'photoCard', 'clipLabel', 'statTiles', 'dotGrid', 'compare', 'streak', 'rankTile', 'tagPill', 'quote', 'number', 'dots', 'endcard'];
+  const STYLE_IDS = ['breakdown', 'casefile', 'outlier', 'hotseat'];
+  const DEFAULT_STYLE = 'breakdown';
+  const SKINS = ['clean', 'scrapbook'];
+  const SRC = 'Pro Football Reference';
+  // A small v4 plan for the style cards' live previews (structure only, no media).
+  const pv = (esStyle, skin, chapters, close, extra = {}) => ({ v: 4, style: 'es', esStyle, skin, sport: 'nfl', sourceLine: `Source: ${SRC}`, ...extra, chapters, close });
+  const STYLES = {
+    breakdown: {
+      id: 'breakdown', label: 'Breakdown', skin: 'clean', look: 'paper',
+      blurb: 'Hook, two to four chapters that build the case, a payoff stat, then your call.',
+      shape: ['hook contradiction', 'chapter 1', 'chapter 2', 'chapter 3?', 'payoff stat', 'your call'],
+      modules: ['scoreboard', 'bars', 'numberLine', 'compare', 'reveal', 'statTiles'], close: 'yourCall',
+      blocks: V4_BLOCKS, order: ['hook', 'statement', 'compare', 'statTiles', 'statement', 'endcard'], max: {},
+      media: { clips: 0.6, photos: 0.3, clipsMin: 0.2 }, pacing: { hookMs: 3000, beatMinMs: 2400, beatMaxMs: 6000, tailMs: 240 },
+      motion: 'standard', kinetic: false, voice: { tone: 'steady' }, music: 'tension',
+      previewPlan: pv('breakdown', 'clean', [
+        { id: 'c1', marker: '1 · THE LEAD', headline: 'DALLAS BLEW A *21-POINT LEAD*', tone: 'red', beats: [
+          { id: 'b1', vo: 'Dallas led by 21.', module: { type: 'scoreboard', rows: [{ team: 'DAL', value: 31 }, { team: 'PHI', value: 10 }] } },
+          { id: 'b2', vo: 'Then lost on a *59-yard* field goal.', module: { type: 'scoreboard', rows: [{ team: 'DAL', value: 31 }, { team: 'PHI', value: 34 }], tag: { text: '59-YD FG · 0:02 LEFT', tone: 'red' } } }] },
+        { id: 'c2', marker: '2 · THE CHOICE', headline: 'IT WAS *NOT* THE 4TH DOWN', tone: 'blue', beats: [
+          { id: 'b3', vo: 'Win chance went from 47 to 57.', module: { type: 'compare', from: { value: '47%', label: 'GO FOR IT' }, to: { value: '57%', label: 'PUNT' } } }] },
+      ], { kind: 'yourCall', prompt: 'COWBOYS FANS: YOUR CALL', options: [{ text: 'BAD CALL', tone: 'red' }, { text: 'RIGHT CALL', tone: 'blue' }], comment: 'COMMENT: WHO IS TO BLAME?' }),
+    },
+    casefile: {
+      id: 'casefile', label: 'Case File', skin: 'scrapbook', look: 'paper',
+      blurb: 'An argument with evidence: a 3·2·1 countdown on graph paper, closed with a checklist.',
+      shape: ['the question', 'evidence #3', 'evidence #2', 'evidence #1', 'checklist close'],
+      modules: ['rankList', 'tally', 'playDiagram', 'calendar', 'flow', 'checklist', 'quote'], close: 'checklist',
+      blocks: V4_BLOCKS, order: ['hook', 'rankTile', 'statTiles', 'quote', 'statement', 'endcard'], max: {},
+      media: { clips: 0.4, photos: 0.5, clipsMin: 0.1 }, pacing: { hookMs: 3000, beatMinMs: 2600, beatMaxMs: 6000, tailMs: 260 },
+      motion: 'standard', kinetic: false, voice: { tone: 'steady' }, music: 'calm',
+      previewPlan: pv('casefile', 'scrapbook', [
+        { id: 'c1', marker: { kind: 'countdown', n: 3, of: 3 }, headline: 'WHO SHOULD *CALL* PLAYS?', beats: [
+          { id: 'b1', vo: 'Exhibit three: the tally.', module: { type: 'tally', n: 4, label: 'TD PASSES' } },
+          { id: 'b2', vo: 'And it keeps going.', module: { type: 'tally', n: 7, label: 'TD PASSES' } }] },
+        { id: 'c2', marker: { kind: 'countdown', n: 2, of: 3 }, headline: 'THE *SHORTEST* THROW', beats: [
+          { id: 'b3', vo: 'The ranks.', module: { type: 'rankList', title: 'AIR YARDS / ATT', rows: [{ rank: 1, label: 'KC', value: '5.1' }, { rank: 2, label: 'NYG', value: '5.6' }, { rank: 3, label: 'MIA', value: '5.9' }] } }] },
+      ], { kind: 'checklist', rows: [{ text: 'QUICK GAME', checked: true }, { text: 'NO RUN GAME', checked: false }] }),
+    },
+    outlier: {
+      id: 'outlier', label: 'The Outlier', skin: 'clean', look: 'paper',
+      blurb: 'One player or team against all the data: a dot grid or scatter that says "shouldn\'t exist".',
+      shape: ['the outlier claim', 'the field (dots / scatter)', 'why it is rare', 'the dot that shouldn\'t exist', 'your call'],
+      modules: ['dotGrid', 'scatter', 'lineChart', 'bars', 'rankList', 'wl'], close: 'yourCall',
+      blocks: V4_BLOCKS, order: ['hook', 'dotGrid', 'statTiles', 'compare', 'statement', 'endcard'], max: {},
+      media: { clips: 0.3, photos: 0.4, clipsMin: 0.1 }, pacing: { hookMs: 3000, beatMinMs: 2800, beatMaxMs: 6000, tailMs: 300 },
+      motion: 'standard', kinetic: false, voice: { tone: 'steady' }, music: 'calm',
+      previewPlan: pv('outlier', 'clean', [
+        { id: 'c1', marker: '1 · THE ODDS', headline: '67 ACHILLES TEARS. *WHO CAME BACK?*', beats: [
+          { id: 'b1', vo: '67 tears since 2015.', module: { type: 'dotGrid', total: 67, groups: [] } },
+          { id: 'b2', vo: '26 got back to 90%.', module: { type: 'dotGrid', total: 67, groups: [{ n: 26, tone: 'blue', label: 'BACK TO 90%' }, { n: 26, tone: 'ink', label: 'RETURNED' }, { n: 15, tone: 'grey', label: "DIDN'T" }] } }] },
+      ], { kind: 'yourCall', prompt: '49ERS FANS: YOUR CALL', options: [{ text: 'HE\'S BACK', tone: 'blue' }, { text: 'NOT THE SAME', tone: 'red' }], comment: 'COMMENT: YOUR CALL' }, { sourceLine: 'Source: ES research' }),
+    },
+    hotseat: {
+      id: 'hotseat', label: 'Hot Seat', skin: 'clean', look: 'paper',
+      blurb: 'A person under pressure: press-conference windows, a timeline that fills in, a fan vote.',
+      shape: ['who is on the hot seat', 'what they said (presser)', 'the record (timeline)', 'the case against', 'fan vote'],
+      modules: ['timeline', 'quote', 'statTiles', 'wl', 'compare'], close: 'yourCall',
+      blocks: V4_BLOCKS, order: ['hook', 'quote', 'statTiles', 'streak', 'statement', 'endcard'], max: {},
+      media: { clips: 0.7, photos: 0.2, clipsMin: 0.3 }, pacing: { hookMs: 3000, beatMinMs: 2400, beatMaxMs: 6000, tailMs: 240 },
+      motion: 'standard', kinetic: false, voice: { tone: 'energetic' }, music: 'tension',
+      previewPlan: pv('hotseat', 'clean', [
+        { id: 'c1', marker: '1 · THE RECORD', headline: 'IS DECOSTA ON THE *HOT SEAT?*', tone: 'red', beats: [
+          { id: 'b1', vo: '82 and 38 since 2019.', module: { type: 'statTiles', tiles: [{ value: '82-38', label: 'SINCE 2019' }] } },
+          { id: 'b2', vo: 'And no Super Bowl.', module: { type: 'timeline', slots: [{ label: '2019', filled: false }, { label: '2020', filled: false }, { label: '2021', filled: false }, { label: '2022', filled: false }, { label: '2023', filled: false }] } }] },
+      ], { kind: 'yourCall', prompt: 'RAVENS FANS: YOUR CALL', options: [{ text: 'FIRE DECOSTA', tone: 'red' }, { text: 'ONE MORE OFFSEASON', tone: 'blue' }], comment: 'COMMENT: WHO GOES FIRST?' }),
+    },
+  };
   const isStyle = id => STYLE_IDS.includes(id);
-  const getStyle = id => STYLES[isStyle(id) ? id : DEFAULT_STYLE];
+  const getStyle = id => STYLES[isStyle(id) ? id : (isV3Style(id) ? legacyStyle('', id, {}) : DEFAULT_STYLE)];
   const slug = v => String(v || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  // Retired looks and recipes (Reels 2.0), and their labels, on a v3 style.
+  // A plan "has dots": a dot grid or scatter-like data anywhere in it (v3
+  // blocks or v4 modules). Receipts / Stat Card reels like that open as The Outlier.
+  const DOTTY = new Set(['dotGrid', 'dots', 'scatter']);
+  function hasDots(plan) {
+    const p = plan || {};
+    const beats = Array.isArray(p.beats) ? p.beats : [];
+    const v4 = Array.isArray(p.chapters) ? p.chapters.flatMap(c => (c && Array.isArray(c.beats) ? c.beats : [])) : [];
+    return beats.some(b => b && b.block && DOTTY.has(b.block.type)) || beats.some(b => b && ['dotrank', 'chips'].includes(b.kind) && b.block == null)
+      || v4.some(b => b && b.module && DOTTY.has(b.module.type));
+  }
+  // v3 style -> v4 style (the owner's map). Old looks and recipes too.
+  const V3_TO_V4 = { gametape: 'breakdown', hypecut: 'breakdown' };
   const LEGACY_DECISIVE = {
     data: 'receipts', 'data-led': 'receipts', 'stat-drop': 'receipts', 'money-story': 'receipts', versus: 'receipts',
     photo: 'statcard', 'photo-led': 'statcard',
@@ -429,37 +525,51 @@
   function hasClips(plan) {
     const p = plan || {};
     if (p.hasClips || (Array.isArray(p.clips) && p.clips.length)) return true;
-    return (Array.isArray(p.beats) ? p.beats : []).some(b => b && (b.clip || b.clipId || (b.media && b.media.kind === 'clip') || (b.pick && b.pick.kind === 'clip') || b.visual === 'clip'));
+    const v4 = Array.isArray(p.chapters) ? p.chapters.flatMap(c => (c && Array.isArray(c.beats) ? c.beats : [])) : [];
+    return [...(Array.isArray(p.beats) ? p.beats : []), ...v4].some(b => b && (b.clip || b.clipId || (b.media && ['clip', 'presser'].includes(b.media.kind)) || (b.pick && b.pick.kind === 'clip') || b.visual === 'clip'));
   }
-  // legacyStyle(look, recipe, plan): the v3 style an old reel opens in.
-  function legacyStyle(look, recipe, plan) {
+  // The v3 style an old look / recipe meant (kept for v3 data and tests).
+  function v3StyleOf(look, recipe, plan) {
     const r = slug(recipe);
     const l = slug(look);
-    if (isStyle(r)) return r;
-    if (isStyle(l)) return l;
+    if (isV3Style(r)) return r;
+    if (isV3Style(l)) return l;
     if (LEGACY_DECISIVE[r]) return LEGACY_DECISIVE[r];
     if (LEGACY_DECISIVE[l]) return LEGACY_DECISIVE[l];
     void LEGACY_SOFT;
     return hasClips(plan) ? 'gametape' : 'receipts';
   }
-  // styleOf(plan): the plan's v3 style. plan.esStyle is where the director
-  // and the page keep it (plan.style stays 'es', the engine); plan.reelStyle
-  // or a v3 id in plan.style are read too. Else the closest style for the
-  // plan's old look / recipe.
+  // legacyStyle(look, recipe, plan): the v4 style an old reel opens in.
+  //   receipts / statcard -> outlier when the plan has dots or a scatter, else breakdown;
+  //   gametape / hypecut -> breakdown; any older look -> breakdown.
+  function legacyStyle(look, recipe, plan) {
+    const r = slug(recipe);
+    const l = slug(look);
+    if (isStyle(r)) return r;
+    if (isStyle(l)) return l;
+    const v3 = isV3Style(r) ? r : isV3Style(l) ? l : LEGACY_DECISIVE[r] || LEGACY_DECISIVE[l] || '';
+    if (v3 === 'receipts' || v3 === 'statcard') return hasDots(plan) ? 'outlier' : 'breakdown';
+    if (V3_TO_V4[v3]) return V3_TO_V4[v3];
+    return 'breakdown';
+  }
+  // styleOf(plan): the plan's v4 style. plan.esStyle is where the director
+  // and the page keep it (plan.style stays 'es', the engine); a v3 id there
+  // (an old reel) maps through legacyStyle.
   function styleOf(plan) {
     const p = plan || {};
-    if (isStyle(p.esStyle)) return p.esStyle;
-    if (isStyle(p.reelStyle)) return p.reelStyle;
-    if (isStyle(p.style)) return p.style;
+    for (const id of [p.esStyle, p.reelStyle, p.style]) if (isStyle(id)) return id;
+    for (const id of [p.esStyle, p.reelStyle, p.style]) if (isV3Style(id)) return legacyStyle('', id, p);
     return legacyStyle(p.look, p.recipe, p);
   }
-  // The internal look a style draws with.
-  const lookForReelStyle = id => getStyle(id).look;
+  const skinOf = plan => (plan && SKINS.includes(plan.skin) ? plan.skin : getStyle(styleOf(plan)).skin);
+  // The internal look a style draws with (v4 styles are all Paper; v3 ids keep theirs).
+  const lookForReelStyle = id => (isV3Style(id) ? getV3Style(id).look : getStyle(id).look);
 
   return {
     TOKENS, SIGNALS, SIGNAL_MEANING, NEUTRALS, GROUNDS, TEXT_MIN, ACCENT_MIN,
     LOOKS, LOOK_IDS, DEFAULT_LOOK, LAYOUTS, MOTIONS, MOTION_LIMITS, SURFACES, LEGACY_STYLE_LOOKS,
-    STYLES, STYLE_IDS, DEFAULT_STYLE, isStyle, getStyle, styleOf, legacyStyle, hasClips, lookForReelStyle,
+    STYLES, STYLE_IDS, DEFAULT_STYLE, SKINS, isStyle, getStyle, styleOf, legacyStyle, hasClips, hasDots, skinOf, lookForReelStyle,
+    V3_STYLES, V3_STYLE_IDS, V3_DEFAULT_STYLE, isV3Style, getV3Style, v3StyleOf, V3_TO_V4,
     lookId, lookForStyle, teamCarriesText, resolve, validateLook, contrastMatrix, teamSurface, inkOn, contrast, luminance, blend,
   };
 }));
