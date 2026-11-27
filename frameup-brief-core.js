@@ -95,7 +95,90 @@
         shape: '{"headline": "0-22 chars, a short hook above the posts (empty is fine)"}',
       },
     },
-    newsletter: {},
+    newsletter: {
+      'tag-fi': {
+        label: 'Tag FI (Corner Label)',
+        photo: true,
+        layouts: ['default'],
+        use: 'A newsletter feature image: the photo with a short corner label (a sport, a league or the topic).',
+        shape: '{"tag": "2-16 chars, one or two words, e.g. TENNIS or TRADE TALK"}',
+      },
+      'ig-headline-photo': {
+        label: 'Headline Photo FI',
+        photo: true,
+        infographic: 'headline-photo',
+        layouts: ['default'],
+        use: 'A newsletter feature image: the photo with a two-line boxed headline.',
+        shape: '{"line1": "2-22 chars", "line2": "2-22 chars"}',
+      },
+      'ig-player-quote': {
+        label: 'Player Quote FI',
+        photo: true,
+        infographic: 'player-quote',
+        quote: true,
+        layouts: ['default'],
+        use: 'A newsletter feature image: the player\'s photo with their own words over two lines. Only for words they actually said.',
+        shape: '{"line1": "2-30 chars, the start of the quote", "line2": "0-30 chars, the rest"}',
+      },
+      'archive-page-fi': {
+        label: 'Archive Page FI',
+        photo: true,
+        layouts: ['default'],
+        use: 'The archive page feature image: the photo with a lightning "Quick Read" tag.',
+        shape: '{"tag": "2-14 chars, usually QUICK READ"}',
+      },
+      'youtube-fi': {
+        label: 'Video FI (Play Button)',
+        photo: true,
+        layouts: ['default'],
+        use: 'The photo with a play button, linking to a video. Only when the brief is about a video.',
+        shape: '{} (no text: the photo is the design)',
+      },
+      'section-header': {
+        label: 'Section Header (Left)',
+        photo: false,
+        layouts: ['default'],
+        use: 'A section title strip, left aligned, e.g. NEWS or TRADE TALK.',
+        shape: '{"title": "2-20 chars"}',
+      },
+      'section-header-2': {
+        label: 'Section Header (Centred)',
+        photo: false,
+        layouts: ['default'],
+        use: 'A centred section title between two lines, e.g. WEEKLY RECAP.',
+        shape: '{"title": "2-24 chars"}',
+      },
+      list: {
+        label: 'Headline List (Big Numbers)',
+        html: true,
+        needs: 'articles',
+        layouts: ['default'],
+        use: 'Five linked ES headlines with big numbers. Only the ES articles listed in the facts, with their own links.',
+        shape: '{"items": [{"text": "20-100 chars, the headline", "url": "one of the ES article URLs given"}, exactly 5]}',
+      },
+      list2: {
+        label: 'Headline List (Simple)',
+        html: true,
+        needs: 'articles',
+        layouts: ['default'],
+        use: 'Five linked ES headlines, numbered 1. to 5. Only the ES articles listed in the facts, with their own links.',
+        shape: '{"items": [{"text": "20-100 chars, the headline", "url": "one of the ES article URLs given"}, exactly 5]}',
+      },
+      ticker: {
+        label: 'Financial Ticker',
+        html: true,
+        layouts: ['default'],
+        use: 'A business-of-sports story card (money, valuations, deals): a label, a headline, a one-line summary and whether it is up or down.',
+        shape: '{"label": "2-16 chars, e.g. VALUATIONS", "category": "2-26 chars, e.g. BUSINESS OF SPORTS", "headline": "12-90 chars", "summary": "12-140 chars", "direction": "up or down", "url": "one of the ES article URLs given, or empty"}',
+      },
+      trivia: {
+        label: 'Trivia',
+        html: true,
+        layouts: ['default'],
+        use: 'A quiz question with four answers. Only when the brief asks for trivia or a quiz; the question and the right answer must come from the facts.',
+        shape: '{"question": "20-160 chars", "options": ["1-40 chars", 4 answers], "answer": "1-4, which option is right"}',
+      },
+    },
     youtube: {},
   };
 
@@ -132,6 +215,65 @@
           const headline = within(f.headline ?? '', 0, 22);
           if (headline === null) return { error: 'tweet headline is max 22 chars' };
           return { fields: { headline }, lines: headline ? [headline] : [] };
+        }
+        default: return { error: `unsupported template "${template}"` };
+      }
+    }
+    if (workspace === 'newsletter') {
+      switch (template) {
+        case 'tag-fi': {
+          const tag = within(f.tag, 2, 16);
+          return tag ? { fields: { tag }, lines: [tag] } : { error: 'tag FI needs a tag of 2-16 chars' };
+        }
+        case 'archive-page-fi': {
+          const tag = within(f.tag || 'QUICK READ', 2, 14);
+          return tag ? { fields: { tag }, lines: [tag] } : { error: 'archive page FI tag is 2-14 chars' };
+        }
+        case 'youtube-fi': return { fields: {}, lines: [] };
+        case 'section-header':
+        case 'section-header-2': {
+          const max = template === 'section-header' ? 20 : 24;
+          const title = within(f.title, 2, max);
+          return title ? { fields: { title }, lines: [title] } : { error: `section header needs a title of 2-${max} chars` };
+        }
+        case 'ig-headline-photo':
+        case 'ig-player-quote': {
+          const max = template === 'ig-headline-photo' ? 22 : 30;
+          const line1 = within(String(f.line1 || '').replace(/^["“]|["”]$/g, ''), 2, max);
+          const line2 = within(String(f.line2 ?? '').replace(/^["“]|["”]$/g, ''), 0, max);
+          if (!line1 || line2 === null) return { error: `${template} needs line 1 (2-${max} chars) and line 2 (0-${max} chars)` };
+          return { fields: { line1, line2 }, lines: [line1, line2].filter(Boolean) };
+        }
+        case 'list':
+        case 'list2': {
+          const items = (Array.isArray(f.items) ? f.items : []).map(item => ({ text: within(item?.text, 12, 100), url: clean(item?.url || item?.link) }));
+          if (items.length !== 5 || items.some(item => !item.text || !/^https:\/\/(?:www\.)?essentiallysports\.com\//.test(item.url))) {
+            return { error: `${template} needs exactly 5 ES headlines (12-100 chars) with their ES links` };
+          }
+          if (new Set(items.map(item => item.url)).size !== 5) return { error: `${template} repeats an article` };
+          return { fields: { items }, lines: items.map(item => item.text), links: items.map(item => item.url) };
+        }
+        case 'ticker': {
+          const out = {
+            label: within(f.label, 2, 16),
+            category: within(f.category, 2, 26),
+            headline: within(f.headline, 12, 90),
+            summary: within(f.summary, 12, 140),
+            direction: f.direction === 'down' ? 'down' : 'up',
+            url: clean(f.url || ''),
+          };
+          if (!out.label || !out.category || !out.headline || !out.summary) return { error: 'ticker needs a label (2-16), category (2-26), headline (12-90) and summary (12-140)' };
+          if (out.url && !/^https:\/\/(?:www\.)?essentiallysports\.com\//.test(out.url)) return { error: 'ticker link must be an ES article' };
+          return { fields: out, lines: [out.label, out.category, out.headline, out.summary], links: out.url ? [out.url] : [] };
+        }
+        case 'trivia': {
+          const question = within(f.question, 20, 160);
+          const options = (Array.isArray(f.options) ? f.options : []).map(option => within(option, 1, 40));
+          const answer = Number(f.answer);
+          if (!question || options.length !== 4 || options.some(option => !option)) return { error: 'trivia needs a question (20-160 chars) and 4 answers (1-40 chars)' };
+          if (!(answer >= 1 && answer <= 4)) return { error: 'trivia needs the right answer (1-4)' };
+          if (new Set(options.map(option => option.toLowerCase())).size !== 4) return { error: 'trivia answers must differ' };
+          return { fields: { question, options, answer }, lines: [question, ...options] };
         }
         default: return { error: `unsupported template "${template}"` };
       }
@@ -189,12 +331,12 @@
   }
 
   // -> [{ value, label, score, why }] best first (limit 5).
-  function shortlist(text, workspace = 'instagram', { tweets = 0, stats = null, limit = 5, available = null } = {}) {
+  function shortlist(text, workspace = 'instagram', { tweets = 0, articles = 0, stats = null, limit = 5, available = null } = {}) {
     const raw = withoutLinks(text);
     const known = templatesFor(workspace);
     let list = [];
     if (workspace === 'instagram') list = socialRules(raw, { tweets });
-    else if (typeof shortlist.rules?.[workspace] === 'function') list = shortlist.rules[workspace](raw, { tweets });
+    else if (typeof shortlist.rules?.[workspace] === 'function') list = shortlist.rules[workspace](raw, { tweets, articles });
     return list
       .filter(item => known[item.value] && (!available || available.includes(item.value)))
       .map(item => {
@@ -251,7 +393,7 @@
 
   // ─── Free-mode fills for templates Generate does not know ────────────────
   // Only words and dates from the brief; null when the brief can't fill it.
-  function rulesFill(workspace, template, brief, { facts = '' } = {}) {
+  function rulesFill(workspace, template, brief, opts = {}) {
     const text = withoutLinks(brief);
     if (workspace === 'instagram') {
       if (template === 'asap-template-1') {
@@ -267,10 +409,67 @@
         return { headline: chunkWords(words, 22, 1)[0] || '' };
       }
     }
-    if (typeof rulesFill.more?.[workspace] === 'function') return rulesFill.more[workspace](template, brief, { facts });
+    if (typeof rulesFill.more?.[workspace] === 'function') return rulesFill.more[workspace](template, brief, opts);
     return null;
   }
   rulesFill.more = {};
+
+  // ─── Newsletter rules ─────────────────────────────────────────────────────
+  // Feature images by default (Tag FI, Headline Photo FI); a section title, a
+  // video, a quote, a roundup of ES stories, money news or a quiz each have
+  // their own template. Headline lists need five ES articles (articles >= 5).
+  shortlist.rules.newsletter = (text, { articles = 0 } = {}) => {
+    const t = String(text || '').toLowerCase();
+    const words = t.split(/\s+/).filter(Boolean);
+    const out = [];
+    const add = (value, score, why) => out.push({ value, score, why });
+    if (/\bsection\b|\bheader\b|\bdivider\b/.test(t) || (words.length <= 3 && !/[0-9]/.test(t))) {
+      add('section-header', 3, 'A short section title');
+      add('section-header-2', 2.5, 'A centred section title');
+    }
+    if (/\b(?:video|watch|youtube|clip|highlights?|podcast|episode)\b/.test(t)) add('youtube-fi', 3, 'It points to a video');
+    if (/["“”]|\b(?:said|says|told|admits?|quote)\b/.test(t)) add('ig-player-quote', 3, 'Someone is quoted');
+    if (/\b(?:trivia|quiz|guess|who am i)\b/.test(t)) add('trivia', 4, 'It asks for a quiz');
+    if (/\b(?:valuations?|stocks?|shares|revenue|business|billion|million|deal|contract|sale|sold|money|worth|salary|net worth)\b/.test(t)) add('ticker', 2, 'It is money news');
+    if (articles >= 5 && /\b(?:top|roundup|round-up|headlines|stories|news|list|week|today|must read|recap)\b/.test(t)) {
+      add('list', 3, 'A roundup of ES stories');
+      add('list2', 2.5, 'A simple list of ES stories');
+    }
+    if (/\b(?:archive|quick read)\b/.test(t)) add('archive-page-fi', 3, 'An archive page image');
+    add('ig-headline-photo', 1.5, 'A headline over a photo');
+    add('tag-fi', 1.2, 'A photo with a corner label');
+    add('archive-page-fi', 0.4, 'A photo with a Quick Read tag');
+    // One entry per template (highest score wins).
+    const best = new Map();
+    out.forEach(item => { const seen = best.get(item.value); if (!seen || item.score > seen.score) best.set(item.value, item); });
+    return [...best.values()];
+  };
+
+  const SPORT_WORDS = ['NFL', 'NBA', 'WNBA', 'MLB', 'NHL', 'MLS', 'NCAA', 'CFB', 'Golf', 'Tennis', 'F1', 'NASCAR', 'UFC', 'Boxing', 'Soccer', 'Olympics', 'Cricket'];
+  rulesFill.more.newsletter = (template, brief, { articles = [] } = {}) => {
+    const words = withoutLinks(brief);
+    const clause = words.split(/[,.;:!?"“—\n]/)[0] || words;
+    switch (template) {
+      case 'section-header': return chunkWords(words, 20, 1).length ? { title: chunkWords(words, 20, 1)[0] } : null;
+      case 'section-header-2': return chunkWords(words, 24, 1).length ? { title: chunkWords(words, 24, 1)[0] } : null;
+      case 'tag-fi': {
+        const sport = SPORT_WORDS.find(word => new RegExp(`\\b${word}\\b`, 'i').test(words));
+        return sport ? { tag: sport.toUpperCase() } : null;
+      }
+      case 'archive-page-fi': return { tag: 'QUICK READ' };
+      case 'youtube-fi': return /\b(?:video|watch|youtube|clip|highlights?)\b/i.test(words) ? {} : null;
+      case 'ig-headline-photo': {
+        const lines = chunkWords(clause, 22, 2);
+        return lines.length ? { line1: lines[0], line2: lines[1] || '' } : null;
+      }
+      case 'list':
+      case 'list2': {
+        const items = (articles || []).filter(a => a && a.title && a.url).slice(0, 5).map(a => ({ text: clean(a.title).slice(0, 100), url: a.url }));
+        return items.length === 5 ? { items } : null;
+      }
+      default: return null;
+    }
+  };
 
   // ─── The prompt's template list ──────────────────────────────────────────
   // generateShapes: es-generate TEMPLATES (server only) for Generate's ten.

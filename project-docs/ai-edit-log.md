@@ -4,6 +4,15 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-27 — Suhail (Claude, brief lane): Design from a brief, R2 Newsletter (branch feature/brief-to-design)
+- Status: committed on feature/brief-to-design after R1 (origin/main panel v2 merged in), not pushed. No migration, no env vars.
+- Newsletter brief templates (core TEMPLATES.newsletter, checks, rules, free fills): Tag FI, Headline Photo FI (ig-headline-photo), Player Quote FI (ig-player-quote, exact words only), Archive Page FI, Video FI, Section Header (Left / Centred), and the HTML widgets Headline List (Big Numbers / Simple: five ES headlines with their own links, only articles research returned), Financial Ticker and Trivia (only when asked). Locked templates (Feature Image, Desktop News Layout) are never offered.
+- Server: facts list each ES article with its URL; links must be ones research returned (else repair / drop); quote FIs checked against the brief + research; headline lists keep only the format rules (ES's own headlines).
+- Appliers (frameup-brief-apply.js): canvas assets through the text box path; infographic FIs fill their layer fields + photo slot; HTML widgets fill their builder + form (Restore button: Undo doesn't cover widget forms). Editor readiness no longer goes through FrameUpSpec.ready (that opened Social). Over an HTML widget the box sits above the email preview.
+- Undo note for index.html owners: applyDesignHistoryEntry restores newsletterState.newsletterAsset but not activeNewsletterAsset, so undoing across an asset switch shows the wrong asset. frameup-brief.js works round it after Undo/Redo of a Newsletter brief design only; the general fix belongs in index.html.
+- Brief UI matched to panel v2: 40px controls (44 touch, --fi-ctl-h), 8px control radius, 16px gaps.
+- Tests: test-brief-design (newsletter matcher, checks, fills, server links/quotes); check-brief-design newsletter flow (tag FI, undo, infographic fields + photo swap, HTML list, Copy HTML learning row, Restore) at 1440/1024/375 light + dark.
+
 ## 2026-11-27 — Suhail (Claude, editor-panel lane): Editor right panel v2 — one control system across Social Media, YouTube and Newsletter (branch feature/editor-panel-revamp)
 - Status: committed on feature/editor-panel-revamp (base origin/main b43cde3), not pushed. $0, no env vars, no AI. Canvas, renderers and exports untouched (panel chrome + label text only).
 - Asked (owner): revamp the right panel of the three editors at every breakpoint to the level of the AI products (Reels Review inspector, Merch rail).

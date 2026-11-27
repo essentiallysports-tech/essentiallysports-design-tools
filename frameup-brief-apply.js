@@ -175,6 +175,8 @@
   // A small picture of an option (the renderer frame calls this).
   const thumb = (option, ctx = {}, width = 360) => serial(async () => {
     await applyNow(option, ctx);
+    // HTML widgets have no canvas picture.
+    if (isHtml(ctx.workspace, option.template)) return null;
     // Logos and photos can land a moment later: give them a beat.
     await wait(60);
     render();
@@ -317,8 +319,156 @@
     return { option: next, ctx, fixed, left };
   }
 
+  // ─── Newsletter ───────────────────────────────────────────────────────────
+  // Canvas assets (feature images, section headers) take their text through
+  // the same path as typing in the editor; infographic FIs fill their own
+  // layer fields and main photo; HTML widgets fill their builder and form.
+  const INFOGRAPHIC_PREFIX = 'ig-';
+  const TEXT_ASSETS = { 'tag-fi': 'tag', 'archive-page-fi': 'tag', 'section-header': 'title', 'section-header-2': 'title' };
+  const PHOTO_ASSETS = new Set(['tag-fi', 'archive-page-fi', 'youtube-fi']);
+  const HTML_ASSETS = new Set(['list', 'list2', 'ticker', 'trivia']);
+  // The editor's own layer ids for each infographic field.
+  const INFOGRAPHIC_FIELDS = { 'ig-headline-photo': ['line1', 'line2'], 'ig-player-quote': ['line1', 'line2'] };
+
+  // Waits for the editor without switching editors (FrameUpSpec.ready opens Social).
+  async function editorReady() {
+    if (document.readyState !== 'complete') await new Promise(resolve => window.addEventListener('load', resolve, { once: true }));
+    try { await document.fonts.ready; } catch (error) { /* fonts optional */ }
+    // postFontLoaded is the editor's own (script-scope) flag.
+    const fontReady = () => { try { return Boolean(postFontLoaded); } catch (error) { return true; } };
+    for (let i = 0; i < 200 && !(fontReady() && document.getElementById('preview')); i += 1) await wait(50);
+  }
+
+  function setLines(lines) {
+    const box = document.getElementById('pill-text');
+    if (box) box.value = lines.join('\n');
+    call('onTextChange');
+    call('flushPendingTextChange');
+  }
+
+  function syncBuilderFields(prefix, getValue) {
+    document.querySelectorAll(`[data-${prefix}-field]`).forEach(field => {
+      const value = getValue(field.dataset[`${prefix.replace(/-([a-z0-9])/g, (_, c) => c.toUpperCase())}Field`]);
+      if (value != null && field.type !== 'file') field.value = value;
+    });
+  }
+
+  function fillWidget(option, ctx) {
+    const f = option.fields || {};
+    switch (option.template) {
+      case 'list':
+      case 'list2': {
+        const builder = option.template === 'list' ? listBuilderState : list2BuilderState;
+        if (!builder) return;
+        builder.items.forEach((item, i) => { item.text = f.items?.[i]?.text || ''; item.link = f.items?.[i]?.url || ''; });
+        const prefix = option.template === 'list' ? 'list' : 'list2';
+        document.querySelectorAll(`[data-${prefix}-field]`).forEach(field => {
+          const [, index, key] = field.dataset[`${prefix}Field`].split('.');
+          field.value = builder.items[Number(index)]?.[key] ?? '';
+        });
+        break;
+      }
+      case 'ticker': {
+        if (!tickerBuilderState) return;
+        Object.assign(tickerBuilderState, { label: f.label, category: f.category, headline: f.headline, summary: f.summary, link: f.url || tickerBuilderState.link });
+        if (ctx.photo?.sourceUrl) tickerBuilderState.imageUrl = ctx.photo.sourceUrl;
+        document.querySelectorAll('[data-ticker-field]').forEach(field => { if (field.type !== 'file') field.value = tickerBuilderState[field.dataset.tickerField] ?? ''; });
+        const direction = document.querySelector(`[data-ticker-direction="${f.direction === 'down' ? 'down' : 'up'}"]`);
+        if (direction && !direction.classList.contains('is-active')) direction.click();
+        tickerBuilderState.direction = f.direction === 'down' ? 'down' : 'up';
+        call('updateTickerThumb');
+        break;
+      }
+      case 'trivia': {
+        if (!triviaBuilderState) return;
+        triviaBuilderState.question = f.question;
+        triviaBuilderState.options = [...f.options];
+        if (ctx.photo?.sourceUrl) triviaBuilderState.imageUrl = ctx.photo.sourceUrl;
+        try { triviaContentEdited = true; } catch (error) { /* older editor */ }
+        document.querySelectorAll('[data-trivia-field]').forEach(field => { if (field.dataset.triviaField !== 'headerImage' && has('getTriviaFieldValue')) field.value = window.getTriviaFieldValue(field.dataset.triviaField) ?? ''; });
+        call('updateTriviaThumb');
+        break;
+      }
+      default: break;
+    }
+    call('renderWidgetPreview');
+  }
+
+  async function applyNewsletter(option, ctx) {
+    await editorReady();
+    if (activeWorkspace !== 'newsletter') activateWorkspace('newsletter');
+    const asset = option.template;
+    const select = document.getElementById('newsletter-asset-select');
+    if (!select || ![...select.options].some(o => o.value === asset)) throw new Error('That newsletter template is not in this editor.');
+    select.value = asset;
+    switchNewsletterAsset(asset);
+    const f = option.fields || {};
+    if (TEXT_ASSETS[asset]) setLines([f[TEXT_ASSETS[asset]] || '']);
+    if (PHOTO_ASSETS.has(asset)) await setPhoto(ctx.photo);
+    if (asset.startsWith(INFOGRAPHIC_PREFIX)) {
+      const template = typeof getInfographicTemplate === 'function' ? getInfographicTemplate(asset) : null;
+      if (!template) throw new Error('That feature image is not in this editor.');
+      (INFOGRAPHIC_FIELDS[asset] || []).forEach(id => setInfographicText(template, id, f[id] || ''));
+      const slot = (typeof getInfographicMainPhotoLayer === 'function' ? getInfographicMainPhotoLayer(template) : null) || template.layers.find(layer => layer.type === 'photo');
+      if (slot) {
+        let img = null;
+        if (ctx.photo?.url) { try { img = await loadImageFromUrl(ctx.photo.url); } catch (error) { img = null; } }
+        const store = getInfographicStore(template);
+        if (img) store.photos[slot.id] = { img, url: ctx.photo.url };
+        else delete store.photos[slot.id];
+        store.adjust[slot.id] = { zoom: 1, dx: 0, dy: 0 };
+      }
+      call('syncInfographicAfterHistory');
+    }
+    if (HTML_ASSETS.has(asset)) fillWidget(option, ctx);
+    call('syncWorkspaceControls');
+    call('syncAllCustomSelects');
+  }
+  APPLIERS.newsletter = applyNewsletter;
+
+  currentText.more.newsletter = () => {
+    const out = [];
+    const push = value => { const text = clean(value); if (text) out.push(text); };
+    const asset = activeNewsletterAsset;
+    if (asset === 'list' || asset === 'list2') (asset === 'list' ? listBuilderState : list2BuilderState)?.items?.forEach(item => { push(item.text); push(item.link); });
+    else if (asset === 'ticker') ['label', 'category', 'headline', 'summary', 'link'].forEach(key => push(tickerBuilderState?.[key]));
+    else if (asset === 'trivia') { push(triviaBuilderState?.question); (triviaBuilderState?.options || []).forEach(push); }
+    else if (asset.startsWith(INFOGRAPHIC_PREFIX)) {
+      const template = getInfographicTemplate(asset);
+      (INFOGRAPHIC_FIELDS[asset] || []).forEach(id => push(getInfographicValues(template)?.[id]));
+    } else (state.lines || []).forEach(push);
+    return out;
+  };
+
+  // The previous widget content, for "Restore" (Undo covers canvas designs,
+  // not the HTML widget forms).
+  function widgetSnapshot(template) {
+    const source = { list: () => listBuilderState, list2: () => list2BuilderState, ticker: () => tickerBuilderState, trivia: () => triviaBuilderState }[template];
+    const value = source?.();
+    return value ? JSON.parse(JSON.stringify(value)) : null;
+  }
+
+  // Swap the photo on the design on screen, wherever its template keeps it.
+  async function swapPhoto(workspace, option, photo) {
+    if (workspace === 'newsletter' && String(option.template).startsWith(INFOGRAPHIC_PREFIX)) {
+      const template = getInfographicTemplate(option.template);
+      const slot = (typeof getInfographicMainPhotoLayer === 'function' ? getInfographicMainPhotoLayer(template) : null) || template?.layers.find(layer => layer.type === 'photo');
+      if (!template || !slot) return;
+      let img = null;
+      try { img = await loadImageFromUrl(photo.url); } catch (error) { img = null; }
+      if (img) getInfographicStore(template).photos[slot.id] = { img, url: photo.url };
+      return;
+    }
+    if (workspace === 'newsletter' && HTML_ASSETS.has(option.template)) {
+      fillWidget(option, { photo });
+      return;
+    }
+    await setPhoto(photo);
+  }
+  const isHtml = (workspace, template) => workspace === 'newsletter' && HTML_ASSETS.has(template);
+
   window.FrameUpBriefApply = Object.freeze({
-    APPLIERS, LAYOUTS, apply, applyNow, thumb, serial, setPhoto, setPalette, brandPalette,
+    APPLIERS, LAYOUTS, apply, applyNow, thumb, serial, setPhoto, setPalette, brandPalette, swapPhoto, isHtml, widgetSnapshot, editorReady,
     currentText, placeKey, currentTemplate, checks, repair, rechunk, has, call, wait, nextFrame,
   });
 })();

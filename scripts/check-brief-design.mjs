@@ -45,6 +45,12 @@ const RECORD_OPTION = {
 };
 const TWEET = { url: 'https://x.com/espn/status/1234567890', authorName: 'ESPN', handle: 'espn', text: 'LeBron James tonight: 41 points, 12 assists, 9 rebounds.', dateLabel: 'Nov 26, 2026', metrics: '', avatarDataUrl: '', avatarUrl: '', verified: true };
 const TWEET_OPTION = { template: 'twitter-quote', label: 'Tweet / X Post', why: 'It links an X post', layout: 'default', fields: { headline: 'LeBron Goes Off' }, lines: ['LeBron Goes Off'], listicle: null, sport: 'NBA', team: '', warnings: [], source: 'ai' };
+const NL_ITEMS = [1, 2, 3, 4, 5].map(n => ({ text: `Lakers story ${n}: LeBron James scores 41 in Phoenix`, url: `https://www.essentiallysports.com/nba-news-story-${n}/` }));
+const NL_OPTIONS = [
+  { template: 'tag-fi', label: 'Tag FI (Corner Label)', why: 'A feature image with a corner label', layout: 'default', fields: { tag: 'NBA' }, lines: ['NBA'], listicle: null, sport: 'NBA', team: '', warnings: [], source: 'ai' },
+  { template: 'ig-headline-photo', label: 'Headline Photo FI', why: 'A boxed headline over his photo', layout: 'default', fields: { line1: 'LeBron Drops 41', line2: 'In Phoenix' }, lines: ['LeBron Drops 41', 'In Phoenix'], listicle: null, sport: 'NBA', team: '', warnings: [], source: 'ai' },
+  { template: 'list', label: 'Headline List (Big Numbers)', why: 'Five ES stories from this week', layout: 'default', fields: { items: NL_ITEMS }, lines: NL_ITEMS.map(i => i.text), listicle: null, sport: 'NBA', team: '', warnings: [], source: 'ai' },
+];
 const withIds = list => list.map((option, rank) => ({ ...option, id: `brief-qa-${rank}`, rank }));
 
 let mode = 'ok'; // ok | free | error500 | error429 | tweet | slow
@@ -59,6 +65,9 @@ const api = async (req, url, body) => {
       return { status: 200, delay: 400, body: { option: { ...option, fields: { pills }, lines: pills }, costUsd: 0.0006 } };
     }
     return { status: 422, body: { error: 'No better version this time. Try another.' } };
+  }
+  if (body?.workspace === 'newsletter' && mode === 'ok') {
+    return { status: 200, delay: 500, body: { options: withIds(NL_OPTIONS), photos: [{ url: '/__qa/photo/lebron-1.svg', title: 'LeBron James', sourceUrl: 'https://image-cdn.essentiallysports.com/qa.jpg' }, { url: '/__qa/photo/lebron-2.svg', title: 'LeBron James', sourceUrl: 'https://image-cdn.essentiallysports.com/qa2.jpg' }], tweets: [], subject: 'LeBron James', notes: [], engine: 'ai', ms: 500, costUsd: 0.001 } };
   }
   if (mode === 'error500') return { status: 500, delay: 300, body: { error: 'Design from a brief failed. Try again in a moment.' } };
   if (mode === 'error429') return { status: 429, delay: 300, body: { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' } };
@@ -142,7 +151,7 @@ const SCAN = `(() => {
   for (const [p, rs] of rows) { const byTop = new Map(); rs.forEach(r => { const k = Math.round(r.top / 3); byTop.set(k, [...(byTop.get(k) || []), r.height]); }); for (const hs of byTop.values()) if (hs.length > 1 && Math.max(...hs) - Math.min(...hs) > 1.5) issues.push('misaligned buttons in ' + name(p) + ': ' + hs.map(Math.round).join('/')); }
   // The canvas stays on screen (desktop).
   const c = document.getElementById('preview')?.getBoundingClientRect();
-  if (W > 900 && c && (c.bottom > innerHeight + 2 || c.height < 200)) issues.push('canvas pushed off screen (' + Math.round(c.top) + '..' + Math.round(c.bottom) + ')');
+  if (W > 900 && c && c.height > 0 && (c.bottom > innerHeight + 2 || c.height < 200)) issues.push('canvas pushed off screen (' + Math.round(c.top) + '..' + Math.round(c.bottom) + ')');
   return { issues: [...new Set(issues)], grid: [...new Set(grid)] };
 })()`;
 
@@ -351,8 +360,54 @@ try {
   await submit();
   expect(await waitFor(`!document.querySelector('.fu-brief__error').hidden && /few words/.test(document.querySelector('.fu-brief__error-text').textContent)`, 3000), 'empty brief: asks for a few words, no request');
 
+  // ── Newsletter (R2).
+  mode = 'ok';
+  await open('newsletter');
+  expect(await waitFor(`Boolean(document.querySelector('.canvas-stack > .fu-brief:first-child'))`, 8000), 'newsletter: the brief box sits above the canvas');
+  await sweep('nl-idle');
+  await evaluate(`(() => { const s = document.getElementById('newsletter-asset-select'); s.value = 'section-header'; s.dispatchEvent(new Event('change', { bubbles: true })); const t = document.getElementById('pill-text'); t.value = 'OLD SECTION'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
+  await sleep(1300);
+  calls = [];
+  await typeBrief('Top Lakers stories this week as LeBron James scores 41');
+  await submit();
+  expect(await waitFor(resultShown, 15000), 'newsletter: ready');
+  expect(calls[0]?.workspace === 'newsletter', 'newsletter: the request names the editor');
+  expect(await evaluate(`activeNewsletterAsset === 'tag-fi' && JSON.stringify(state.lines) === '["NBA"]' && Boolean(state.photo)`), 'newsletter: the Tag FI opens with its tag and the checked photo');
+  expect(await waitFor(`[...document.querySelectorAll('.fu-brief__opt')].slice(0, 2).every(b => b.querySelector('img')?.naturalWidth > 0) && Boolean(document.querySelector('.fu-brief__opt.is-html .fu-brief__thumb-html'))`, 25000), 'newsletter: canvas thumbnails render; the HTML list shows its mark');
+  await sweep('nl-result');
+  await evaluate(`document.querySelector('[data-history="undo"]').click(), true`);
+  await sleep(700);
+  await debug(`JSON.stringify({ a: activeNewsletterAsset, l: state.lines, na: state.newsletterAsset })`);
+  expect(await evaluate(`activeNewsletterAsset === 'section-header' && JSON.stringify(state.lines) === '["OLD SECTION"]'`), 'newsletter undo: ONE step back to the section header');
+  await evaluate(`document.querySelector('[data-history="redo"]').click(), true`);
+  await sleep(700);
+  await evaluate(`document.querySelector('.fu-brief__opt[data-option="1"]').click(), true`);
+  await sleep(2500); await debug(`JSON.stringify({ a: activeNewsletterAsset, v: getInfographicTemplate('ig-headline-photo') && getInfographicValues(getInfographicTemplate('ig-headline-photo')), busy: document.querySelector('.fu-brief').className, err: document.querySelector('.es-toast')?.textContent })`);
+  expect(await waitFor(`activeNewsletterAsset === 'ig-headline-photo' && getInfographicValues(getInfographicTemplate('ig-headline-photo')).line1 === 'LeBron Drops 41'`, 8000), 'newsletter: the Headline Photo FI fills its fields');
+  await waitFor(idle, 8000);
+  expect(await evaluate(`Boolean(getInfographicStore(getInfographicTemplate('ig-headline-photo')).photos.photo?.img)`), 'newsletter: the infographic photo slot has the checked photo');
+  const before2 = await evaluate(`getInfographicStore(getInfographicTemplate('ig-headline-photo')).photos.photo?.url || ''`);
+  await evaluate(`document.querySelector('[data-brief="swap"]').click(), true`);
+  expect(await waitFor(`(getInfographicStore(getInfographicTemplate('ig-headline-photo')).photos.photo?.url || '') !== ${JSON.stringify(before2)}`, 6000), 'newsletter: Swap photo changes the infographic photo');
+  await waitFor(idle, 8000);
+  const oldList = await evaluate(`listBuilderState.items[0].text`);
+  await evaluate(`document.querySelector('.fu-brief__opt[data-option="2"]').click(), true`);
+  expect(await waitFor(`activeNewsletterAsset === 'list' && listBuilderState.items[0].text === ${JSON.stringify(NL_ITEMS[0].text)} && listBuilderState.items[4].link === ${JSON.stringify(NL_ITEMS[4].url)}`, 8000), 'newsletter: the HTML list fills its five headlines and links');
+  await waitFor(idle, 8000);
+  await sleep(400);
+  expect(await evaluate(`(() => { const b = document.querySelector('.fu-brief'); const p = document.getElementById('widget-preview-pane'); return b && b.nextElementSibling === p && b.getBoundingClientRect().height > 0 && b.classList.contains('is-widget'); })()`), 'newsletter: over an HTML widget the box sits above its preview');
+  expect(await evaluate(`document.querySelector('[data-brief="export"]').textContent.trim() === 'Copy HTML' && !document.querySelector('[data-brief="restore"]').hidden`), 'newsletter: Copy HTML and Restore for the widget');
+  await sweep('nl-widget');
+  await evaluate(`document.querySelector('[data-brief="export"]').click(), true`);
+  await sleep(600);
+  rows = await queued();
+  expect(rows.some(r => r.action === 'brief-export' && r.meta.template === 'list' && r.meta.ws === 'newsletter'), 'newsletter: copying the widget logs the learning row');
+  await evaluate(`document.querySelector('[data-brief="restore"]').click(), true`);
+  await sleep(400);
+  expect(await evaluate(`listBuilderState.items[0].text === ${JSON.stringify(oldList)} && document.querySelector('[data-list-field="items.0.text"]').value === ${JSON.stringify(oldList)}`), 'newsletter: Restore puts the old widget back');
+
   // ── Editors without brief templates yet: no box.
-  for (const ws of ['newsletter', 'youtube']) {
+  for (const ws of ['youtube']) {
     const has = await evaluate(`(() => { const core = window.FrameUpBriefCore; return Boolean(core && Object.keys(core.templatesFor(${JSON.stringify(ws)})).length); })()`);
     await evaluate(`location.hash = ${JSON.stringify(ws)}, true`);
     await waitFor(`document.body.dataset.currentPage === ${JSON.stringify(ws)}`, 8000);
