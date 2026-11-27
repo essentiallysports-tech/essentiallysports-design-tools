@@ -1550,3 +1550,69 @@ html[data-theme="dark"] .rm-dots .rm-cchip--ink[aria-checked="true"]::before { b
 .rm-field > .rm-count { opacity: 0; transition: opacity var(--es-dur, 160ms) var(--es-ease, ease); }
 .rm-field:focus-within > .rm-count, .rm-field > .rm-count.is-over { opacity: 1; }
 .rm-field:not(:focus-within) > .rm-bf__input.es-input:not(:has(+ .is-over)) { padding-right: 12px; }
+
+/* ══ Create v4: the script is the reel ══════════════════════════════════ */
+.rm-create { width: min(100%, 920px); gap: var(--es-space-5, 20px); }
+.rm-create__title { font-size: clamp(28px, 3vw, 36px); }
+.rm-script { border-radius: var(--rm-r-card); }
+.rm-script .rm-script__input { min-height: 240px; max-height: 60dvh; padding: var(--es-space-5, 20px) var(--es-space-6, 24px) var(--es-space-3, 12px); border-radius: var(--rm-r-card) var(--rm-r-card) 0 0; font: 400 17px/28px var(--es-font-ui); }
+.rm-script .rm-prompt__bar { min-height: 48px; padding: var(--es-space-2, 8px) var(--es-space-6, 24px); }
+.rm-meter { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--es-space-3, 12px); margin: 0; color: var(--rm-ink-3); font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; }
+.rm-meter__words { color: var(--rm-ink); font-weight: 600; }
+.rm-meter__sec { color: var(--rm-ink-2); }
+.rm-meter__target { padding: 0 var(--es-space-2, 8px); border-radius: 6px; background: var(--rm-sunk); font-size: 12px; }
+.rm-meter[data-state="ok"] .rm-meter__target { background: var(--rm-good-soft); color: var(--rm-good); }
+.rm-meter[data-state="short"] .rm-meter__target, .rm-meter[data-state="long"] .rm-meter__target { background: var(--rm-warn-soft); color: var(--rm-warn); }
+.rm-script .rm-prompt__tools:not(:has(> :not([hidden]))) { display: none; }
+.rm-script .rm-prompt__hint { flex: 0 1 auto; margin-left: auto; font-size: 12px; }
+.rm-extras { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--es-space-4, 16px); align-items: start; }
+.rm-extras .es-field__label .rm-meta { font-weight: 400; font-size: 12px; }
+.rm-topic.es-input { min-height: 64px; padding: 10px 12px; border-radius: var(--rm-r-ctl); font-size: 14px; line-height: 20px; resize: vertical; }
+.rm-extras .rm-seg { align-self: stretch; }
+.rm-stylesec .rm-sec__head { align-items: center; }
+.rm-stylesec__why { margin-top: calc(-1 * var(--es-space-1, 4px)); }
+.rm-length .es-segmented__item { white-space: nowrap; }
+.rm-style4, html[data-theme="dark"] .rm-style4 { border-radius: var(--rm-r-card); }
+.rm-style4__frame { border-radius: var(--rm-r-ctl); }
+.rm-makingch:not([hidden]) { box-sizing: border-box; display: flex; flex-direction: column; gap: 2px; width: min(100%, 420px); margin: 0; padding: var(--es-space-2, 8px) var(--es-space-3, 12px); list-style: none; border-radius: var(--rm-r-ctl); background: var(--rm-surface); box-shadow: inset 0 0 0 1px var(--rm-line); }
+.rm-makingch__item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: var(--es-space-2, 8px); min-height: 28px; font-size: 13px; line-height: 20px; }
+@media (prefers-reduced-motion: no-preference) { .rm-makingch__item { animation: rmChIn 240ms cubic-bezier(.2, .8, .2, 1) both; } }
+@keyframes rmChIn { from { opacity: 0; transform: translateY(4px); } }
+.rm-makingch__marker { color: var(--rm-brand-text); font-weight: 700; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+.rm-makingch__title { overflow: hidden; color: var(--rm-ink); font-weight: 600; white-space: nowrap; text-overflow: ellipsis; text-transform: uppercase; font-size: 12px; letter-spacing: .02em; }
+@media (max-width: 720px) { .rm-extras { grid-template-columns: minmax(0, 1fr); } .rm-script .rm-prompt__hint { margin-left: 0; } }
+@media (max-width: 480px) { .rm-script .rm-script__input { min-height: 200px; padding: var(--es-space-4, 16px); font-size: 16px; line-height: 24px; } .rm-length .es-segmented__item { padding-inline: 8px; } }
+
+/* Review v4: your words read-only, Ask AI per scene, the module fields */
+.rm-voread__text { margin: 0; padding: 10px 12px; border-radius: var(--rm-r-ctl); background: var(--rm-sunk); color: var(--rm-ink); font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.rm-voread__edit { padding: 0; border: 0; background: none; font: 600 12px/16px var(--es-font-ui); cursor: pointer; }
+.rm-askbeat { display: flex; flex-direction: column; gap: 4px; padding-top: var(--es-space-3, 12px); border-top: 1px solid var(--rm-line); }
+.rm-askbeat__row { display: flex; gap: var(--es-space-2, 8px); }
+.rm-askbeat__row .es-input { flex: 1 1 auto; min-width: 0; }
+.rm-askbeat__row .es-btn { --es-btn-h: 40px; height: 40px; min-height: 40px; border-radius: var(--rm-r-ctl); }
+.rm-askbeat__row .es-btn svg { width: 14px; height: 14px; }
+.rm-modfields { display: flex; flex-direction: column; gap: var(--es-space-2, 8px); }
+
+/* Review v4 polish (owner review of the first editor pass) */
+.rm-stage, html[data-theme="dark"] .rm-stage { --rm-frame-h: clamp(400px, calc(100dvh - 320px), 78dvh); }
+.rm-toasts.is-stage { transform: translateX(-50%); }
+/* The timeline is flat: one line above it, no panel. */
+.rm-scenes, html[data-theme="dark"] .rm-scenes { padding: var(--es-space-3, 12px) 0 0; border-radius: 0; background: none; box-shadow: none; border-top: 1px solid var(--rm-line); }
+html[data-theme="dark"] .rm-scenes { border-top-color: #2A2D34; }
+.rm-scenes .rm-sb__scroll { margin: 0; padding-left: 4px; padding-right: 4px; scroll-padding: 0 4px; }
+/* Block / Module: the label above, the select full width. */
+.rm-scene__block--stack { flex-direction: column; align-items: stretch; gap: 4px; min-height: 0; }
+.rm-scene__block--stack .es-select { max-width: none; width: 100%; }
+.rm-panel .rm-scene__block--stack .es-select--sm { min-height: 40px; height: 40px; }
+/* The colour choice: four light dots, the picked one ringed; no box. */
+.rm-dots, html[data-theme="dark"] .rm-dots { gap: 2px; height: 28px; padding: 0; box-shadow: none; }
+.rm-dots .rm-cchip { width: 22px; height: 28px; }
+.rm-dots .rm-cchip[aria-checked="true"] { background: transparent; }
+.rm-dots .rm-cchip::before { width: 10px; height: 10px; margin: -5px 0 0 -5px; }
+.rm-dots .rm-cchip[aria-checked="true"]::before { width: 12px; height: 12px; margin: -6px 0 0 -6px; box-shadow: 0 0 0 2px var(--rm-surface), 0 0 0 3.5px var(--chip); }
+@media (hover: hover) { .rm-dots .rm-cchip:not([aria-checked="true"]):hover::before { transform: scale(1.2); } }
+/* One voice control on Create: the voice choice replaces the tray's record button. */
+.rm-script #ri-script-voice { display: none; }
+/* Find clips is the next step when the reel has no clip: ES blue. */
+.rm-findclips.es-btn--primary, html[data-theme="dark"] .rm-findclips.es-btn--primary { background: var(--rm-blue); color: #fff; border-color: transparent; box-shadow: none; }
+@media (hover: hover) { .rm-findclips.es-btn--primary:not(:disabled):hover { background: #0A6FDE; color: #fff; } }
