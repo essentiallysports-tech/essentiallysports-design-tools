@@ -396,8 +396,8 @@
       motion: 'standard', kinetic: false, voice: { tone: 'steady' }, music: 'calm',
       previewPlan: ep([
         { kind: 'hook', vo: '67 Achilles tears since 2015.', block: { type: 'hook', pills: [{ text: '67 ACHILLES', color: 'ink' }, { text: 'TEARS', color: 'blue' }] } },
-        { kind: 'dotrank', vo: '52 made it back. 26 got back to 90 percent.', block: { type: 'dotGrid', title: '*67* ACHILLES TEARS', total: 67, groups: [{ n: 26, tone: 'blue', label: 'BACK TO 90%' }, { n: 26, tone: 'ink', label: 'RETURNED' }, { n: 15, tone: 'grey', label: "DIDN'T RETURN" }] } },
-        { kind: 'stat', vo: '52 made it back. 26 got back to 90 percent.', block: { type: 'statTiles', title: 'THE *OLD LEVEL*', tiles: [{ value: '52', label: 'MADE IT BACK', tone: 'ink' }, { value: '26', label: 'BACK TO 90%', tone: 'blue' }] } },
+        { kind: 'dotrank', vo: 'Of 67, 52 made it back. 26 got back to 90%.', block: { type: 'dotGrid', title: '*67* ACHILLES TEARS', total: 67, groups: [{ n: 26, tone: 'blue', label: 'BACK TO 90%' }, { n: 26, tone: 'ink', label: 'RETURNED' }, { n: 15, tone: 'grey', label: "DIDN'T RETURN" }] } },
+        { kind: 'stat', vo: '52 made it back. 26 got back to 90%.', block: { type: 'statTiles', title: 'THE *OLD LEVEL*', tiles: [{ value: '52', label: 'MADE IT BACK', tone: 'ink' }, { value: '26', label: 'BACK TO 90%', tone: 'blue' }] } },
         { kind: 'cta', block: { type: 'endcard' } },
       ], { sourceLine: 'Source: ES research' }),
     },
@@ -442,10 +442,13 @@
     void LEGACY_SOFT;
     return hasClips(plan) ? 'gametape' : 'receipts';
   }
-  // styleOf(plan): the plan's v3 style (plan.reelStyle, or plan.style when it
-  // is one of the four), else the closest style for its old look / recipe.
+  // styleOf(plan): the plan's v3 style. plan.esStyle is where the director
+  // and the page keep it (plan.style stays 'es', the engine); plan.reelStyle
+  // or a v3 id in plan.style are read too. Else the closest style for the
+  // plan's old look / recipe.
   function styleOf(plan) {
     const p = plan || {};
+    if (isStyle(p.esStyle)) return p.esStyle;
     if (isStyle(p.reelStyle)) return p.reelStyle;
     if (isStyle(p.style)) return p.style;
     return legacyStyle(p.look, p.recipe, p);

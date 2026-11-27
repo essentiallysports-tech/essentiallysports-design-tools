@@ -389,7 +389,7 @@
     // Cut). Passed as opts.style / opts.reelStyle, or read from the plan (an
     // old plan opens in the closest style).
     const E0 = style.engine === 'es' ? getES() : null;
-    const v3Id = [opts.reelStyle, opts.style, plan && plan.reelStyle, plan && plan.style].find(id => E0 && E0.isStyle && E0.isStyle(id)) || '';
+    const v3Id = [opts.esStyle, opts.reelStyle, opts.style, plan && plan.esStyle, plan && plan.reelStyle, plan && plan.style].find(id => E0 && E0.isStyle && E0.isStyle(id)) || '';
     const reelStyle = E0 && E0.styleOf ? (v3Id || E0.styleOf(plan || {})) : '';
     const pacing = reelStyle && v3Id ? E0.getStyle(reelStyle).pacing : null;
     // Data formats (Game Swing, Moment Replay, Archive) build a v2 timeline:
@@ -570,7 +570,7 @@
       // v3: a reel built in one of the four styles draws with that style's
       // look; an old reel keeps its look and opens in the closest style.
       ...(style.engine === 'es' && getES() ? { look: getES().themes.lookId(v3Id && !opts.look ? getES().themes.lookForReelStyle(reelStyle) : (opts.look || (plan && plan.look))) } : {}),
-      ...(reelStyle ? { reelStyle } : {}),
+      ...(reelStyle ? { reelStyle, esStyle: reelStyle } : {}),
       eyebrow: clean(plan && plan.eyebrow, 48), series: plan && plan.series && plan.series.tag ? { tag: clean(plan.series.tag, 28) } : null,
       strip: style.chrome.strip ? sx : null,
       team, highlight, captionStyle, voice: { mode: voiceMode },

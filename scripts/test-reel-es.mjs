@@ -465,4 +465,154 @@ await test('director: the ES style asks for blocks with exactly their fields; bl
   E.BLOCK_TYPES.filter(t => !E.BLOCKS[t].v3).forEach(t => assert.ok(src.includes(`"type":"${t}"`), `prompt shows ${t}`));
 });
 
+// ─── Reels Studio v3 ─────────────────────────────────────────────────────
+const V3 = await import('./lib/reel-v3-samples.mjs');
+const buildV3 = (id, extra = {}) => R.buildTimeline(V3.REELS[id].plan, V3.optsFor(id, extra));
+const opsOf = (tl, i) => R.layoutGraphic(measure, tl.tracks.graphics[i], tl);
+
+await test('v3 type scale: named steps, snapping, step-down then shorten (never an in-between size)', () => {
+  assert.deepEqual(E.TYPE_SCALE, { statXL: 300, stat: 220, display: 168, h1: 128, h2: 96, caption: 64, label: 44, body: 34 });
+  assert.equal(E.snapStep(150), 128); assert.equal(E.snapStep(300), 300); assert.equal(E.snapStep(10), 34);
+  assert.ok(E.onScale(96) && E.onScale(128 * 0.82, 0.82) && !E.onScale(110));
+  assert.deepEqual(E.pickStep('display', 'h2', 1, s => s <= 128), { step: 'h1', size: 128, fits: true });
+  assert.equal(E.pickStep('h1', 'h2', 1, () => false).fits, false);
+  // Every text op of every sample reel, both sizes, is on the scale.
+  V3.STYLE_ORDER.forEach(id => ['9:16', '4:5'].forEach(aspect => {
+    const tl = buildV3(id, { aspect });
+    const T = E.geometry(tl.size).type;
+    tl.tracks.graphics.forEach((g, i) => opsOf(tl, i).filter(o => (o.type === 'text' || o.type === 'count') && !o.noCheck).forEach(o => assert.ok(E.onScale(o.size, T), `${id} ${aspect} ${o.role} ${o.size}`)));
+  }));
+  // A statement too long for the smallest step is cut at a word and flagged.
+  const long = { ...STAT, beats: [STAT.beats[0], { id: 'x', kind: 'point', block: { type: 'statement', lines: [{ text: 'SUPERCALIFRAGILISTIC EXPIALIDOCIOUS AGAIN' }] }, vo: 'Long.' }, STAT.beats[3]] };
+  const tl = build(long);
+  const line = R.layoutGraphic(measure, tl.tracks.graphics[1], tl).filter(o => o.role === 'line');
+  assert.ok(line.every(o => o.size === 96 && o.shortened), 'H2, shortened');
+  assert.ok(lintOf(long).issues.some(i => i.id === 'scale' && i.severity === 'warning' && /cut to fit/.test(i.message)));
+});
+
+await test('v3 pills: every boxed word is the FrameUp ES pill (pillMetrics), sizes L / M / S on the scale', () => {
+  const RULES = require('../frameup-rules.js');
+  const tl = buildV3('receipts');
+  const all = tl.tracks.graphics.flatMap((g, i) => opsOf(tl, i)).filter(o => o.fill && (o.type === 'text'));
+  assert.ok(all.length > 5);
+  all.forEach(o => {
+    const pm = RULES.pillMetrics(o.size, E.TYPE.cap * o.size);
+    assert.ok(Math.abs(o.box.h - pm.h) < 0.01, `${o.role} height`);
+    assert.ok(Math.abs(o.box.x + pm.padLeft - o.x) < 0.01, `${o.role} left padding`);
+    assert.ok(Math.abs(o.box.y + pm.baseline - o.y) < 0.01, `${o.role} baseline`);
+    assert.ok(E.onScale(o.size), `${o.role} size`);
+  });
+  assert.deepEqual(E.PILL_SIZES, { L: 'h1', M: 'caption', S: 'label' });
+});
+
+await test('v3 blocks: shapes, limits and legacy fields (photoCard, statTiles, dotGrid, streak, rankTile, tagPill, clipLabel)', () => {
+  const pc = E.cleanBlock({ type: 'photoCard', label: '2011 · GB', focus: [0.3, 0.1, 0.4, 0.3], scan: 1, tiles: [{ value: '45', label: 'TD' }, { value: '6', label: 'INT' }, { value: '1' }, { value: '2' }], junk: 1 });
+  assert.deepEqual(pc.focus, { x: 0.3, y: 0.1, w: 0.4, h: 0.3 }); assert.equal(pc.scan, true); assert.equal(pc.tiles.length, 3); assert.equal(pc.junk, undefined);
+  assert.deepEqual(pc.tiles.map(t => t.tone), ['blue', 'ink', 'ink']);
+  const dg = E.cleanBlock({ type: 'dotGrid', total: 67, groups: [{ n: 26, tone: 'blue' }, { n: 26, tone: 'ink' }, { n: 99, tone: 'grey' }, { n: 1 }] });
+  assert.deepEqual(dg.groups.map(g => g.n), [26, 26, 15], 'groups clip to the total, three at most');
+  assert.deepEqual(E.cleanBlock({ type: 'streak', items: 'WWLDT?' }).items, ['W', 'W', 'L', 'T', 'T']);
+  assert.deepEqual(E.cleanBlock({ type: 'rankTile', kicker: '2024', rank: '1', pos: 'TE', chip: 'GRADE 92.6' }).items, [{ kicker: '2024', rank: '#1', pos: 'TE', chip: 'GRADE 92.6', tone: 'ink' }]);
+  assert.equal(E.cleanBlock({ type: 'tagPill', text: 'TORE ACHILLES · JAN. 11', tone: 'purple' }).tone, 'red');
+  assert.equal(E.cleanBlock({ type: 'clipLabel', text: 'GEORGE KITTLE' }).tone, 'blue');
+  assert.deepEqual(E.tileNumber('92.6'), { value: 92.6, prefix: '', suffix: '', display: '92.6' });
+  assert.equal(E.tileNumber('15-1'), null, 'a record stays as it is');
+  assert.equal(E.legacyFields({ type: 'statTiles', tiles: [{ value: '45', label: 'TD' }] }).stat.value, '45');
+  assert.equal(E.legacyFields({ type: 'dotGrid', total: 67, groups: [{ n: 26, tone: 'blue' }] }).kind, 'dotrank');
+  Object.keys(E.BLOCKS).filter(t => E.BLOCKS[t].v3).forEach(t => assert.ok(F.KINDS.includes(E.KIND_FOR[t]), t));
+  // Signals: the streak's wins are green; a red tag is red.
+  assert.deepEqual(E.signalsIn(E.cleanBlock({ type: 'streak', items: 'WL' })), ['green']);
+  assert.deepEqual(E.signalsIn(E.cleanBlock({ type: 'tagPill', text: 'X', tone: 'red' })), ['red']);
+});
+
+await test('v3 layout: one grid (column 60, slots kicker 330 / head 480 / lower 1288), one tile component, focus card with viewfinder', () => {
+  assert.deepEqual([E.GRID.left, E.GRID.right, E.GRID.top, E.GRID.bottom, E.GRID.captionY], [60, 1020, 300, 1640, 1172]);
+  const sc = buildV3('statcard');
+  const hook = opsOf(sc, 0);
+  const kicker = hook.find(o => o.role === 'kicker');
+  assert.equal(kicker.box.y, 330); assert.equal(kicker.box.x, 60);
+  assert.equal(hook.find(o => o.role === 'pill').box.y, 480);
+  const card = opsOf(sc, 1);
+  const media = card.find(o => o.role === 'card');
+  assert.equal(media.fit, 'focus'); assert.ok(media.bracket && media.scan); assert.equal(media.x, 60); assert.equal(media.w, 960);
+  assert.ok(media.y + media.h <= 1240, 'the card ends above the tiles');
+  const tiles = card.filter(o => o.type === 'tile');
+  assert.equal(tiles.length, 2); assert.equal(tiles[0].y, 1288); assert.equal(tiles[0].h, tiles[1].h, 'one tile height');
+  assert.equal(tiles[0].x, 60); assert.equal(tiles[1].x + tiles[1].w, 1020);
+  const values = card.filter(o => o.role === 'tile-value');
+  assert.equal(values[0].size, values[1].size, 'one value step across the row');
+  assert.equal(card.find(o => o.role === 'label').fill, 'blue');
+  // Without a verified photo there is no empty card: the tiles carry it.
+  const noPhoto = R.buildTimeline(V3.REELS.statcard.plan, V3.optsFor('statcard', { photos: {} }));
+  assert.ok(!opsOf(noPhoto, 1).some(o => o.role === 'card'));
+  assert.ok(opsOf(noPhoto, 1).some(o => o.type === 'tile'));
+  // Dot grid: groups in order, legend pills under the caption line.
+  const rc = buildV3('receipts');
+  const dg = opsOf(rc, 1);
+  const grid = dg.find(o => o.type === 'dotgrid');
+  assert.deepEqual(grid.groups.map(g => [g.n, g.tone]), [[26, 'blue'], [26, 'ink'], [15, 'grey']]);
+  assert.ok(grid.w <= 960 + 0.5 && grid.y + grid.h <= 1100);
+  assert.ok(dg.filter(o => o.role === 'legend').every(o => o.box.y >= 1288));
+  // Streak: W green, L ink.
+  const sk = opsOf(sc, 3).filter(o => o.type === 'square');
+  assert.equal(sk.length, 16); assert.equal(sk.filter(o => o.fill === 'green').length, 15); assert.equal(sk.find(o => o.fill !== 'green').fill, 'ink');
+});
+
+await test('v3 emphasis by *word*: the marked word is blue, not the last line; hooks keep ink-then-blue', () => {
+  const st = E.blockOf({ kind: 'point', text: 'Rodgers has no twin in this era', emphasis: 'twin' });
+  assert.ok(st.lines.some(l => /\*TWIN\*|\*twin\*/.test(l.text)), JSON.stringify(st.lines));
+  assert.ok(st.lines.every(l => l.color === 'ink'));
+  const plain = E.blockOf({ kind: 'point', text: 'The Packers went fifteen and one' });
+  assert.ok(plain.lines.every(l => l.color === 'ink' && !/\*/.test(l.text)), 'nothing forced blue');
+  const tl = buildV3('statcard');
+  const title = opsOf(tl, 1).filter(o => o.role === 'title');
+  assert.deepEqual(title.map(o => [o.text, o.color]), [["RODGERS'", 'ink'], ['2011', 'blue']]);
+  const hp = E.blockOf({ kind: 'hook', text: 'The Cubs lost and this bar got paid' }).pills;
+  assert.equal(hp[hp.length - 1].color, 'blue');
+});
+
+await test('v3 element limits: a headline, one picture, one data block, two pills; the extra pill is not drawn', () => {
+  assert.deepEqual(E.ELEMENT_LIMITS, { headline: 1, media: 1, data: 1, pills: 2 });
+  const busy = { type: 'photoCard', kicker: 'STAT TWIN', title: 'X', label: '2011 · GB', tag: { text: 'TORE ACHILLES', tone: 'red' }, tiles: [{ value: '1' }] };
+  assert.equal(E.elementsOf(E.cleanBlock(busy), { media: true }).pills, 3);
+  const plan = { ...V3.REELS.statcard.plan, beats: V3.REELS.statcard.plan.beats.map((b, i) => (i === 1 ? { ...b, block: busy } : b)) };
+  const tl = R.buildTimeline(plan, V3.optsFor('statcard'));
+  const ops = opsOf(tl, 1);
+  assert.equal(ops.filter(o => ['kicker', 'label', 'tag'].includes(o.role)).length, 2);
+  assert.ok(!ops.some(o => o.role === 'kicker'), 'the kicker gives way to the card\'s label and tag');
+  const res = L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure });
+  assert.ok(res.issues.some(i => i.id === 'elements' && /3 pills/.test(i.message)));
+});
+
+await test('v3 lint: off-scale sizes and stray boxes are critical; off-grid and long pills warn; clean samples pass', () => {
+  V3.STYLE_ORDER.forEach(id => {
+    const tl = buildV3(id);
+    const res = L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure });
+    assert.deepEqual(res.issues.filter(i => i.severity !== 'info' && i.id !== 'rights').map(i => i.message), [], id);
+  });
+  const tl = buildV3('receipts');
+  const bad = (mutate) => E.v3Checks(tl, { measure, layout: (m, g, t) => { const ops = R.layoutGraphic(m, g, t); return g.beat === 'b2' ? mutate(ops.map(o => ({ ...o }))) : ops; } });
+  assert.ok(bad(ops => [...ops, { type: 'rect', role: 'plate', x: 60, y: 600, w: 300, h: 40 }]).some(i => i.id === 'boxes' && i.severity === 'critical'));
+  assert.ok(bad(ops => ops.map(o => (o.role === 'title' ? { ...o, size: 110 } : o))).some(i => i.id === 'scale' && i.severity === 'critical'));
+  assert.ok(bad(ops => ops.map(o => (o.role === 'title' && o.align === 'col' ? { ...o, x: 90 } : o))).some(i => i.id === 'slots' && i.severity === 'warning'));
+  assert.ok(bad(ops => ops.map(o => (o.role === 'legend' ? { ...o, text: 'A VERY LONG LEGEND LABEL HERE' } : o))).some(i => i.id === 'pills'));
+  // A block the style does not use warns.
+  const off = R.buildTimeline({ ...V3.REELS.gametape.plan, beats: [V3.REELS.gametape.plan.beats[0], { id: 'q', kind: 'dotrank', vo: '67 tears.', block: { type: 'dotGrid', total: 67, groups: [] } }, V3.REELS.gametape.plan.beats[5]] }, V3.optsFor('gametape'));
+  assert.ok(E.v3Checks(off, {}).some(i => i.id === 'style' && /not a Game Tape block/.test(i.message)));
+});
+
+await test('v3 media focus: the crop keeps the verified face in frame; the bracket follows it', () => {
+  const size = [1200, 1600];
+  const face = E.faceBox(size, null, { head: { x: 0.8, y: 0.2 }, focus: { x: 0.6, y: 0.1, w: 0.3, h: 0.8 } });
+  assert.ok(face && face.x > 800, 'from the head point');
+  const rect = { x: 60, y: 700, w: 960, h: 500 };
+  const c = E.focusCrop(size, rect, face);
+  const [fx0, fy0] = c.map(face.x, face.y); const [fx1, fy1] = c.map(face.x + face.w, face.y + face.h);
+  assert.ok(fx0 >= rect.x && fx1 <= rect.x + rect.w && fy0 >= rect.y && fy1 <= rect.y + rect.h, 'the face is inside the card');
+  assert.equal(E.faceBox(size, null, {}), null, 'no verified face, no bracket');
+  // buildTimeline frames full-frame shots on the head, not a fixed point.
+  const tl = buildV3('statcard');
+  assert.deepEqual(tl.tracks.video.find(v => v.beat === 'b1').motion.focus, [0.5, 0.275]);
+});
+
 console.log(process.exitCode ? '\nReel ES tests failed.' : `\nAll ${passed} reel ES tests passed.`);

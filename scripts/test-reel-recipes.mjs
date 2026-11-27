@@ -34,7 +34,7 @@ t('the eight recipes, in the order the Start screen shows them', () => {
 t('each recipe: id, label, blurb, ES blocks only, hook first, end card last, a real look, a steer, a beat range', () => {
   RC.list().forEach(r => {
     assert.deepEqual(RC.validate(r), [], `${r.id}: ${RC.validate(r).join('; ')}`);
-    assert.deepEqual(Object.keys(r).filter(k => !['id', 'label', 'blurb', 'format', 'look', 'blocks', 'beats', 'steer', 'stamp', 'cta'].includes(k)), [], `${r.id}: unknown keys`);
+    assert.deepEqual(Object.keys(r).filter(k => !['id', 'label', 'blurb', 'format', 'look', 'blocks', 'beats', 'steer', 'stamp', 'cta', 'style', 'retired'].includes(k)), [], `${r.id}: unknown keys`);
     r.blocks.forEach(b => assert.ok(ES.BLOCK_TYPES.includes(b), `${r.id}: ${b}`));
     assert.ok(r.blocks.length - 1 <= r.beats.max + 1 && r.blocks.length >= 4, `${r.id}: block list fits the beat range`);
     assert.ok(r.blurb.length <= 64, `${r.id}: blurb fits its card`);
@@ -206,6 +206,22 @@ t('the page loads the recipes after the ES engine and before the page script', a
   const html = readFileSync(path.join(root, 'reel-maker.html'), 'utf8');
   const at = s => html.indexOf(`src="${s}`);
   assert.ok(at('reel-es.js') > 0 && at('reel-es.js') < at('reel-recipes.js') && at('reel-recipes.js') < at('reel-maker.js'), 'script order');
+});
+
+// Reels Studio v3: recipes are retired; each opens in a style, and a style is a preset.
+t('v3: every retired recipe names its style; applyStyle reshapes by code and keeps every word', () => {
+  assert.deepEqual(Object.fromEntries(RC.RECIPE_IDS.map(id => [id, RC.RECIPES[id].style])), { 'stat-drop': 'receipts', 'quote-reaction': 'receipts', explainer: 'receipts', countdown: 'hypecut', versus: 'receipts', 'fan-pulse': 'receipts', verdict: 'receipts', 'money-story': 'receipts' });
+  assert.ok(RC.RECIPE_IDS.every(id => RC.RECIPES[id].retired));
+  assert.equal(RC.styleFor('explainer', { beats: [{ clip: 'c' }] }), 'gametape');
+  const plan = ES.scriptToPlan(SCRIPT);
+  ES.STYLE_IDS.forEach(id => {
+    const { plan: out } = RC.applyStyle(plan, id);
+    assert.equal(vo(out), vo(plan), `${id}: words unchanged`);
+    assert.equal(out.esStyle, id);
+    const allowed = new Set([...ES.STYLES[id].blocks, 'endcard']);
+    const { notes } = RC.applyStyle(plan, id);
+    types(out).forEach((ty, i) => assert.ok(allowed.has(ty) || notes.some(x => x.startsWith(`Scene ${i + 1}`)), `${id} scene ${i + 1} ${ty}`));
+  });
 });
 
 console.log(`All ${n} reel recipe tests passed.`);

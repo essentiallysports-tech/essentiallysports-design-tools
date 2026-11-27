@@ -306,4 +306,18 @@ test('look checks: a clean reel passes in every look; unreadable words, an unkno
 });
 
 
+test('v3 blocks: numbers in tiles, the dot grid and rank tiles need a source', () => {
+  const plan = { format: 'stat', title: 'T', sourceLine: 'Source: X', beats: [
+    { id: 'b1', kind: 'hook', vo: 'Big year.', block: { type: 'hook', pills: [{ text: 'BIG YEAR' }, { text: 'FOR HIM', color: 'blue' }] } },
+    { id: 'b2', kind: 'stat', vo: 'Touchdowns.', block: { type: 'statTiles', tiles: [{ value: '45', label: 'TD' }, { value: '7', label: 'INT' }] } },
+    { id: 'b3', kind: 'dotrank', vo: 'Tears.', block: { type: 'dotGrid', total: 67, groups: [{ n: 26, tone: 'blue', label: 'BACK' }] } },
+    { id: 'b4', kind: 'cta', block: { type: 'endcard' } },
+  ] };
+  const tl = R.buildTimeline(plan, { style: 'receipts', corpus: '45 touchdowns, 67 tears' });
+  const msgs = L.lintTimeline(tl, {}).issues.filter(i => i.id === 'numbers').map(i => i.message);
+  assert.ok(msgs.some(m => /Beat 2: 7 is not/.test(m)), JSON.stringify(msgs));
+  assert.ok(msgs.some(m => /Beat 3: 26 is not/.test(m)), JSON.stringify(msgs));
+  assert.ok(!msgs.some(m => /45|67/.test(m)));
+});
+
 console.log(process.exitCode ? '\nReel lint tests failed.' : `\nAll ${passed} reel lint tests passed.`);

@@ -534,7 +534,7 @@ await test('data formats: default to ES, and their overlay elements are re-skinn
 await test('director: ES_SPEC has one line per layout preset; the plan carries the look through', () => {
   Object.values(TH.LAYOUTS).forEach(l => { assert.ok(l.director && l.director.length < 220, l.id); assert.ok(D.ES_SPEC.includes(`- ${l.director}`), `${l.id} line in ES_SPEC`); });
   assert.match(D.ES_SPEC, /- Data-led: at least two of number \/ dots \/ compare/);
-  assert.equal(D.ES_SPEC.split('\n').filter(l => /^- (Standard|Photo-led|Data-led|Minimal|Bold|Game Tape):/.test(l)).length, Object.keys(TH.LAYOUTS).length);
+  assert.equal(D.ES_SPEC.split('\n').filter(l => /^- (Standard|Photo-led|Data-led|Minimal|Bold|Game Tape|Hype Cut):/.test(l)).length, Object.keys(TH.LAYOUTS).length);
   assert.equal(D.lookRequest('data'), 'LOOK: Data-led. Follow the Data-led line above.');
   assert.equal(D.lookRequest('ink'), 'LOOK: Ink. Follow the Standard line above.');
   assert.equal(D.lookRequest('nope'), '');
