@@ -259,7 +259,7 @@
     const library = root.FrameUpLogos;
     const chips = buildChips(library ? library.LEAGUES : [], { recent: readList('recent').length, favorites: readList('favorites').length });
     if (!chips.some(chip => chip.id === view.chip)) view.chip = 'all';
-    el.querySelector('[data-flp-chips]').hidden = view.only === 'custom';
+    el.querySelector('[data-flp-chips]').setAttribute('aria-hidden', String(view.only === 'custom'));
     el.querySelector('[data-flp-chips]').innerHTML = chips.map(chip =>
       `<button type="button" class="es-chip" data-flp-chip="${esc(chip.id)}" aria-pressed="${chip.id === view.chip}"${chip.title ? ` title="${esc(chip.title)}"` : ''}>${esc(chip.label)}</button>`).join('');
   }
@@ -315,7 +315,8 @@
 
   function customTileHtml(logo, manage) {
     const key = 'custom:' + logo.id;
-    const selected = !!(opts && opts.customId && opts.customId === logo.id);
+    const api = customApi();
+    const selected = !!(opts && ((opts.customId && opts.customId === logo.id) || (opts.current && api && api.store.idForSrc(opts.current) === logo.id)));
     if (manage && mine.confirming === logo.id) {
       return `<div class="flp__tile is-confirming" data-flp-tile="${esc(key)}">
         <div class="flp__confirm" role="group" aria-label="Delete ${esc(logo.name)}?">

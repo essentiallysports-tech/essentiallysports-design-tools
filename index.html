@@ -3455,9 +3455,12 @@ body[data-current-page="faq"] .faq-cta-art img {
   .brand-logo-control { display: none; }
   body:is([data-current-page="instagram"], [data-current-page="youtube"]) .brand-logo-control { display: block; }
   .brand-logo-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-  .brand-logo-custom-art { display: grid; place-items: center; height: 28px; }
-  .brand-logo-custom-art img { width: 28px; height: 28px; object-fit: contain; }
-  .brand-logo-custom-label { font: 500 12px/1.2 var(--es-font-ui); }
+  /* 44px tall in the inspector: icon + label sit side by side; a chosen logo shows alone. */
+  .brand-logo-option--custom { grid-auto-flow: column; gap: 4px; }
+  .brand-logo-custom-art { display: grid; place-items: center; height: 24px; }
+  .brand-logo-custom-art img { width: 24px; height: 24px; object-fit: contain; }
+  .brand-logo-custom-label { font: 500 12px/1.2 var(--es-font-ui); white-space: nowrap; }
+  .brand-logo-custom-label[hidden] { display: none; }
   .brand-logo-custom-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
   .brand-logo-custom-row[hidden] { display: none; }
   .brand-logo-custom-name { min-width: 0; overflow: hidden; color: var(--es-ink-3); font: 400 13px/1.3 var(--es-font-ui); text-overflow: ellipsis; white-space: nowrap; }
@@ -14042,7 +14045,10 @@ function syncBrandLogoControl() {
     img.src = custom.mark.src;
     art.append(img);
   }
-  if (label) label.textContent = custom ? 'Custom' : (customBrandPending ? 'Loading' : 'Custom');
+  if (label) {
+    label.hidden = Boolean(custom);
+    label.textContent = customBrandPending ? 'Loading' : 'Custom';
+  }
   if (option) {
     option.setAttribute('aria-label', custom ? `Custom logo: ${custom.label}` : 'Custom logo: choose or upload');
     option.title = custom ? custom.label : 'Your own square logo';

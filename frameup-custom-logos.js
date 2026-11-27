@@ -454,6 +454,13 @@
       return url;
     }
 
+    // Which saved logo a placed data URL came from (this page session only).
+    function idForSrc(src) {
+      if (!src) return '';
+      for (const [id, url] of dataUrls) if (url === src) return id;
+      return '';
+    }
+
     async function getById(id) {
       if (!isUuid(id)) return null;
       try { await list(); } catch (error) { return null; }
@@ -462,7 +469,7 @@
 
     root.addEventListener && root.addEventListener('es:auth-updated', () => { state.loaded = false; state.mode = 'unknown'; user = null; });
 
-    return Object.freeze({ list, add, rename, remove, touch, thumbUrl, dataUrl, getById, track, get mode() { return state.mode; }, get note() { return state.note; } });
+    return Object.freeze({ list, add, rename, remove, touch, thumbUrl, dataUrl, getById, idForSrc, track, get mode() { return state.mode; }, get note() { return state.note; } });
   })();
 
   // ── Crop dialog ─────────────────────────────────────────────────────────

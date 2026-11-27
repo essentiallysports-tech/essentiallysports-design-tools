@@ -232,7 +232,7 @@ ok(log.some(l => l[0] === 'rest' && l[1] === 'PATCH' && /last_used_at/.test(l[3]
 await click('[data-template-logo-open="player-stat-line"]');
 await until("document.querySelector('dialog.flp')?.open && document.querySelector('[data-flp-chip=\"uploads\"]')?.getAttribute('aria-pressed') === 'true'", 'opens on My logos (current is custom)');
 await until("Boolean(document.querySelector('img[data-flp-thumb]:not([hidden])')?.naturalWidth)", 'thumbnail loads');
-ok(await ev("document.querySelector('.flp__tile.is-selected [data-flp-pick^=\"custom:\"]') !== null || true"), 'tile rendered');
+ok(await ev("document.querySelector('.flp__tile.is-selected [data-flp-pick^=\"custom:\"]') !== null"), 'the placed logo is marked selected');
 await shot('03-my-logos-light');
 await click('[data-flp-rename]');
 await until("document.activeElement?.matches('[data-flp-rename-input]')", 'rename field focused');
@@ -263,7 +263,8 @@ await sleep(300);
 ok(await ev("document.querySelectorAll('[data-brand-logo]').length === 4"), 'brand logo has a 4th Custom option');
 await click('[data-brand-logo="custom"]');
 await until("document.querySelector('dialog.flp')?.open && document.querySelector('dialog.flp').classList.contains('is-only-custom')", 'custom-only picker');
-ok(await ev("document.querySelector('[data-flp-chips]').hidden"), 'no league chips in custom-only mode');
+ok(await ev("document.querySelector('[data-flp-chips]').getBoundingClientRect().height === 0 && getComputedStyle(document.querySelector('[data-flp-chips]')).visibility === 'hidden'"), 'no league chips in custom-only mode');
+ok(await ev("document.querySelector('[data-flp-grid]').getBoundingClientRect().height > 200"), 'grid keeps the tall row in custom-only mode');
 await setFile('[data-flp-file]', F.svg);
 await until("document.querySelector('dialog.fcl')?.open", 'crop dialog for the SVG');
 await sleep(300);
@@ -278,6 +279,9 @@ ok(await ev("!document.querySelector('[data-brand-custom-row]').hidden && /Brand
 await sleep(500);
 const brand = await ev(COUNT([0, 170, 255], [0.7, 0, 1, 0.3]));
 ok(brand.png && brand.n > 300, 'export has the custom brand logo top right (' + brand.n + ' px)');
+await ev(`(() => { const c = document.getElementById('brand-logo-control'); const sec = c.closest('.studio-accordion, [class*="studio-section"], section'); const t = sec?.querySelector('.studio-accordion-trigger[aria-expanded="false"]'); t?.click(); c.scrollIntoView({ block: 'center' }); return 1; })()`);
+await sleep(300);
+ok(await ev("(() => { const opts = [...document.querySelectorAll('[data-brand-logo]')].map(o => o.getBoundingClientRect()); return opts.every(r => r.width > 40 && Math.abs(r.height - opts[0].height) < 1 && Math.abs(r.top - opts[0].top) < 1); })()"), 'four brand options on one row, same size');
 await shot('05-brand-custom-light');
 
 // ─── 4. Reload: brand logo comes back from storage ───────────────────────
@@ -331,6 +335,7 @@ await click('[data-template-logo-open="team-record"]');
 await until("document.querySelector('dialog.flp')?.open", 'picker opens (missing table)');
 await click('[data-flp-chip="uploads"]');
 await until("!document.querySelector('[data-flp-session]').hidden && /this tab only/.test(document.querySelector('[data-flp-session]').textContent)", 'clear note when the table is missing');
+ok(await ev("document.querySelector('[data-flp-session]').getBoundingClientRect().height < 80 && document.querySelector('[data-flp-grid]').getBoundingClientRect().height > 200"), 'note is one short row; grid keeps the space');
 await shot('09-missing-table');
 await setFile('[data-flp-file]', F.png);
 await until("document.querySelector('dialog.fcl')?.open", 'crop opens (missing table)');
