@@ -1618,3 +1618,10 @@ html[data-theme="dark"] .rm-scenes { border-top-color: #2A2D34; }
 .rm-findclips.is-go, html[data-theme="dark"] .rm-findclips.is-go { background: var(--rm-blue); color: #fff; border-color: transparent; box-shadow: none; }
 @media (hover: hover) { .rm-findclips.is-go:not(:disabled):hover { background: #0A6FDE; color: #fff; } }
 .rm-script .rm-prompt__tools { display: none; }
+/* The sourcing's next steps (Find clips, Swap media, priced AI b-roll) */
+.rm-actions:not([hidden]) { display: flex; flex-direction: column; gap: 4px; padding-top: var(--es-space-2, 8px); border-top: 1px solid var(--rm-line); }
+.rm-actions__row { display: flex; flex-wrap: wrap; gap: var(--es-space-1, 4px); }
+.rm-actions .es-btn svg { width: 14px; height: 14px; }
+.rm-verified.is-caption { color: var(--rm-ink-2); }
+/* The house button reads its colours from these variables (with !important), so the fill is set through them. */
+.rm-findclips.is-go, html[data-theme="dark"] .rm-findclips.is-go { --es-btn-bg: #0A7DFA; --es-btn-bg-hover: #0A6FDE; --es-btn-ink: #FFFFFF; --es-btn-ink-hover: #FFFFFF; --es-btn-line: transparent; --es-btn-line-hover: transparent; --es-btn-icon: #FFFFFF; }

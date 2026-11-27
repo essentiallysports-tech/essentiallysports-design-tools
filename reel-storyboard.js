@@ -509,7 +509,11 @@
         const note = state.visualNote && state.visualNote[beat.id];
         const open = state.swapOpen === beat.id;
         const credit = m.asset && m.asset.rights && m.asset.rights.credit ? ` · ${m.asset.rights.credit}` : '';
-        const status = m.asset ? (m.verified ? `<span class="rm-verified">${ICON.check}<span>Checked: ${m.clip ? 'right subject and moment' : 'shows the right person'}</span></span>` : (ui.sourcingOn && ui.sourcingOn() ? '' : '<span class="rm-meta">Not checked yet</span>')) : '<span class="rm-meta">No clip or photo matched this scene, so it is an infographic.</span>';
+        // A photo says "shows the right person" only when vision checked it; an agency caption says so.
+        const by = m.asset && m.asset.checkedBy;
+        const what = m.clip ? 'Checked: right subject and moment' : (by === 'caption' ? 'From an agency caption' : (by && by !== 'vision' ? 'Checked by its source' : 'Checked: shows the right person'));
+        const shortNote = m.clip && m.asset.short ? '<span class="rm-meta">The clip is shorter than the scene, so it loops.</span>' : '';
+        const status = m.asset ? (m.verified ? `<span class="rm-verified${by === 'caption' && !m.clip ? ' is-caption' : ''}">${by === 'caption' && !m.clip ? '' : ICON.check}<span>${what}</span></span>${shortNote}` : (ui.sourcingOn && ui.sourcingOn() ? '' : '<span class="rm-meta">Not checked yet</span>')) : '<span class="rm-meta">No clip or photo matched this scene, so it is an infographic.</span>';
         return `<div class="rm-scene__media">
           <div class="rm-scene__mediarow">
             <span class="rm-scene__thumb${m.img ? '' : ' is-empty'}" aria-hidden="true">${m.img ? (m.img.tagName === 'CANVAS' ? '<span data-sb-poster></span>' : `<img src="${esc(m.img.src)}" alt="">`) : ICON.image}</span>

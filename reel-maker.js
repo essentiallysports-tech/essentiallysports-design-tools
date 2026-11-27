@@ -1628,17 +1628,39 @@
   }
   // One pick from ReelSourcing: { kind:'clip', clip, segment, relevance, gate } |
   // { kind:'photo', photo:{ url, sourceUrl, focus, head, … } } | { kind:'none', fallback:<block> }.
+  // One pick from ReelSourcing (v4): { kind: 'clip'|'presser', clip, segment, relevance, gate, rung } |
+  // { kind: 'photo'|'cutout', photo, kenBurns } | { kind: 'cards', cards: [{ name, photo, kenBurns }] } |
+  // { kind: 'none', fallback? }. A clip that fails to load (or clips switched off) asks
+  // ReelSourcing.nextCandidate for the next pick: the next confirmed clip, then a Ken Burns
+  // photo, then the team photo, then the fallback module. Never plain paper while one is left.
   async function applyPick(beat, pick, subject, usedClips = new Set()) {
-    if (pick && pick.kind === 'clip' && pick.clip && state.useClips && !usedClips.has(pick.clip.url)) {
-      if (await useXClip(beat.id, pick.clip, pick.segment || null)) {
-        usedClips.add(pick.clip.url);
-        state.visualSrc[beat.id] = 'x-clip';
-        markAsset(beat.id, { verified: pick.gate === 'judge' || pick.gate === 'text' || pick.clip.judged === true, gate: pick.gate || '', relevance: pick.relevance ?? null, subject: subject || null });
-        return 'clip';
+    const src = SRC();
+    for (let tries = 0; pick && tries < 8; tries += 1) {
+      const isClip = (pick.kind === 'clip' || pick.kind === 'presser') && pick.clip;
+      if (isClip && state.useClips && !usedClips.has(pick.clip.url)) {
+        if (await useXClip(beat.id, pick.clip, pick.segment || null)) {
+          usedClips.add(pick.clip.url);
+          state.visualSrc[beat.id] = 'x-clip';
+          markAsset(beat.id, { verified: pick.gate === 'judge' || pick.gate === 'text' || pick.gate === 'library' || pick.clip.judged === true, gate: pick.gate || '', relevance: pick.relevance ?? null, subject: subject || null, presser: pick.kind === 'presser', rung: pick.rung || '', short: Boolean(pick.segment && pick.segment.short) });
+          return 'clip';
+        }
       }
+      const photo = pick.photo || (pick.kind === 'cards' && Array.isArray(pick.cards) && pick.cards[0] ? pick.cards[0].photo : null);
+      if (!isClip && photo && ['photo', 'cutout', 'cards'].includes(pick.kind)) {
+        const kb = pick.kenBurns || (pick.cards && pick.cards[0] && pick.cards[0].kenBurns) || null;
+        if (await useSourcedPhoto(beat.id, { ...photo, id: photo.sourceUrl || photo.url, verified: photo.verified !== false }, subject)) {
+          markAsset(beat.id, { kenBurns: kb, checkedBy: photo.checkedBy || photo.verifiedBy || '', cards: pick.kind === 'cards' ? pick.cards : null, cutout: pick.kind === 'cutout' });
+          state.visualSrc[beat.id] = 'photo';
+          return 'photo';
+        }
+      }
+      if (pick.kind === 'none') break;
+      // This pick could not be used (it did not load, or clips are off): the next one.
+      const next = src && typeof src.nextCandidate === 'function' ? src.nextCandidate(beat.id, { failed: (pick.clip && pick.clip.url) || (photo && photo.url) || '' }) : null;
+      if (!next || next === pick) { pick = null; break; }
+      pick = next;
     }
-    if (pick && pick.kind === 'photo' && pick.photo && await useSourcedPhoto(beat.id, { ...pick.photo, id: pick.photo.sourceUrl || pick.photo.url, verified: pick.photo.verified !== false }, subject)) { state.visualSrc[beat.id] = 'photo'; return 'photo'; }
-    // Nothing relevant: the scene becomes the infographic block the sourcing lane proposes.
+    // Nothing that moves is left: the module the sourcing proposes (v3: an infographic block).
     if (pick && pick.kind === 'none' && pick.fallback && typeof pick.fallback === 'object' && pick.fallback.type) {
       beat.block = { ...pick.fallback };
       if (ES && ES.BLOCKS[pick.fallback.type]) { try { Object.assign(beat, ES.legacyFields(ES.cleanBlock({ ...pick.fallback }))); } catch { /* the engine draws it */ } }
@@ -1661,6 +1683,7 @@
     const rows = (out && out.beats) || {};
     // v4 sourcing: per scene motionOk (clip, Ken Burns photo, or a module that animates) and the reel's clip count.
     Object.entries(rows).forEach(([id, row]) => { if (row && typeof row.motionOk === 'boolean') state.motion = { ...(state.motion || {}), [id]: { motionOk: row.motionOk } }; });
+    if (out && typeof out.clipCount === 'number') state.sourcing = { clipCount: out.clipCount, needsClips: Boolean(out.needsClips), motionOk: out.motionOk !== false, actions: Array.isArray(out.actions) ? out.actions : [], stats: out.stats || null };
     const usedClips = new Set(usedList);
     const n = { clip: 0, photo: 0, none: 0 };
     for (const [i, beat] of todo.entries()) {
@@ -1728,6 +1751,7 @@
       if (!ok) toast(cand.kind === 'clip' ? 'That clip did not load. Try another.' : 'That photo did not load. Try another.', { tone: 'error' });
     } finally {
       delete state.visualNote[beatId];
+      motionRecheck();
       rebuild();
       renderBeats();
       renderSceneEditor();
@@ -2061,6 +2085,21 @@
     const media = a ? (a.kind === 'clip' ? 'clip' : ((a.verified || a.kind === 'upload') ? 'photo' : '')) : '';
     return SB.motionOf({ media, block: ES ? ES.blockOf(beat).type : '', module: beat.module && beat.module.type, motionOk: row && typeof row.motionOk === 'boolean' && !media ? row.motionOk : undefined });
   }
+  // Exported clips rank up in the confirmed library (a Swap ranks the old one down by itself).
+  function rankKept() {
+    const src = SRC();
+    if (!src || typeof src.rank !== 'function' || !state.plan) return;
+    state.plan.beats.forEach(b => { const a = state.assets[(state.photos[b.id] || [])[0]]; if (a && a.kind === 'clip' && a.post) { try { src.rank(a.post, +1, { beatId: b.id }); } catch { /* fire and forget */ } } });
+  }
+  // After an edit or a swap: the sourcing's own motion re-check (pure, no network).
+  function motionRecheck() {
+    const src = SRC();
+    if (!src || typeof src.motionCheck !== 'function' || !state.plan) return;
+    try {
+      const mc = src.motionCheck(state.plan, typeof src.picksFor === 'function' ? src.picksFor(state.plan) : undefined);
+      if (mc && mc.beats) state.motion = Object.fromEntries(Object.entries(mc.beats).map(([id, m]) => [id, { motionOk: Boolean(m && m.motionOk) }]));
+    } catch { /* the page's own check stands */ }
+  }
   const clipCount = () => (state.plan ? state.plan.beats.filter(b => { const a = state.assets[(state.photos[b.id] || [])[0]]; return a && a.kind === 'clip'; }).length : 0);
   function readyNow(critical, warnings) {
     const SB = window.ReelStoryboardCore;
@@ -2068,6 +2107,28 @@
     if (!SB) return null;
     return SB.readiness({ draft: state.planSource === 'draft', beats: (state.plan ? state.plan.beats : []).map(b => ({ id: b.id, ...beatMotion(b) })), clipCount: clipCount(), critic: state.critic || null, critical, warnings, gated });
   }
+  // The sourcing's next steps under the checklist: Find clips (the broader ladder),
+  // Swap media for a static scene, and AI b-roll with its price (offered, never run by itself).
+  function renderActions(rd) {
+    let host = $('rm-actions');
+    if (!host) { host = document.createElement('div'); host.id = 'rm-actions'; host.className = 'rm-actions'; els.checklist.after(host); }
+    const acts = (state.sourcing && state.sourcing.actions) || [];
+    const n = id => (state.plan ? state.plan.beats.findIndex(b => b.id === id) + 1 : 0);
+    const still = state.plan ? state.plan.beats.filter(b => !beatMotion(b).ok) : [];
+    const list = [];
+    if (rd && rd.needsClips) list.push(`<button class="es-btn es-btn--sm" type="button" data-find-clips>${ICON.film}<span>Find clips</span></button>`);
+    const swaps = new Set([...acts.filter(a => a.action === 'swap-media').map(a => a.beatId), ...still.map(b => b.id)]);
+    [...swaps].filter(id => n(id) > 0).slice(0, 4).forEach(id => list.push(`<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-goto-swap="${esc(id)}">${ICON.refresh}<span>Swap media · scene ${n(id)}</span></button>`));
+    if (state.config.aiClips?.ready) acts.filter(a => a.action === 'ai-broll' && n(a.beatId) > 0).slice(0, 2).forEach(a => list.push(`<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-broll="${esc(a.beatId)}">${ICON.sparkles}<span>AI b-roll · scene ${n(a.beatId)}${Number(a.costUsd) ? ` · $${Number(a.costUsd).toFixed(2)}` : ''}</span></button>`));
+    host.hidden = !list.length;
+    host.innerHTML = list.length ? `<span class="rm-bf__label">Next steps</span><div class="rm-actions__row">${list.join('')}</div>` : '';
+  }
+  els.lint.addEventListener('click', event => {
+    const br = event.target.closest('[data-broll]');
+    if (br) { visualAction(br.dataset.broll, 'ai-clip'); return; }
+    const sw = event.target.closest('[data-goto-swap]');
+    if (sw) visualAction(sw.dataset.gotoSwap, 'swap');
+  });
   // "Find clips": the sourcing again for every scene without a clip, on the broader ladder (player → game → team).
   async function findClips() {
     if (!state.plan || state.busy) return;
@@ -2119,6 +2180,7 @@
     rows.push(rv ? row(!rvOpen.length, rvOpen.length ? 'AI review: some scenes need a look' : `AI review: pictures match their words, facts are sourced${rv.fixed ? ` (${rv.fixed} fixed for you)` : ''}`, rvCritical ? 'critical' : 'warning', rvOpen.length)
       : row(true, window.ReelSourcing ? 'AI review did not run (AI is off or capped); the code checks above did' : 'Code checks: words, safe frame, captions, rights'));
     els.checklist.innerHTML = rows.join('');
+    renderActions(rd);
     const beatN = id => (state.plan ? state.plan.beats.findIndex(b => b.id === id) : -1);
     const go = (id, n) => (n >= 0 ? `<button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-goto="${esc(id)}">Scene ${n + 1}</button>` : '');
     const items = [
@@ -2393,6 +2455,7 @@
     if (!type) delete beat.module;
     else if (!beat.module || beat.module.type !== type) beat.module = { ...(beat.module && ['title', 'label', 'caption'].reduce((o, k) => (beat.module[k] != null ? { ...o, [k]: beat.module[k] } : o), {})), type };
     feedback('change_module', { beatId: beat.id, before: { module: before }, after: { module: type || '' } });
+    motionRecheck();
     rebuild();
     renderBeats();
   }
@@ -3231,6 +3294,7 @@
       const name = exportName(tl, result.ext);
       saveFile(fileUrl, name);
       feedback('export', { after: { format: result.ext, seconds: Math.round(tl.durationMs / 1000), clips: clipCount() } });
+      rankKept();
       window.FrameUpTrack?.exported?.({ tool: 'reels-studio', format: result.ext, dest: 'download', label: name, width: (tl.size || [1080, 1920])[0], height: (tl.size || [1080, 1920])[1], bytes: result.blob.size, seconds: Math.round(tl.durationMs / 1000), template: state.plan.format, thumb: els.canvas, meta: { audio: Boolean(result.hasAudio), esStyle: curStyle() } });
       els.files.hidden = false;
       els.files.innerHTML = `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(result.blob.size / 1048576).toFixed(1)} MB · ${(tl.durationMs / 1000).toFixed(1)} s</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`;
