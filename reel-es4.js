@@ -377,8 +377,8 @@
   // ─── The zones (9:16; a 4:5 export fits this frame, see drawFrame) ─────
   const ZONE = Object.freeze({ left: 60, right: 1020, width: 960, markerY: 330, headY: 404, headW: 840, mark: { x: 940, y: 330, size: 80 }, safeTop: 300, safeBottom: 1640, sourceY: 1600 });
   const LAYOUTS = Object.freeze({
-    both: { media: { x: 60, y: 616, w: 960, h: 540 }, cap: 1220, module: { x: 60, y: 1288, w: 960, h: 336 } },
-    data: { module: { x: 60, y: 616, w: 960, h: 576 }, cap: 1248, media: { x: 240, y: 1304, w: 600, h: 336 } },
+    both: { media: { x: 60, y: 616, w: 960, h: 540 }, cap: 1222, module: { x: 60, y: 1296, w: 960, h: 328 } },
+    data: { module: { x: 60, y: 616, w: 960, h: 560 }, cap: 1238, media: { x: 256, y: 1320, w: 568, h: 320 } },
     media: { media: { x: 60, y: 656, w: 960, h: 540 }, cap: 1300 },
     module: { module: { x: 60, y: 616, w: 960, h: 800 }, cap: 1496 },
     none: { cap: 1000 },
@@ -390,7 +390,7 @@
       case 'bars': return 72 + m.rows.length * 92 + (m.title ? 40 : 0);
       case 'rankList': return m.rows.length * 104 + (m.title ? 56 : 0);
       case 'checklist': return m.rows.length * 96 + 64;
-      case 'statTiles': case 'compare': case 'wl': case 'timeline': case 'quote': return 336;
+      case 'statTiles': case 'compare': case 'wl': case 'timeline': case 'quote': return 320;
       case 'reveal': case 'numberLine': case 'tally': return 420;
       default: return 600;
     }
@@ -878,6 +878,8 @@
   function applyScene(L, specs, t, mode, reveal, ctx) {
     const seen = new Set();
     const ids = new Set(specs.map(s => s.id));
+    let exiting = false;
+    L.els.forEach(el => { if (el.alive && !ids.has(el.id) && !el.global) exiting = true; });
     specs.forEach(s => {
       seen.add(s.id);
       let el = L.els.get(s.id);
@@ -901,7 +903,8 @@
           el.born.push(t);
           if (s.from) morph(el, target, Math.max(reveal + delay, s.buildAt || 0), 'build');
         } else {
-          const at = s.at != null ? Math.max(t, s.at) : (mode === 'cover' ? reveal : t) + delay;
+          // Inside a chapter, new elements enter once the old ones are mostly out (160 ms).
+          const at = s.at != null ? Math.max(t, s.at) : (mode === 'cover' ? reveal : t + (exiting ? DUR.xs : 0)) + delay;
           addKey(el, t, 0, 'set', { ...start, ...enterFrom(s) }, { cover: true });
           el.born.push(at);
           const pre = enterFrom(s);
@@ -1043,8 +1046,9 @@
         if (hasMedia) specs.push(...mediaSpecs(media, mr, { main, cards: cardAssets }, ctx));
         if (b.module && MOD[b.module.type] && dr) specs.push(...MOD[b.module.type](b.module, dr, ctx));
         const tagZone = dr || mr;
-        // The tag: a red / blue ES pill on the zone's bottom-left edge (inside the safe frame).
-        if (b.tag && tagZone) { const th = PILL(TS.caption).h; specs.push(sp('tag', 'pill', { x: tagZone.x + 24, y: Math.min(tagZone.y + tagZone.h - th / 2, ZONE.safeBottom - th - 8), size: TS.caption, fill: toneHex(b.tag.tone, 'red'), ink: WHITE, text: b.tag.text }, { z: 34, order: 3, enter: 'pop' })); }
+        // The tag: a red / blue ES pill, a tab on the zone's top-right edge
+        // (the label tag and the module title are tabs on the top-left).
+        if (b.tag && tagZone) { const th = PILL(TS.label).h; specs.push(sp('tag', 'pill', { x: tagZone.x + tagZone.w - 24, y: tagZone.y - th / 2, size: TS.label, fill: toneHex(b.tag.tone, 'red'), ink: WHITE, text: b.tag.text, anchor: 'right' }, { z: 34, order: 3, enter: 'pop' })); }
         if (b.stamp) {
           const zr = (b.stamp.at === 'media' ? mr : b.stamp.at === 'module' ? dr : null) || mr || dr || { x: 60, y: 700, w: 960, h: 500 };
           const sw = measure(b.stamp.text, dFont(TS.caption)) + 56;

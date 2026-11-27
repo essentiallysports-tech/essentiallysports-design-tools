@@ -59,7 +59,8 @@ function beatsSheet(id) {
   const fr = [{ t: 0, label: 'frame one' }];
   tl.beats.forEach(b => fr.push({ t: Math.max(b.inMs + 1, b.outMs - (b.kind === 'cta' ? 200 : 420)), label: b.id + ' settled ' + sec(b.outMs - 420) }));
   const drawn = fr.map(f => ({ ...f, c: draw(tl, f.t) }));
-  return { png: strip(drawn, 0.25, REELS[id].label + ' · ' + tl.esStyle + ' / ' + tl.skin + ' · ' + sec(tl.durationMs) + ' · clips ' + tl.clipCount), full: drawn.map(f => f.c.toDataURL('image/png')), dur: tl.durationMs };
+  const mids = tl.beats.map(b => draw(tl, b.inMs + Math.min(1700, (b.outMs - b.inMs) / 2)).toDataURL('image/png'));
+  return { png: strip(drawn, 0.25, REELS[id].label + ' · ' + tl.esStyle + ' / ' + tl.skin + ' · ' + sec(tl.durationMs) + ' · clips ' + tl.clipCount), full: drawn.map(f => f.c.toDataURL('image/png')), mids, dur: tl.durationMs };
 }
 function wipesSheet(id) {
   const tl = build(id);
@@ -117,7 +118,7 @@ try {
   for (const id of only.length ? only : REEL_ORDER) {
     const r = await chrome.evaluate(`beatsSheet(${JSON.stringify(id)})`);
     save(`${id}-beats.png`, r.png);
-    if (full) r.full.forEach((png, i) => save(`frames/${id}-${i}.png`, png));
+    if (full) { r.full.forEach((png, i) => save(`frames/${id}-${i}.png`, png)); r.mids.forEach((png, i) => save(`frames/${id}-mid-${i + 1}.png`, png)); }
     save(`${id}-wipes.png`, await chrome.evaluate(`wipesSheet(${JSON.stringify(id)})`));
     const cuts = await chrome.evaluate(`beatCutsSheet(${JSON.stringify(id)})`);
     if (cuts) save(`${id}-beatcuts.png`, cuts);
