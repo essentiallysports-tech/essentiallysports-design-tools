@@ -2109,7 +2109,7 @@
     els.ready.dataset.tone = tone;
     els.ready.dataset.state = rd ? rd.state : '';
     els.readyText.textContent = rd ? rd.label : (critical ? `${critical} to fix before posting` : (warnings ? `Ready to post · ${warnings} to review` : 'Ready to post'));
-    if (els.findClips) { els.findClips.hidden = !(rd && (rd.needsClips || rd.still)); els.findClips.classList.toggle('es-btn--primary', Boolean(rd && rd.needsClips)); }
+    if (els.findClips) { els.findClips.hidden = !(rd && (rd.needsClips || rd.still)); els.findClips.classList.toggle('is-go', Boolean(rd && rd.needsClips)); }
     // ES: the kit's "Check" result, "Safe frame ✓" when every word is inside it.
     const safeOk = esOn() && !lint.issues.some(i => i.id === 'safe-frame' || i.id === 'safe-zone');
     els.statuslineText.textContent = FLOW.statusLine({ critical: lint.critical, warnings: lint.warnings, seconds: tl ? tl.durationMs / 1000 : 0, usd: totalSpent(), money: isAdmin() ? F.money : (() => '') }).replace(/\s*·\s*$/, '') + (esOn() ? (safeOk ? ' · Safe frame ✓' : ' · Safe frame ✗') : '') + (state.voiceError && state.voiceOn ? ' · voice failed, captions only' : '');
@@ -3230,6 +3230,7 @@
       fileUrl = URL.createObjectURL(result.blob);
       const name = exportName(tl, result.ext);
       saveFile(fileUrl, name);
+      feedback('export', { after: { format: result.ext, seconds: Math.round(tl.durationMs / 1000), clips: clipCount() } });
       window.FrameUpTrack?.exported?.({ tool: 'reels-studio', format: result.ext, dest: 'download', label: name, width: (tl.size || [1080, 1920])[0], height: (tl.size || [1080, 1920])[1], bytes: result.blob.size, seconds: Math.round(tl.durationMs / 1000), template: state.plan.format, thumb: els.canvas, meta: { audio: Boolean(result.hasAudio), esStyle: curStyle() } });
       els.files.hidden = false;
       els.files.innerHTML = `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(result.blob.size / 1048576).toFixed(1)} MB · ${(tl.durationMs / 1000).toFixed(1)} s</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`;
@@ -3263,6 +3264,7 @@
       fileUrl = URL.createObjectURL(result.blob);
       const name = exportName(x.tl, result.ext);
       saveFile(fileUrl, name);
+      feedback('export', { after: { format: result.ext, size: aspect, clips: clipCount() } });
       window.FrameUpTrack?.exported?.({ tool: 'reels-studio', format: result.ext, dest: 'download', label: name, width: (x.tl.size || [1080, 1920])[0], height: (x.tl.size || [1080, 1920])[1], bytes: result.blob.size, seconds: Math.round(x.tl.durationMs / 1000), template: state.plan.format, thumb: els.canvas, meta: { audio: Boolean(result.hasAudio), size: aspect, esStyle: curStyle() } });
       els.files.hidden = false;
       els.files.insertAdjacentHTML('beforeend', `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(result.blob.size / 1048576).toFixed(1)} MB · ${(x.tl.durationMs / 1000).toFixed(1)} s</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`);

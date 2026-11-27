@@ -1613,6 +1613,8 @@ html[data-theme="dark"] .rm-scenes { border-top-color: #2A2D34; }
 @media (hover: hover) { .rm-dots .rm-cchip:not([aria-checked="true"]):hover::before { transform: scale(1.2); } }
 /* One voice control on Create: the voice choice replaces the tray's record button. */
 .rm-script #ri-script-voice { display: none; }
-/* Find clips is the next step when the reel has no clip: ES blue. */
-.rm-findclips.es-btn--primary, html[data-theme="dark"] .rm-findclips.es-btn--primary { background: var(--rm-blue); color: #fff; border-color: transparent; box-shadow: none; }
-@media (hover: hover) { .rm-findclips.es-btn--primary:not(:disabled):hover { background: #0A6FDE; color: #fff; } }
+/* Find clips is the next step when the reel has no clip: an ES blue fill
+   (not the animated primary rim, which stays on the one key action per view). */
+.rm-findclips.is-go, html[data-theme="dark"] .rm-findclips.is-go { background: var(--rm-blue); color: #fff; border-color: transparent; box-shadow: none; }
+@media (hover: hover) { .rm-findclips.is-go:not(:disabled):hover { background: #0A6FDE; color: #fff; } }
+.rm-script .rm-prompt__tools { display: none; }
