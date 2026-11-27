@@ -52,8 +52,8 @@ ok('fit: size scales the print, position moves it', () => {
   assert.ok(big.items.every(i => i.x >= 0 && i.x + i.w <= TEE.pixelsWidth));
 });
 ok('fit is clamped to safe values', () => {
-  assert.deepEqual(P.fitOf({ fit: { scale: 9, topIn: -3 } }), { scale: 1.6, topIn: 0.5, xIn: 0 });
-  assert.deepEqual(P.fitOf({}), { scale: 1, topIn: null, xIn: 0 });
+  assert.deepEqual(P.fitOf({ fit: { scale: 9, topIn: -3 } }), { scale: 1.6, topIn: 0.5, xIn: 0, yIn: 0 });
+  assert.deepEqual(P.fitOf({}), { scale: 1, topIn: null, xIn: 0, yIn: 0 });
 });
 ok('splitWords modes', () => {
   assert.deepEqual(P.splitWords('the king of the court', 'word'), ['THE KING', 'OF THE COURT']);
@@ -337,6 +337,30 @@ console.log(`merch7 photos: ${n} checks passed`);
     // hard goods stay inside their safe edge
     const poster = P.layout({ ...short, blanks: ['poster'], fit: { xIn: 9 } }, { pixelsWidth: 1500, pixelsHeight: 2100, dpi: 300, kind: 'poster' });
     assert.ok(poster.w - poster.design.x - poster.design.w >= Math.round(P.SAFE_IN.poster * 300));
+  });
+  ok2('fit.yIn (tote-drag): hard goods move up/down inside the safe edge; apparel, mug and yIn 0 unchanged', () => {
+    const TS = { regionId: 'front', pixelsWidth: 1500, pixelsHeight: 1500, dpi: 150, kind: 'tote', logo: 'inline' };
+    const tote = { ...short, blanks: ['tote'], fit: { scale: 0.7 } };
+    const base = P.layout(tote, TS);
+    const down = P.layout({ ...tote, fit: { scale: 0.7, yIn: 1 } }, TS);
+    assert.equal(down.design.y - base.design.y, 150, '1 in down');
+    assert.equal(down.design.x, base.design.x);
+    assert.ok(down.items.find(i => i.type === 'logo').y - base.items.find(i => i.type === 'logo').y === 150, 'the inline ES mark moves with it');
+    const far = P.layout({ ...tote, fit: { scale: 0.7, yIn: 9 } }, TS);
+    assert.equal(far.design.y + far.design.h, far.h, 'clamped to the bottom of the 10 x 10 area (tote safe edge 0)');
+    const up = P.layout({ ...tote, fit: { scale: 0.7, yIn: -9, xIn: -9 } }, TS);
+    assert.equal(up.design.y, 0); assert.equal(up.design.x, 0);
+    [far, up].forEach(x => assert.equal(P.checksFor(x).filter(c => c.level === 'error').length, 0, 'clamped designs pass the print checks'));
+    // a topIn (e.g. saved on a tee) still does nothing on the tote
+    assert.equal(P.layout({ ...tote, fit: { scale: 0.7, topIn: 6 } }, TS).design.y, base.design.y);
+    // poster keeps its trim
+    const poster = P.layout({ ...short, blanks: ['poster'], fit: { scale: 0.7, yIn: 30 } }, { pixelsWidth: 1500, pixelsHeight: 2100, dpi: 300, kind: 'poster' });
+    assert.equal(poster.h - poster.design.y - poster.design.h, Math.round(P.SAFE_IN.poster * 300));
+    // apparel ignores yIn, and so does the mug
+    assert.equal(P.layout({ ...short, fit: { ...short.fit, yIn: 2 } }, SP).design.y, P.layout(short, SP).design.y);
+    const MS = { pixelsWidth: 2475, pixelsHeight: 1155, dpi: 300, kind: 'mug' };
+    assert.equal(P.layout({ ...short, blanks: ['mug'], fit: { scale: 0.7, yIn: 1 } }, MS).design.y, P.layout({ ...short, blanks: ['mug'] }, MS).design.y);
+    assert.equal(P.fitOf({ fit: { yIn: -99 } }).yIn, -P.FIT.xMaxIn);
   });
   ok2('designBox matches layout (inches from the print area top-left)', () => {
     const c = { ...short, fit: { scale: 0.7, xIn: 1.5, topIn: 4 } };

@@ -480,7 +480,10 @@ function shapeFit(raw) {
   // engine clamps it inside the print area.
   const x = Number(raw.xIn);
   const xIn = Number.isFinite(x) ? Math.max(-10, Math.min(10, Math.round(x * 100) / 100)) : 0;
-  return xIn ? { scale, topIn, xIn } : { scale, topIn };
+  // Up/down shift on hard goods (the tote, dragged on its photo); same rules.
+  const y = Number(raw.yIn);
+  const yIn = Number.isFinite(y) ? Math.max(-10, Math.min(10, Math.round(y * 100) / 100)) : 0;
+  return { scale, topIn, ...(xIn ? { xIn } : {}), ...(yIn ? { yIn } : {}) };
 }
 // Where the pill colours came from (the page's picker): { kind: 'team'|'es'|'custom',
 // sport?, team?, index? }. Anything else is dropped.
@@ -740,7 +743,7 @@ function applyIntent(intent, concept) {
   } else if (intent === 'bigger' || intent === 'smaller') {
     const next = Math.round(Math.min(G.LIMITS.fitScaleMax, Math.max(G.LIMITS.fitScaleMin, scale * (intent === 'bigger' ? 1.15 : 0.87))) * 100) / 100;
     if (next === scale) return null;
-    c.fit = { scale: next, topIn: concept.fit?.topIn ?? null, ...(concept.fit?.xIn ? { xIn: concept.fit.xIn } : {}) }; note = intent === 'bigger' ? 'Made the print bigger.' : 'Made the print smaller.';
+    c.fit = { scale: next, topIn: concept.fit?.topIn ?? null, ...(concept.fit?.xIn ? { xIn: concept.fit.xIn } : {}), ...(concept.fit?.yIn ? { yIn: concept.fit.yIn } : {}) }; note = intent === 'bigger' ? 'Made the print bigger.' : 'Made the print smaller.';
   } else if (intent === 'white' || intent === 'black') {
     if (c.garment.color === TEE[intent].color) return null;
     c.garment = { ...TEE[intent] }; note = `Put it on a ${intent} tee.`;

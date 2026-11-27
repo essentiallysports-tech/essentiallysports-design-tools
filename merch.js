@@ -3933,7 +3933,8 @@
     loadStatus();
     loadMoments();
     // Move and resize the design on the stage (merch-canvas.js): only where the
-    // design's position is real (a calibrated Fourthwall photo or the close-up).
+    // design's position is real (a calibrated Fourthwall photo, the tote's
+    // perspective panel included, or the close-up). Uncalibrated / back photos: none.
     function attachStageCanvas() {
       const cv = $('mx-stage-canvas');
       if (!cv || !window.MerchCanvas || canvasCtl) return;
@@ -3946,7 +3947,7 @@
           return {
             view: state.view, kind: kind(), spec: thumbSpec(), pad: 0.14,
             templateId: state.templateId || '', photoIndex: ph?.index,
-            calibrated: state.view === 'tee' && state.stagePic === 'photo' && Boolean(ph?.calibrated) && Boolean(BLANK_INFO[kind()]?.apparel),
+            calibrated: state.view === 'tee' && state.stagePic === 'photo' && Boolean(ph?.calibrated),
           };
         },
         onChange: (fit, { final, source }) => {
@@ -3963,7 +3964,7 @@
       });
     }
     try { attachStageCanvas(); } catch (error) { console.warn('merch canvas', error); }
-    window.MerchUI = { state, go, demo, refine, undo, redo, stop: stopMaking, openPop, closePop, brainstorm: openBrainstorm, bsRefresh: refreshBoard }; // for the UI check
+    window.MerchUI = { state, go, demo, refine, undo, redo, stop: stopMaking, openPop, closePop, brainstorm: openBrainstorm, bsRefresh: refreshBoard, get canvas() { return canvasCtl; } }; // for the UI check
   }
   // Small line icons for the blanks (decorative; 24px box, currentColor).
   const svg = d => `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${d}</svg>`;
