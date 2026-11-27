@@ -244,7 +244,7 @@ function classify(log, voc, captionBand) {
     const inBand = captionBand && cy >= captionBand[0] && cy <= captionBand[1];
     if (Math.abs(t.rot) >= 1 && within(voc.stamp, t.text, true)) role = 'stamp';
     else if (inBand && within(voc.vo, t.text) && !within(voc.headline, t.text, true) && !within(voc.module, t.text, true) && !within(voc.tag, t.text, true) && !within(voc.label, t.text, true)) role = 'caption';
-    else if (within(voc.headline, t.text, true) && t.size >= 64 && (!captionBand || t.b < captionBand[0])) role = 'headline';
+    else if (within(voc.headline, t.text, true) && t.size >= 64 && (!captionBand || t.b < captionBand[0]) && !(ES4 && ES4.ZONE && t.t > ES4.ZONE.headY + 240)) role = 'headline';
     else if (within(voc.marker, t.text, true)) role = 'marker';
     else if (within(voc.stamp, t.text, true) && words(t.text).join(' ') === voc.stampText) role = 'stamp'; // an unrotated stamp: only the whole stamp text
     else if (within(voc.tag, t.text, true)) role = 'tag';
