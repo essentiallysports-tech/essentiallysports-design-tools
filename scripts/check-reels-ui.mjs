@@ -109,6 +109,7 @@ function sceneMedia(body) {
   const clipsOn = scenario.clips === 'ok';
   const beats = allBeats(body.plan || {}).filter(b => !(b.kind === 'cta' || b.block?.type === 'endcard'));
   let clipCount = 0;
+  const staticAt = beats.findIndex(b => !b.media || b.media.kind === 'none');
   const out = beats.map((b, i) => {
     const wants = b.media?.kind || (b.module ? 'none' : 'clip');
     const subject = b.media?.subject || { type: 'player', name: 'Dak Prescott', team: 'Dallas Cowboys' };
@@ -118,7 +119,7 @@ function sceneMedia(body) {
     let pick;
     if (wants === 'none') pick = { kind: 'none', ref: '', why: 'module beat' };
     else if (clips.length) { pick = { kind: 'clip', ref: clips[0].url, segment: { inSec: 0.4, outSec: 4.4 }, why: 'qa' }; clipCount++; } else pick = { kind: 'photo', ref: photos[0].url, kenBurns: true, why: 'no clip: verified photo with Ken Burns' };
-    return { motion: wants === 'none' ? 'module' : (clips.length ? 'clip' : 'kenburns'), failures: [], ladder: [{ rung: 'player+moment', n: clips.length, cost: 0, ms: 5 }], beatId: b.id, chapterId: b.chapterId, block: b.block || null, module: b.module || null, kind: wants, wants, subject: { ...subject, key: String(subject.name || '').toLowerCase() }, clips, photos, pick, motionOk: !(scenario.motion === 'static' && i === 1), ...(scenario.motion === 'static' && i === 1 ? { motionWhy: 'a still photo with no Ken Burns and no module' } : {}), segment: clips[0]?.segment || null };
+    return { motion: wants === 'none' ? 'module' : (clips.length ? 'clip' : 'kenburns'), failures: [], ladder: [{ rung: 'player+moment', n: clips.length, cost: 0, ms: 5 }], beatId: b.id, chapterId: b.chapterId, block: b.block || null, module: b.module || null, kind: wants, wants, subject: { ...subject, key: String(subject.name || '').toLowerCase() }, clips, photos, pick, motionOk: !(scenario.motion === 'static' && i === staticAt), ...(scenario.motion === 'static' && i === staticAt ? { motionWhy: 'a still photo with no Ken Burns and no module' } : {}), segment: clips[0]?.segment || null };
   });
   return {
     ok: true, esStyle: style, cost: 0, costs: { clips: 0, photos: 0 }, capped: { clips: false, photos: false },
@@ -176,8 +177,8 @@ async function reelApi(pathname, body) {
     if (free) return { status: 200, body: { ok: true, skipped: true } };
     const plan = clone(body.plan || {});
     if (Array.isArray(plan.chapters) && plan.chapters[0]) {
+      // Script-first: Ask AI may change what is on screen (headline, modules), never the voiceover words.
       plan.chapters[0].headline = 'DALLAS LED BY *21*';
-      if (plan.chapters[0].beats?.[0]) plan.chapters[0].beats[0].vo = 'Dallas led by 21. They lost anyway.';
     } else if (plan.beats?.[0]) { plan.beats[0].text = 'DALLAS LED BY 21'; plan.beats[0].vo = 'Dallas led by 21. They lost anyway.'; }
     return { status: 200, body: { ok: true, plan, cost: 0.001 } };
   }
@@ -577,7 +578,9 @@ for (const w of WIDTHS) {
       expect(await visible('#rm-revise'), 'Ask AI (#rm-revise) is not shown');
       await typeInto('#rm-ask-input', 'Lead with the 21-point lead');
       await evaluate(`(document.querySelector('#rm-ask').requestSubmit(), 1)`);
-      await waitFor(`JSON.stringify(window.ReelMakerCtx.state.plan).includes('Dallas led by 21')`, 6000, 'the revised plan');
+      const voBefore = await ctx(`${PAGE_BEATS}(c.state.plan).map(b => b.vo).join(' ')`);
+      await waitFor(`JSON.stringify(window.ReelMakerCtx.state.plan).includes('DALLAS LED BY')`, 6000, 'the revised plan (new headline)');
+      expect((await ctx(`${PAGE_BEATS}(c.state.plan).map(b => b.vo).join(' ')`)) === voBefore, 'Ask AI changed the voiceover words (script-first: they stay word for word)');
       const rv = calls.find(c => c.mode === 'revise');
       expect(rv && /21-point/.test(rv.body.instruction), `revise instruction: ${rv && rv.body.instruction}`);
       expect(rv.body.plan && Array.isArray(rv.body.plan.chapters), 'Ask AI did not send the v4 plan');
@@ -588,7 +591,11 @@ for (const w of WIDTHS) {
       const target = await ctx(`${PAGE_BEATS}(c.state.plan)[2].id`);
       await selectBeat(target);
       const n0 = calls.filter(c => c.mode === 'revise').length;
-      await clickAction('/ask ai/i', target, 'Ask AI on a beat');
+      // The beat's own Ask AI: a form in its editor ([data-sb-ask]), or an "Ask AI" control that focuses the main box.
+      const formSel = `[data-sb-ask]`;
+      if (await evaluate(`${SHOWN}(document.querySelector(${JSON.stringify(formSel)}))`)) {
+        await evaluate(`(() => { const f = document.querySelector('[data-sb-ask]'); const i = f.querySelector('input, textarea'); i.value = 'Make this beat punchier'; i.dispatchEvent(new Event('input', { bubbles: true })); f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); return 1; })()`);
+      } else await clickAction('/ask ai/i', target, 'Ask AI on a beat');
       await sleep(200);
       if (calls.filter(c => c.mode === 'revise').length === n0 && await visible('#rm-ask-input')) {
         await typeInto('#rm-ask-input', 'Make this beat punchier');
@@ -604,8 +611,8 @@ for (const w of WIDTHS) {
     await step('Review: Delete beat (if offered) logs delete_beat', async () => {
       const target = await ctx(`(${PAGE_BEATS}(c.state.plan)[3] || {}).id`);
       await selectBeat(target);
-      if (!(await evaluate(`Boolean(${ACTION('/delete|remove/i', target)})`))) return;
-      await clickAction('/delete|remove/i', target, 'Delete');
+      if (!(await evaluate(`Boolean(${ACTION('/delete scene|^\\s*delete\\s*$/i', target)})`))) return;
+      await clickAction('/delete scene|^\\s*delete\\s*$/i', target, 'Delete');
       await sleep(200);
       await evaluate(`(() => { const b = [...document.querySelectorAll('dialog[open] button, [role="alertdialog"] button')].find(x => /delete|remove|yes/i.test(x.textContent)); if (b) b.click(); return 1; })()`);
       await sleep(300);
