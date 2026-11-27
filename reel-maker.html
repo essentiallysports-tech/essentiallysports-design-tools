@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="reel-maker.css?v=20261127-rv4ui5">
+  <link rel="stylesheet" href="reel-maker.css?v=20261127-rv4ui8">
   <link rel="stylesheet" href="reel-inputs.css?v=20261125-reels2">
   <link rel="stylesheet" href="reel-b-panels.css?v=20261125-reels2">
   <script src="theme.js?v=20261120-rel2"></script>
@@ -146,7 +146,10 @@
           <ul class="rm-trends" id="rm-trends" aria-label="Trending stories" aria-busy="true"></ul>
         </section>
 
-        <p class="rm-inspire"><button class="rm-link" type="button" id="rm-inspire-link" aria-haspopup="dialog">Need a script?</button><span class="rm-hint">Brainstorm ES angles, or see which official clips are doing well.</span></p>
+        <div class="rm-inspire">
+          <p class="rm-inspire__line"><button class="rm-link" type="button" id="rm-inspire-link" aria-haspopup="dialog">Need a script?</button><span class="rm-hint">Browse ES ideas, or</span><button class="rm-link" type="button" id="rm-draft-btn" aria-describedby="rm-draft-status">draft a script</button><span class="rm-hint">from your topic, sources or a picked story. You edit it before anything is made.</span></p>
+          <p class="rm-status" id="rm-draft-status" role="status" aria-live="polite"></p>
+        </div>
 
         <section class="rm-recent" id="rm-recent" aria-labelledby="rm-recent-title" hidden>
           <h3 class="rm-sec__title" id="rm-recent-title">Continue a reel</h3>
@@ -540,9 +543,9 @@
   <script src="reel-captions-export.js?v=20261128-reels3"></script>
   <script src="reel-media-tray.js?v=20261125-reels2"></script>
   <script src="reel-voice-input.js?v=20261125-reels2"></script>
-  <script src="reel-storyboard.js?v=20261127-rv4ui5"></script>
+  <script src="reel-storyboard.js?v=20261127-rv4ui8"></script>
   <script src="reel-a11y.js?v=20261125-reels2"></script>
-  <script src="reel-maker.js?v=20261127-rv4ui5"></script>
+  <script src="reel-maker.js?v=20261127-rv4ui8"></script>
   <script src="reel-ideas.js?v=20261125-reels2"></script>
   <script src="reel-radar.js?v=20261125-reels2"></script>
 </body>

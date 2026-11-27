@@ -202,7 +202,7 @@
     try {
       const plan = state.plan;
       const chapter = plan && v4(plan) ? (plan.chapters.find(c => (c.beats || []).some(b => b.id === beatId)) || {}).id || '' : '';
-      window.ReelFeedback?.log?.({ event, reel_id: state.projectId, beat_id: beatId || '', chapter_id: chapter, before, after, style: curStyle() });
+      window.ReelFeedback?.log?.({ event, reelId: state.projectId, beatId: beatId || '', chapterId: chapter, before, after, style: curStyle() });
     } catch { /* the reel never waits on feedback */ }
   }
 
@@ -221,10 +221,12 @@
     els.toasts.classList.toggle('is-stage', Boolean(sr && sr.width));
     els.toasts.style.left = sr && sr.width ? `${Math.round(sr.left + sr.width / 2)}px` : '';
     els.toasts.style.maxWidth = sr && sr.width ? `${Math.round(sr.width - 32)}px` : '';
-    // Review v4: over the top of the frame (the reel's own picture), never over the transport, the timeline or the panel.
-    const dr = sr && sr.width ? els.device.getBoundingClientRect() : null;
-    els.toasts.style.top = dr && dr.height ? `${Math.round(Math.max(16, Math.min(window.innerHeight - 96, dr.top + 16)))}px` : '';
-    els.toasts.style.bottom = dr && dr.height ? 'auto' : '';
+    // Review v4: in the preview column just under the transport bar (over its quiet meta
+    // line), clear of the frame, the playback controls, the timeline's buttons and the panel.
+    const trr = sr && sr.width && els.transport ? els.transport.getBoundingClientRect() : null;
+    els.toasts.style.top = trr && trr.height ? `${Math.round(Math.max(16, Math.min(window.innerHeight - 72, trr.bottom + 6)))}px` : '';
+    els.toasts.style.bottom = trr && trr.height ? 'auto' : '';
+    if (trr && trr.height) els.toasts.style.maxWidth = `${Math.round(Math.min(440, sr.width - 32))}px`;
     els.toasts.append(el);
     setTimeout(() => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 260); }, action ? 5000 : 3200);
   }
@@ -719,6 +721,43 @@
     logEvent('edit', { what: 'inspiration' });
   }
   els.inspireLink.addEventListener('click', () => openInspo());
+  // "Draft a script" (AI lane, mode script-draft, one Haiku call): a first
+  // draft from the topic (the sources field, a picked story, or the words
+  // typed so far). It lands in the editor for the person to change; the
+  // director only ever reads what they keep. Undo puts the old words back.
+  const draftBtn = $('rm-draft-btn');
+  const draftStatus = $('rm-draft-status');
+  async function draftScript() {
+    if (state.busy || state.flow.making) return;
+    const typed = els.prompt.value.trim();
+    const topic = [els.topic ? els.topic.value.trim() : '', typed].filter(Boolean).join('\n');
+    if (!topic && !state.trend) { draftStatus.textContent = 'Say what the reel is about first: type a topic above, add sources, or pick a story below.'; els.prompt.focus(); return; }
+    if (!aiOn()) { draftStatus.textContent = 'Drafting needs AI, which is off right now. Write your script above.'; return; }
+    state.busy = 'draft';
+    draftBtn.disabled = true;
+    draftBtn.setAttribute('aria-busy', 'true');
+    draftStatus.textContent = 'Drafting a script from your topic…';
+    try {
+      const data = await api({ mode: 'script-draft', topic, trend: state.trend || null, length: state.length });
+      const text = String(data.script || '').trim();
+      if (!text) throw new Error('No draft came back. Try a more specific topic.');
+      state.spent.director += Number(data.cost) || 0;
+      els.prompt.value = text;
+      els.prompt.dispatchEvent(new Event('input', { bubbles: true }));
+      renderMeter();
+      els.prompt.focus({ preventScroll: true });
+      draftStatus.textContent = (data.issues || []).length ? `Draft ready. ${data.issues.length} line${data.issues.length > 1 ? 's were' : ' was'} left out: ${data.issues[0]}` : 'Draft ready. Edit it into your own words; it is your script from here.';
+      toast('A first draft is in the editor. Change anything before you build.', typed ? { action: { label: 'Undo', run: () => { els.prompt.value = typed; renderMeter(); } } } : {});
+      logEvent('edit', { what: 'script-draft', cost: data.cost || 0 });
+    } catch (error) {
+      draftStatus.textContent = error.message || 'Drafting is unavailable right now. Write your script above.';
+    } finally {
+      state.busy = '';
+      draftBtn.disabled = false;
+      draftBtn.removeAttribute('aria-busy');
+    }
+  }
+  draftBtn?.addEventListener('click', draftScript);
   els.ideasDialog.addEventListener('click', event => { if (event.target === els.ideasDialog) els.ideasDialog.close(); });
   // Esc, the close button or a backdrop click: focus goes back to "Need an idea?".
   els.ideasDialog.addEventListener('close', () => { if (state.step === 'topic') els.inspireLink.focus({ preventScroll: true }); });
@@ -1100,7 +1139,7 @@
         if (plan && data.source !== 'draft' && SBC && SBC.keepsScript(plan, script)) {
           plan.script = { text: script.replace(/\s+/g, ' ').trim(), locked: true };
           applyStyle(plan, style);
-          made = { ...data, plan, corpus: [data.corpus, corpus].filter(Boolean).join('\n'), sources: [...sources, ...(data.sources || []).filter(x => x && x.type !== 'brief')] };
+          made = { ...data, plan, corpus: [data.corpus, corpus, ...sourceClaims(plan)].filter(Boolean).join('\n'), sources: [...sources, ...(data.sources || []).filter(x => x && x.type !== 'brief')] };
         } else if (plan && data.source !== 'draft') why = 'The AI plan changed some of your words, so the scenes were built from your script by code.';
       } catch (error) {
         why = error.offline ? '' : 'The AI planner is unavailable right now, so the scenes were built from your script by code.';
@@ -1119,6 +1158,10 @@
     showChapters(groups);
     flowEvent({ type: 'stage-done', stage: 'script', note: `${v4(made.plan) ? `${made.plan.chapters.length} chapters · ` : ''}${made.plan.beats.length} scenes · your words` });
     await finishMake(started);
+  }
+  // What the plan's own sources say (title, claim, text): numbers on screen may come from them.
+  function sourceClaims(plan) {
+    return (Array.isArray(plan && plan.sources) ? plan.sources : []).map(x => (x && typeof x === 'object' ? [x.title, x.source, x.claim, x.text].filter(Boolean).join(' · ') : String(x || ''))).filter(Boolean);
   }
   // The making checklist lists the chapters as they are planned.
   let chapterTimer = 0;
@@ -1287,6 +1330,7 @@
     state.planSource = data.source || '';
     state.notice = data.notice || (data.source === 'draft' ? 'This is a draft built from your words. Edit the beats, or write again when AI is available.' : '');
     state.corpus = data.corpus || [brief, trend?.title].filter(Boolean).join('\n');
+    sourceClaims(plan).forEach(c => { if (!state.corpus.includes(c)) state.corpus += `\n${c}`; });
     state.sources = data.sources || [];
     // A code plan (free mode, a draft, your script) has no source line: it comes from the sources it used.
     if (!plan.sourceLine) { const line = sourceLineFrom([...(trend && trend.source ? [{ source: trend.source }] : []), ...state.sources], [brief, trend && trend.title].filter(Boolean).join(' ')); if (line) plan.sourceLine = line; }
@@ -1299,7 +1343,7 @@
     state.versions = null; state.version = 0; state.scene = -1; // ── Reels 2.0: D (interface) ──
     if (!STYLE_IDS.includes(plan.esStyle)) applyStyle(plan, state.esStyle);
     state.esStyle = plan.esStyle;
-    state.review = null; state.swapOpen = ''; state.motion = {}; state.critic = null;
+    state.review = null; state.swapOpen = ''; state.motion = {}; state.serverMotion = {}; state.critic = null;
     loadTeamLogo();
     rebuild();
     renderEdit();
@@ -1670,6 +1714,16 @@
   }
   // The clip loader ReelSourcing uses to sample clips for the judge (shares this page's cache).
   async function sourcingVideo(clip) { const id = await loadClip(clip).catch(() => ''); return id ? state.videos[id] || null : null; }
+  // The page's API for ReelSourcing, keeping scene-media's per-beat verdict (motionOk, motionWhy) from the server.
+  async function sourcingApi(body) {
+    const data = await api(body);
+    if (body && body.mode === 'scene-media' && data && Array.isArray(data.beats)) {
+      const seen = {};
+      data.beats.forEach(b => { if (b && b.beatId && typeof b.motionOk === 'boolean') seen[b.beatId] = { motionOk: b.motionOk, why: b.motionWhy || '' }; });
+      state.serverMotion = { ...(state.serverMotion || {}), ...seen };
+    }
+    return data;
+  }
   async function fillFromSourcing(plan, beats, { force = false, broaden = false } = {}) {
     for (const beat of beats) { if (state.plan !== plan) return { note: '' }; await componentVisuals(beat).catch(() => {}); }
     const todo = beats.filter(b => b.kind !== 'cta' && (force || !state.photos[b.id]?.length));
@@ -1677,7 +1731,7 @@
     const durations = {};
     (state.timeline ? state.timeline.beats : []).forEach(b => { durations[b.id] = b.outMs - b.inMs; });
     const usedList = plan.beats.filter(b => !todo.includes(b)).flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean);
-    const out = await SRC().mediaFor(plan, curStyle(), { loadVideo: sourcingVideo, durations, usedClips: usedList, ai: aiOn(), ...(broaden ? { broaden: true, ladder: 'broad' } : {}), onProgress: text => { if (text && els.makingLive) els.makingLive.textContent = text; } }).catch(() => null);
+    const out = await SRC().mediaFor(plan, curStyle(), { loadVideo: sourcingVideo, durations, usedClips: usedList, ai: aiOn(), api: sourcingApi, ...(broaden ? { broaden: true, ladder: 'broad' } : {}), onProgress: text => { if (text && els.makingLive) els.makingLive.textContent = text; } }).catch(() => null);
     if (state.plan !== plan) return { note: '' };
     if (out && Number(out.cost)) state.spent.clips += Number(out.cost);
     const rows = (out && out.beats) || {};
@@ -2080,10 +2134,22 @@
     const SB = window.ReelStoryboardCore;
     if (!SB || !beat) return { ok: true, why: '' };
     if (ES && ES.blockOf(beat).type === 'endcard') return { ok: true, why: 'end' };
-    const row = state.motion && state.motion[beat.id];
+    // 1. The engine's own per-beat flag; 2. the v4 lint's static-beat check (it
+    // looks at what actually animates); 3. a confirmed clip or a checked photo.
+    // "Has a module" alone never counts as moving.
+    const tb = state.timeline && Array.isArray(state.timeline.beats) ? state.timeline.beats.find(x => x.id === beat.id) : null;
+    if (tb && typeof tb.moves === 'boolean') return { ok: tb.moves, why: tb.moves ? 'engine' : 'static' };
     const a = state.assets[(state.photos[beat.id] || [])[0]];
     const media = a ? (a.kind === 'clip' ? 'clip' : ((a.verified || a.kind === 'upload') ? 'photo' : '')) : '';
-    return SB.motionOf({ media, block: ES ? ES.blockOf(beat).type : '', module: beat.module && beat.module.type, motionOk: row && typeof row.motionOk === 'boolean' && !media ? row.motionOk : undefined });
+    const row = state.motion && state.motion[beat.id];
+    const srv = state.serverMotion && state.serverMotion[beat.id];
+    // The sourcing (browser or server) found nothing that moves for this scene, and the page has no clip or photo on it.
+    if (!media && ((row && row.motionOk === false) || (srv && srv.motionOk === false))) return { ok: false, why: 'static' };
+    const v4tl = Boolean(state.timeline && (state.timeline.v === 4 || Array.isArray(state.timeline.layers)));
+    if (v4tl && state.lint) { const still = state.lint.issues.some(i => i.id === 'static-beat' && i.beat === beat.id); return { ok: !still, why: still ? 'static' : (media || 'lint') }; }
+    if (media) return { ok: true, why: media };
+    // A v3 data block counts up, fills or grows on the v3 engine; a v4 module waits for the engine's word.
+    return SB.motionOf({ media: '', block: !v4Beat(beat) && ES ? ES.blockOf(beat).type : '' });
   }
   // Exported clips rank up in the confirmed library (a Swap ranks the old one down by itself).
   function rankKept() {
@@ -2141,7 +2207,7 @@
       await fillVisuals({ only, force: true, broaden: true });
       const found = clipCount() - before;
       toast(found > 0 ? `${found} clip${found > 1 ? 's' : ''} found and checked.` : 'No confirmed clip yet. Try a different angle in your words, or upload a clip.', { tone: found > 0 ? '' : 'error' });
-      window.ReelFeedback?.log?.({ event: 'find_clips', reel_id: state.projectId, before: { clips: before }, after: { clips: clipCount() }, style: curStyle() });
+      feedback('find_clips', { before: { clips: before }, after: { clips: clipCount() } });
     } finally {
       state.busy = '';
       rebuild();
@@ -2162,7 +2228,9 @@
     const rv = state.review;
     const rvOpen = rv ? (rv.issues || []).filter(i => !i.fixed) : [];
     const rvCritical = rvOpen.filter(i => i.severity === 'critical').length;
-    const critical = lint.critical + rvCritical;
+    const GATED = ['needs-clips', 'static-beat'];
+    const gatedN = window.ReelStoryboardCore && esOn() ? lint.issues.filter(i => i.severity === 'critical' && GATED.includes(i.id)).length : 0;
+    const critical = Math.max(0, lint.critical - gatedN) + rvCritical;
     const warnings = lint.warnings + rvOpen.length - rvCritical;
     const rd = readyNow(critical, warnings);
     state.ready = rd;
@@ -2450,10 +2518,41 @@
     o[last] = typeof o[last] === 'number' && value !== '' && Number.isFinite(Number(value)) ? Number(value) : value;
   }
   // Module change (v4): the new module keeps the fields it shares with the old one; numbers stay sourced.
+  // A module change keeps the scene's sourced figures: the old module's label/value
+  // pairs move into the new shape (bars, rank list, scoreboard, stat tiles, number
+  // line, compare, checklist). Nothing is invented; a shape that cannot take them
+  // starts empty and the lint asks for its data.
+  function moduleRows(m) {
+    if (!m || typeof m !== 'object') return [];
+    const pair = x => (x && typeof x === 'object' ? { label: String(x.label ?? x.team ?? x.text ?? x.name ?? '').trim(), value: x.value ?? x.n ?? '' } : null);
+    if (Array.isArray(m.rows)) return m.rows.map(pair).filter(Boolean);
+    if (Array.isArray(m.marks)) return m.marks.map(pair).filter(Boolean);
+    if (Array.isArray(m.tiles)) return m.tiles.map(pair).filter(Boolean);
+    if (Array.isArray(m.groups)) return m.groups.map(pair).filter(Boolean);
+    if (m.from && m.to) return [pair(m.from), pair(m.to)].filter(Boolean);
+    if (m.to != null && m.label) return [{ label: String(m.label), value: m.to }];
+    return [];
+  }
+  function convertModule(old, type) {
+    const keep = old ? ['title', 'label', 'caption'].reduce((o, k) => (old[k] != null && typeof old[k] !== 'object' ? { ...o, [k]: old[k] } : o), {}) : {};
+    const rows = moduleRows(old).filter(r => r.label || r.value !== '');
+    const num = v => { const n = Number(String(v).replace(/[^0-9.+-]/g, '')); return Number.isFinite(n) ? n : null; };
+    const out = { ...keep, type };
+    if (!rows.length) return out;
+    if (type === 'bars') out.rows = rows.map(r => ({ label: r.label, value: num(r.value) ?? r.value }));
+    else if (type === 'rankList') out.rows = rows.map((r, i) => ({ rank: i + 1, label: r.label, value: r.value }));
+    else if (type === 'scoreboard') out.rows = rows.map(r => ({ team: r.label, value: r.value }));
+    else if (type === 'statTiles') out.tiles = rows.slice(0, 3).map(r => ({ label: r.label, value: r.value }));
+    else if (type === 'checklist') out.rows = rows.map(r => ({ text: [r.label, r.value].filter(x => x !== '' && x != null).join(' '), checked: true }));
+    else if (type === 'numberLine') { const marks = rows.map(r => ({ label: r.label, value: num(r.value) })).filter(r => r.value != null); if (marks.length) { const vs = marks.map(m => m.value); Object.assign(out, { min: Math.min(0, ...vs), max: Math.max(...vs), marks }); } }
+    else if (type === 'compare' && rows.length >= 2) Object.assign(out, { from: { value: rows[0].value, label: rows[0].label }, to: { value: rows[1].value, label: rows[1].label } });
+    else if (type === 'reveal') Object.assign(out, { from: '?', to: String(rows[rows.length - 1].value), label: rows[rows.length - 1].label });
+    return out;
+  }
   function setModule(beat, type) {
     const before = beat.module ? beat.module.type : '';
     if (!type) delete beat.module;
-    else if (!beat.module || beat.module.type !== type) beat.module = { ...(beat.module && ['title', 'label', 'caption'].reduce((o, k) => (beat.module[k] != null ? { ...o, [k]: beat.module[k] } : o), {})), type };
+    else if (!beat.module || beat.module.type !== type) beat.module = convertModule(beat.module, type);
     feedback('change_module', { beatId: beat.id, before: { module: before }, after: { module: type || '' } });
     motionRecheck();
     rebuild();
@@ -3422,7 +3521,7 @@
     const lookNote = adoptLook(state.plan, t.style);
     state.look = state.plan.look || 'paper';
     state.esStyle = curStyle();
-    state.review = null; state.swapOpen = ''; state.motion = {}; state.critic = null;
+    state.review = null; state.swapOpen = ''; state.motion = {}; state.serverMotion = {}; state.critic = null;
     if (lookNote) toast(lookNote);
     state.selected = state.plan.beats[0]?.id || '';
     // ── Reels 2.0: C (inputs) ── your uploads come back from this browser first; the ones
