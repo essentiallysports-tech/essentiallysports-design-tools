@@ -34,14 +34,14 @@ t('the kept ids: canvas, play, scrub, export', () => {
   ['rm-steps', 'rm-canvas', 'rm-play', 'rm-scrub', 'rm-export'].forEach(once);
 });
 
-t('Create: one prompt, four style cards, Make my reel, trends, Need an idea?', () => {
+t('Create: one script prompt, four style cards, Make / Build my reel, trends, Need a script?', () => {
   ['rm-pane-topic', 'rm-prompt', 'rm-styles4', 'rm-make', 'rm-inspire-link', 'rm-trends'].forEach(once);
   assert.match(html, /id="rm-styles4"[^>]*role="radiogroup"/, 'the style cards are a radio group');
   assert.match(html, /<textarea[^>]*id="rm-prompt"/, 'the prompt is a textarea');
   assert.match(html, /id="rm-make"[^>]*>[\s\S]*?(Make|Build) my reel/, 'the button says Make (or Build) my reel');
   assert.match(html, /class="[^"]*es-btn--primary[^"]*"[^>]*id="rm-make"|id="rm-make"[^>]*class="[^"]*es-btn--primary/, 'Make my reel is the primary button');
-  assert.match(html, /id="rm-inspire-link"[^>]*>Need an idea\?</);
-  assert.match(html, /Start from a trend/);
+  assert.match(html, /id="rm-inspire-link"[^>]*>(Need an idea\?|Need a script\?)</);
+  assert.match(html, /Start from a trend|Add a story as a source/);
 });
 
 t('Create: the length toggle (Full / Short) is one radio group', () => {

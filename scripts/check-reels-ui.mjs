@@ -404,17 +404,17 @@ for (const w of WIDTHS) {
     expect(!soon, `${soon} "Soon" labels`);
   });
   await step('Create: "Need a script?" drafts one (script-draft) into the prompt, if offered', async () => {
-    const has = await evaluate(`[...document.querySelectorAll('#rm-pane-topic button, #rm-pane-topic a')].some(b => /need a script|draft (a|my) script|write (it|a script) for me/i.test(b.textContent) && ${SHOWN}(b))`);
+    const has = await evaluate(`[...document.querySelectorAll('#rm-pane-topic button, #rm-pane-topic a')].some(b => b.id !== 'rm-inspire-link' && /need a script|draft (a|my) script|write (it|a script) for me/i.test(b.textContent) && ${SHOWN}(b))`);
     if (!has) return;
     await typeInto('#rm-prompt', 'Dallas blew a 21-point lead');
-    await evaluate(`([...document.querySelectorAll('#rm-pane-topic button, #rm-pane-topic a')].find(b => /need a script|draft (a|my) script|write (it|a script) for me/i.test(b.textContent) && ${SHOWN}(b)).click(), 1)`);
+    await evaluate(`([...document.querySelectorAll('#rm-pane-topic button, #rm-pane-topic a')].find(b => b.id !== 'rm-inspire-link' && /need a script|draft (a|my) script|write (it|a script) for me/i.test(b.textContent) && ${SHOWN}(b)).click(), 1)`);
     await waitFor(`document.querySelector('#rm-prompt').value.length > 60`, 4000, 'the drafted script in the prompt');
     expect(calls.some(c => c.mode === 'script-draft'), 'no script-draft call');
     await typeInto('#rm-prompt', '');
   });
   await step('Create: Start from a trend and Need an idea?', async () => {
     expect(await visible('#rm-trends'), 'the trend row is not shown');
-    expect(/start from a trend/i.test(await evaluate(`document.querySelector('#rm-pane-topic').textContent`)), 'no "Start from a trend" heading');
+    expect(/start from a trend|add a story as a source/i.test(await evaluate(`document.querySelector('#rm-pane-topic').textContent`)), 'no "Start from a trend" / "Add a story as a source" heading');
     expect(await visible('#rm-inspire-link'), '"Need an idea?" (#rm-inspire-link) is not shown');
   });
   await step('Need an idea? opens and closes with Escape', async () => {
