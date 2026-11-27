@@ -1641,3 +1641,11 @@ html[data-theme="dark"] .rm-card.has-warning:not(.is-on) .rm-card__n { color: #1
 .rm-inspire__line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4px 6px; margin: 0; text-align: center; }
 .rm-inspire .rm-link { padding: 0; border: 0; background: none; font: 600 14px/1.4 var(--es-font-ui); cursor: pointer; }
 .rm-inspire .rm-link[aria-busy="true"] { opacity: .6; cursor: progress; }
+
+/* Create: the four style cards' height is reserved before their previews draw (no layout shift).
+   Card = 8px padding, a 432:544 preview, then about 112px of name, blurb and media line. */
+.rm-stylesec { container-type: inline-size; }
+.rm-styles4 { min-height: calc(((100cqw - 48px) / 4 - 16px) * 544 / 432 + 120px); }
+@media (max-width: 1180px) { .rm-styles4 { min-height: calc(((100cqw - 36px) / 4 - 16px) * 544 / 432 + 136px); } }
+@media (max-width: 900px) { .rm-styles4 { min-height: calc((((100cqw - 16px) / 2 - 16px) * 544 / 432 + 118px) * 2 + 16px); } }
+@media (max-width: 480px) { .rm-styles4 { min-height: calc((((100cqw - 8px) / 2 - 12px) * 544 / 432 + 126px) * 2 + 8px); } }

@@ -911,7 +911,7 @@
   // ─── Voice picker (Story settings and Review fold share it) ─────────────
   let sampleSource = null;
   function voicePickerHtml(where) {
-    const v = state.config.voice;
+    const v = state.config.voice || {};
     // The rail's own note (#rm-voice-note) already says why; one line, not two.
     if (!v.ready) return '';
     const list = v.voices || [];
@@ -1007,7 +1007,7 @@
     return 450;
   }
   function costEstimate() {
-    const v = state.config.voice;
+    const v = state.config.voice || {};
     const long = S.get(styleId()).seconds.max > 90;
     const ai = state.config.ai && !state.config.offline;
     const sceneBeats = state.plan ? state.plan.beats.filter(b => b.visual === 'scene').length : 1;
@@ -1130,15 +1130,17 @@
     logStart();
     let made = null;
     let why = '';
-    if (aiOn()) {
+    // The server plans in every mode it can answer (AI on: the director; AI off or capped: its code plan).
+    if (!state.config.offline) {
       try {
         const data = await api({ mode: 'plan', v: 4, script, scriptLocked: true, brief: topic, trend, length: state.length, format: state.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style, esStyle: style, ...(realStyles() ? {} : { look: STUB_LOOK[style] }) });
         state.spent.director += Number(data.costs?.director) || 0;
         state.spent.factCheck += Number(data.costs?.factCheck) || 0;
         const plan = data.plan ? ensureV4(data.plan) : null;
-        // Only a plan the AI planned is used here: a server code plan ('code' / 'draft', AI off or capped)
-        // gives way to the page's own code plan, one scene per line of the script (as v3 did).
-        const planned = plan && !['draft', 'code', 'script', 'free'].includes(String(data.source || ''));
+        // The server's plan is used whenever it keeps the words: the AI's, or its own code plan
+        // (AI off or capped: one beat per sentence, chapters, sourced headlines). Only the old
+        // v3 'draft' (a plan written from a brief, not the script) gives way to the page's code plan.
+        const planned = plan && String(data.source || '') !== 'draft';
         if (planned && SBC && SBC.keepsScript(plan, script)) {
           plan.script = { text: script.replace(/\s+/g, ' ').trim(), locked: true };
           applyStyle(plan, style);
@@ -1697,6 +1699,7 @@
         const kb = pick.kenBurns || (pick.cards && pick.cards[0] && pick.cards[0].kenBurns) || null;
         if (await useSourcedPhoto(beat.id, { ...photo, id: photo.sourceUrl || photo.url, verified: photo.verified !== false }, subject)) {
           markAsset(beat.id, { kenBurns: kb, checkedBy: photo.checkedBy || photo.verifiedBy || '', cards: pick.kind === 'cards' ? pick.cards : null, cutout: pick.kind === 'cutout' });
+          if (pick.kind === 'cutout' || (beat.media && beat.media.kind === 'cutout')) cutoutFor(beat.id);
           state.visualSrc[beat.id] = 'photo';
           return 'photo';
         }
@@ -1714,6 +1717,40 @@
     }
     setVisual(beat.id, [], 'paper');
     return 'none';
+  }
+  // A scene that asks for a photo or a cut-out gets the first verified photo the
+  // sourcing found for it when the pick itself came back empty (never paper while
+  // a checked photo of the subject exists).
+  function stillPick(beat, row) {
+    const pick = row && row.pick;
+    const kind = beat && beat.media && beat.media.kind;
+    if (!(pick && pick.kind === 'none' && ['photo', 'cutout'].includes(kind))) return pick;
+    const fromCands = (row.candidates || []).find(c => c && c.kind === 'photo' && c.photo && c.photo.verified === true);
+    const photo = fromCands ? fromCands.photo : (row.photos || []).find(p => p && p.verified === true && p.url);
+    if (!photo) return pick;
+    const C = window.ReelClips;
+    return { kind, photo, kenBurns: C && typeof C.kenBurnsFor === 'function' ? C.kenBurnsFor(photo) : null, ...(kind === 'cutout' ? { cutout: true } : {}), why: 'verified photo for a scene with no pick' };
+  }
+  // A cut-out scene: the plain-backdrop cut when the photo has one, else the
+  // whole photo stands in (the engine draws state.cutouts[asset]).
+  function cutoutFor(beatId) {
+    const id = (state.photos[beatId] || [])[0];
+    const img = id && state.images[id];
+    if (!img || state.cutouts[id]) return;
+    let cut = null;
+    if (CUT && typeof CUT.plainBackdropMask === 'function') {
+      try {
+        const c = document.createElement('canvas');
+        const k = Math.min(1, 1200 / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+        c.width = Math.round((img.naturalWidth || img.width) * k); c.height = Math.round((img.naturalHeight || img.height) * k);
+        const g = c.getContext('2d', { willReadFrequently: true });
+        g.drawImage(img, 0, 0, c.width, c.height);
+        const px = g.getImageData(0, 0, c.width, c.height);
+        const mask = CUT.plainBackdropMask(px.data, c.width, c.height);
+        if (mask && mask.ok) { for (let i = 0; i < mask.alpha.length; i += 1) px.data[i * 4 + 3] = Math.min(px.data[i * 4 + 3], mask.alpha[i]); g.putImageData(px, 0, 0); cut = c; }
+      } catch { /* a cross-site photo cannot be read: the whole photo stands in */ }
+    }
+    state.cutouts[id] = cut || img;
   }
   // The clip loader ReelSourcing uses to sample clips for the judge (shares this page's cache).
   async function sourcingVideo(clip) { const id = await loadClip(clip).catch(() => ''); return id ? state.videos[id] || null : null; }
@@ -1752,7 +1789,7 @@
       if (state.plan !== plan) return { note: '' };
       const row = rows[beat.id];
       if (row) state.cands[beat.id] = { subject: row.subject || null };
-      n[await applyPick(beat, row ? row.pick : null, row && row.subject, usedClips)] += 1;
+      n[await applyPick(beat, row ? stillPick(beat, row) : null, row && row.subject, usedClips)] += 1;
       if (i % 2 === 1) { rebuild(); renderBeats(); }
     }
     rebuild();
@@ -2758,7 +2795,7 @@
     return { withVo, voiced };
   }
   function renderVoice() {
-    const v = state.config.voice;
+    const v = state.config.voice || {};
     const { withVo, voiced } = voiceCounts();
     // ── Reels 2.0: C (inputs) ── the person's own recording: its own badge, no AI voice button.
     const mine = ownVoice();
@@ -4937,7 +4974,8 @@
   async function loadConfig() {
     try {
       const data = await api({ mode: 'config' });
-      state.config = { ai: data.ai, voice: data.voice, music: data.music || null, aiClips: data.aiClips || null, offline: false, formatModes: data.formatModes || {}, dataFormats: data.dataFormats || [] };
+      // A partial or old config reply (no voice block) must never break the page: captions only.
+      state.config = { ai: data.ai, voice: { mode: 'off', ready: false, label: 'Captions only', ...(data.voice && typeof data.voice === 'object' ? data.voice : {}) }, music: data.music || null, aiClips: data.aiClips || null, offline: false, formatModes: data.formatModes || {}, dataFormats: data.dataFormats || [] };
       if (data.voice?.defaultVoice && !(data.voice.voices || []).some(v => v.id === state.voiceId)) state.voiceId = data.voice.defaultVoice;
       if (data.admin === true) state.config.admin = true;
     } catch (error) {
