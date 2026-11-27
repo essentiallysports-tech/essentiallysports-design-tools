@@ -319,6 +319,33 @@ test('brand checks: palette, type scale, safe frame, the mark\'s clear space, on
   TL.rams.els.forEach(el => el.keys.forEach(k => { if (k.p.size != null) assert.ok(Object.values(E.TYPE_SCALE).includes(k.p.size), `${el.id} ${k.p.size}`); }));
 });
 
+console.log('QA round 1 (integration)');
+test('rankList rows with the same label stay separate; a tally of 45 draws 45; labels never cut mid-word', () => {
+  const tl = R.buildTimeline({ v: 4, chapters: [{ headline: 'A *B*', beats: [
+    { id: 'a', vo: 'one two three four five', module: { type: 'rankList', title: 'FAVOUR RETURNED', rows: [{ rank: 1, label: 'PHI DRIVE', value: 'TD' }, { rank: 2, label: 'PHI DRIVE', value: 'TD' }, { rank: 3, label: 'PHI DRIVE', value: 'FG' }] } },
+    { id: 'b', vo: 'six seven eight nine ten', module: { type: 'tally', n: 45, label: 'TD PASSES' }, media: { kind: 'clip', label: 'JETS HEAD COACH ASKED THREE TIMES ABOUT PLAY CALLING' } },
+  ] }] }, {});
+  assert.equal(tl.els.filter(e => /^mod\.rk\.\d\.PHI DRIVE\.row$/.test(e.id)).length, 3);
+  assert.equal(tl.els.filter(e => /^mod\.tally\.\d+$/.test(e.id)).length, 45);
+  const label = tl.els.find(e => e.id === 'media.label').final.text;
+  assert.ok('JETS HEAD COACH ASKED THREE TIMES ABOUT PLAY CALLING'.startsWith(label) && / $|^$/.test('JETS HEAD COACH ASKED THREE TIMES ABOUT PLAY CALLING'.slice(label.length, label.length + 1) || ' '), label);
+  assert.ok(!/\bTH$/.test(label));
+});
+test('markers are ES pills; no invented tags; one tag per element; structural numbers need no source; beats carry moves', () => {
+  const tl = R.buildTimeline({ v: 4, chapters: [{ marker: { kind: 'countdown', n: 2, of: 3 }, headline: 'A *B*', beats: [
+    { id: 'a', vo: 'Press conference: the coach was asked.', media: { kind: 'presser', subject: { name: 'New York Jets' }, label: 'NEW YORK JETS' }, tag: { text: 'PRESS CONFERENCE' }, module: { type: 'timeline', slots: [{ label: '2020', filled: true }, { label: '2021' }] } },
+    { id: 'b', vo: 'Chapter one, the run.', media: { kind: 'presser', subject: { name: 'Jets' } }, tag: { text: 'CHAPTER ONE' }, module: { type: 'numberLine', min: -20, max: 20, marks: [{ label: 'X', value: 3 }] } },
+  ] }] }, { corpus: '3' });
+  assert.ok(tl.els.filter(e => /^marker\.\d$/.test(e.id)).every(e => e.kind === 'pill'));
+  assert.ok(!tl.els.some(e => e.id === 'tag'), 'the media tag wins; framing phrases are not tags');
+  const who = tl.els.find(e => e.layer === 0 && e.id === 'media.who');
+  assert.ok(!who || who.born[0] >= tl.beats.find(x => x.id === 'b').inMs, 'the presser name is not drawn twice (beat a: it is the label)');
+  assert.equal(tl.els.filter(e => e.id === 'media.label' && e.keys.some(k => k.p.text === 'PRESS CONFERENCE')).length, 0, 'no default label');
+  assert.ok(!L.lintTimeline(tl).issues.some(i => i.id === 'numbers'), 'axis ticks and timeline years are structural');
+  tl.beats.forEach(b => assert.ok(typeof b.idleMs === 'number' && typeof b.moves === 'boolean'));
+  assert.ok(E4.CLOSE_KINDS.includes('checklist'));
+});
+
 console.log('export');
 test('MP4 export path: every frame draws (9:16 and 4:5), clip times follow the shots, audio and rights tracks kept', () => {
   ['dallas', 'rodgers'].forEach(id => {
