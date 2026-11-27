@@ -141,6 +141,7 @@ const FEATURE_NAMES = [
   ['generate-assistant', 'The design assistant'],
   ['generate-scene-image', 'AI scene images'],
   ['generate', 'AI design writing'],
+  ['brief-design', 'Design from a brief'],
   ['trend', 'AI headline ideas'],
   ['video-ads-find-clips', 'Clip search'],
   ['video-ads-moments-with-clips', 'Clip search'],

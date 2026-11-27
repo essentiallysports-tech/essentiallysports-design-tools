@@ -1,0 +1,415 @@
+/* FrameUp "Design from a brief" (frameup-brief.js): the brief box above the
+   canvas, its progress line, the three option thumbnails, the action bar and
+   the notes. ES tokens, 8-pt grid, light and dark. Everything is scoped to
+   .fu-brief, so nothing else in the editor changes. */
+
+.fu-brief {
+  --fb-bg: var(--es-bg, #ffffff);
+  --fb-raised: var(--es-bg, #ffffff);
+  --fb-sunk: var(--es-sunk, #f0f2f5);
+  --fb-line: var(--es-line, #dfe2e7);
+  --fb-line-2: var(--es-line-2, #8a919e);
+  --fb-ink: var(--es-ink, #0e1014);
+  --fb-ink-2: var(--es-ink-2, #3a3f48);
+  --fb-ink-3: var(--es-ink-3, #565c67);
+  --fb-placeholder: var(--es-placeholder, #6e7581);
+  --fb-brand: var(--es-brand-text, #0a62c7);
+  --fb-brand-soft: var(--es-brand-soft, #e8f2ff);
+  --fb-good: var(--es-good, #0e7a3d);
+  --fb-warn: var(--es-warn, #b45309);
+  --fb-bad: var(--es-bad, #c42323);
+  --fb-go-bg: var(--es-ink, #0e1014);
+  --fb-go-ink: #ffffff;
+  --fb-shadow: 0 1px 2px rgb(14 16 20 / .06), 0 8px 24px -16px rgb(14 16 20 / .28);
+  container: fubrief / inline-size;
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: var(--es-space-2, 8px);
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+  color: var(--fb-ink);
+}
+
+html[data-theme="dark"] .fu-brief {
+  --fb-bg: #1f2126;
+  --fb-raised: #2a2d34;
+  --fb-sunk: #2a2d34;
+  --fb-line: #3b4049;
+  --fb-line-2: #707a8c;
+  --fb-ink: #ffffff;
+  --fb-ink-2: #bfc8d9;
+  --fb-ink-3: #98a6bf;
+  --fb-placeholder: #98a6bf;
+  --fb-brand: #9dcbfd;
+  --fb-brand-soft: rgb(10 125 250 / .2);
+  --fb-good: #4cc985;
+  --fb-warn: #fcd34d;
+  --fb-bad: #ff8a8a;
+  --fb-go-bg: #ffffff;
+  --fb-go-ink: #0e1014;
+  --fb-shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px -16px rgb(0 0 0 / .7);
+}
+
+.fu-brief__sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── The bar ─────────────────────────────────────────────────────────── */
+.fu-brief__bar {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--es-space-1, 4px);
+  min-width: 0;
+  margin: 0;
+  padding: var(--es-space-1, 4px);
+  border-radius: var(--es-radius-control, 12px);
+  background: var(--fb-bg);
+  box-shadow: inset 0 0 0 1px var(--fb-line), var(--fb-shadow);
+  transition: box-shadow var(--es-dur, 160ms) var(--es-ease, ease);
+}
+/* The AI products' gradient ring, while you type. */
+.fu-brief__bar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: var(--ais-gradient-stroke, linear-gradient(120deg, #0a7dfa, #54a4fb, #00b3e6, #9dcbfd));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--es-dur, 160ms) var(--es-ease, ease);
+}
+.fu-brief__bar:focus-within::before,
+.fu-brief.is-busy .fu-brief__bar::before,
+.fu-brief.is-drop .fu-brief__bar::before { opacity: 1; }
+.fu-brief__bar:focus-within { box-shadow: inset 0 0 0 1px transparent, var(--es-focus-halo, 0 0 0 3px rgb(10 125 250 / .16)); }
+.fu-brief.is-drop .fu-brief__bar { background: var(--fb-brand-soft); }
+
+.fu-brief__spark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 40px;
+  color: var(--fb-brand);
+}
+
+.fu-brief__input,
+html[data-theme="dark"] .fu-brief .fu-brief__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  max-height: 120px;
+  margin: 0;
+  padding: 8px 4px;
+  border: 0 !important;
+  border-radius: 0;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--fb-ink) !important;
+  font: 400 15px/24px var(--es-font-ui, "Roboto", sans-serif);
+  resize: none;
+  overflow-y: auto;
+}
+/* One line while you're not typing in it (the full brief is still there). */
+.fu-brief__input:not(:focus),
+html[data-theme="dark"] .fu-brief .fu-brief__input:not(:focus) {
+  height: 40px !important;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.fu-brief__input::placeholder,
+html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--fb-placeholder) !important; opacity: 1; }
+
+.fu-brief__icon,
+.fu-brief__go {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--es-space-2, 8px);
+  height: 40px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  font: 500 14px/20px var(--es-font-ui, "Roboto", sans-serif);
+  cursor: pointer;
+  transition: background-color var(--es-dur, 160ms) var(--es-ease, ease), color var(--es-dur, 160ms) var(--es-ease, ease), opacity var(--es-dur, 160ms) var(--es-ease, ease);
+}
+.fu-brief__icon {
+  width: 40px;
+  padding: 0;
+  background: transparent;
+  color: var(--fb-ink-3);
+}
+.fu-brief__icon:hover { background: var(--fb-sunk); color: var(--fb-ink); }
+.fu-brief__go {
+  padding: 0 16px 0 12px;
+  background: var(--fb-go-bg);
+  color: var(--fb-go-ink);
+}
+.fu-brief__go:hover { opacity: .88; }
+.fu-brief__go:disabled { opacity: .5; cursor: progress; }
+.fu-brief__go svg { flex: none; }
+@container fubrief (max-width: 380px) {
+  .fu-brief__go { width: 40px; padding: 0; }
+  .fu-brief__go-text { display: none; }
+  .fu-brief__spark { width: 24px; }
+}
+
+/* ─── Your photo ──────────────────────────────────────────────────────── */
+.fu-brief__chip:not([hidden]) {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--es-space-2, 8px);
+  height: 40px;
+  padding: 4px 4px 4px 4px;
+  border-radius: 12px;
+  background: var(--fb-bg);
+  box-shadow: inset 0 0 0 1px var(--fb-line);
+  color: var(--fb-ink-2);
+  font: 500 13px/16px var(--es-font-ui, "Roboto", sans-serif);
+}
+.fu-brief__chip-img { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
+.fu-brief__chip-x {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fb-ink-3);
+  cursor: pointer;
+}
+.fu-brief__chip-x:hover { background: var(--fb-sunk); color: var(--fb-ink); }
+
+/* ─── The panel under the bar ─────────────────────────────────────────── */
+.fu-brief__panel:not([hidden]) {
+  display: grid;
+  gap: var(--es-space-2, 8px);
+  padding: var(--es-space-3, 12px);
+  border-radius: var(--es-radius-control, 12px);
+  background: var(--fb-bg);
+  box-shadow: inset 0 0 0 1px var(--fb-line), var(--fb-shadow);
+  animation: fu-brief-in var(--es-dur-step, 300ms) var(--es-ease-entrance, ease) both;
+}
+@keyframes fu-brief-in { from { opacity: 0; transform: translateY(-4px); } }
+
+.fu-brief__progress:not([hidden]),
+.fu-brief__error:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: var(--es-space-3, 12px);
+  min-height: 32px;
+  font: 500 14px/20px var(--es-font-ui, "Roboto", sans-serif);
+}
+.fu-brief__step { flex: 1 1 auto; min-width: 0; color: var(--fb-ink-2); }
+.fu-brief__error-text { flex: 1 1 auto; min-width: 0; color: var(--fb-bad); }
+.fu-brief__spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--fb-brand-soft);
+  border-top-color: var(--fb-brand);
+  animation: fu-brief-spin .8s linear infinite;
+}
+@keyframes fu-brief-spin { to { transform: rotate(360deg); } }
+
+.fu-brief__link {
+  flex: none;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fb-brand);
+  font: 500 14px/20px var(--es-font-ui, "Roboto", sans-serif);
+  cursor: pointer;
+}
+.fu-brief__link:hover { background: var(--fb-brand-soft); }
+.fu-brief__link[hidden] { display: none; }
+
+.fu-brief__result:not([hidden]) { display: grid; gap: var(--es-space-3, 12px); }
+.fu-brief__head { display: flex; align-items: flex-start; gap: var(--es-space-2, 8px); }
+.fu-brief__why {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding-top: 4px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--fb-ink-2);
+  font: 400 13px/20px var(--es-font-ui, "Roboto", sans-serif);
+}
+.fu-brief__why strong { color: var(--fb-ink); font-weight: 600; }
+.fu-brief__x {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fb-ink-3);
+  cursor: pointer;
+}
+.fu-brief__x:hover { background: var(--fb-sunk); color: var(--fb-ink); }
+
+/* Options: three live thumbnails, best first. */
+.fu-brief__opts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--es-space-2, 8px);
+}
+.fu-brief__opt {
+  display: flex;
+  align-items: center;
+  gap: var(--es-space-2, 8px);
+  min-width: 0;
+  min-height: 48px;
+  margin: 0;
+  padding: 4px 8px 4px 4px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--fb-sunk);
+  box-shadow: inset 0 0 0 1px transparent;
+  color: var(--fb-ink);
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow var(--es-dur, 160ms) var(--es-ease, ease), background-color var(--es-dur, 160ms) var(--es-ease, ease);
+}
+.fu-brief__opt:hover { box-shadow: inset 0 0 0 1px var(--fb-line-2); }
+.fu-brief__opt[aria-checked="true"] { background: var(--fb-brand-soft); box-shadow: inset 0 0 0 2px var(--fb-brand); }
+.fu-brief__opt:disabled { cursor: progress; }
+.fu-brief__thumb-box {
+  flex: none;
+  width: 32px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--fb-bg);
+  box-shadow: inset 0 0 0 1px var(--fb-line);
+}
+.fu-brief__thumb { display: block; width: 100%; height: 100%; object-fit: cover; }
+.fu-brief__thumb:not([src]) { visibility: hidden; }
+.fu-brief__opt.is-loading .fu-brief__thumb-box {
+  background: linear-gradient(100deg, var(--fb-sunk) 30%, var(--fb-bg) 50%, var(--fb-sunk) 70%) 0 0 / 300% 100%;
+  animation: fu-brief-shimmer 1.4s linear infinite;
+}
+@keyframes fu-brief-shimmer { to { background-position: -150% 0; } }
+.fu-brief__opt-text { display: grid; gap: 4px; min-width: 0; }
+.fu-brief__opt-label,
+.fu-brief__opt-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fu-brief__opt-label { font: 600 13px/16px var(--es-font-ui, "Roboto", sans-serif); }
+.fu-brief__opt-meta { color: var(--fb-ink-3); font: 400 12px/16px var(--es-font-ui, "Roboto", sans-serif); }
+.fu-brief__opt[aria-checked="true"] .fu-brief__opt-meta { color: var(--fb-brand); }
+
+/* The action bar. */
+.fu-brief__actions { display: flex; flex-wrap: wrap; gap: var(--es-space-2, 8px); }
+.fu-brief__menu-wrap { position: relative; display: inline-flex; }
+.fu-brief__act {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--es-space-2, 8px);
+  height: 32px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--fb-bg);
+  box-shadow: inset 0 0 0 1px var(--fb-line);
+  color: var(--fb-ink);
+  font: 500 13px/16px var(--es-font-ui, "Roboto", sans-serif);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--es-dur, 160ms) var(--es-ease, ease), box-shadow var(--es-dur, 160ms) var(--es-ease, ease);
+}
+.fu-brief__act svg { flex: none; color: var(--fb-ink-3); }
+.fu-brief__act:hover:not(:disabled) { background: var(--fb-sunk); box-shadow: inset 0 0 0 1px var(--fb-line-2); }
+.fu-brief__act:disabled { cursor: not-allowed; color: var(--fb-ink-3); }
+.fu-brief__menu:not([hidden]) {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  min-width: 160px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--fb-raised);
+  box-shadow: inset 0 0 0 1px var(--fb-line), 0 16px 40px -12px rgb(14 16 20 / .35);
+}
+.fu-brief__menu [role="menuitem"] {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fb-ink);
+  font: 500 14px/20px var(--es-font-ui, "Roboto", sans-serif);
+  text-align: left;
+  cursor: pointer;
+}
+.fu-brief__menu [role="menuitem"]:is(:hover, :focus-visible) { background: var(--fb-sunk); }
+
+/* Notes: what was fixed, and what is left for you. */
+.fu-brief__notes:not([hidden]) { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.fu-brief__notes:empty { display: none; }
+.fu-brief__note {
+  position: relative;
+  padding-left: 16px;
+  color: var(--fb-ink-2);
+  font: 400 12px/16px var(--es-font-ui, "Roboto", sans-serif);
+}
+.fu-brief__note::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fb-ink-3);
+}
+.fu-brief__note[data-tone="good"]::before { background: var(--fb-good); }
+.fu-brief__note[data-tone="warn"]::before { background: var(--fb-warn); }
+
+/* Narrow columns (1024 editor, phones): thumbnails only, icon actions. The
+   names stay on each button (aria-label, title) and in the line above. */
+@container fubrief (max-width: 460px) {
+  .fu-brief__opt { justify-content: center; padding: 4px; }
+  .fu-brief__opt-text { display: none; }
+  .fu-brief__act { width: 40px; padding: 0; justify-content: center; }
+  .fu-brief__act-text,
+  .fu-brief__act > svg:last-child:not(:first-child) { display: none; }
+  .fu-brief__actions { justify-content: space-between; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fu-brief *,
+  .fu-brief *::before { animation: none !important; transition: none !important; }
+}

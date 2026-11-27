@@ -9,7 +9,7 @@
   <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="frameup-errors.js?v=20261121-rel2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
-  <script src="es-auth.js?v=20261121-rel2"></script>
+  <script src="es-auth.js?v=20261127-ux1"></script>
   <script src="frameup-track.js?v=20261129-exports"></script>
   <script src="dashboard-data.js?v=20261129-exports"></script>
   <script>
@@ -31,14 +31,14 @@
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
 <script src="frameup-ai-mode.js?v=20261121-rel"></script>
-<script src="app-shell.js?v=20261125-merch"></script>
+<script src="app-shell.js?v=20261127-ux1"></script>
 <link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261121-notes"></script>
 <script src="tours/tours.js?v=20261127-rv4ui"></script>
 <script src="tours/tour-launcher.js?v=20261120-rel2"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
-<link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
+<link rel="stylesheet" href="frameup-posted.css?v=20261127-ux1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
 <script src="frameup-posted.js?v=20261125-tracking"></script>
 <script src="frameup-gallery-query.js?v=20261119-rel3"></script>
@@ -107,6 +107,11 @@
     .gallery-viewer__actions small { color: var(--es-ink-3); font-size: 12px; line-height: 1.4; }
     .gallery-viewer__actions .es-btn.is-disabled { pointer-events: none; }
     .gallery-viewer__media img:not([src]) { width: min(420px, 100%); }
+    /* No src yet (loading) or none at all: keep the frame's shape (a landscape img with no src was 0px tall, so the viewer showed an empty grey pane), and say so when there is no preview. UX audit 2026-11-27. */
+    .gallery-viewer.is-landscape .gallery-viewer__media img:not([src]) { width: min(640px, 100%); aspect-ratio: 16 / 9; }
+    .gallery-viewer__media.is-missing img { visibility: hidden; }
+    .gallery-viewer.is-single .gallery-viewer__nav { display: none; }
+    .gallery-viewer__media.is-missing::after { content: 'No preview for this post'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--es-ink-3); font-size: var(--es-type-body-size, 14px); pointer-events: none; }
     .gallery-viewer__nav, .gallery-viewer__close { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 999px; background: #fff; color: var(--es-ink); box-shadow: 0 2px 8px rgb(14 16 20 / .14), inset 0 0 0 1px var(--es-line); cursor: pointer; }
     .gallery-viewer__nav svg, .gallery-viewer__close svg { width: 18px; height: 18px; }
     .gallery-viewer__nav { position: absolute; top: 50%; transform: translateY(-50%); }
@@ -689,14 +694,19 @@
           source: 'gallery',
           onChange: () => loadPosted([item.id]),
         });
+        els.viewer.classList.toggle('is-single', state.visible.length < 2); // no dead prev / next arrows on a single post
         els.viewer.querySelector('.is-prev').disabled = index === 0;
         els.viewer.querySelector('.is-next').disabled = index === state.visible.length - 1;
+        const media = els.viewerImage.parentElement;
+        media.classList.remove('is-missing');
         els.viewerImage.removeAttribute('src');
         if (thumbs.has(item.id)) els.viewerImage.src = thumbs.get(item.id);
         els.viewerImage.alt = item.title;
         if (!els.viewer.open) els.viewer.showModal();
         const src = await loadPreview(item);
-        if (state.viewerIndex === index && src) els.viewerImage.src = src;
+        if (state.viewerIndex !== index) return;
+        if (src) els.viewerImage.src = src;
+        else if (!els.viewerImage.getAttribute('src')) media.classList.add('is-missing');
       }
 
       els.viewer.addEventListener('click', event => {

@@ -4269,7 +4269,10 @@
     renderSteps();
     const started = performance.now();
     if (!(await ensureBrief())) {
-      state.set = { ...state.set, status: 'error', error: 'No trending moment for this sport right now. Add a note about the ad (Ask AI → Add context), or pick a clip first.' };
+      // A failed trends check is not "no moment": say which, so Try again makes sense. UX audit 2026-11-27.
+      state.set = { ...state.set, status: 'error', error: state.trendsStatus === 'error'
+        ? 'Couldn’t load today’s trending moments. Try again, or add a note about the ad (Ask AI → Add context).'
+        : 'No trending moment for this sport right now. Add a note about the ad (Ask AI → Add context), or pick a clip first.' };
       renderSet();
       renderSteps();
       return;

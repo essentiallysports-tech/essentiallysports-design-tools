@@ -243,6 +243,7 @@
         <div class="es-sidebar__account" data-shell-account></div>
       </div>`;
     document.body.prepend(aside);
+    addSkipLink(); // keeps the skip link the first Tab stop, ahead of the sidebar
 
     // Soft fade above the footer while there is more nav below.
     const scroller = aside.querySelector('.es-sidebar__scroll');
@@ -1100,9 +1101,73 @@
     document.documentElement.classList.toggle('es-sidebar-collapsed', readCollapsed());
   }
 
+  // Old Design Request links are sent Home with ?paused=requests (above).
+  // Say why, once, instead of a silent jump, and tidy the link. UX audit 2026-11-27.
+  function notePausedRequests() {
+    let query;
+    try { query = new URLSearchParams(window.location.search); } catch (error) { return; }
+    if (query.get('paused') !== 'requests') return;
+    query.delete('paused');
+    const rest = query.toString();
+    try { history.replaceState(history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`); } catch (error) { /* file:// */ }
+    let region = document.getElementById('es-toast-region');
+    if (!region) {
+      region = document.createElement('div');
+      region.id = 'es-toast-region';
+      region.className = 'es-toast-region';
+      region.setAttribute('role', 'status');
+      region.setAttribute('aria-live', 'polite');
+      document.body.appendChild(region);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'es-toast';
+    toast.dataset.shellNote = 'requests-paused';
+    toast.textContent = 'Design requests are paused for now. Make it yourself with Generate or the editor.';
+    region.appendChild(toast);
+    setTimeout(() => toast.classList.add('is-leaving'), 9600);
+    setTimeout(() => toast.remove(), 10000);
+  }
+
+  // Keyboard users had to Tab through ~20 sidebar links on every page before
+  // reaching the work. A "Skip to main content" link is the first Tab stop,
+  // shown only while focused. UX audit 2026-11-27.
+  function addSkipLink() {
+    const existing = document.querySelector('.es-skip-link');
+    if (existing) { if (document.body.firstElementChild !== existing) document.body.prepend(existing); return; }
+    const shown = el => Boolean(el && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
+    // The page's visible <main> (index.html has one per route, most hidden);
+    // else the first control outside the navigation (the editor routes).
+    const target = () => [...document.querySelectorAll('main')].find(shown)
+      || [...document.querySelectorAll('a[href], button:not([disabled]), input:not([type=hidden]), select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .find(el => shown(el) && !el.closest('.es-sidebar, .es-skip-link, .es-mobile-nav, .mobile-menu, nav, header'));
+    const main = document.querySelector('main');
+    if (main && !main.id) main.id = 'main';
+    const style = document.createElement('style');
+    style.textContent = '.es-skip-link{position:fixed;left:16px;top:16px;z-index:5000;padding:12px 16px;border-radius:var(--es-radius-control,10px);background:var(--es-surface,#fff);color:var(--es-ink,#0e1014);box-shadow:var(--es-shadow-float,0 8px 24px rgb(14 16 20 / .2)),inset 0 0 0 1px var(--es-line,#dfe3ea);font:600 14px/1.2 var(--es-font-ui,Roboto,sans-serif);text-decoration:none;transform:translateY(calc(-100% - 24px))}.es-skip-link:focus,.es-skip-link:focus-visible{transform:none;outline:2px solid var(--es-blue,#0a6fde);outline-offset:2px}html[data-theme="dark"] .es-skip-link{background:#2A2D34;color:#FFFFFF;box-shadow:0 8px 24px rgb(0 0 0 / .5),inset 0 0 0 1px #3B4049}';
+    document.head.appendChild(style);
+    const link = document.createElement('a');
+    link.className = 'es-skip-link';
+    link.href = main ? `#${main.id}` : '#';
+    link.textContent = 'Skip to main content';
+    link.addEventListener('click', event => {
+      event.preventDefault();
+      let to = target();
+      if (!to) return;
+      // No <main>: focus the content root that holds that first control (the
+      // editor's .app), not the control itself, so the Enter that followed
+      // the link can never press it.
+      if (to.tagName !== 'MAIN') while (to.parentElement && to.parentElement !== document.body) to = to.parentElement;
+      if (!to.hasAttribute('tabindex')) to.setAttribute('tabindex', '-1');
+      to.focus();
+    });
+    document.body.prepend(link);
+  }
+
   // site-chrome.js builds the account menu first; wait for it.
   function start() {
     if (leavingPage || !document.body) return; // [qa-auth-errors] see leavingPage
+    setTimeout(notePausedRequests, 0);
+    setTimeout(addSkipLink, 0);
     setTimeout(boot, 0);
     setTimeout(startTickerIfAuthed, 0);
     setTimeout(tagNewTemplates, 0);

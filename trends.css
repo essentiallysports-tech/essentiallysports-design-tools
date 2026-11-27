@@ -80,9 +80,10 @@
 @media (prefers-reduced-motion: reduce) { .td-view [data-tip]::after { animation: none !important; } }
 
 /* ── Filter chips: one row, light counts, scrolls sideways when narrow ──── */
-.trends-filters { display: flex; gap: var(--es-space-2, 8px); margin: 0 calc(-1 * var(--es-space-1, 4px)) var(--es-space-6, 24px); padding: var(--es-space-1, 4px); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-padding-inline: var(--es-space-4, 16px); }
+.trends-filters { position: relative; display: flex; gap: var(--es-space-2, 8px); margin: 0 calc(-1 * var(--es-space-1, 4px)) var(--es-space-6, 24px); padding: var(--es-space-1, 4px); overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-padding-inline: var(--es-space-4, 16px); }
 .trends-filters::-webkit-scrollbar { display: none; }
 .trends-filters:empty { display: none; }
+/* position: relative above keeps the chips' screen-reader counts (absolute, 1px) inside this scroller: without it they hang off the page edge and the whole page scrolls sideways once the chips overflow (1024px, 9 sports). */
 @media (max-width: 1100px) { .trends-filters { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); } }
 .trends-filters .es-chip { flex: none; gap: var(--es-space-2, 8px); }
 .trends-filters .es-chip svg[viewBox] { width: var(--es-icon-sm); height: var(--es-icon-sm); }
