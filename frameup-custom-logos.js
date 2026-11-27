@@ -82,6 +82,7 @@
 
   function cleanName(raw) {
     const value = String(raw == null ? '' : raw)
+      .trim()
       .replace(/\.(png|jpe?g|webp|svg)$/i, '')
       .replace(/[\u0000-\u001f\u007f]/g, ' ')
       .replace(/_+/g, ' ')
