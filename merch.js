@@ -257,7 +257,19 @@
       if (error.status === 429) return { kind: 'rate', text: 'Fourthwall is busy (5 requests a minute). Wait a minute, then try again.' };
       return { kind: 'error', text: error.message || 'Something went wrong. Try again.' };
     }
-    const track = (event, data) => { try { window.FrameUpTrack?.track?.(event, data); } catch { /* tracking never breaks the page */ } };
+    // Merch interaction events. The usage log takes only take-actions, so AI
+    // runs that make something are logged as 'generate' (tool merch); pure
+    // screen events (steps, zoom, palette…) are not sent. Exports and the
+    // Fourthwall create use FrameUpTrack.exported elsewhere.
+    const MERCH_GENERATE = new Set(['concepts', 'moment', 'refine', 'variations', 'brainstorm-turn', 'brainstorm-design', 'brainstorm-line', 'angle']);
+    const track = (event, data = {}) => {
+      try {
+        if (event !== 'merch') { window.FrameUpTrack?.track?.(event, data); return; }
+        if (!MERCH_GENERATE.has(data.action)) return;
+        const { action, ...meta } = data;
+        window.FrameUpTrack?.track?.('generate', { tool: 'merch', action, meta });
+      } catch { /* tracking never breaks the page */ }
+    };
 
     // ── Banner (page-level state) ──
     function banner(kind, text, { retry = null } = {}) {

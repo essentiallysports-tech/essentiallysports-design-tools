@@ -695,7 +695,8 @@
     renderGrid();
     if (typeof el.showModal === 'function') { if (!el.open) el.showModal(); } else el.setAttribute('open', '');
     doc.documentElement.classList.add('flp-open');
-    root.requestAnimationFrame(() => el.querySelector('[data-flp-search]').focus());
+    // Focus search on the next frame, unless the person already moved focus inside the picker (a fast click on Rename etc.).
+    root.requestAnimationFrame(() => { const a = doc.activeElement; if (!a || a === el || a === doc.body || !el.contains(a)) el.querySelector('[data-flp-search]')?.focus(); });
     listUploads().then(list => { view.uploads = list; if (el.open) renderGrid(); });
     loadMine(mine.status === 'error');
   }
