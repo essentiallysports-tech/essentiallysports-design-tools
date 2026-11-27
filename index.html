@@ -3454,7 +3454,13 @@ body[data-current-page="faq"] .faq-cta-art img {
   /* BRAND LOGO CHOICE (Social Media, YouTube) */
   .brand-logo-control { display: none; }
   body:is([data-current-page="instagram"], [data-current-page="youtube"]) .brand-logo-control { display: block; }
-  .brand-logo-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .brand-logo-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .brand-logo-custom-art { display: grid; place-items: center; height: 28px; }
+  .brand-logo-custom-art img { width: 28px; height: 28px; object-fit: contain; }
+  .brand-logo-custom-label { font: 500 12px/1.2 var(--es-font-ui); }
+  .brand-logo-custom-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+  .brand-logo-custom-row[hidden] { display: none; }
+  .brand-logo-custom-name { min-width: 0; overflow: hidden; color: var(--es-ink-3); font: 400 13px/1.3 var(--es-font-ui); text-overflow: ellipsis; white-space: nowrap; }
   .brand-logo-option {
     display: grid;
     justify-items: center;
@@ -8361,6 +8367,14 @@ body[data-current-page="faq"] .faq-cta-art img {
         <button type="button" class="brand-logo-option" role="radio" aria-checked="false" data-brand-logo="w" title="Essentially W" aria-label="Essentially W">
           <img src="assets/brand-logos/essentially-w-mark.svg" alt="">
         </button>
+        <button type="button" class="brand-logo-option brand-logo-option--custom" role="radio" aria-checked="false" data-brand-logo="custom" title="Your own square logo" aria-label="Custom logo">
+          <span class="brand-logo-custom-art" data-brand-custom-art aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span>
+          <span class="brand-logo-custom-label" data-brand-custom-label>Custom</span>
+        </button>
+      </div>
+      <div class="brand-logo-custom-row" data-brand-custom-row hidden>
+        <span class="brand-logo-custom-name" data-brand-custom-name></span>
+        <button type="button" class="es-btn es-btn--sm es-btn--tertiary" data-brand-custom-change>Change logo</button>
       </div>
     </div>
 
@@ -9945,6 +9959,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 <script src="social-stat-templates.js?v=20261118-rel2"></script>
 <script src="logo-library-data.js?v=20261118-rel2"></script>
 <script src="logo-library.js?v=20261118-rel2"></script>
+<script src="frameup-custom-logos.js?v=20261128-logos1"></script>
 <script src="logo-picker.js?v=20261118-rel2"></script>
 <script src="infographic-templates.js?v=20261111-pill1"></script>
 <script>
@@ -12354,7 +12369,7 @@ function describeTemplateLogo(logo) {
   if (logo.mode === 'none') return { src: '', name: 'No logo', meta: 'Hidden on the design' };
   if (!resolved) return { src: '', name: 'No team logo yet', meta: 'Choose one from the library or upload yours' };
   if (resolved.auto) return { src: resolved.src, name: resolved.name, meta: 'Matches the Sport + Team selection' };
-  if (logo.mode === 'upload') return { src: resolved.src, name: resolved.name, meta: 'Your upload' };
+  if (logo.mode === 'upload') return { src: resolved.src, name: resolved.name, meta: 'My logos' };
   const league = resolved.entry && library ? library.leagueOf(resolved.entry.league) : null;
   return { src: resolved.src, name: resolved.name, meta: league ? `Logo library · ${league.short || league.label}` : 'Logo library' };
 }
@@ -12401,7 +12416,7 @@ function openTemplateLogoPicker(kind) {
     league: resolved ? '' : league,
     onPick(choice) {
       setTemplateLogo(kind, {
-        mode: choice.source === 'upload' ? 'upload' : 'library',
+        mode: choice.source === 'library' ? 'library' : 'upload',
         src: choice.src,
         id: choice.id,
         name: choice.name,
@@ -13927,9 +13942,23 @@ const BRAND_LOGOS = {
   },
 };
 const BRAND_LOGO_KEY = 'frameup.brandLogo.v1';
+// Custom brand logo: one square logo from the person's "My logos" library
+// (frameup-custom-logos.js). Only its id + name are remembered here; the image
+// is fetched again with the person's session (a 1024 px PNG data URL).
+const BRAND_CUSTOM_KEY = 'frameup.brandLogo.custom.v1';
+let customBrandPending = false;
+function readCustomBrandRef() {
+  try {
+    const value = JSON.parse(localStorage.getItem(BRAND_CUSTOM_KEY) || 'null');
+    return value && typeof value.id === 'string' ? value : null;
+  } catch (error) {
+    return null;
+  }
+}
 let activeBrandLogo = (() => {
   try {
     const saved = localStorage.getItem(BRAND_LOGO_KEY);
+    if (saved === 'custom') return readCustomBrandRef() ? 'custom' : 'es';
     return BRAND_LOGOS[saved] ? saved : 'es';
   } catch (error) {
     return 'es';
@@ -13977,6 +14006,7 @@ function getBrandMarkSize(width, height) {
 
 function isBrandLogoLoading() {
   if (isStatTemplateLogoLoading()) return true;
+  if (activeBrandLogo === 'custom' && customBrandPending && (activeWorkspace === 'instagram' || activeWorkspace === 'youtube')) return true;
   const brand = getActiveBrandLogo();
   if (!brand) return false;
   return [brand.mark, brand.wordmark].some(asset => {
@@ -13986,6 +14016,7 @@ function isBrandLogoLoading() {
 }
 
 function setBrandLogo(key) {
+  if (key === 'custom' && !BRAND_LOGOS.custom) { if (!customBrandPending) openCustomBrandPicker(); return; }
   if (!BRAND_LOGOS[key]) return;
   activeBrandLogo = key;
   try { localStorage.setItem(BRAND_LOGO_KEY, key); } catch (error) { /* per-browser preference */ }
@@ -13998,6 +14029,89 @@ function syncBrandLogoControl() {
     option.setAttribute('aria-checked', String(option.dataset.brandLogo === activeBrandLogo));
     option.tabIndex = option.dataset.brandLogo === activeBrandLogo ? 0 : -1;
   });
+  const custom = BRAND_LOGOS.custom;
+  const art = document.querySelector('[data-brand-custom-art]');
+  const label = document.querySelector('[data-brand-custom-label]');
+  const option = document.querySelector('[data-brand-logo="custom"]');
+  const row = document.querySelector('[data-brand-custom-row]');
+  if (art && custom && art.dataset.src !== custom.mark.src) {
+    art.dataset.src = custom.mark.src;
+    art.innerHTML = '';
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = custom.mark.src;
+    art.append(img);
+  }
+  if (label) label.textContent = custom ? 'Custom' : (customBrandPending ? 'Loading' : 'Custom');
+  if (option) {
+    option.setAttribute('aria-label', custom ? `Custom logo: ${custom.label}` : 'Custom logo: choose or upload');
+    option.title = custom ? custom.label : 'Your own square logo';
+  }
+  if (row) {
+    row.hidden = !(custom && activeBrandLogo === 'custom');
+    const name = row.querySelector('[data-brand-custom-name]');
+    if (name) name.textContent = custom ? custom.label : '';
+  }
+}
+
+function setCustomBrand(logo) {
+  BRAND_LOGOS.custom = {
+    label: logo.name || 'Custom logo',
+    custom: true,
+    id: logo.id || '',
+    mark: { src: logo.src, width: 1024, height: 1024 },
+    wordmark: { src: logo.src, width: 1024, height: 1024 },
+  };
+  loadBrandLogoImage(logo.src);
+  try { localStorage.setItem(BRAND_CUSTOM_KEY, JSON.stringify({ id: logo.id || '', name: logo.name || '' })); } catch (error) { /* per-browser */ }
+}
+
+function openCustomBrandPicker() {
+  const picker = window.FrameUpLogoPicker;
+  if (!picker) {
+    setStatus('The logo library is still loading. Try again in a moment.', 'err');
+    return;
+  }
+  const current = BRAND_LOGOS.custom;
+  picker.open({
+    title: 'Custom brand logo',
+    only: 'custom',
+    current: current ? current.mark.src : '',
+    customId: current ? current.id : '',
+    onPick(choice) {
+      setCustomBrand({ id: choice.customId || '', name: choice.name, src: choice.src });
+      setBrandLogo('custom');
+      setStatus(`${choice.name} is your brand logo on this design.`, 'ok');
+      document.querySelector('[data-brand-logo="custom"]')?.focus();
+    },
+  });
+}
+
+// Brings back the remembered custom brand logo after a reload. If it is gone
+// (deleted, another account, this-tab-only upload), the ES logo comes back.
+async function restoreCustomBrand() {
+  const ref = readCustomBrandRef();
+  if (activeBrandLogo !== 'custom' || !ref) return;
+  customBrandPending = true;
+  syncBrandLogoControl();
+  let restored = false;
+  try {
+    for (let i = 0; i < 40 && !window.FrameUpCustomLogos?.store; i += 1) await new Promise(r => setTimeout(r, 100));
+    const store = window.FrameUpCustomLogos?.store;
+    const logo = store ? await store.getById(ref.id) : null;
+    if (logo) {
+      const src = await store.dataUrl(logo);
+      setCustomBrand({ id: logo.id, name: logo.name, src });
+      restored = true;
+    }
+  } catch (error) { restored = false; }
+  customBrandPending = false;
+  if (!restored && activeBrandLogo === 'custom') {
+    activeBrandLogo = 'es';
+    try { localStorage.setItem(BRAND_LOGO_KEY, 'es'); } catch (error) { /* per-browser */ }
+  }
+  syncBrandLogoControl();
+  render();
 }
 
 function initBrandLogoControl() {
@@ -14006,6 +14120,7 @@ function initBrandLogoControl() {
     if (brand.wordmark) loadBrandLogoImage(brand.wordmark.src);
   });
   const options = [...document.querySelectorAll('[data-brand-logo]')];
+  document.querySelector('[data-brand-custom-change]')?.addEventListener('click', openCustomBrandPicker);
   options.forEach((option, index) => {
     option.addEventListener('click', () => setBrandLogo(option.dataset.brandLogo));
     // Radio-group keys: arrows move the choice.
@@ -14014,11 +14129,14 @@ function initBrandLogoControl() {
       if (!step) return;
       event.preventDefault();
       const next = options[(index + step + options.length) % options.length];
-      setBrandLogo(next.dataset.brandLogo);
+      // Arrowing onto an empty Custom option only moves focus (Enter opens the picker).
+      if (next.dataset.brandLogo !== 'custom' || BRAND_LOGOS.custom) setBrandLogo(next.dataset.brandLogo);
+      else next.tabIndex = 0;
       next.focus();
     });
   });
   syncBrandLogoControl();
+  restoreCustomBrand();
 }
 const POST_SAFE_AREA = 50;
 const PILL_EDGE_TO_TEXT_GAP = 1;
