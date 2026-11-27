@@ -584,6 +584,39 @@ const DATA_MODES = { 'ai-clip-status': aiClipStatus, projects, 'project-save': p
   feedback: (body, auth, token) => lessonsApi.saveFeedback(Array.isArray(body.events) ? body.events : [body.event && typeof body.event === 'object' ? body.event : body], { auth, token }),
   lessons: lessonsMode };
 
+// ── Reels v4: SOURCING lane modes (kept apart from plan / critique) ──────
+//   clip-rank   { url, delta: 1|-1, keys: [subject keys] } -> { ok, rank }
+//               people kept (+1) or swapped out (-1) a clip; $0, no AI
+//   clip-proxy  { url, start? } -> 206 video bytes (<= 3 MB a call) from an
+//               allow-listed media host; the browser's fallback when a direct
+//               CORS download fails. $0, no AI.
+const REEL_SOURCING_MODES = ['clip-rank', 'clip-proxy'];
+async function reelSourcingConfirm(body, result) {
+  try {
+    await Promise.race([
+      sourcing.confirmJudged({ clips: body.clips, subjects: body.subjects, judgements: result.judgements || {}, sport: typeof body.sport === 'string' ? body.sport.slice(0, 8) : '' }),
+      new Promise(resolve => setTimeout(resolve, 2500)),
+    ]);
+  } catch (error) { console.warn('reel clip confirm failed:', error && error.message); }
+}
+async function reelSourcingMode(body, track) {
+  if (body.mode === 'clip-rank') {
+    const confirmed = require('./_reel-clip-confirmed.js');
+    const keys = (Array.isArray(body.keys) ? body.keys : []).map(k => String(k || '').slice(0, 120)).filter(Boolean).slice(0, 6);
+    const out = await confirmed.rank(String(body.url || '').slice(0, 400), keys, Number(body.delta) > 0 ? 1 : -1);
+    return json(out.ok ? 200 : 400, out.ok ? { ok: true, rank: out.rank } : { ok: false, error: 'Nothing to rank.' });
+  }
+  const out = await sourcing.clipProxy(body);
+  if (!out.ok) return json(out.status || 502, { ok: false, reason: out.reason || '', error: out.error });
+  void track;
+  return {
+    statusCode: 206,
+    headers: { 'Content-Type': out.type || 'video/mp4', 'Content-Range': `bytes ${out.from}-${out.to}/${out.total}`, 'Accept-Ranges': 'bytes', 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff' },
+    body: out.bytes.toString('base64'),
+    isBase64Encoded: true,
+  };
+}
+
 // withAiMode (ai-free-mode): one free-mode store per request; replies carry mode: 'free'.
 exports.handler = withAiMode(async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: { 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' }, body: '' };
@@ -621,7 +654,7 @@ exports.handler = withAiMode(async function handler(event) {
         aiClips: (({ ready, model, max, seconds, perClip, reason }) => ({ ready, model, max, seconds, perClip, reason }))(media.clipsStatus()),
         scenes: { ready: gatewayConfigured(), perImage: F.PRICES.sceneImage },
         clipJudge: { ready: gatewayConfigured(), model: process.env.REELS_CLIP_JUDGE_MODEL || CLIPS.JUDGE.model, maxUsdPerReel: CLIPS.JUDGE.maxUsdPerReel, maxClips: CLIPS.JUDGE.maxClips, perCall: CLIPS.JUDGE.perCall, gate: { relevance: CLIPS.GATE.relevance, moment: CLIPS.GATE.moment } },
-        sourcing: { styles: CLIPS.STYLE_IDS, modes: ['scene-media', 'review'] },
+        sourcing: { styles: CLIPS.STYLE_IDS, modes: ['scene-media', 'review', ...REEL_SOURCING_MODES], kinds: CLIPS.MEDIA_KINDS },
       });
     }
     if (body.mode === 'trends') return json(200, await trends());
@@ -631,8 +664,12 @@ exports.handler = withAiMode(async function handler(event) {
       if (gate) return json(gate.status, { ok: false, reason: gate.reason, error: gate.error });
       if (await userOverHourlyLimit(token)) return json(429, { ok: false, reason: 'limit', error: 'Clips are ranked without the AI check this hour.' });
       const result = await clipJudge.judgeClips({ clips: body.clips, subjects: body.subjects, budgetUsd: Number(body.budgetUsd ?? CLIPS.JUDGE.maxUsdPerReel), track });
+      // Reels v4: confirmed clips go into the confirmed-clip library (bounded wait, never fails the judge).
+      if (result.ok) await reelSourcingConfirm(body, result);
       return json(result.ok ? 200 : (result.status || (result.reason === 'off' || result.reason === 'feature-off' ? 503 : 502)), result);
     }
+    // ── Reels v4: sourcing (clip library rank, clip proxy) ──
+    if (REEL_SOURCING_MODES.includes(body.mode)) return reelSourcingMode(body, track);
     // ── Reels v3: sourcing ── always answers: over a cap, in free mode or
     // with AI off it uses the clip library, free sources and caption evidence
     // (no vision, no judge queue); never a random clip or unverified photo.
@@ -700,4 +737,4 @@ exports.handler = withAiMode(async function handler(event) {
   }
 });
 
-exports._test = { planV4, reviseV4, scriptDraft, critique, lessonsMode, linksOf, lessonsApi, sourcing, MAX_JUDGE_BODY, voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf, TREND_SPORTS, trendSport, ideas };
+exports._test = { planV4, reviseV4, scriptDraft, critique, lessonsMode, linksOf, lessonsApi, sourcing, REEL_SOURCING_MODES, reelSourcingMode, reelSourcingConfirm, MAX_JUDGE_BODY, voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf, TREND_SPORTS, trendSport, ideas };

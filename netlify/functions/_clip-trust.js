@@ -111,6 +111,26 @@ const SITES = {
 // so an X clip's trust is decided by the post's account, never the CDN.
 const MEDIA_HOSTS = ['video.twimg.com', 'espnmedia-cdn.akamaized.net', 'mlb-cuts-diamond.mlb.com'];
 
+// Reels v4: press-conference / interview sources, trusted ONLY when the
+// caller asks for a presser (classify({ purpose: 'presser' })): network and
+// league shows that post podium and sit-down interviews. Every team account,
+// league account and network in video-ads-sources.js already counts. Game
+// searches never see these (their posts are talk, not game action).
+// Owner to confirm the list (2026-11-27); each entry is a well-known
+// verified X account of a league network or a network show.
+const PRESSER_HANDLES = {
+  nfltotalaccess: ['NFL Total Access', 'league'],
+  gmfb: ['Good Morning Football', 'league'],
+  nflonprime: ['NFL on Prime', 'media'],
+  patmcafeeshow: ['The Pat McAfee Show', 'media'],
+  getupespn: ['Get Up (ESPN)', 'media'],
+  firsttake: ['First Take (ESPN)', 'media'],
+  collegegameday: ['College GameDay', 'media'],
+  herdnow: ['The Herd (FOX Sports)', 'media'],
+  profootballtalk: ['ProFootballTalk (NBC)', 'media'],
+  mlbtonight: ['MLB Tonight', 'league'],
+};
+
 const KIND_WORD = { official: 'team account', league: 'league account', media: 'network' };
 const SITE_WORD = { official: 'team site', league: 'league site', media: 'network' };
 const PLATFORM_HOSTS = { reddit: 'Reddit', bluesky: 'Bluesky', streamable: 'Streamable', vimeo: 'Vimeo', drive: 'Google Drive', dropbox: 'Dropbox' };
@@ -165,13 +185,15 @@ const unverified = (where = '') => ({ trusted: false, kind: 'unverified', site: 
 // label: "@Yankees · team account", "MLB.com · league site", "ESPN · network".
 // Inputs: platform ('x', 'espn', 'mlb', 'reddit', …), handle, url (the post or
 // page), mediaUrl (the file, for non-X results: it must sit on a trusted CDN).
-function classify({ platform = '', handle = '', url = '', mediaUrl = '' } = {}) {
+function classify({ platform = '', handle = '', url = '', mediaUrl = '', purpose = '' } = {}) {
   const pageUrl = unwrapRedirect(url);
   const host = hostOf(pageUrl);
   const isX = platform === 'x' || isXHost(host) || (!platform && !host && handle);
   if (isX) {
     const h = String(handle || xHandleOf(pageUrl) || '').replace(/^@/, '').trim();
     const kind = h ? SOURCES.classifyHandle(h) : 'other';
+    const press = purpose === 'presser' && h ? PRESSER_HANDLES[h.toLowerCase()] : null;
+    if (kind === 'other' && press) return { trusted: true, kind: press[1], site: 'X', label: `@${h} · ${press[0]}`, presser: true };
     if (kind === 'other') return unverified(h ? `@${h}` : 'X');
     return { trusted: true, kind, site: 'X', label: `@${h} · ${KIND_WORD[kind]}` };
   }
@@ -193,4 +215,4 @@ function withTrust(clip) {
   return { ...clip, trust: { kind: t.kind, label: t.label, site: t.site } };
 }
 
-module.exports = { SITES, MEDIA_HOSTS, classify, isTrusted, withTrust, siteFor, unwrapRedirect, mediaHostTrusted, xHandleOf };
+module.exports = { SITES, MEDIA_HOSTS, PRESSER_HANDLES, classify, isTrusted, withTrust, siteFor, unwrapRedirect, mediaHostTrusted, xHandleOf };
