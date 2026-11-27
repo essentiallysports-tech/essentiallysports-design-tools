@@ -1,4 +1,8 @@
 'use strict';
+// Reels v3: up to 4 clips per call, 24 per reel, $0.03 per reel; each
+// judgement also rates the scene's moment ("moment": { key: 0-10 }) so the
+// relevance gate (reel-clips.js GATE) can confirm subject AND moment.
+//
 // Reels Studio clip judge: a vision model looks at a few frames of each
 // candidate clip (sampled in the browser: about 3 small JPEGs per clip) and
 // says what is in it, how good the picture is, how much action each frame
@@ -32,17 +36,18 @@ const SYSTEM = [
   'You judge short sports video clips for an EssentiallySports vertical reel.',
   'For each clip you get its post text and a few frames in time order.',
   'Report only what the frames and the post text show. Name a player only when a jersey name or number, a caption or the post text identifies them; otherwise leave players empty. Never guess.',
-  'Answer with JSON only: {"clips":[{"i":0,"kind":"game-action|highlight-replay|celebration|practice|press-conference|interview|crowd-stadium|graphic-or-text|studio-talk|other","teams":["..."],"players":["..."],"quality":0-10,"action":[0-10 per frame],"relevance":{"<subject key>":0-10},"textOverlay":true|false,"note":"<= 12 words"}]}',
+  'Answer with JSON only: {"clips":[{"i":0,"kind":"game-action|highlight-replay|celebration|practice|press-conference|interview|crowd-stadium|graphic-or-text|studio-talk|other","teams":["..."],"players":["..."],"quality":0-10,"action":[0-10 per frame],"relevance":{"<subject key>":0-10},"moment":{"<subject key>":0-10},"textOverlay":true|false,"note":"<= 10 words"}]}',
   'quality: sharp, well framed, no big watermark, letterbox or burned-in text = high.',
   'action: how much sport is happening in that frame (a play, a catch, a run, a celebration = high; a scoreboard, a talking head, a logo slate = low).',
-  'relevance: for every subject key given, how well this clip shows that subject (the named player or team on screen = 8-10; the right team but another player = 5-6; unrelated = 0-2).',
+  'relevance: for every subject key given, how well this clip shows that subject (the named player or team on screen = 8-10; the right team but another player = 5-6; unrelated = 0-2). Be strict: a clip is used on a scene only at 7 or more.',
+  'moment: for every subject that names a moment, how well the clip shows THAT moment (the season, the play, the injury, the game named); 0 when it shows something else, 5 when unclear. Omit subjects without a moment.',
 ].join('\n');
 
 function priceOf(model) { return C.PRICES[model] || C.PRICES[C.JUDGE.model]; }
 function costOf(model, usage) { const p = priceOf(model); return ((usage.input || 0) * p.input + (usage.output || 0) * p.output) / 1e6; }
 
 function userContent(clips, subjects) {
-  const parts = [{ type: 'text', text: `Subjects (key: label): ${subjects.map(s => `${s.key}: ${s.label}`).join(' | ') || 'none'}\nClips: ${clips.length}` }];
+  const parts = [{ type: 'text', text: `Subjects (key: label [moment]): ${subjects.map(s => `${s.key}: ${s.label}${s.moment ? ` [moment: ${s.moment}]` : ''}`).join(' | ') || 'none'}\nClips: ${clips.length}` }];
   clips.forEach((clip, i) => {
     parts.push({ type: 'text', text: `Clip ${i} from @${clean(clip.handle, 40) || 'unknown'}: "${clean(clip.text, 220)}" (${clip.frames.length} frames${clip.times.length ? ` at ${clip.times.map(t => `${Number(t).toFixed(1)}s`).join(', ')}` : ''})` });
     clip.frames.forEach(url => parts.push({ type: 'image_url', image_url: { url } }));
@@ -56,7 +61,7 @@ async function callModel({ model, clips, subjects, timeoutMs = 25000, fetchImpl 
     method: 'POST',
     headers: { 'content-type': 'application/json', Authorization: `Bearer ${process.env.AI_GATEWAY_API_KEY}` },
     body: JSON.stringify({
-      model, max_tokens: 300 + clips.length * 260, temperature: 0.1,
+      model, max_tokens: 300 + clips.length * 300, temperature: 0.1,
       response_format: { type: 'json_object' },
       messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: userContent(clips, subjects) }],
     }),
@@ -77,7 +82,7 @@ async function callModel({ model, clips, subjects, timeoutMs = 25000, fetchImpl 
 async function judgeClips({ clips = [], subjects = [], budgetUsd = C.JUDGE.maxUsdPerReel, track, fetchImpl = fetch, now = Date.now } = {}) {
   if (!gatewayConfigured()) return { ok: false, reason: 'off', error: 'AI is off: clips are ranked without the vision check.' };
   if (featureDisabled(FEATURE)) return { ok: false, reason: 'feature-off', error: 'The clip check is switched off: clips are ranked without it.' };
-  const subs = (Array.isArray(subjects) ? subjects : []).slice(0, 12).map(s => ({ key: C.norm(s && s.key).slice(0, 40), label: clean(s && s.label, 60) })).filter(s => s.key);
+  const subs = (Array.isArray(subjects) ? subjects : []).slice(0, 12).map(s => ({ key: C.norm(s && s.key).slice(0, 40), label: clean(s && s.label, 60), moment: clean(s && s.moment, 60) })).filter(s => s.key);
   const list = (Array.isArray(clips) ? clips : []).slice(0, C.JUDGE.perCall).map(c => ({
     url: clean(c && c.url, 300), text: clean(c && c.text, 280), handle: clean(c && c.handle, 40),
     frames: (Array.isArray(c && c.frames) ? c.frames : []).filter(f => typeof f === 'string' && f.length <= MAX_FRAME_CHARS && DATA_URL.test(f)).slice(0, C.JUDGE.framesPerClip + 1),
@@ -89,7 +94,7 @@ async function judgeClips({ clips = [], subjects = [], budgetUsd = C.JUDGE.maxUs
   const todo = [];
   list.forEach(c => {
     const hit = CACHE.get(c.url);
-    if (hit && now() - hit.at < TTL_MS && subs.every(s => s.key in hit.j.relevance)) judgements[c.url] = hit.j;
+    if (hit && now() - hit.at < TTL_MS && subs.every(s => s.key in hit.j.relevance && (!s.moment || s.key in (hit.j.moment || {})))) judgements[c.url] = hit.j;
     else todo.push(c);
   });
   if (!todo.length) return { ok: true, judgements, cost: 0, model: '', cached: list.length, skipped: 0 };

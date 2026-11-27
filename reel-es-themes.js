@@ -64,12 +64,19 @@
   // ─── Layout presets (sizes are 9:16 px; the 4:5 frame scales them) ──────
   // Every preset stays inside the safe frame and above the caption line; the
   // column, the caption line and the marks are not theirs to move.
+  // v3 (2026-11-27): sizes are steps of the one type scale (reel-es.js
+  // TYPE_SCALE), never free pixel values. pillStep / statementStep /
+  // numberStep name the biggest step a block may use; text that does not fit
+  // moves down one step at a time (and is shortened at the smallest), never
+  // to an in-between size.
   const LAYOUTS = {
-    standard: { id: 'standard', pillBoxed: true, pillScale: 1, statementMax: 150, statementBoxed: false, numberMax: 300, kickerFill: 'ink', kickerBoxed: true, whoBoxed: true, ctaPanel: true, barScale: 1, media: { hook: 'full', statement: 'lower' }, director: 'Standard: any mix of blocks; one idea a beat.' },
-    photo: { id: 'photo', pillBoxed: true, pillScale: 1, statementMax: 128, statementBoxed: true, numberMax: 300, kickerFill: 'ink', kickerBoxed: true, whoBoxed: true, ctaPanel: true, barScale: 1, media: { hook: 'full', statement: 'full' }, director: 'Photo-led: the hook and at least two statement beats, each one a moment a photo can show (a person, a play, a place); at most one number, dots or compare beat.' },
-    data: { id: 'data', pillBoxed: true, pillScale: 1, statementMax: 124, statementBoxed: false, numberMax: 340, kickerFill: 'blue', kickerBoxed: true, whoBoxed: true, ctaPanel: true, barScale: 1.18, media: { hook: 'full', statement: 'lower' }, director: 'Data-led: at least two of number / dots / compare, each with a kicker; statements only to set up or land a figure.' },
-    minimal: { id: 'minimal', pillBoxed: false, pillScale: 1, statementMax: 150, statementBoxed: false, numberMax: 300, kickerFill: 'ink', kickerBoxed: false, whoBoxed: false, ctaPanel: false, barScale: 0.86, media: { hook: 'lower', statement: 'lower' }, director: 'Minimal: at most two pills on the hook, no stamp, statements of one or two lines; let one figure or one quote carry the reel.' },
-    bold: { id: 'bold', pillBoxed: true, pillScale: 1.25, statementMax: 150, statementBoxed: true, numberMax: 340, kickerFill: 'blue', kickerBoxed: true, whoBoxed: true, ctaPanel: true, barScale: 1.12, media: { hook: 'full', statement: 'lower' }, director: 'Bold: pills and lines of 10 characters or fewer so they draw at full size; two lines beat three.' },
+    standard: { id: 'standard', pillBoxed: true, pillStep: 'h1', statementStep: 'display', statementBoxed: false, numberStep: 'statXL', kickerFill: 'ink', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'lower' }, director: 'Standard: any mix of blocks; one idea a beat.' },
+    photo: { id: 'photo', pillBoxed: true, pillStep: 'h1', statementStep: 'h1', statementBoxed: true, numberStep: 'statXL', kickerFill: 'ink', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'full' }, director: 'Photo-led: the hook and at least two statement beats, each one a moment a photo can show (a person, a play, a place); at most one number, dots or compare beat.' },
+    data: { id: 'data', pillBoxed: true, pillStep: 'h1', statementStep: 'h1', statementBoxed: false, numberStep: 'statXL', kickerFill: 'blue', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'lower' }, director: 'Data-led: at least two of number / dots / compare, each with a kicker; statements only to set up or land a figure.' },
+    minimal: { id: 'minimal', pillBoxed: false, pillStep: 'h1', statementStep: 'display', statementBoxed: false, numberStep: 'statXL', kickerFill: 'ink', kickerBoxed: false, whoBoxed: false, ctaPanel: false, media: { hook: 'lower', statement: 'lower' }, director: 'Minimal: at most two pills on the hook, no stamp, statements of one or two lines; let one figure or one quote carry the reel.' },
+    bold: { id: 'bold', pillBoxed: true, pillStep: 'display', statementStep: 'display', statementBoxed: true, numberStep: 'statXL', kickerFill: 'blue', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'lower' }, director: 'Bold: pills and lines of 10 characters or fewer so they draw at full size; two lines beat three.' },
+    // Game Tape: the clip carries the scene, boxed words sit over it.
+    tape: { id: 'tape', pillBoxed: true, pillStep: 'h1', statementStep: 'h1', statementBoxed: true, numberStep: 'statXL', kickerFill: 'ink', kickerBoxed: true, whoBoxed: true, ctaPanel: true, media: { hook: 'full', statement: 'full' }, director: 'Game Tape: the clip is the story; short boxed words over it.' },
   };
   // ─── Motion presets (inside the kit's limits: 0.35-0.45 s, 150-180 ms) ──
   const MOTION_LIMITS = { enterMinMs: 350, enterMaxMs: 450, staggerMinMs: 150, staggerMaxMs: 180 };
@@ -174,6 +181,13 @@
       roles: { text: 'ink', accent: 'blue', pillFill: 'ink', pillInk: 'white', pillAlt: 'blue', captionFill: 'ink', captionInk: 'white', captionEmphasis: 'yellow', mark: 'blue', wipe: ['ink', 'blue'], dotBase: 'ink', grain: 0.05 },
       pill: 'big', caption: { box: 'hug', emphasis: 'text' }, layout: 'bold', motion: 'punchy',
     },
+  };
+  // Internal looks the v3 styles draw with (never offered on their own).
+  LOOKS.tape = {
+    id: 'tape', label: 'Game Tape', blurb: 'Clips first, boxed words over them, on the ES paper.',
+    ground: 'paper', surface: 'paper', scenes: { quote: 'ink' },
+    roles: { text: 'ink', accent: 'blue', pillFill: 'ink', pillInk: 'white', pillAlt: 'blue', captionFill: 'ink', captionInk: 'white', captionEmphasis: 'yellow', mark: 'blue', wipe: ['blue', 'ink'], dotBase: 'ink', grain: 0.05 },
+    pill: 'boxed', caption: { box: 'hug', emphasis: 'text' }, layout: 'tape', motion: 'standard', internal: true,
   };
   const LOOK_IDS = ['paper', 'ink', 'blue', 'team', 'photo', 'data', 'minimal', 'bold'];
   const DEFAULT_LOOK = 'paper';
@@ -327,9 +341,114 @@
     return rows;
   }
 
+  // ─── Reels Studio v3: the four styles ───────────────────────────────────
+  // A style is a locked template system on the one ES frame: which blocks it
+  // may use and in what order, its media mix, pacing, motion and default
+  // voice and music. The look it draws with (ground, pills, wipe) is internal:
+  // every style keeps the ES type scale, pills, colours, mark and end card.
+  //   media.clips / media.photos: the share of scenes (0-1) that carry a
+  //   verified clip / photo; clipsMin is the floor a Game Tape reel needs.
+  //   pacing: beat lengths in ms (the voiceover still sets the real length).
+  //   previewPlan: a small plan the style cards loop (reference topics, no media).
+  const STYLE_IDS = ['gametape', 'statcard', 'receipts', 'hypecut'];
+  const DEFAULT_STYLE = 'receipts';
+  const ep = (beats, extra = {}) => ({ format: 'explainer', style: 'es', sourceLine: 'Source: Pro Football Reference', ...extra, beats: beats.map((b, i) => ({ id: `b${i + 1}`, vo: '', emphasis: '', photo: '', ...b })) });
+  const STYLES = {
+    gametape: {
+      id: 'gametape', label: 'Game Tape', blurb: 'Video-first: verified game clips with short type over them.',
+      look: 'tape', blocks: ['hook', 'clipLabel', 'statement', 'statTiles', 'tagPill', 'endcard'],
+      order: ['hook', 'clipLabel', 'statement', 'clipLabel', 'statTiles', 'clipLabel', 'endcard'], max: { statTiles: 1, tagPill: 1 },
+      media: { clips: 0.9, photos: 0.1, clipsMin: 0.8 }, pacing: { hookMs: 3000, beatMinMs: 2000, beatMaxMs: 3600, tailMs: 200 },
+      motion: 'standard', kinetic: false, voice: { tone: 'energetic' }, music: 'hype',
+      previewPlan: ep([
+        { kind: 'hook', vo: 'George Kittle tore his Achilles on January 11.', block: { type: 'hook', pills: [{ text: 'KITTLE TORE', color: 'ink' }, { text: 'HIS ACHILLES', color: 'blue' }] } },
+        { kind: 'point', vo: 'The best tight end in football.', block: { type: 'clipLabel', text: 'GEORGE KITTLE', sub: 'SAN FRANCISCO · TE' } },
+        { kind: 'point', vo: 'Back to back years as the top graded tight end.', block: { type: 'statTiles', title: 'BACK TO *BACK*', tiles: [{ value: '92.6', label: '2024 TE GRADE', tone: 'blue' }, { value: '90.4', label: '2025 TE GRADE', tone: 'ink' }] } },
+        { kind: 'cta', block: { type: 'endcard' } },
+      ], { sourceLine: 'Source: PFF' }),
+    },
+    statcard: {
+      id: 'statcard', label: 'Stat Card', blurb: 'Player cards and stat tiles that build on screen.',
+      look: 'paper', blocks: ['hook', 'photoCard', 'statTiles', 'streak', 'rankTile', 'tagPill', 'statement', 'compare', 'number', 'endcard'],
+      order: ['hook', 'photoCard', 'statTiles', 'rankTile', 'streak', 'statement', 'endcard'], max: { photoCard: 3 },
+      media: { clips: 0, photos: 0.6, clipsMin: 0 }, pacing: { hookMs: 3000, beatMinMs: 2600, beatMaxMs: 5000, tailMs: 260 },
+      motion: 'standard', kinetic: false, voice: { tone: 'steady' }, music: 'tension',
+      previewPlan: ep([
+        { kind: 'hook', vo: "Aaron Rodgers' 2011 has no twin.", block: { type: 'hook', kicker: 'STAT TWIN · EP. 10', pills: [{ text: "RODGERS' 2011", color: 'ink' }, { text: 'HAS NO TWIN', color: 'blue' }] } },
+        { kind: 'point', vo: '45 touchdowns, 6 interceptions.', block: { type: 'photoCard', title: "RODGERS' *2011*", label: '2011 · GB', scan: true, tiles: [{ value: '45', label: 'TD', tone: 'blue' }, { value: '6', label: 'INT', tone: 'ink' }] } },
+        { kind: 'point', vo: 'And a 15 and 1 season.', block: { type: 'streak', title: '2011 · *GREEN BAY*', items: 'WWWWWWWWWWWWWLWW', label: '15-1' } },
+        { kind: 'cta', block: { type: 'endcard' } },
+      ]),
+    },
+    receipts: {
+      id: 'receipts', label: 'Receipts', blurb: 'Pure motion graphics: numbers, dots and bars, no footage needed.',
+      look: 'paper', blocks: ['hook', 'statement', 'statTiles', 'dotGrid', 'compare', 'streak', 'rankTile', 'tagPill', 'quote', 'number', 'dots', 'endcard'],
+      order: ['hook', 'dotGrid', 'statTiles', 'compare', 'statement', 'endcard'], max: {},
+      media: { clips: 0, photos: 0, clipsMin: 0 }, pacing: { hookMs: 3000, beatMinMs: 2800, beatMaxMs: 5500, tailMs: 300 },
+      motion: 'standard', kinetic: false, voice: { tone: 'steady' }, music: 'calm',
+      previewPlan: ep([
+        { kind: 'hook', vo: '67 Achilles tears since 2015.', block: { type: 'hook', pills: [{ text: '67 ACHILLES', color: 'ink' }, { text: 'TEARS', color: 'blue' }] } },
+        { kind: 'dotrank', vo: '52 made it back. 26 got back to 90 percent.', block: { type: 'dotGrid', title: '*67* ACHILLES TEARS', total: 67, groups: [{ n: 26, tone: 'blue', label: 'BACK TO 90%' }, { n: 26, tone: 'ink', label: 'RETURNED' }, { n: 15, tone: 'grey', label: "DIDN'T RETURN" }] } },
+        { kind: 'stat', vo: '52 made it back. 26 got back to 90 percent.', block: { type: 'statTiles', title: 'THE *OLD LEVEL*', tiles: [{ value: '52', label: 'MADE IT BACK', tone: 'ink' }, { value: '26', label: 'BACK TO 90%', tone: 'blue' }] } },
+        { kind: 'cta', block: { type: 'endcard' } },
+      ], { sourceLine: 'Source: ES research' }),
+    },
+    hypecut: {
+      id: 'hypecut', label: 'Hype Cut', blurb: 'Fast kinetic type over clips, stamps and quick stat pops.',
+      look: 'bold', blocks: ['hook', 'statement', 'tagPill', 'statTiles', 'clipLabel', 'endcard'],
+      order: ['hook', 'statement', 'clipLabel', 'statement', 'statTiles', 'endcard'], max: { statTiles: 2 },
+      media: { clips: 0.6, photos: 0.2, clipsMin: 0 }, pacing: { hookMs: 2400, beatMinMs: 1400, beatMaxMs: 2600, tailMs: 120 },
+      motion: 'punchy', kinetic: true, voice: { tone: 'hype' }, music: 'hype',
+      previewPlan: ep([
+        { kind: 'hook', vo: 'Green Bay, 2011.', block: { type: 'hook', pills: [{ text: '2011', color: 'ink' }, { text: 'GREEN BAY', color: 'blue' }], stamp: { text: 'UNREAL' } } },
+        { kind: 'point', vo: '45 touchdowns. 6 picks.', block: { type: 'statement', lines: [{ text: '45 TD.', color: 'ink' }, { text: '*6 INT.*', color: 'ink' }] } },
+        { kind: 'stat', vo: 'Fifteen and one.', block: { type: 'statTiles', tiles: [{ value: '15-1', label: 'RECORD', tone: 'blue' }] } },
+        { kind: 'cta', block: { type: 'endcard' } },
+      ]),
+    },
+  };
+  const isStyle = id => STYLE_IDS.includes(id);
+  const getStyle = id => STYLES[isStyle(id) ? id : DEFAULT_STYLE];
+  const slug = v => String(v || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // Retired looks and recipes (Reels 2.0), and their labels, on a v3 style.
+  const LEGACY_DECISIVE = {
+    data: 'receipts', 'data-led': 'receipts', 'stat-drop': 'receipts', 'money-story': 'receipts', versus: 'receipts',
+    photo: 'statcard', 'photo-led': 'statcard',
+    bold: 'hypecut', countdown: 'hypecut', hype: 'hypecut',
+  };
+  const LEGACY_SOFT = ['paper', 'ink', 'blue', 'team', 'team-colour', 'team-color', 'minimal', 'quote', 'quote-reaction', 'explainer', 'fan-pulse', 'verdict', 'es', 'classic', 'series'];
+  // A plan has clips when any scene carries one (or the plan says so).
+  function hasClips(plan) {
+    const p = plan || {};
+    if (p.hasClips || (Array.isArray(p.clips) && p.clips.length)) return true;
+    return (Array.isArray(p.beats) ? p.beats : []).some(b => b && (b.clip || b.clipId || (b.media && b.media.kind === 'clip') || (b.pick && b.pick.kind === 'clip') || b.visual === 'clip'));
+  }
+  // legacyStyle(look, recipe, plan): the v3 style an old reel opens in.
+  function legacyStyle(look, recipe, plan) {
+    const r = slug(recipe);
+    const l = slug(look);
+    if (isStyle(r)) return r;
+    if (isStyle(l)) return l;
+    if (LEGACY_DECISIVE[r]) return LEGACY_DECISIVE[r];
+    if (LEGACY_DECISIVE[l]) return LEGACY_DECISIVE[l];
+    void LEGACY_SOFT;
+    return hasClips(plan) ? 'gametape' : 'receipts';
+  }
+  // styleOf(plan): the plan's v3 style (plan.reelStyle, or plan.style when it
+  // is one of the four), else the closest style for its old look / recipe.
+  function styleOf(plan) {
+    const p = plan || {};
+    if (isStyle(p.reelStyle)) return p.reelStyle;
+    if (isStyle(p.style)) return p.style;
+    return legacyStyle(p.look, p.recipe, p);
+  }
+  // The internal look a style draws with.
+  const lookForReelStyle = id => getStyle(id).look;
+
   return {
     TOKENS, SIGNALS, SIGNAL_MEANING, NEUTRALS, GROUNDS, TEXT_MIN, ACCENT_MIN,
     LOOKS, LOOK_IDS, DEFAULT_LOOK, LAYOUTS, MOTIONS, MOTION_LIMITS, SURFACES, LEGACY_STYLE_LOOKS,
+    STYLES, STYLE_IDS, DEFAULT_STYLE, isStyle, getStyle, styleOf, legacyStyle, hasClips, lookForReelStyle,
     lookId, lookForStyle, teamCarriesText, resolve, validateLook, contrastMatrix, teamSurface, inkOn, contrast, luminance, blend,
   };
 }));

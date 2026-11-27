@@ -27,6 +27,14 @@
 //             browser sampled (_reel-clip-judge.js, Gemini 3.8 Flash, Haiku
 //             fallback); capped at $0.10 per reel, cached per clip URL,
 //             logged as reels-clip-judge; respects aiSpendGate
+//   scene-media  Reels v3: per scene its subject, trusted clip candidates
+//             (library first, live search for at most 2 subjects), verified
+//             photos (photo-verify, focus + head boxes) and the pick under the
+//             relevance gate (_reel-sourcing.js). judgeQueue lists the clips
+//             the browser should sample and send to clip-judge (<= 24, $0.03 a
+//             reel). Over a cap / free mode: library + caption evidence only.
+//   review    Reels v3: code checks + one Haiku call (reels-review, ~$0.001)
+//             -> issues, auto-fixed plan, ready (_reel-sourcing.js review)
 //   ai-clip-start / ai-clip-status
 //             one AI b-roll clip as an async Gateway job (REELS_AI_CLIPS=gateway,
 //             capped by REELS_AI_CLIPS_MAX, default 2 per reel); the page polls
@@ -78,19 +86,25 @@ const framePick = require('./_reel-frame-pick.js');
 // ── Reels 2.0: lane B ── the ideas room and ES coverage for news reels.
 const ideas = require('./_reel-ideas.js');
 const { cachedEnrichment } = require('./trend-design.js');
+// Reels v3: per-scene sourcing and the review pass.
+const sourcing = require('./_reel-sourcing.js');
 
 const REEL_SPORTS = ['nfl', 'cfb', 'mlb', 'golf'];
 const TREND_HOURS = 48;
 const PLAN_TTL_MS = 45 * 60 * 1000;
 const PLAN_CACHE = new Map();
-const MAX_BODY = 220 * 1024; // a project's timeline is capped at 200 KB; a clip-judge batch (3 clips x 3 small JPEGs) is ~120 KB
+const MAX_BODY = 220 * 1024; // a project's timeline is capped at 200 KB
+// Reels v3: a clip-judge batch is up to 4 clips x 3 small JPEGs (~160-240 KB).
+const MAX_JUDGE_BODY = 320 * 1024;
 const PROJECTS = 'frameup_reel_projects';
 const EVENTS = 'frameup_reel_events';
 // ── Reels 2.0: C (inputs) ── a voice-align body carries one take (<= 90 s of 16 kHz mono WAV as base64, ~3.9 MB).
 const MAX_VOICE_BODY = 4.3 * 1024 * 1024;
 const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked', 'make', 'visuals', 'data', 'frames', 'carousel_export',
   // ── Reels 2.0: C (inputs) ── start source, idea lens, recipe, look, version, media added, voice mode, captions export, radar
-  'start', 'idea_pick', 'recipe', 'look', 'variant', 'media_add', 'voice_upload', 'captions_export', 'radar_open', 'radar_handoff'];
+  'start', 'idea_pick', 'recipe', 'look', 'variant', 'media_add', 'voice_upload', 'captions_export', 'radar_open', 'radar_handoff',
+  // ── Reels v3 ── the style picked, sourcing, a Swap, the review pass and its badge
+  'style', 'scene_media', 'media_swap', 'review', 'ready'];
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
@@ -186,6 +200,8 @@ async function dataPlan(input, body, track, gates) {
   const tier = body.tier === 'economy' ? 'economy' : 'standard';
   const out = await director.runDataDirector(input, { style, look, tier: body.aiCopy === false ? 'off' : tier, steer: clean(body.steer, 300), voice: body.voice === true, blocked, track });
   if (!out.plan) return { ok: false, status: 422, reason: 'no-data', error: 'There is not enough data for this reel; use the brief.' };
+  // Reels v3: data reels default to Receipts unless the person picked a style.
+  out.plan.esStyle = director.v3StyleOf({ esStyle: clean(body.esStyle, 20), style: clean(body.style, 20), look, recipe: clean(body.recipe, 30) || 'data' });
   const MAXP = require('../../reel-data.js').MAX_KEY_PLAYS;
   const dropped = input.playIds && input.playIds.length > MAXP ? [`Kept the ${MAXP} strongest of your ${input.playIds.length} ticked plays.`] : [];
   return {
@@ -218,7 +234,10 @@ async function plan(body, track, gates) {
   const suggested = STYLES.suggestStyle({ format, text: [trend?.title, ...(trend?.related || []).map(r => r.title), brief].filter(Boolean).join(' ') });
   const style = STYLES.currentStyle(STYLES.STYLES[body.style] ? body.style : suggested.id);
   const look = clean(body.look, 20);
-  const key = planKey([trend?.id || trend?.title || '', brief, format, tier, steer, sport, Boolean(body.factCheck), style]);
+  // Reels v3: the style (Game Tape, Stat Card, Receipts, Hype Cut); an old
+  // look / recipe maps to the closest one.
+  const esStyle = director.v3StyleOf({ esStyle: clean(body.esStyle, 20), style: clean(body.style, 20), look, recipe: clean(body.recipe, 30) });
+  const key = planKey([trend?.id || trend?.title || '', brief, format, tier, steer, sport, Boolean(body.factCheck), style, esStyle]);
   const hit = PLAN_CACHE.get(key);
   if (hit && Date.now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: 0, costs: { director: 0, factCheck: 0 } };
 
@@ -252,9 +271,10 @@ async function plan(body, track, gates) {
     draft.team = read.team;
     draft.style = style;
     if (look) draft.look = look;
+    draft.esStyle = esStyle;
     result = { plan: draft, read, source: 'draft', cost: 0, model: '', issues: [] };
   } else {
-    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, look, track, facts: extraFacts });
+    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, look, esStyle, track, facts: extraFacts });
   }
   const corpus = result.read.corpus;
   const value = {
@@ -269,7 +289,7 @@ async function plan(body, track, gates) {
     corpus: corpus.slice(0, 12000),
     sources: [...sourcesOf(trend, brief, facts), ...(esText ? es.sources : [])].slice(0, 16),
     route: result.read.route,
-    style, suggestedStyle: suggested,
+    style, suggestedStyle: suggested, esStyle,
     lint: lintPlan(result.plan, { corpus }),
     costs: { director: money(result.cost), factCheck: money(factCost) },
     cost: money(result.cost + factCost),
@@ -286,6 +306,7 @@ async function revise(body, track) {
   const out = await director.revisePlan({ plan: current, instruction: clean(body.instruction, 300), corpus: clean(body.corpus, 12000), track });
   if (!out.plan.beats.length || out.weak && out.plan.beats.length < 3) return { ok: false, status: 422, error: 'That change did not come back clean. Try a different wording.', issues: out.issues };
   out.plan.team = current.team || out.plan.team;
+  if (current.esStyle && !out.plan.esStyle) out.plan.esStyle = current.esStyle;
   return { ok: true, plan: out.plan, issues: out.issues.slice(0, 8), model: out.model, cost: money(out.cost), lint: lintPlan(out.plan, { corpus: clean(body.corpus, 12000) }) };
 }
 
@@ -471,12 +492,14 @@ exports.handler = withAiMode(async function handler(event) {
   const bodySize = String(event.body || '').length;
   if (bodySize > MAX_VOICE_BODY) return json(413, { ok: false, reason: 'too-long', error: 'That request is too large.' });
   // Only a voice-align take may be larger than the usual cap (checked once the body is read).
-  if (bodySize > MAX_BODY && !/"mode"\s*:\s*"voice-align"/.test(String(event.body).slice(0, 4000) + String(event.body).slice(-4000))) return json(413, { ok: false, error: 'That request is too large.' });
+  const ends = String(event.body).slice(0, 4000) + String(event.body).slice(-4000);
+  const judgeBody = /"mode"\s*:\s*"clip-judge"/.test(ends);
+  if (bodySize > MAX_BODY && !/"mode"\s*:\s*"voice-align"/.test(ends) && !(judgeBody && bodySize <= MAX_JUDGE_BODY)) return json(413, { ok: false, error: 'That request is too large.' });
   const auth = await verifyEsUser(event);
   if (!auth.ok) return json(auth.statusCode, { ok: false, error: auth.error });
   let body = {};
   try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { ok: false, error: 'Invalid request.' }); }
-  if (bodySize > MAX_BODY && body.mode !== 'voice-align') return json(413, { ok: false, error: 'That request is too large.' });
+  if (bodySize > MAX_BODY && body.mode !== 'voice-align' && !(body.mode === 'clip-judge' && bodySize <= MAX_JUDGE_BODY)) return json(413, { ok: false, error: 'That request is too large.' });
   const token = bearerToken(event.headers);
   const track = { email: auth.user.email, token };
   try {
@@ -490,7 +513,8 @@ exports.handler = withAiMode(async function handler(event) {
         formatModes: Object.fromEntries(Object.entries(FORMAT_MODES).map(([id, m]) => [id, typeof m.run === 'function'])),
         aiClips: (({ ready, model, max, seconds, perClip, reason }) => ({ ready, model, max, seconds, perClip, reason }))(media.clipsStatus()),
         scenes: { ready: gatewayConfigured(), perImage: F.PRICES.sceneImage },
-        clipJudge: { ready: gatewayConfigured(), model: process.env.REELS_CLIP_JUDGE_MODEL || CLIPS.JUDGE.model, maxUsdPerReel: CLIPS.JUDGE.maxUsdPerReel },
+        clipJudge: { ready: gatewayConfigured(), model: process.env.REELS_CLIP_JUDGE_MODEL || CLIPS.JUDGE.model, maxUsdPerReel: CLIPS.JUDGE.maxUsdPerReel, maxClips: CLIPS.JUDGE.maxClips, perCall: CLIPS.JUDGE.perCall, gate: { relevance: CLIPS.GATE.relevance, moment: CLIPS.GATE.moment } },
+        sourcing: { styles: CLIPS.STYLE_IDS, modes: ['scene-media', 'review'] },
       });
     }
     if (body.mode === 'trends') return json(200, await trends());
@@ -501,6 +525,18 @@ exports.handler = withAiMode(async function handler(event) {
       if (await userOverHourlyLimit(token)) return json(429, { ok: false, reason: 'limit', error: 'Clips are ranked without the AI check this hour.' });
       const result = await clipJudge.judgeClips({ clips: body.clips, subjects: body.subjects, budgetUsd: Number(body.budgetUsd ?? CLIPS.JUDGE.maxUsdPerReel), track });
       return json(result.ok ? 200 : (result.status || (result.reason === 'off' || result.reason === 'feature-off' ? 503 : 502)), result);
+    }
+    // ── Reels v3: sourcing ── always answers: over a cap, in free mode or
+    // with AI off it uses the clip library, free sources and caption evidence
+    // (no vision, no judge queue); never a random clip or unverified photo.
+    if (body.mode === 'scene-media' || body.mode === 'review') {
+      const feature = body.mode === 'review' ? sourcing.REVIEW_FEATURE : sourcing.PHOTO_FEATURE;
+      const [gate, hourly] = await Promise.all([aiSpendGate(token, { feature }), userOverHourlyLimit(token)]);
+      const free = freeModeGate(gate);
+      const aiAllowed = !free && !gate && !hourly && gatewayConfigured();
+      const run = body.mode === 'review' ? sourcing.review : sourcing.sceneMedia;
+      const result = await run(body, { track, aiAllowed });
+      return json(result.ok ? 200 : (result.status || 400), { ...result, ...(aiAllowed ? {} : { aiPaused: free ? 'free' : gate ? (gate.reason || 'limit') : hourly ? 'limit' : 'off' }) });
     }
     // ── Reels 2.0: lane B ── the ideas room. Over a cap, with AI off or on
     // any AI failure it answers with free template drafts, never an error.
@@ -549,4 +585,4 @@ exports.handler = withAiMode(async function handler(event) {
   }
 });
 
-exports._test = { voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf, TREND_SPORTS, trendSport, ideas };
+exports._test = { sourcing, MAX_JUDGE_BODY, voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf, TREND_SPORTS, trendSport, ideas };

@@ -1042,7 +1042,48 @@ function fallbackNote(steps, { sport, team, query }) {
   return parts.length ? `Few fresh ${what} — showing ${parts.join(', then ')} from the clip library.` : '';
 }
 
+// ─── Reels v3: find-clips per scene subject ─────────────────────────────
+// body.subject = { type: 'player'|'team'|'moment'|'game', name, team, moment? }
+// (Reels Studio sends one per scene). The search itself is unchanged and
+// cached per team (so scenes of one team share one search): the subject only
+// picks the team when none is given, becomes the moment query when there is
+// no team, and ranks the clips that name the subject first (subjectHit).
+// Requests without a subject behave exactly as before.
+const SUBJECT_TYPES = ['player', 'team', 'moment', 'game'];
+function readClipSubject(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const name = clean(raw.name, 80);
+  if (!name) return null;
+  return { type: SUBJECT_TYPES.includes(raw.type) ? raw.type : 'player', name, team: clean(raw.team, 80), moment: clean(raw.moment, 80) };
+}
+const subjectWords = text => String(text || '').toLowerCase().normalize('NFKD').replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 1);
+function subjectHit(clip, subject) {
+  const words = subjectWords(subject.name);
+  if (!words.length) return false;
+  const hay = ` ${subjectWords([clip.text, ...(clip.players || []), ...(subject.type === 'team' ? clip.teams || [] : [])].join(' ')).join(' ')} `;
+  return hay.includes(` ${words.join(' ')} `); // the full name, never one word of it
+}
 async function findClips(body, track) {
+  const subject = readClipSubject(body && body.subject);
+  if (!subject) return findClipsCore(body, track);
+  const sport = AD_SPORTS.includes(body.sport) ? body.sport : '';
+  const has = body.team || (Array.isArray(body.teams) && body.teams.length) || body.color || (Array.isArray(body.colors) && body.colors.length);
+  const next = { ...body };
+  delete next.subject;
+  if (!has) {
+    const teamName = subject.type === 'team' ? subject.name : subject.team;
+    const team = teamName && sport ? TEAMS.findTeam(teamName, sport) : null;
+    if (team) next.team = team.name;
+    else if (!clean(next.query, 160)) next.query = [subject.name, subject.moment].filter(Boolean).join(' ').slice(0, 160);
+  }
+  const out = await findClipsCore(next, track);
+  if (!out || !out.ok) return out;
+  const tag = list => (list || []).map(c => ({ ...c, subjectHit: subjectHit(c, subject) }));
+  const clips = tag(out.clips).map((c, i) => ({ c, i })).sort((a, b) => (b.c.subjectHit - a.c.subjectHit) || a.i - b.i).map(x => x.c);
+  return { ...out, clips, subject, subjectHits: clips.filter(c => c.subjectHit).length };
+}
+
+async function findClipsCore(body, track) {
   const started = Date.now();
   const sport = AD_SPORTS.includes(body.sport) ? body.sport : '';
   if (!sport) return { ok: false, status: 400, error: 'Pick NFL, CFB or MLB first.' };
@@ -2376,7 +2417,7 @@ exports.handler = withAiMode(async function handler(event) {
 
 exports._test = {
   variantsFrom, isVideoUrl, sizeFromUrl, clipFromPost, trends, checkVariant, autoFix, trimToWords, swapBanned, closestPhrase, copyContext, suggestStyle, skipReason, styleFieldsOf,
-  freeCopy, freeTemplates, freeModeRun,
+  freeCopy, freeTemplates, freeModeRun, readClipSubject, subjectHit, findClipsCore,
   MODE_FEATURES, COPY_SYSTEM, COPY_CACHE, copyKey, rankVariants, claimsFor, checkClaims, saveClaims, claimsMode, resetClaims() { claimsCache = { at: 0, rows: null }; }, findClips, momentsWithClips, teamInTitle, MOMENT_CACHE, MOMENTS, looksOld, ageHoursOf, copy, chat, CLIP_CACHE, FIND_CLIPS, grammar, checkGrammarIssues, GRAMMAR_CACHE,
   MOMENT_TITLE_CACHE, MOMENTS_LIB, CLASSIFY, assembleMoments, searchPlan, webPrompt, xQueryFor, xApiSearch, assessClip, freshClip, scoreClip, rankClips, mediaKey, qualityLabel, CLIP_TTL_MS, SOURCES,
   TRUST, windowFor, windowInfo, mlbOffseason, mp4Dims, LAST_GAMES_HOURS,
@@ -2384,6 +2425,10 @@ exports._test = {
   useSources(list) { EXTRA_SOURCES = Array.isArray(list) ? list : []; },
   useLearning(mod) { learning = { lessonsFor: async () => ({ examples: [], rules: [] }), styleRankingFor: async () => [], recordEvent: async () => false, ...mod }; },
 };
+
+// Reels v3 (reel-maker scene-media): one trusted clip search per scene
+// subject, library first, the same caps and cache as the find-clips mode.
+exports.findClipsFor = findClips;
 
 // The clip pipeline, for the prefetch cron (clips-prefetch.js).
 exports.clipPipeline = {
