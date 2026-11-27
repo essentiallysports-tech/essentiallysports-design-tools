@@ -35,3 +35,5 @@ body.dashboard-page .dov-insight.is-skeleton .es-skeleton { display: block; widt
   body.dashboard-page .dov-insight .es-btn { grid-column: 2; justify-self: start; }
   body.dashboard-page .dov-insight-copy span { white-space: normal; }
 }
+/* Needs attention now sits at the bottom of the overview (owner, 2026-11-27). */
+body.dashboard-page .dov-insights { margin-top: var(--es-space-6); margin-bottom: 0; }
