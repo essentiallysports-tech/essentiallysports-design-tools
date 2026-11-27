@@ -183,6 +183,24 @@ const CHECKS = [
     },
   },
   {
+    // Design requests are paused, so their buttons are hidden, but How FrameUp
+    // works still said "hand a clear brief to the design team" and kept a
+    // "Need something custom? ... send the design team one clear brief" block
+    // with no way to do it (a dead end).
+    id: 'how-no-paused-requests',
+    async run() {
+      if (!await open('/how-frameup-works.html', { ready: "document.documentElement.classList.contains('fu-requests-off') && document.querySelector('.how-help')" })) return 'How FrameUp works never loaded';
+      const text = await c.evaluate("document.querySelector('main').innerText");
+      if (/design team/i.test(text)) return 'still tells people to brief the design team while requests are paused';
+      if (/Request a design/i.test(text)) return 'a "Request a design" button is visible';
+      const help = await c.evaluate("[...document.querySelectorAll('.how-help a')].filter(a => a.getClientRects().length).length");
+      if (help < 3) return 'the Help links went missing';
+      const toc = await c.evaluate("[...document.querySelectorAll('.how-toc a')].filter(a => a.getClientRects().length).map(a => a.innerText.trim())");
+      if (toc.includes('Custom designs')) return 'the page menu still offers "Custom designs"';
+      return '';
+    },
+  },
+  {
     // Keyboard users tabbed through ~20 sidebar links before the work on every
     // page. The first Tab stop is now "Skip to main content".
     id: 'skip-link',

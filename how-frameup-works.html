@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>How FrameUp works | FrameUp</title>
-  <meta name="description" content="A step-by-step guide to FrameUp: pick a workspace, add your content, export a brand-ready file, or send a brief to the design team.">
+  <meta name="description" content="A step-by-step guide to FrameUp: pick a workspace, add your content, and export a brand-ready file.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="frameup-errors.js?v=20261121-rel2"></script>
@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="design-tokens.css?v=20261121-rel2">
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
-  <link rel="stylesheet" href="how-frameup-works.css?v=20261121-rel2">
+  <link rel="stylesheet" href="how-frameup-works.css?v=20261127-ux1">
   <script src="theme.js?v=20261120-rel2"></script>
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
@@ -79,7 +79,7 @@
       <div class="how-hero__copy">
         <span class="how-kicker">Guide</span>
         <h1 id="how-title">How FrameUp works</h1>
-        <p class="how-lead">Make brand-ready sports graphics yourself in minutes, or hand a clear brief to the design team. Here is everything you need, start to finish.</p>
+        <p class="how-lead">Make brand-ready sports graphics yourself in minutes<span data-requests-only>, or hand a clear brief to the design team</span>. Here is everything you need, start to finish.</p>
         <div class="how-hero__actions">
           <a class="es-btn es-btn--primary" href="index.html#frames">Start designing</a>
           <a class="es-btn" href="design-request.html">Request a design</a>
@@ -102,7 +102,7 @@
       <a href="#editor">Inside the editor</a>
       <a href="#brand">Brand rules</a>
       <a href="#tips">Tips &amp; shortcuts</a>
-      <a href="#custom">Custom designs</a>
+      <a href="#custom"><span data-requests-only>Custom designs</span><span data-requests-off>Help</span></a>
     </nav>
 
     <!-- Steps -->
@@ -303,8 +303,8 @@
     </section>
 
     <!-- Custom -->
-    <section class="how-section how-custom" id="custom" aria-labelledby="custom-title">
-      <div class="how-custom__copy">
+    <section class="how-section how-custom" id="custom">
+      <div class="how-custom__copy" data-requests-only>
         <h2 id="custom-title">Need something custom?</h2>
         <p>For campaigns, special formats or anything the templates do not cover, send the design team one clear brief.</p>
         <ol class="how-flow">
@@ -314,6 +314,7 @@
         </ol>
         <a class="es-btn" href="design-request.html">Request a design</a>
       </div>
+      <h2 id="help-title" data-requests-off>Help and resources</h2>
       <nav class="how-help" aria-label="Help and resources">
         <a href="index.html#logo-guidelines"><span class="es-tile es-tile--amber" aria-hidden="true">G</span><span><strong>Brand guidelines</strong><small>Logo, social and video rules</small></span></a>
         <a href="index.html#faq"><span class="es-tile es-tile--pink" aria-hidden="true">?</span><span><strong>FAQ</strong><small>Answers to common questions</small></span></a>
