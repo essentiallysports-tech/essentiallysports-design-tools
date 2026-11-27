@@ -39,8 +39,8 @@ const LIMITS = {
   photoSubjects: 8, // photo searches per reel (subjects, cards, teams)
   budgetMs: 44000, // the whole scene-media call (reel-maker runs in 60 s)
   liveSearches: 2, // paid live clip searches per reel (the rest: library + free sources)
-  visionSubjects: 2, // photo vision checks per reel (Sonnet, ~$0.015 each at 6 photos; verdicts cached 7 days per photo)
-  visionPhotos: 6, // photos per vision check (Generate uses 12; a scene needs one good photo)
+  visionSubjects: 3, // photo vision checks per reel (Sonnet, ~$0.0025 a photo; 3 x 4 photos ~ $0.03, the same cap as before; verdicts cached 7 days per photo)
+  visionPhotos: 4, // photos per vision check (Generate uses 12; a scene needs one good photo)
   clipsPerScene: 12,
   photosPerSubject: 4,
   searchMs: 40000,
@@ -83,9 +83,37 @@ function trackedGateway(gateway, feature) {
 
 const CLIP_FIELDS = ['url', 'handle', 'text', 'variants', 'durationMs', 'source', 'sourceKind', 'platform', 'teams', 'players', 'postedAt', 'ageHours', 'shortSide', 'via', 'subjectHit', 'trust', 'quality', 'rung', 'confirmed'];
 const slimClip = c => Object.fromEntries(CLIP_FIELDS.filter(k => c[k] !== undefined).map(k => [k, c[k]]));
+// Only real photos of the named person / team go on a reel (bug 2026-11-27:
+// an ES stat-card graphic "45 PTS / 9 AST / 4 MVP" passed as a verified photo
+// of Aaron Rodgers on its title alone). A photo is kept when:
+//   - it is not a graphic: the vision check did not flag it, the file is not
+//     a PNG / GIF / SVG (ES graphics and templates), and its title, caption
+//     and file name carry no graphic / stat-card words;
+//   - and the vision check confirmed it, or (no vision for this subject) a
+//     photo-agency caption names the subject. A title or file name alone is
+//     never enough (graphics are titled with the player's name too).
+// -> { ok, reason }
+const GRAPHIC_WORDS = /\b(graphics?|infographic|stat ?cards?|stats? (?:card|graphic|line)|template|collage|screenshot|screen shot|poster|wallpaper|logo|thumbnail|illustration|vector|render(?:ing)?|mock-?up|edit|photoshop|quote card|tweet|meme|power rankings?|ranking graphic|split|side[- ]by[- ]side|vs\.? graphic)\b/i;
+const STAT_TEXT = /\b\d+(?:\.\d+)?\s*(?:pts|ast|reb|yds|tds?|ints?|mvps?|ppg|rpg|apg|era|hrs?|rbis?)\b/i;
+const GRAPHIC_FILE = /\.(?:png|gif|svg|webp)(?:$|[?#])/i;
+function reelPhotoOk(p = {}) {
+  if (!p || p.verified !== true) return { ok: false, reason: 'photo-unverified' };
+  if (p.graphic === true || p.kind === 'graphic') return { ok: false, reason: 'graphic' };
+  const file = String(p.sourceUrl || p.url || '');
+  let fileName = '';
+  try { fileName = decodeURIComponent(new URL(file, 'https://x.invalid').pathname.split('/').pop() || ''); } catch { fileName = file; }
+  if (GRAPHIC_FILE.test(fileName)) return { ok: false, reason: 'graphic' };
+  const text = `${p.title || ''} ${p.caption || ''} ${fileName.replace(/[-_]+/g, ' ')}`;
+  if (GRAPHIC_WORDS.test(text) || STAT_TEXT.test(text)) return { ok: false, reason: 'graphic' };
+  if (p.verifiedBy === 'vision') return { ok: true, reason: '' };
+  if (p.verifiedBy === 'caption' && String(p.caption || '').trim().length >= 40) return { ok: true, reason: '' };
+  return { ok: false, reason: 'photo-unverified' };
+}
 function photoOut(p) {
   return {
     url: p.url || p.src, sourceUrl: p.sourceUrl, verified: true, verifiedBy: p.verifiedBy || '',
+    // What the UI may say: 'vision' = "Checked: shows the right person"; 'caption' = "Matched by its caption".
+    checkedBy: p.verifiedBy === 'vision' ? 'vision' : 'caption',
     focus: p.focus || null, head: p.focal || p.head || null, kind: p.kind || '', shot: p.shot || p.detail || '',
     title: clean(p.title, 160), caption: clean(p.caption, 220), credit: clean(p.credit, 120), width: p.width || null, height: p.height || null,
     main: Boolean(p.main), rights: p.rights || null,
@@ -214,6 +242,7 @@ async function sceneMedia(body = {}, ctx = {}) {
   if (wantPhoto.length > LIMITS.photoSubjects) capped.photos = true;
   const names = photoSubjects.filter(w => isPerson(w.sub)).map(w => w.sub.name);
   const photosByKey = new Map();
+  const photoDrops = {};
   let visionUsed = 0;
   const photoWork = photoSubjects.map(async ({ sub }) => {
     const vision = aiAllowed && photoGateway && visionUsed < LIMITS.visionSubjects;
@@ -229,7 +258,13 @@ async function sceneMedia(body = {}, ctx = {}) {
     const res = await withTimeout(deps.findPhotos(args, photoCtx), Math.max(3000, Math.min(LIMITS.photoMs, deadlineAt - now())), null);
     if (!res || res.ok === false) return;
     costs.photos += Number(res.cost) || 0;
-    photosByKey.set(`${sub.type === 'team' ? 'team' : 'x'}|${sub.key}`, (res.photos || []).filter(p => p && p.verified === true && (p.url || p.src) && p.sourceUrl && !exclude.has(p.sourceUrl) && !exclude.has(p.url)).map(photoOut));
+    const kept = [];
+    (res.photos || []).forEach(p => {
+      if (!p || !(p.url || p.src) || !p.sourceUrl || exclude.has(p.sourceUrl) || exclude.has(p.url)) return;
+      const ok = reelPhotoOk(p);
+      if (ok.ok) kept.push(photoOut(p)); else photoDrops[ok.reason] = (photoDrops[ok.reason] || 0) + 1;
+    });
+    photosByKey.set(`${sub.type === 'team' ? 'team' : 'x'}|${sub.key}`, kept);
   });
   await Promise.all([...clipWork, ...photoWork]);
   const photosOf = sub => photosByKey.get(`x|${sub.key}`) || (sub.type === 'team' ? photosByKey.get(`team|${sub.key}`) : null) || [];
@@ -300,7 +335,7 @@ async function sceneMedia(body = {}, ctx = {}) {
     try { deps.log(`reels-sourcing ${JSON.stringify({ style, sport: plan.sport || '', beats: stats.beats, clip: stats.clip, photo: stats.photo, module: stats.module, none: stats.none, failures: stats.failures, rungs: stats.rungs, cost: money(cost), ms, liveSearches: live })}`); } catch { /* logging never breaks sourcing */ }
   }
   return {
-    ok: true, v: 4, esStyle: style, beats, judgeQueue, subjects,
+    ok: true, v: 4, esStyle: style, beats, judgeQueue, subjects, photoDrops,
     clipCount: summary.clipCount, needsClips: summary.needsClips, motionOk: summary.motionOk, actions: summary.actions, stats, ms,
     judge: { ready: judgeAvailable, maxClips: C.JUDGE.maxClips, perCall: C.JUDGE.perCall, maxUsdPerReel: C.JUDGE.maxUsdPerReel, threshold: { relevance: C.GATE.relevance, moment: C.GATE.moment } },
     cost: money(cost), costs: { clips: money(costs.clips), photos: money(costs.photos) }, capped,
@@ -625,4 +660,4 @@ async function review(body = {}, ctx = {}) {
   return { ok: true, ready, issues: issues.slice(0, 40), plan, cost: money(cost), model, esStyle: style };
 }
 
-module.exports = { sceneMedia, confirmJudged, clipsForSubject, clipProxy, proxyHostAllowed, PROXY, review, codeReview, reviewRequest, REVIEW_SYSTEM, PHOTO_FEATURE, REVIEW_FEATURE, LIMITS, v3BlockStrings, unsourcedIn, _test: { searchKey, trackedGateway, photoOut, wrapLines, stripNumber } };
+module.exports = { sceneMedia, reelPhotoOk, confirmJudged, clipsForSubject, clipProxy, proxyHostAllowed, PROXY, review, codeReview, reviewRequest, REVIEW_SYSTEM, PHOTO_FEATURE, REVIEW_FEATURE, LIMITS, v3BlockStrings, unsourcedIn, _test: { searchKey, trackedGateway, photoOut, wrapLines, stripNumber } };

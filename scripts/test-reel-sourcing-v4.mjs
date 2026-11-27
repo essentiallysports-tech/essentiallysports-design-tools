@@ -28,7 +28,7 @@ async function test(name, fn) {
 
 // ─── Fixtures ────────────────────────────────────────────────────────────
 const clip = (id, text, extra = {}) => ({ url: `https://x.com/${extra.handle || 'NFL'}/status/${id}`, handle: 'NFL', text, source: 'league', ageHours: 10, durationMs: 9000, shortSide: 720, teams: [], variants: [{ url: `https://video.twimg.com/${id}.mp4`, width: 720, height: 1280 }], ...extra });
-const photo = (name, extra = {}) => ({ url: `/api/es-image-search?image=${name}`, sourceUrl: `https://image-cdn.essentiallysports.com/${name}.jpg`, title: name, verified: true, focus: { x: 0.3, y: 0.1, w: 0.4, h: 0.6 }, focal: { x: 0.5, y: 0.22 }, ...extra });
+const photo = (name, extra = {}) => ({ url: `/api/es-image-search?image=${name}`, sourceUrl: `https://image-cdn.essentiallysports.com/${name}.jpg`, title: name, verified: true, verifiedBy: 'vision', focus: { x: 0.3, y: 0.1, w: 0.4, h: 0.6 }, focal: { x: 0.5, y: 0.22 }, ...extra });
 const J = (rels, extra = {}) => C.validateJudgement({ kind: 'game-action', quality: 8, action: [3, 9, 4], relevance: rels, ...extra }, 3);
 
 // The Ravens "perfect cover" reel (reference 6) as a v4 plan.
@@ -305,6 +305,33 @@ await test('scene-media: a deadline that has run out stops the ladder (reason de
   const res = await SRC.sceneMedia({ plan: RAVENS }, { deps: d, aiAllowed: true, budgetMs: 44000 });
   assert.equal(res.ok, true);
   assert.ok(res.beats[0].ladder.some(r => r.error === 'deadline'));
+});
+
+await test('photos: an ES stat-card graphic titled with the player never passes as his photo; title / file evidence alone is not enough', async () => {
+  // The bug fixture: an ES graphic ("45 PTS / 9 AST / 4 MVP", ES mark) in the
+  // image pool, "verified" by its title naming Aaron Rodgers.
+  const GRAPHIC = { url: '/api/es-image-search?image=g', sourceUrl: 'https://image-cdn.essentiallysports.com/wp-content/uploads/aaron-rodgers-45-pts-9-ast-4-mvp.jpeg', title: 'Aaron Rodgers 45 PTS 9 AST 4 MVP', verified: true, verifiedBy: 'title' };
+  const cases = [
+    [GRAPHIC, false, 'graphic'],
+    [{ ...GRAPHIC, title: 'Aaron Rodgers', sourceUrl: 'https://image-cdn.essentiallysports.com/rodgers-card.png' }, false, 'graphic'],
+    [{ ...GRAPHIC, title: 'Aaron Rodgers', sourceUrl: 'https://image-cdn.essentiallysports.com/rodgers.jpg', verifiedBy: 'vision', graphic: true }, false, 'graphic'],
+    [{ ...GRAPHIC, title: 'Aaron Rodgers stats graphic', sourceUrl: 'https://image-cdn.essentiallysports.com/r.jpg', verifiedBy: 'vision' }, false, 'graphic'],
+    [{ ...GRAPHIC, title: 'Aaron Rodgers', sourceUrl: 'https://image-cdn.essentiallysports.com/rodgers.jpg', verifiedBy: 'title' }, false, 'photo-unverified'],
+    [{ ...GRAPHIC, title: 'Aaron Rodgers', sourceUrl: 'https://image-cdn.essentiallysports.com/rodgers.jpg', verifiedBy: 'file' }, false, 'photo-unverified'],
+    [{ ...GRAPHIC, title: 'Aaron Rodgers', sourceUrl: 'https://image-cdn.essentiallysports.com/rodgers.jpg', verifiedBy: 'vision' }, true, ''],
+    [{ ...GRAPHIC, title: 'Steelers at Ravens', caption: 'Pittsburgh Steelers quarterback Aaron Rodgers (8) throws a pass during the first half at M&T Bank Stadium.', sourceUrl: 'https://image-cdn.essentiallysports.com/imagn-123.jpg', verifiedBy: 'caption' }, true, ''],
+  ];
+  cases.forEach(([p, ok, reason], i) => { const r = SRC.reelPhotoOk(p); assert.equal(r.ok, ok, `case ${i}`); assert.equal(r.reason, reason, `case ${i}`); });
+  // End to end: the graphic never reaches the scene; the drop is counted.
+  const plan = { v: 4, esStyle: 'breakdown', sport: 'nfl', team: { name: 'Pittsburgh Steelers' }, chapters: [{ id: 'c1', beats: [{ id: 'b1', vo: 'Rodgers', media: { kind: 'photo', subject: { type: 'player', name: 'Aaron Rodgers', team: 'Pittsburgh Steelers' } } }] }] };
+  const res = await SRC.sceneMedia({ plan }, { deps: deps({ photosBy: { 'Aaron Rodgers': [GRAPHIC] } }), aiAllowed: false });
+  assert.equal(res.beats[0].photos.length, 0);
+  assert.notEqual(res.beats[0].pick.kind, 'photo');
+  assert.equal(res.photoDrops.graphic, 1);
+  const good = await SRC.sceneMedia({ plan }, { deps: deps({ photosBy: { 'Aaron Rodgers': [GRAPHIC, photo('rodgers')] } }), aiAllowed: false });
+  assert.equal(good.beats[0].pick.ref, photo('rodgers').url);
+  assert.equal(good.beats[0].photos.length, 1);
+  assert.equal(good.beats[0].photos[0].checkedBy, 'vision');
 });
 
 // ─── confirmed-clip library ─────────────────────────────────────────────

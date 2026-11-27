@@ -224,7 +224,7 @@ await test('scene-media: one search per team (shared by its scenes), photos only
   assert.equal(res.needsClips, true);
   assert.equal(res.actions[0].action, 'find-clips');
   assert.ok(calls.verifyGateways.length && calls.verifyGateways.every(f => f === 'reels-photo-verify'), 'photo vision logged as a Reels feature');
-  assert.equal(calls.maxPhotos, 6, 'at most 6 photos per vision check');
+  assert.equal(calls.maxPhotos, 4, 'at most 4 photos per vision check (v4: 3 subjects x 4, the same $0.03)');
   assert.equal(res.judge.threshold.relevance, 7);
 });
 
@@ -244,13 +244,13 @@ await test('scene-media: judgements in -> the confirmed clip is picked; an irrel
   assert.equal(res.beats[1].clips[0].gate, '');
 });
 
-await test('scene-media: live clip search for at most 2 subjects, vision for at most 2 (6 photos each); AI off -> library + text evidence, no queue', async () => {
+await test('scene-media: live clip search for at most 2 subjects, vision for at most 3 (4 photos each); AI off -> library + text evidence, no queue', async () => {
   const plan = { ...PLAN, beats: ['Aaron Rodgers|Green Bay Packers', 'George Kittle|San Francisco 49ers', 'Josh Allen|Buffalo Bills', 'Patrick Mahomes|Kansas City Chiefs', 'Lamar Jackson|Baltimore Ravens'].map((x, i) => ({ id: `b${i + 1}`, kind: i ? 'point' : 'hook', text: x, block: { type: i ? 'statement' : 'hook' }, subject: { type: 'player', name: x.split('|')[0], team: x.split('|')[1] } })) };
   const calls = {};
   const res = await SRC.sceneMedia({ plan }, { deps: mockDeps({ calls }), aiAllowed: true });
   assert.equal(calls.find.filter(c => !c.freeOnly).length, 2, 'at most 2 paid live searches a reel, whatever the ladder');
   assert.ok(calls.find.filter(c => c.freeOnly).length >= 3, 'the other rungs: library + free sources');
-  assert.equal(calls.photos.filter(c => c.vision).length, 2);
+  assert.equal(calls.photos.filter(c => c.vision).length, 3);
   assert.equal(res.capped.clips, true);
   assert.equal(res.capped.photos, true);
   const off = {};
