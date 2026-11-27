@@ -2352,3 +2352,8 @@ exports._test = { creative, onBrand, searchPhotos, classicPhotos, verifiedPhotos
 // (netlify/functions/_reel-ideas.js). Additive: the same functions Generate
 // uses, exported as they are; nothing above changes.
 exports.esData = { esCoverage, queryEsArticles, research, discover, keyTerms, nameCandidates, isEsUrl };
+
+// ── Design from a brief (brief-design.js) ── Generate's template limits and
+// checks, ES coverage and the photo check, for the editor's brief box.
+// Additive: the same functions as above, exported as they are.
+exports.briefKit = { TEMPLATES, checkFields, extractJson, draftPlan, chunkWords, nameCandidates, keyTerms, esCoverage, sportFromUrl, isEsUrl, clean, proxied, canProxy };

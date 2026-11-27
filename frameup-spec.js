@@ -365,7 +365,18 @@
   // confirmed brief -> design example (Generate learns from what gets used).
   let lastApplied = null;
   const GENERATED_WINDOW_MS = 3 * 60 * 60 * 1000;
+  // Design from a brief (frameup-brief.js) answers for the designs it opened:
+  // provider() -> { value } (value may be null) while that design is on
+  // screen, else null (and the Generate answer below is used).
+  let originProvider = null;
+  function setOrigin(provider) { originProvider = typeof provider === 'function' ? provider : null; }
   function generatedFor() {
+    if (originProvider) {
+      try {
+        const own = originProvider();
+        if (own && typeof own === 'object' && 'value' in own) return own.value || null;
+      } catch (error) { /* fall back to Generate's answer */ }
+    }
     if (!lastApplied?.brief || state.postType !== lastApplied.postType) return null;
     if (Date.now() - lastApplied.at > GENERATED_WINDOW_MS) return null;
     // The director's direction travels with the export, so Generate's corpus
@@ -525,6 +536,9 @@
   // The brand kit's leagues and teams, for Generate's per-card team picker.
   const brandOptions = () => getSports().map(sport => ({ sport, teams: getTeams(sport) }));
 
-  window.FrameUpSpec = Object.freeze({ PENDING_KEY, PENDING_SET_KEY, SUPPORTED, ready: whenReady, apply, renderToDataUrl, renderWithInfo, exportSpec, exportSet, generatedFor, brandOptions });
+  // Design from a brief: the same brand step on its own (templates the spec
+  // does not cover set their own text) and the origin hook (generatedFor).
+  const brand = spec => applyBrand({ lines: [], ...spec });
+  window.FrameUpSpec = Object.freeze({ PENDING_KEY, PENDING_SET_KEY, SUPPORTED, ready: whenReady, apply, renderToDataUrl, renderWithInfo, exportSpec, exportSet, generatedFor, brandOptions, brand, setOrigin });
   openPending();
 })();
