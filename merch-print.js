@@ -274,7 +274,11 @@
   // concept.fit = { scale: 0.6-1.6 (1 = the default compact size), topIn:
   // inches from the top of the print area (apparel; null = default mid-chest),
   // xIn: the design centre's offset from the print area's centre line, inches
-  // (+ = viewer's right; 0 default; layout() clamps it so the design stays inside) }.
+  // (+ = viewer's right; 0 default; layout() clamps it so the design stays inside),
+  // yIn: hard goods only (tote, poster, sticker; not the mug, not apparel, which use
+  // topIn): the design's vertical shift from where layout() centres it, inches
+  // (+ = down; 0 default; clamped inside the safe edge). Its own field so a topIn
+  // saved on a tee never moves the design on a tote (tote-drag 2026-11-28) }.
   const FIT = { scaleMin: 0.6, scaleMax: 1.6, topMinIn: 0.5, topMaxIn: 10, xMaxIn: 10 };
   // Default apparel placement (owner, 2026-11-28: "keep the full design in the middle
   // part"): the design's centre ~37% down the print area, its top at least 2.5 in
@@ -287,7 +291,8 @@
     const scale = Number(f.scale) > 0 ? clampN(Number(f.scale), FIT.scaleMin, FIT.scaleMax) : 1;
     const topIn = f.topIn === null || f.topIn === undefined || f.topIn === '' || !Number.isFinite(Number(f.topIn)) ? null : clampN(Number(f.topIn), FIT.topMinIn, FIT.topMaxIn);
     const xIn = Number.isFinite(Number(f.xIn)) && f.xIn !== null && f.xIn !== '' ? clampN(Number(f.xIn), -FIT.xMaxIn, FIT.xMaxIn) : 0;
-    return { scale, topIn, xIn };
+    const yIn = Number.isFinite(Number(f.yIn)) && f.yIn !== null && f.yIn !== '' ? clampN(Number(f.yIn), -FIT.xMaxIn, FIT.xMaxIn) : 0;
+    return { scale, topIn, xIn, yIn };
   }
   // ─── Pro elements (beside the pills; solid ink, print-safe) ─────────────
   // Basic designs are pills only. Pro may add up to 3 of these:
@@ -549,6 +554,14 @@
       design.w = Math.max(design.x + design.w, logo.x + logo.w) - x0;
       design.x = x0;
       design.h = logo.y + logo.h - design.y;
+    }
+    // Vertical shift on hard goods (fit.yIn; apparel uses topIn, the mug keeps its
+    // face): kept inside the safe edge (the tote's whole 10 x 10 in area).
+    if (fit.yIn && all.length && !blank.apparel && kind !== 'mug') {
+      const safe = Math.round((SAFE_IN[kind] || 0) * a.dpi);
+      const lo = safe - design.y;
+      const hi = H - safe - design.y - design.h;
+      move(0, lo <= hi ? clampN(Math.round(fit.yIn * a.dpi), lo, hi) : 0);
     }
     // Horizontal offset (fit.xIn): the design centre moves off the centre line, kept
     // inside the print area (apparel) or the safe edge / mug face (hard goods).

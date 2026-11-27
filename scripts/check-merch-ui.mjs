@@ -754,6 +754,130 @@ async function zoomChecks(tag) {
   await until("!document.getElementById('mx-zoom').open", `${tag} close button`);
 }
 
+// ── tote-drag: move / resize on the tote's perspective photo (merch-canvas.js).
+// The overlay is the design box's 4 projected corners (an SVG polygon) and must
+// sit where photoMock draws the ink (within 3 canvas px at the corners), a drag
+// inside the quad moves it (fit.xIn / fit.yIn), a corner handle resizes it
+// (fit.scale, opposite corner held), a press outside the quad does nothing, and
+// hard goods never grow past 100%.
+const TOTE_OVERLAY = `(() => {
+  const cv = document.getElementById('mx-stage-canvas'); const ctl = MerchUI.canvas;
+  const poly = document.querySelector('.mx-cv__quad polygon'); const svg = document.querySelector('.mx-cv__quad');
+  if (!ctl || !ctl.quad() || !poly || svg.hasAttribute('hidden')) return null;
+  const r = cv.getBoundingClientRect(); const cs = getComputedStyle(cv);
+  let sx = r.width / cv.width, sy = r.height / cv.height;
+  if (cs.objectFit === 'contain' || cs.objectFit === 'scale-down') sx = sy = Math.min(sx, sy);
+  const ox = r.left + (r.width - cv.width * sx) / 2, oy = r.top + (r.height - cv.height * sy) / 2;
+  const sr = svg.getBoundingClientRect();
+  const client = poly.getAttribute('points').trim().split(' ').filter(Boolean).map(p => p.split(',').map(Number)).map(([x, y]) => ({ x: sr.left + x, y: sr.top + y }));
+  const dom = client.map(p => ({ x: (p.x - ox) / sx, y: (p.y - oy) / sy }));
+  const he = document.querySelector('.mx-cv__h[data-corner=se]').getBoundingClientRect();
+  return { quad: ctl.quad(), dom, client, se: { x: he.left + he.width / 2, y: he.top + he.height / 2 }, ox, oy, sx, sy, fit: JSON.parse(JSON.stringify(MerchUI.state.concepts.find(c => c.id === MerchUI.state.selected).fit || {})), st: ctl.state() };
+})()`;
+// Where photoMock puts the ink: the same concept in one dark colour on a plain
+// photo (strap cut-out off), every ink pixel mapped back to inches, the extremes
+// projected to the canvas, compared with the overlay corners.
+const TOTE_INK = `(async () => {
+  const P = window.MerchPrint, ctl = MerchUI.canvas, st = ctl.state(), cv = document.getElementById('mx-stage-canvas');
+  const c = JSON.parse(JSON.stringify(MerchUI.state.concepts.find(x => x.id === MerchUI.state.selected)));
+  c.palette = { a: '#111111', b: '#111111', ink: '#111111' };
+  c.stack = (c.stack || []).map(r => ({ ...r, fill: 'a', ink: 'ink' }));
+  const W = cv.width, H = cv.height;
+  const ph = document.createElement('canvas'); ph.width = W; ph.height = H; const pg = ph.getContext('2d'); pg.fillStyle = '#f4f4f4'; pg.fillRect(0, 0, W, H);
+  const cal = P.PHOTO_QUADS.pro_367[st.view.photoIndex || 0]; const cover = cal.cover; cal.cover = [];
+  const off = document.createElement('canvas'); off.width = W;
+  try { await P.photoMock(c, off, { photo: ph.toDataURL('image/png'), kind: 'tote', templateId: 'pro_367', photoIndex: st.view.photoIndex || 0, spec: st.view.spec, garmentColor: '#FFFFFF', realism: false, logoSpot: 'inline' }); } finally { cal.cover = cover; }
+  const g = P.photoGeometry('pro_367', st.view.photoIndex || 0, off.width, off.height, { inW: 10, inH: 10 });
+  const d = off.getContext('2d').getImageData(0, 0, off.width, off.height).data;
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
+  for (let y = 0; y < off.height; y++) for (let x = 0; x < off.width; x++) { const i = (y * off.width + x) * 4; if (d[i] > 90 || d[i + 3] < 200) continue; n++; const [a, b] = g.toInches(x + 0.5, y + 0.5); if (a < x0) x0 = a; if (a > x1) x1 = a; if (b < y0) y0 = b; if (b > y1) y1 = b; }
+  const ink = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(([a, b]) => g.toCanvas(a, b));
+  const q = ctl.quad();
+  const err = Math.max(...q.map((p, k) => Math.hypot(p.x - ink[k][0], p.y - ink[k][1])));
+  return { n, err, same: off.width === W && off.height === H, inkIn: [x0, y0, x1, y1].map(v => Math.round(v * 100) / 100), box: st.box };
+})()`;
+const mouseAt = (type, x, y, down = false) => send('Input.dispatchMouseEvent', { type, x, y, button: type === 'mouseMoved' ? 'none' : 'left', buttons: type === 'mouseReleased' ? 0 : (down || type === 'mousePressed' ? 1 : 0), clickCount: type === 'mouseMoved' ? 0 : 1, pointerType: 'mouse' });
+async function mouseDrag(from, dx, dy, { steps = 8, mid = null } = {}) {
+  await mouseAt('mouseMoved', from.x, from.y);
+  await mouseAt('mousePressed', from.x, from.y);
+  let seen = null;
+  for (let i = 1; i <= steps; i++) {
+    await mouseAt('mouseMoved', from.x + (dx * i) / steps, from.y + (dy * i) / steps, true);
+    await sleep(25);
+    if (mid && i === Math.ceil(steps / 2)) seen = await ev(mid);
+  }
+  await sleep(40);
+  await mouseAt('mouseReleased', from.x + dx, from.y + dy);
+  await sleep(150);
+  return seen;
+}
+async function toteCanvas(tag) {
+  await ev("MerchUI.go('designs'); true");
+  await until(`${step('designs')} && MerchUI.state.templateId === 'pro_367' && MerchUI.state.view === 'tee' && MerchUI.state.stagePic === 'photo'`, `${tag} tote photo on the stage`, 15000);
+  await until(`(${TOTE_OVERLAY}) !== null`, `${tag} tote overlay`, 8000);
+  await sleep(200);
+  let o = await ev(TOTE_OVERLAY);
+  ok(o && o.st.map === 'proj' && o.st.canMove && o.st.yMode && o.st.hasX && o.st.limits.scaleMax === 1, `${tag}: tote: projective overlay, moves both ways, scale capped at 100% (${JSON.stringify(o && { map: o.st.map, canMove: o.st.canMove, yMode: o.st.yMode, max: o.st.limits.scaleMax })})`);
+  const domErr = o => Math.max(...o.quad.map((p, k) => Math.hypot(p.x - o.dom[k].x, p.y - o.dom[k].y)));
+  ok(o && domErr(o) <= 1, `${tag}: tote: the SVG quad sits on the projected corners (${o && domErr(o).toFixed(2)} canvas px)`);
+  ok(o && Math.abs(o.quad[0].y - o.quad[1].y) > 1 && (o.quad[3].y - o.quad[0].y) > (o.quad[2].y - o.quad[1].y), `${tag}: tote: the overlay is a perspective quad (near edge taller), not a rectangle`);
+  const notes = [];
+  let ink = await ev(TOTE_INK);
+  notes.push(`ink ${ink.err.toFixed(2)}px`);
+  ok(ink.same && ink.n > 500 && ink.err <= 3, `${tag}: tote: overlay corners match where photoMock draws the design (worst ${ink.err.toFixed(2)} canvas px, ${ink.n} ink px)`);
+  // Move: drag inside the quad 30 px right, 40 px down.
+  const f0 = o.fit, q0 = o.quad;
+  const c0 = { x: o.client.reduce((a, p) => a + p.x, 0) / 4, y: o.client.reduce((a, p) => a + p.y, 0) / 4 };
+  const mid = await mouseDrag(c0, 30, 40, { mid: "({ dragging: document.querySelector('.mx-cv').classList.contains('is-dragging'), shown: !document.querySelector('.mx-cv').hidden, stroke: getComputedStyle(document.querySelector('.mx-cv__quad polygon')).strokeOpacity })" });
+  ok(mid && mid.dragging && mid.shown && mid.stroke === '1', `${tag}: tote: the quad outline shows while dragging (${JSON.stringify(mid)})`);
+  await until(`(() => { const o = ${TOTE_OVERLAY}; return o && Math.abs(o.quad[0].y - ${q0[0].y}) > 2; })()`, `${tag} tote overlay moved`);
+  await sleep(300);
+  o = await ev(TOTE_OVERLAY);
+  ok(o.fit.yIn > 0.3 && o.fit.xIn > 0.2 && o.quad[0].y > q0[0].y + 2 && o.quad[0].x > q0[0].x + 2, `${tag}: tote: dragging moves the design right and down (fit ${JSON.stringify(f0)} -> ${JSON.stringify(o.fit)})`);
+  ink = await ev(TOTE_INK);
+  notes.push(`moved ${JSON.stringify(o.fit)} ink ${ink.err.toFixed(2)}px`);
+  ok(ink.err <= 3, `${tag}: tote: after the move the overlay still matches the drawn ink (${ink.err.toFixed(2)} px)`);
+  ok(ink.box.x >= -0.01 && ink.box.y >= -0.01 && ink.box.x + ink.box.w <= 10.01 && ink.box.y + ink.box.h <= 10.01, `${tag}: tote: the moved design stays inside the 10 x 10 in area (${JSON.stringify(ink.box)})`);
+  ok(await ev(`(() => { const c = MerchUI.state.concepts.find(x => x.id === MerchUI.state.selected); return MerchPrint.checks(c, { pixelsWidth: 1500, pixelsHeight: 1500, dpi: 150, kind: 'tote', regionId: 'front', logo: 'inside' }).every(k => k.level !== 'error'); })()`), `${tag}: tote: the moved design passes the print checks`);
+  // Resize from the se handle toward the centre: smaller, the nw corner holds.
+  const f1 = o.fit, q1 = o.quad;
+  await mouseDrag(o.se, -24, -24);
+  await until(`(() => { const o = ${TOTE_OVERLAY}; return o && o.fit.scale < ${f1.scale}; })()`, `${tag} tote resized`);
+  await sleep(300);
+  o = await ev(TOTE_OVERLAY);
+  const held = Math.hypot(o.quad[0].x - q1[0].x, o.quad[0].y - q1[0].y);
+  ok(o.fit.scale < f1.scale && held <= 3, `${tag}: tote: corner resize changes fit.scale (${f1.scale} -> ${o.fit.scale}) and holds the opposite corner (${held.toFixed(2)} canvas px)`);
+  ink = await ev(TOTE_INK);
+  notes.push(`resized scale ${o.fit.scale} corner held ${held.toFixed(2)}px ink ${ink.err.toFixed(2)}px`);
+  ok(ink.err <= 3, `${tag}: tote: after the resize the overlay matches the drawn ink (${ink.err.toFixed(2)} px)`);
+  // A press inside the box round the quad but outside the quad does not grab.
+  const f2 = o.fit;
+  // (the sloping top edge: 30% along it, 2 px above it; well clear of the handles)
+  const [qa, qb] = o.quad;
+  const corner = { x: qa.x + 0.3 * (qb.x - qa.x), y: qa.y + 0.3 * (qb.y - qa.y) - 2 };
+  const ys = o.quad.map(p => p.y);
+  const outside = corner.y > Math.min(...ys) && await ev(`!MerchCanvas.pointInQuad(${JSON.stringify(corner)}, MerchUI.canvas.quad())`);
+  await mouseDrag({ x: o.ox + corner.x * o.sx, y: o.oy + corner.y * o.sy }, 20, 20);
+  await sleep(200);
+  ok(outside && JSON.stringify((await ev(TOTE_OVERLAY)).fit) === JSON.stringify(f2), `${tag}: tote: a press outside the quad leaves the design alone`);
+  if (await ev("document.getElementById('mx-zoom').open")) { await ev("document.getElementById('mx-zoom-close').click(); true"); await until("!document.getElementById('mx-zoom').open", `${tag} zoom closed`); }
+  // Keys: ArrowUp moves up 0.1 in; 0 resets; + never goes past 100%.
+  await ev("document.querySelector('.mx-cv__box').focus(); true");
+  await key('ArrowUp');
+  await sleep(150);
+  ok(Math.abs((await ev(TOTE_OVERLAY)).fit.yIn - (f2.yIn - 0.1)) < 0.02, `${tag}: tote: ArrowUp moves the design 0.1 in up`);
+  await ev("document.querySelector('.mx-cv__box').focus(); true");
+  await key('0');
+  await sleep(150);
+  await ev("document.querySelector('.mx-cv__box').focus(); true");
+  await key('+');
+  await sleep(150);
+  const fr = (await ev(TOTE_OVERLAY)).fit;
+  ok(fr.scale === 1 && fr.yIn === 0 && fr.xIn === 0, `${tag}: tote: 0 resets, + stops at 100% (${JSON.stringify(fr)})`);
+  console.log(`${tag} tote canvas: ${notes.join('; ')}`);
+  await audit(`${tag}-tote-canvas`);
+}
+
 async function merch7(width, theme) {
   const tag = `${width}-${theme}-m7`;
   scenario = 'ok';
@@ -843,6 +967,7 @@ async function merch7(width, theme) {
   await until("MerchUI.state.templateId === 'pro_367'", `${tag} tote`);
   ok(await ev("MerchUI.state.colors[0] === 'Oyster' && document.querySelectorAll('#mx-pcolors [data-pub-color]').length === 2 && document.getElementById('mx-logo').value === 'inline'"), `${tag}: tote: Oyster by default, Black on offer, logo inside`);
   await audit(`${tag}-blanks`);
+  if (width === 1440 && theme === 'light') { await toteCanvas(tag); await click('#mx-to-setup'); await until(step('publish'), `${tag} back to publish`); }
   // ── Your merch: an ad from a row.
   await click('#mx-tab-list');
   await until("document.querySelector('#mx-list [data-row=ad]')", `${tag} list ad button`);

@@ -135,4 +135,98 @@ ok('px per inch: close-up is linear; on a photo the centre is widest (it wraps r
   assert.ok(C.pxPerInch(map, 0.5) < mid && C.pxPerInch(map, 14.5) < mid);
 });
 
+// ─── tote-drag: the tote's flat panel in perspective (projective map) ───
+const TOTE_ID = P.TEMPLATE_KIND.tote;
+const TOTE = { regionId: 'front', pixelsWidth: 1500, pixelsHeight: 1500, dpi: 150, kind: 'tote', logo: 'inline' };
+const toteConcept = { ...concept, blanks: ['tote'], fit: { scale: 0.8 } };
+const toteView = { view: 'tee', kind: 'tote', templateId: TOTE_ID, photoIndex: 0, spec: TOTE, calibrated: true };
+const toteSpec = { ...P.DEFAULT_AREAS.tote, ...TOTE, kind: 'tote' };
+
+ok('tote: the photo map is projective and round-trips inches <-> canvas at any size', () => {
+  for (const [W, H] of [[720, 960], [1600, 2133], [360, 480]]) {
+    const map = C._mapFor(toteView, toteConcept, { width: W, height: H });
+    assert.equal(map.kind, 'proj'); assert.equal(map.inW, 10); assert.equal(map.inH, 10);
+    for (let x = 0; x <= 10; x += 2.5) for (let y = 0; y <= 10; y += 2.5) {
+      const c = C.inchesToCanvas({ x, y }, map);
+      const q = C.canvasToInches(c, map);
+      near(q.x, x, 1e-6, `x @${W}`); near(q.y, y, 1e-6, `y @${W}`);
+      const [gx, gy] = P.photoGeometry(TOTE_ID, 0, W, H).toCanvas(x, y);
+      near(c.x, gx, 1e-9, 'same as photoGeometry'); near(c.y, gy, 1e-9);
+    }
+  }
+  // no map on an uncalibrated tote photo
+  assert.equal(C._mapFor({ ...toteView, calibrated: false }, toteConcept, { width: 720, height: 960 }), null);
+});
+
+ok('tote: quadToCanvas = the 4 projected corners; rectToCanvas = the box round them; near edge taller', () => {
+  const map = C._mapFor(toteView, toteConcept, { width: 720, height: 960 });
+  const b = { x: 1, y: 2, w: 8, h: 6 };
+  const q = C.quadToCanvas(b, map);
+  const r = C.rectToCanvas(b, map);
+  near(r.x, Math.min(...q.map(p => p.x)), 1e-9); near(r.y + r.h, Math.max(...q.map(p => p.y)), 1e-9);
+  assert.ok(q[3].y - q[0].y > q[2].y - q[1].y, 'left (near) edge taller than the right (far) edge');
+  assert.ok(Math.abs(q[0].y - q[1].y) > 1, 'the top edge slopes (perspective, not a rectangle)');
+});
+
+ok('pointInQuad: inside the projected design box only (either winding)', () => {
+  const map = C._mapFor(toteView, toteConcept, { width: 720, height: 960 });
+  const b = { x: 1, y: 2, w: 8, h: 6 };
+  const q = C.quadToCanvas(b, map);
+  const at = (x, y) => C.inchesToCanvas({ x, y }, map);
+  assert.ok(C.pointInQuad(at(5, 5), q)); assert.ok(C.pointInQuad(at(1.05, 2.05), q)); assert.ok(C.pointInQuad(at(8.95, 7.95), q));
+  assert.ok(!C.pointInQuad(at(0.9, 5), q)); assert.ok(!C.pointInQuad(at(5, 8.1), q)); assert.ok(!C.pointInQuad(at(9.2, 1.9), q));
+  assert.ok(C.pointInQuad(at(5, 5), [...q].reverse()), 'counter-clockwise too');
+  // the bounding box corner is outside the quad (the slope): a press there does not grab
+  const r = C.rectToCanvas(b, map);
+  assert.ok(!C.pointInQuad({ x: r.x + 1, y: r.y + 1 }, q), 'box top-left corner'); assert.ok(!C.pointInQuad({ x: r.x + r.w - 1, y: r.y + r.h - 1 }, q), 'box bottom-right corner');
+});
+
+ok('tote: corner resize in inches space keeps the opposite corner (inches and canvas)', () => {
+  const map = C._mapFor(toteView, toteConcept, { width: 720, height: 960 });
+  const m = C._measure(toteConcept, toteSpec);
+  const start = m.box;
+  for (const corner of ['nw', 'ne', 'sw', 'se']) {
+    const opp = { x: corner.includes('e') ? start.x : start.x + start.w, y: corner.includes('s') ? start.y : start.y + start.h };
+    const dragged = { x: corner.includes('e') ? start.x + start.w : start.x, y: corner.includes('s') ? start.y + start.h : start.y };
+    // the pointer moves 0.4 in toward the opposite corner, given in canvas px and read back through toInches
+    const toward = { x: dragged.x + (opp.x - dragged.x) * 0.1, y: dragged.y + (opp.y - dragged.y) * 0.1 };
+    const pointer = C.canvasToInches(C.inchesToCanvas(toward, map), map);
+    const r = C.resizeFromCorner({ start, corner, pointer, startScale: 0.8, limits: { ...C.LIMITS, scaleMax: 1 } });
+    near(r.ratio, 0.9, 1e-6, corner);
+    const keep = { x: corner.includes('e') ? r.box.x : r.box.x + r.box.w, y: corner.includes('s') ? r.box.y : r.box.y + r.box.h };
+    near(keep.x, opp.x, 1e-9); near(keep.y, opp.y, 1e-9);
+    const a = C.inchesToCanvas(opp, map), b2 = C.inchesToCanvas(keep, map);
+    near(a.x, b2.x, 1e-6, 'canvas x'); near(a.y, b2.y, 1e-6, 'canvas y');
+    // through the engine, as the controller does: measure at the new scale, place at
+    // the anchor, shift (xIn, yIn) from where the engine centres it, clamp, lay out
+    const m0 = C._measure(toteConcept, toteSpec, { scale: r.scale, topIn: null, xIn: 0, yIn: 0 });
+    const placed = C.placeAtAnchor(m0.box, { anchor: r.anchor, corner });
+    const f = C.clampFit({ scale: r.scale, topIn: null, xIn: placed.x - m0.box.x, yIn: placed.y - m0.box.y }, { design: m0.box, area: m0.area, limits: { ...C.LIMITS, scaleMax: 1 }, allowY: true, baseX: m0.box.x, baseY: m0.box.y });
+    const after = C._measure(toteConcept, toteSpec, f).box;
+    const keep3 = { x: corner.includes('e') ? after.x : after.x + after.w, y: corner.includes('s') ? after.y : after.y + after.h };
+    near(keep3.x, opp.x, 0.02, `${corner} engine anchor x`); near(keep3.y, opp.y, 0.02, `${corner} engine anchor y`);
+    assert.ok(after.w < start.w, 'smaller');
+  }
+});
+
+ok('tote: clampFit keeps a moved design inside the 10 x 10 in area (safe edge 0); the engine agrees', () => {
+  const m0 = C._measure(toteConcept, toteSpec, { scale: 0.8, topIn: null, xIn: 0, yIn: 0 });
+  const opts = { design: m0.box, area: m0.area, allowY: true, baseX: m0.box.x, baseY: m0.box.y, safeIn: 0 };
+  for (const [xIn, yIn] of [[20, 20], [-20, -20], [20, -20], [-20, 20], [0.5, -0.25]]) {
+    const f = C.clampFit({ scale: 0.8, topIn: null, xIn, yIn }, opts);
+    const b = C._measure(toteConcept, toteSpec, f).box;
+    assert.ok(b.x >= -1e-6 && b.y >= -1e-6 && b.x + b.w <= 10 + 1e-6 && b.y + b.h <= 10 + 1e-6, `inside: ${JSON.stringify(b)}`);
+    if (Math.abs(xIn) > 5) near(Math.min(b.x, 10 - b.x - b.w), 0, 0.01, 'at the side edge');
+    if (Math.abs(yIn) > 5) near(Math.min(b.y, 10 - b.y - b.h), 0, 0.01, 'at the top / bottom edge');
+    if (xIn === 0.5) { near(b.x - m0.box.x, 0.5, 0.01); near(b.y - m0.box.y, -0.25, 0.01); }
+    const sc = P.layout({ ...toteConcept, fit: f }, toteSpec);
+    assert.equal(P.checksFor(sc).filter(c => c.level === 'error').length, 0, 'print checks pass');
+  }
+  // safeIn (a poster's trim) is kept
+  const f = C.clampFit({ scale: 1, topIn: null, xIn: 0, yIn: 9 }, { design: { w: 4, h: 4 }, area: { inW: 10, inH: 14 }, allowY: true, baseX: 3, baseY: 5, safeIn: 0.25 });
+  near(f.yIn, 14 - 0.25 - 4 - 5, 1e-9);
+  // without allowY there is no yIn; without baseX the old symmetric room
+  assert.equal('yIn' in C.clampFit({ scale: 1, topIn: null, xIn: 0 }, { design: { w: 4, h: 4 }, area: { inW: 10, inH: 10 } }), false);
+});
+
 console.log(`\n${n} merch-canvas checks passed`);

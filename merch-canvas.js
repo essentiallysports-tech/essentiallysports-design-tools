@@ -14,7 +14,9 @@
 //   ctl.detach();
 //
 // fit = { scale 0.6-1.6, topIn (inches from the print area's top; null = default),
-//         xIn (design centre's offset from the area's centre line, inches; + = right) }.
+//         xIn (design centre's offset from the area's centre line, inches; + = right),
+//         yIn (hard goods only: the design's shift down from where the engine
+//         centres it, inches; the tote's up/down moves) }.
 //
 // The outline and handles are DOM drawn over the canvas, never canvas pixels, so
 // the mockup and downloads stay clean. They show only where the design's real
@@ -22,6 +24,13 @@
 // body exactly as MerchPrint.photoMock draws it) or the close-up (the design
 // fitted to the canvas, so move/resize map 1:1 to the design box). Uncalibrated
 // photos and the flat drawn preview show nothing.
+//
+// The tote (tote-drag 2026-11-28): its photo is a flat panel in perspective, so
+// MerchPrint.photoGeometry is projective (toCanvas / toInches). The overlay is
+// then the design box's 4 projected corners (an SVG polygon, hit-tested as the
+// quad) with a handle on each; every move / resize is worked out in inches and
+// projected back. Hard goods can't grow past 100% (the engine only shrinks them)
+// and move up/down with fit.yIn inside their safe edge.
 //
 // Engine: uses MerchPrint.designBox / photoGeometry when present, else works it
 // out from MerchPrint.layout + photoCal (the same maths photoMock uses). Sideways
@@ -53,6 +62,9 @@
   //   { kind: 'photo', W, H, inW, cal } a calibrated photo: x wraps round the
   //     body (cylinder: cal.body.cx, r, yaw; cal.ppi, cal.top are fractions of
   //     the photo), y is straight, exactly as MerchPrint.photoMock draws it.
+  //   { kind: 'proj', toC, toI, W, H, inW, inH } a flat panel in perspective (the
+  //     tote): toC(xIn, yIn) -> [px, py] and toI(px, py) -> [xIn, yIn] are
+  //     MerchPrint.photoGeometry's own homography and its inverse.
   function wrapFrac(cal, d) {
     const th = clamp(cal.body.yaw * Math.PI / 180 + (d * cal.ppi) / cal.body.r, -MAX_TH, MAX_TH);
     return cal.body.cx + cal.body.r * Math.sin(th);
@@ -62,21 +74,46 @@
     return ((Math.asin(s) - cal.body.yaw * Math.PI / 180) * cal.body.r) / cal.ppi;
   }
   function inchesToCanvas(pt, map) {
+    if (map.kind === 'proj') { const [x, y] = map.toC(pt.x, pt.y); return { x, y }; }
     if (map.kind === 'photo') return { x: wrapFrac(map.cal, pt.x - map.inW / 2) * map.W, y: map.cal.top * map.H + pt.y * map.cal.ppi * map.W };
     return { x: map.ox + pt.x * map.k, y: map.oy + pt.y * map.k };
   }
   function canvasToInches(pt, map) {
+    if (map.kind === 'proj') { const [x, y] = map.toI(pt.x, pt.y); return { x, y }; }
     if (map.kind === 'photo') return { x: map.inW / 2 + unwrapFrac(map.cal, pt.x / map.W), y: (pt.y - map.cal.top * map.H) / (map.cal.ppi * map.W) };
     return { x: (pt.x - map.ox) / map.k, y: (pt.y - map.oy) / map.k };
   }
-  // An inches box -> the canvas box it covers (the wrap keeps edges monotonic).
+  // An inches box -> its 4 corners on the canvas (TL, TR, BR, BL).
+  function quadToCanvas(b, map) {
+    return [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]].map(([x, y]) => inchesToCanvas({ x, y }, map));
+  }
+  // Is a point inside a convex quad (either winding)?
+  function pointInQuad(pt, q) {
+    let sign = 0;
+    for (let i = 0; i < q.length; i++) {
+      const a = q[i], b = q[(i + 1) % q.length];
+      const c = (b.x - a.x) * (pt.y - a.y) - (b.y - a.y) * (pt.x - a.x);
+      if (Math.abs(c) < 1e-9) continue;
+      if (!sign) sign = Math.sign(c); else if (Math.sign(c) !== sign) return false;
+    }
+    return true;
+  }
+  // An inches box -> the canvas box it covers (the wrap keeps edges monotonic;
+  // in perspective, the box round the 4 projected corners).
   function rectToCanvas(b, map) {
+    if (map.kind === 'proj') {
+      const q = quadToCanvas(b, map);
+      const xs = q.map(p => p.x), ys = q.map(p => p.y);
+      const x = Math.min(...xs), y = Math.min(...ys);
+      return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+    }
     const a = inchesToCanvas({ x: b.x, y: b.y }, map);
     const z = inchesToCanvas({ x: b.x + b.w, y: b.y + b.h }, map);
     return { x: Math.min(a.x, z.x), y: Math.min(a.y, z.y), w: Math.abs(z.x - a.x), h: Math.abs(z.y - a.y) };
   }
   // Canvas pixels per inch around a point (for snap thresholds and nudges).
   function pxPerInch(map, xIn = map.inW / 2 || 0) {
+    if (map.kind === 'proj') { const y = (map.inH || 0) / 2; const a = inchesToCanvas({ x: xIn - 0.05, y }, map), b = inchesToCanvas({ x: xIn + 0.05, y }, map); return Math.hypot(b.x - a.x, b.y - a.y) / 0.1; }
     if (map.kind !== 'photo') return map.k;
     return Math.abs(inchesToCanvas({ x: xIn + 0.05, y: 0 }, map).x - inchesToCanvas({ x: xIn - 0.05, y: 0 }, map).x) / 0.1;
   }
@@ -84,17 +121,23 @@
   // Keeps a fit printable: scale in range; the design (w x h inches, its top
   // topOffsetIn below topIn) inside the area, topIn within the engine's limits;
   // xIn so the design stays inside the area's width (0 when sideways is off).
-  function clampFit(fit, { design = { w: 0, h: 0 }, area = { inW: 0, inH: 0 }, limits = LIMITS, topOffsetIn = 0, allowX = true } = {}) {
+  // Hard goods (as MerchPrint.layout clamps them): baseX / baseY = the design's
+  // left / top with no shift (inches); xIn and, with allowY, yIn are shifts kept
+  // so the design stays safeIn inside the area's edges.
+  function clampFit(fit, { design = { w: 0, h: 0 }, area = { inW: 0, inH: 0 }, limits = LIMITS, topOffsetIn = 0, allowX = true, allowY = false, baseX = null, baseY = null, safeIn = 0 } = {}) {
     const out = { scale: clamp(num(fit.scale, 1), limits.scaleMin, limits.scaleMax), topIn: fit.topIn, xIn: 0 };
     if (out.topIn !== null && out.topIn !== undefined && Number.isFinite(Number(out.topIn))) {
       const lo = Math.max(limits.topMinIn, -topOffsetIn);
       const hi = Math.min(limits.topMaxIn, area.inH - design.h - topOffsetIn);
       out.topIn = r2(hi >= lo ? clamp(Number(out.topIn), lo, hi) : lo);
     } else out.topIn = null;
-    if (allowX) {
+    const shift = (v, base, size, span) => { const lo = safeIn - base; const hi = span - safeIn - base - size; return lo <= hi ? clamp(num(v, 0), lo, hi) : 0; };
+    if (allowX && Number.isFinite(baseX)) out.xIn = r2(clamp(shift(fit.xIn, baseX, design.w, area.inW), -10, 10));
+    else if (allowX) {
       const room = Math.max(0, (area.inW - design.w) / 2);
       out.xIn = r2(clamp(num(fit.xIn, 0), -room, room));
     }
+    if (allowY) out.yIn = r2(clamp(Number.isFinite(baseY) ? shift(fit.yIn, baseY, design.h, area.inH) : num(fit.yIn, 0), -10, 10));
     out.scale = r2(out.scale);
     return out;
   }
@@ -145,9 +188,12 @@
   function engineHasX() {
     try { return Object.prototype.hasOwnProperty.call(MP().fitOf({ fit: { xIn: 1 } }) || {}, 'xIn'); } catch { return false; }
   }
+  function engineHasY() {
+    try { return Object.prototype.hasOwnProperty.call(MP().fitOf({ fit: { yIn: 1 } }) || {}, 'yIn'); } catch { return false; }
+  }
   function fitOf(concept) {
     const f = MP()?.fitOf ? MP().fitOf(concept || {}) : { scale: num(concept?.fit?.scale, 1), topIn: concept?.fit?.topIn ?? null };
-    return { scale: f.scale, topIn: f.topIn ?? null, xIn: num(f.xIn, 0) };
+    return { scale: f.scale, topIn: f.topIn ?? null, xIn: num(f.xIn, 0), yIn: num(f.yIn, 0) };
   }
   function fullSpec(view) {
     const kind = view.kind || view.spec?.kind || 'tee';
@@ -183,6 +229,11 @@
     const cal = MP().photoCal?.(view.templateId, { photoIndex: view.photoIndex });
     if (!cal || (cal.side && cal.side !== sideOf(spec))) return null;
     const scene = MP().layout(concept, spec);
+    if (!cal.body) {
+      // A flat panel in perspective (the tote): the engine's own homography.
+      const g = MP().photoGeometry?.(view.templateId, view.photoIndex, W, H, { inW: scene.inW, inH: scene.inH });
+      if (g?.projective && typeof g.toCanvas === 'function' && typeof g.toInches === 'function') return { kind: 'proj', toC: g.toCanvas, toI: g.toInches, W, H, inW: scene.inW, inH: scene.inH, view: 'tee' };
+    }
     if (cal.body && Number.isFinite(cal.ppi)) return { kind: 'photo', cal, W, H, inW: scene.inW, inH: scene.inH, view: 'tee' };
     // No body model: the engine's own linear geometry.
     const g = MP().photoGeometry?.(view.templateId, view.photoIndex, W, H);
@@ -209,11 +260,20 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
 .mx-cv__h[data-corner="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
 .mx-cv.is-dragging .mx-cv__box { cursor: grabbing; }
 .mx-cv.is-resizing .mx-cv__box { cursor: inherit; }
-.mx-cv__guide { position: absolute; width: 0; border-left: 1px dashed var(--mx-cv-blue); pointer-events: none; }
+.mx-cv__guide { position: absolute; width: 0; border-left: 1px dashed var(--mx-cv-blue); pointer-events: none; transform-origin: 0 0; }
+.mx-cv__quad { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.mx-cv__quad polygon { fill: transparent; stroke: var(--mx-cv-blue); stroke-width: 1.5; stroke-linejoin: round; stroke-opacity: 0; vector-effect: non-scaling-stroke; pointer-events: fill; cursor: move; transition: stroke-opacity 120ms ease; }
+.mx-cv__box.is-quad { pointer-events: none; border-radius: 0; }
+.mx-cv__box.is-quad::before { display: none; }
+.mx-cv__box.is-quad .mx-cv__h { pointer-events: auto; }
+.mx-cv__box.is-quad:hover polygon, .mx-cv__box.is-quad.is-active polygon, .mx-cv__box.is-quad:focus-visible polygon { stroke-opacity: 1; }
+.mx-cv__box.is-quad:focus-visible polygon { stroke-width: 2.5; }
+.mx-cv .mx-cv__box.is-quad:focus, .mx-cv .mx-cv__box.is-quad:focus-visible { outline: none !important; } /* the quad's own stroke is the focus ring; a rectangle would not match the bag */
+.mx-cv.is-dragging .mx-cv__quad polygon { cursor: grabbing; }
 .mx-cv__tag { position: absolute; transform: translate(-50%, 8px); padding: 3px 8px; border-radius: 999px; background: var(--mx-cv-tag); color: #fff; font: 600 11px/1.3 var(--es-font-ui, system-ui, sans-serif); font-variant-numeric: tabular-nums; white-space: nowrap; pointer-events: none; }
 .mx-cv__ghost { position: absolute; pointer-events: none; }
 .mx-cv__sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-@media (prefers-reduced-motion: reduce) { .mx-cv__box::before, .mx-cv__h { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .mx-cv__box::before, .mx-cv__h, .mx-cv__quad polygon { transition: none; } }
 `;
   function injectCss(doc) {
     if (doc.getElementById('mx-canvas-css')) return;
@@ -250,6 +310,7 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
       <canvas class="mx-cv__ghost" hidden></canvas>
       <div class="mx-cv__guide" hidden></div>
       <div class="mx-cv__box" tabindex="0" role="group" aria-label="Design position" aria-roledescription="movable design">
+        <svg class="mx-cv__quad" aria-hidden="true" focusable="false" hidden><polygon points=""></polygon></svg>
         <span class="mx-cv__h" data-corner="nw" aria-hidden="true"></span><span class="mx-cv__h" data-corner="ne" aria-hidden="true"></span>
         <span class="mx-cv__h" data-corner="sw" aria-hidden="true"></span><span class="mx-cv__h" data-corner="se" aria-hidden="true"></span>
       </div>
@@ -261,6 +322,9 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
     const guide = rootEl.querySelector('.mx-cv__guide');
     const tag = rootEl.querySelector('.mx-cv__tag');
     const ghost = rootEl.querySelector('.mx-cv__ghost');
+    const quadSvg = rootEl.querySelector('.mx-cv__quad');
+    const quadPoly = quadSvg.querySelector('polygon');
+    const handles = [...rootEl.querySelectorAll('.mx-cv__h')];
     const live = rootEl.querySelector('[role=status]');
     const hint = rootEl.querySelector('[data-mx-cv-hint]');
     hint.id = `mx-cv-hint-${Math.random().toString(36).slice(2, 8)}`;
@@ -304,7 +368,14 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
       if (!map) return null;
       const spec = fullSpec(view);
       const m = measure(concept, spec);
-      return { concept, view, spec, map, m, fit: fitOf(concept), hasX: engineHasX() && m.apparel, canMove: m.apparel };
+      // Hard goods move only where the photo shows the real position (the tote's
+      // panel); they never grow past 100% (MerchPrint.layout only shrinks them).
+      const yMode = !m.apparel && map.kind === 'proj' && engineHasY();
+      const canMove = m.apparel || yMode;
+      const limits = engineLimits();
+      if (!m.apparel) limits.scaleMax = Math.min(limits.scaleMax, 1);
+      const safeIn = num(MP()?.SAFE_IN?.[spec.kind], 0);
+      return { concept, view, spec, map, m, fit: fitOf(concept), hasX: engineHasX() && canMove, canMove, yMode, limits, safeIn };
     }
 
     function place(el, rect, cr) {
@@ -321,8 +392,35 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
       const rc = rectToCanvas(boxIn, map);
       place(box, rc, cr);
       box.dataset.canvasBox = [rc.x, rc.y, rc.w, rc.h].map(v => v.toFixed(1)).join(',');
+      const quad = map.kind === 'proj';
+      box.classList.toggle('is-quad', quad);
+      quadSvg.toggleAttribute('hidden', !quad); // SVG has no .hidden property
+      if (quad) {
+        // The projected corners, in CSS px from the box's top-left (TL TR BR BL).
+        const q = quadToCanvas(boxIn, map);
+        const pts = q.map(p => [(p.x - rc.x) * cr.sx, (p.y - rc.y) * cr.sy]);
+        quadSvg.setAttribute('width', String(Math.max(1, rc.w * cr.sx)));
+        quadSvg.setAttribute('height', String(Math.max(1, rc.h * cr.sy)));
+        quadPoly.setAttribute('points', pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' '));
+        const at = { nw: 0, ne: 1, se: 2, sw: 3 };
+        handles.forEach(h => { const [x, y] = pts[at[h.dataset.corner]]; h.style.left = `${x}px`; h.style.top = `${y}px`; });
+        box.dataset.canvasQuad = q.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+      } else {
+        handles.forEach(h => { h.style.left = ''; h.style.top = ''; });
+        delete box.dataset.canvasQuad;
+      }
       guide.hidden = !snapped;
-      if (snapped) {
+      if (snapped && quad) {
+        // The area's centre line, projected (a slanted line on the tote).
+        const a = inchesToCanvas({ x: map.inW / 2, y: 0 }, map);
+        const b = inchesToCanvas({ x: map.inW / 2, y: map.inH }, map);
+        const dx = (b.x - a.x) * cr.sx, dy = (b.y - a.y) * cr.sy;
+        guide.style.left = `${cr.left + a.x * cr.sx}px`;
+        guide.style.top = `${cr.top + a.y * cr.sy}px`;
+        guide.style.height = `${Math.hypot(dx, dy)}px`;
+        guide.style.transform = `rotate(${Math.atan2(-dx, dy)}rad)`;
+      } else if (snapped) {
+        guide.style.transform = '';
         const cx = inchesToCanvas({ x: map.inW / 2, y: 0 }, map).x;
         const y0 = map.view === 'closeup' ? 0 : inchesToCanvas({ x: 0, y: 0 }, map).y;
         const y1 = map.view === 'closeup' ? map.H : Math.min(map.H, inchesToCanvas({ x: 0, y: map.inH }, map).y);
@@ -351,10 +449,25 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
     // Fit for a wanted design top / centre (inches) at a scale: measured once,
     // corrected for the engine's own offsets, then clamped inside the area.
     function solve(state, { scale, top, cx, keepTopNull = false }) {
-      const limits = engineLimits();
+      const limits = state.limits || engineLimits();
       const s = clamp(scale, limits.scaleMin, limits.scaleMax);
       const base = { ...state.fit, scale: s };
-      if (!state.canMove) { const f = clampFit({ ...base, topIn: state.fit.topIn }, { design: state.m.box, area: state.m.area, limits, allowX: false }); return { fit: f, m: measure(state.concept, state.spec, f) }; }
+      if (!state.canMove) {
+        // Size only; a saved sideways / up-down shift stays as it was.
+        const f = { ...clampFit({ ...base, topIn: state.fit.topIn }, { design: state.m.box, area: state.m.area, limits, allowX: false }), xIn: state.fit.xIn || 0 };
+        if (state.fit.yIn) f.yIn = state.fit.yIn;
+        return { fit: f, m: measure(state.concept, state.spec, f) };
+      }
+      if (state.yMode) {
+        // Hard goods: measure where the engine puts the design with no shift, then
+        // shift it (xIn, yIn) to the wanted top / centre, kept inside the safe edge.
+        const zero = { ...base, xIn: 0, yIn: 0 };
+        const m0 = measure(state.concept, state.spec, zero);
+        const want = { ...zero, xIn: state.hasX ? cx - m0.box.w / 2 - m0.box.x : 0, yIn: top - m0.box.y };
+        const f = clampFit(want, { design: m0.box, area: m0.area, limits, allowX: state.hasX, allowY: true, baseX: m0.box.x, baseY: m0.box.y, safeIn: state.safeIn });
+        f.topIn = state.fit.topIn; // apparel's field: left as it was
+        return { fit: f, m: measure(state.concept, state.spec, f) };
+      }
       // Measure at a top the engine accepts, then correct for its own offsets
       // (elements above the pills, rounding) so the design lands where wanted.
       const guess = { ...base, topIn: keepTopNull ? null : clamp(top, limits.topMinIn, limits.topMaxIn), xIn: state.hasX ? cx - state.m.area.inW / 2 : 0 };
@@ -370,7 +483,7 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
     function announce(text) { live.textContent = ''; win.setTimeout(() => { live.textContent = text; }, 30); }
     function describe(fit, m) {
       const parts = [`${Math.round(fit.scale * 100)}% size, ${m.box.w.toFixed(1)} by ${m.box.h.toFixed(1)} in`];
-      if (m.apparel) {
+      if (m.apparel || cur?.yMode) {
         parts.push(`${m.box.y.toFixed(1)} in from the top of the print area`);
         const off = m.box.x + m.box.w / 2 - m.area.inW / 2;
         parts.push(Math.abs(off) < 0.05 ? 'centred' : `${Math.abs(off).toFixed(1)} in ${off > 0 ? 'right' : 'left'} of centre`);
@@ -399,6 +512,8 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
       if (!cr) return;
       cur = state;
       const corner = e.target.closest?.('.mx-cv__h')?.dataset.corner || '';
+      // In perspective only a press inside the projected design box grabs it.
+      if (!corner && state.map.kind === 'proj' && !pointInQuad(toCanvas(e, cr), quadToCanvas(state.m.box, state.map))) return;
       drag = {
         id: e.pointerId, mode: corner ? 'resize' : 'move', corner, cr, state, map: state.map,
         startPt: canvasToInches(toCanvas(e, cr), state.map), startClient: { x: e.clientX, y: e.clientY },
@@ -440,7 +555,7 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
     }
     function compute(p) {
       const { state, map, cr } = drag;
-      const limits = engineLimits();
+      const limits = state.limits || engineLimits();
       const ppi = pxPerInch(map, state.m.area.inW / 2) * cr.sx; // CSS px per inch
       const snapIn = SNAP_PX / Math.max(1e-6, ppi);
       if (drag.mode === 'pinch') {
@@ -548,12 +663,12 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
         if (!state.canMove || !state.hasX) { announce('The design stays centred side to side.'); return true; }
         out = solve(state, { scale: state.fit.scale, top: b.y, cx: b.x + b.w / 2 + (k === 'ArrowLeft' ? -big : big) });
       } else if (k === '+' || k === '=' || k === '-' || k === '_' || k === '−') {
-        const limits = engineLimits();
+        const limits = state.limits || engineLimits();
         const scale = clamp(r2(state.fit.scale + ((k === '+' || k === '=') ? SCALE_STEP : -SCALE_STEP)), limits.scaleMin, limits.scaleMax);
         const m0 = measure(state.concept, state.spec, { ...state.fit, scale });
         out = solve(state, { scale, top: b.y + b.h / 2 - m0.box.h / 2, cx: b.x + b.w / 2, keepTopNull: !state.canMove });
       } else if (k === '0') {
-        const fit = { scale: 1, topIn: null, xIn: 0 };
+        const fit = state.yMode ? { scale: 1, topIn: state.fit.topIn, xIn: 0, yIn: 0 } : { scale: 1, topIn: null, xIn: 0 };
         out = { fit, m: measure(state.concept, state.spec, fit) };
       } else return false;
       emit(out.fit, true, 'key');
@@ -611,12 +726,16 @@ html[data-theme="dark"] .mx-cv { --mx-cv-blue: var(--mx-brand, #3D96FB); --mx-cv
       get element() { return rootEl; },
       // For checks: the overlay's box in canvas pixels, or null when hidden.
       box() { if (rootEl.hidden || !cur) return null; return rectToCanvas(cur.m.box, cur.map); },
+      // For checks: the design box's 4 corners on the canvas (TL TR BR BL; projected on the tote).
+      quad() { if (rootEl.hidden || !cur) return null; return quadToCanvas(cur.m.box, cur.map); },
+      // For checks: what the overlay is drawn from.
+      state() { return cur ? { view: { ...cur.view }, spec: { ...cur.spec }, box: { ...cur.m.box }, map: cur.map.kind, canMove: cur.canMove, hasX: cur.hasX, yMode: cur.yMode, limits: { ...cur.limits } } : null; },
     };
   }
 
   return {
-    VERSION: '2026-11-26-canvas1', LIMITS, attach,
-    canvasToInches, inchesToCanvas, rectToCanvas, clampFit, resizeFromCorner, placeAtAnchor, snapX, pxPerInch,
+    VERSION: '2026-11-28-totedrag1', LIMITS, attach,
+    canvasToInches, inchesToCanvas, rectToCanvas, quadToCanvas, pointInQuad, clampFit, resizeFromCorner, placeAtAnchor, snapX, pxPerInch,
     // Exposed for tests: the view map from a concept, the engine's design box.
     _mapFor: mapFor, _measure: measure,
   };
