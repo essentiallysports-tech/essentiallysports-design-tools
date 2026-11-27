@@ -49,7 +49,9 @@
   const all = [];
   roots.forEach(root => { all.push(root); root.querySelectorAll('*').forEach(e => all.push(e)); });
   document.querySelectorAll('dialog[open]').forEach(d => { all.push(d); d.querySelectorAll('*').forEach(e => all.push(e)); });
-  const vis = all.filter(e => !ignored(e) && !['SCRIPT', 'STYLE', 'TEMPLATE', 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'g'].includes(e.tagName) && !(e instanceof SVGElement && e.tagName !== 'svg') && shown(e) && onScreenBox(e));
+  // Each element once (a root may sit inside an open dialog, or a dialog inside a root).
+  const uniq = [...new Set(all)];
+  const vis = uniq.filter(e => !ignored(e) && !['SCRIPT', 'STYLE', 'TEMPLATE', 'svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 'g'].includes(e.tagName) && !(e instanceof SVGElement && e.tagName !== 'svg') && shown(e) && onScreenBox(e));
   const visSet = new Set(vis);
   const hasBorderBox = s => ['Top', 'Right', 'Bottom', 'Left'].every(k => parseFloat(s[`border${k}Width`]) >= 1 && s[`border${k}Style`] !== 'none' && !/rgba\(.*, 0\)$/.test(s[`border${k}Color`]));
   const ownText = e => [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim();
@@ -210,7 +212,9 @@
     return false;
   };
   vis.filter(isControl).forEach(e => { if (!e.matches('label') && !nameOf(e) && !e.matches('[aria-hidden=true] *')) issues.push(`no accessible name: ${label(e)}`); });
-  const primaries = vis.filter(e => e.matches('.es-btn--primary, .is-primary, [data-variant=primary]') && !e.closest('[inert]'));
+  // With a modal dialog open the page behind it is inert: only the dialog's primary counts.
+  const modal = [...document.querySelectorAll('dialog[open]')].find(d => { try { return d.matches(':modal'); } catch { return false; } });
+  const primaries = vis.filter(e => e.matches('.es-btn--primary, .is-primary, [data-variant=primary]') && !e.closest('[inert]') && (!modal || modal.contains(e)));
   if (primaries.length > 1) issues.push(`${primaries.length} primary buttons: ${primaries.map(label).join(', ')}`);
 
   // A floating layer (toast, popover) covering one of the view's key actions
