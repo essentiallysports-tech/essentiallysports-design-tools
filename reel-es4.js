@@ -1174,7 +1174,8 @@
     } else if (close.kind === 'checklist') {
       out.push(sp('close.prompt', 'para', { x: ZONE.left, y: 440, w: 840, h: 200, text: close.prompt, color: INK, steps: [TS.h1, TS.h2], maxLines: 2 }, { z: 30 }));
       const r = { x: 60, y: 680, w: 960, h: 640 };
-      MOD.checklist({ type: 'checklist', title: '', rows: close.rows }, r, ctx).forEach(s => out.push({ ...s, from: s.kind === 'check' ? { p: 0 } : s.kind === 'text' ? { alpha: 0 } : s.from }));
+      // The board is part of the close's first frame (revealed by the wipe); its rows build after.
+      MOD.checklist({ type: 'checklist', title: '', rows: close.rows }, r, ctx).forEach(s => out.push(s.id === 'mod.panel' ? { ...s, id: 'close.board' } : s));
     } else {
       out.push(sp('close.wordmark', 'wordmark', { x: 540, y: 820, w: 640 }, { z: 30 }));
       ES.DEFAULT_CTA.forEach((line, i) => out.push(sp(`close.cta.${i}`, 'pill', { x: 540, y: 1000 + i * (PILL(TS.h1).h), size: TS.h1, fill: i ? BLUE : INK, ink: WHITE, text: line, anchor: 'center' }, { z: 30, order: i + 1, from: { alpha: 0 } })));
