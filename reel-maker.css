@@ -1047,7 +1047,7 @@ a.rm-cite:hover { text-decoration: underline; }
    Create is one centred column: the prompt, four style cards with looping
    previews, one button, trends and "Need an idea?". Review and Export show
    the phone with its scene strip beside one panel. Tokens only. */
-.rm-page { --rm-stage-h: min(calc(100dvh - 360px), 600px); --rm-radius-card: var(--es-radius-container, 16px); }
+.rm-page { --rm-stage-h: min(calc(100dvh - 470px), 560px); --rm-radius-card: var(--es-radius-container, 16px); }
 .rm-head__guide { font-size: 13px; background: none; border: 0; padding: 0 var(--es-space-2, 8px); min-height: 40px; cursor: pointer; font-family: var(--es-font-ui); }
 .rm-work { grid-template-columns: minmax(0, 1fr) minmax(340px, 400px); grid-template-areas: "stage panel"; grid-template-rows: auto; gap: var(--es-space-6, 24px); }
 .rm-work:is([data-step="topic"], [data-step="source"]) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "create"; }
@@ -1299,6 +1299,7 @@ html[data-theme="dark"] .rm-ideas { background: #1F2126; color: #fff; }
 @media (max-width: 480px) {
   .rm-create { gap: var(--es-space-5, 20px); padding-top: 0; }
   .rm-create__lede { font-size: 14px; }
+  .rm-stylesec .rm-sec__head .rm-meta { display: none; }
   .rm-styles4 { gap: var(--es-space-2, 8px); }
   .rm-style4 { padding: 6px 6px var(--es-space-2, 8px); gap: var(--es-space-2, 8px); }
   .rm-style4__name { font-size: 14px; }
@@ -1314,3 +1315,16 @@ html[data-theme="dark"] .rm-ideas { background: #1F2126; color: #fff; }
   .rm-style4__preview, .rm-card__thumb { forced-color-adjust: none; }
 }
 @media (prefers-reduced-motion: reduce) { .rm-ready svg { transition: none; } }
+/* Transport: the scrubber and the time on one row; the buttons under them. */
+.rm-transport { flex-wrap: wrap; width: 100%; }
+.rm-transport .rm-scrub { order: -2; flex: 1 1 calc(100% - 96px); }
+.rm-transport .rm-time { order: -1; flex: 0 0 80px; min-width: 0; white-space: nowrap; }
+.rm-scroll, .rm-sb__scroll { position: relative; }
+.rm-panel .ri-nudge__list { grid-template-columns: minmax(0, 1fr); }
+.rm-panel .ri-vo { display: flex; flex-direction: column; align-items: stretch; }
+.rm-panel .ri-vo p { overflow-wrap: anywhere; }
+@media (max-width: 1180px) {
+  .rm-work { grid-template-columns: minmax(0, 1fr) minmax(320px, 360px); gap: var(--es-space-4, 16px); }
+  .rm-stage { padding: var(--es-space-4, 16px); }
+}
+.rm-scenes__head { flex-wrap: wrap; }
