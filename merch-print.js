@@ -922,9 +922,25 @@
   //   torso the visible shirt panel (sleeves, arms and hands in front are cut out):
   //         the print is clipped to it, so an arm in front of the chest covers ink
   //         (occluded names what covers part of the print; never the photo to open on);
-  //   logo.sleeve / sleeveLeft  the ES wordmark spot on the wearer's left sleeve
-  //         (viewer's right on front photos) and that sleeve's outline (tests keep
-  //         the spot inside it). Back photos carry no logo spot.
+  //   sleeve / sleeveLeft  the wearer's left sleeve (viewer's right on front photos)
+  //         as a short tapered cylinder, and that sleeve's outline (the logo is
+  //         clipped to it; tests keep it inside). sleeve-logo 2026-11-28:
+  //           a, b   the cylinder axis on the photo: a at the shoulder point, b at the
+  //                  hem centre (short sleeves) or the elbow (long sleeves);
+  //           r      its radius at a and at b (half the sleeve's width across the axis);
+  //           at     inches from a down the arm to the centre of Fourthwall's
+  //                  sleeve_left area (where the FULL_REGION print file is centred);
+  //           yaw    degrees the sleeve's outer centre line (the shoulder line, where
+  //                  a sleeve print is centred) is turned from the camera, toward
+  //                  the viewer's right (90 = edge-on, the outer face is the silhouette);
+  //           tilt   how much lower the front of a ring round the arm sits than its
+  //                  sides (the camera looks down slightly: hems curve), x radius.
+  //         The real sleeve print file (renderLogo's layout) wraps round it at the
+  //         photo's ppi: the area's width runs round the arm (Fourthwall's long
+  //         sleeves are 3 x 12 in: 12 in down the arm), its top toward the shoulder,
+  //         so the wordmark reads front to back round the arm and a front photo
+  //         shows its start, foreshortened toward the outer edge. Back photos carry
+  //         no sleeve.
   // x, y, w, h (fractions) are the template's main area of that side, for callers
   // that only need a box. scripts/test-merch-v3.mjs guards all of it.
   const PHOTO_W = 720;
@@ -955,14 +971,14 @@
     pro_Vv1XdaPMSdm6jZ5pj24NCQ: {
       0: { angle: 'front', side: 'front', ppi: 17, top: 296, body: { cx: 362, r: 122, yaw: 0 },
         torso: [[236, 300], [290, 262], [330, 272], [365, 284], [400, 272], [440, 262], [492, 300], [490, 780], [232, 780]],
-        logo: { sleeve: { x: 530, y: 418, w: 28, rot: 13 } },
-        sleeveLeft: [[512, 318], [532, 302], [572, 470], [508, 490]] },
+        sleeve: { a: [511, 304], b: [522, 488], r: [26, 43], at: 5.4, yaw: 70, tilt: 0.2 },
+        sleeveLeft: [[510, 302], [520, 299], [533, 316], [540, 340], [548, 380], [553, 400], [558, 420], [563, 440], [568, 460], [573, 483], [530, 489], [482, 494], [487, 440], [492, 410], [500, 367], [505, 330]] },
       // 1: waist-up three-quarter ('side'): the chest still faces the camera.
       1: { angle: 'side', side: 'front', ppi: 17, top: 306, body: { cx: 366, r: 114, yaw: -9 },
         // his left forearm crosses the shirt low on the right: cut out of the panel
         torso: [[250, 330], [254, 298], [305, 262], [345, 290], [395, 252], [462, 282], [472, 470], [478, 545], [446, 600], [404, 668], [330, 700], [250, 740]],
-        logo: { sleeve: { x: 512, y: 380, w: 34, rot: 9 } },
-        sleeveLeft: [[468, 292], [528, 298], [556, 352], [568, 466], [500, 476], [478, 400]] },
+        sleeve: { a: [504, 302], b: [519, 472], r: [36, 48], at: 5, yaw: 50, tilt: 0.15 },
+        sleeveLeft: [[470, 305], [505, 293], [520, 299], [537, 313], [547, 333], [550, 353], [553, 380], [557, 400], [560, 427], [563, 447], [568, 462], [540, 467], [500, 473], [478, 478], [460, 470], [459, 400], [463, 340]] },
       // 2: back three-quarter, his arm covers the back: no calibration.
       3: { angle: 'back', side: 'back', ppi: 11.5, top: 197, body: { cx: 358, r: 90, yaw: 0 },
         torso: [[262, 196], [320, 172], [358, 167], [398, 172], [455, 196], [448, 320], [452, 500], [272, 505], [272, 320]] },
@@ -973,22 +989,22 @@
       // so the left of a wide print hides behind the sleeve.
       0: { angle: 'front', side: 'front', occluded: 'arm', ppi: 18.8, top: 400, body: { cx: 360, r: 160, yaw: -4 },
         torso: [[282, 355], [330, 338], [380, 342], [470, 336], [508, 372], [500, 470], [492, 640], [302, 640], [297, 560], [286, 450]],
-        logo: { sleeve: { x: 526, y: 580, w: 24, rot: 4 } },
-        sleeveLeft: [[508, 392], [540, 400], [556, 520], [556, 700], [548, 800], [500, 800], [494, 600], [500, 470]] },
+        sleeve: { a: [544, 395], b: [494, 760], r: [27, 36], at: 7, yaw: 70, tilt: 0.15 },
+        sleeveLeft: [[530, 350], [537, 380], [545, 405], [550, 465], [555, 515], [559, 560], [556, 600], [547, 640], [537, 680], [525, 720], [512, 760], [505, 790], [470, 790], [445, 760], [470, 640], [490, 565], [500, 505], [515, 465], [527, 390]] },
       1: { angle: 'back', side: 'back', ppi: 18.3, top: 415, body: { cx: 375, r: 170, yaw: 8.5 },
         torso: [[215, 400], [262, 330], [300, 312], [470, 312], [525, 350], [512, 430], [500, 600], [502, 760], [496, 840], [210, 840], [205, 560]] },
       2: { angle: 'front', side: 'front', ppi: 11.2, top: 240, body: { cx: 362, r: 85, yaw: 0 },
         torso: [[288, 218], [332, 204], [390, 204], [438, 218], [444, 372], [440, 512], [282, 512], [284, 372]],
-        logo: { sleeve: { x: 460, y: 352, w: 17, rot: 6 } },
-        sleeveLeft: [[440, 226], [468, 236], [488, 320], [492, 500], [458, 506], [448, 330]] },
+        sleeve: { a: [462, 235], b: [467, 495], r: [21, 25], at: 7, yaw: 70, tilt: 0.15 },
+        sleeveLeft: [[455, 212], [472, 240], [480, 267], [485, 300], [487, 333], [490, 400], [488, 433], [485, 467], [482, 500], [443, 500], [450, 453], [440, 400], [443, 367], [450, 340], [455, 300], [450, 240]] },
       // 3: back three-quarter, her right arm covers half the back: no calibration.
     },
     // Gildan long sleeve (female model; 2 = raised arm, 4-5 = close-up details: not calibrated).
     pro_6ae602fcb22447bfbc: {
       0: { angle: 'front', side: 'front', ppi: 21, top: 298, body: { cx: 302, r: 140, yaw: -3 },
         torso: [[165, 300], [200, 262], [245, 250], [290, 282], [340, 250], [400, 262], [432, 300], [445, 430], [470, 560], [520, 700], [540, 860], [150, 860], [160, 600]],
-        logo: { sleeve: { x: 472, y: 462, w: 28, rot: 27 } },
-        sleeveLeft: [[425, 290], [465, 320], [505, 430], [565, 560], [645, 690], [600, 740], [530, 690], [470, 575], [440, 440]] },
+        sleeve: { a: [453, 320], b: [483, 550], r: [34, 40], at: 7, yaw: 70, tilt: 0.15 },
+        sleeveLeft: [[440, 300], [460, 300], [482, 335], [500, 400], [510, 460], [520, 510], [522, 525], [512, 548], [480, 560], [450, 540], [432, 500], [425, 460], [428, 400], [435, 340]] },
       3: { angle: 'back', side: 'back', ppi: 12.3, top: 189, body: { cx: 365, r: 95, yaw: 0 },
         torso: [[262, 190], [320, 162], [370, 156], [420, 162], [478, 190], [465, 330], [470, 520], [262, 520], [265, 330]] },
     },
@@ -996,8 +1012,8 @@
     'pro_14kNy0EJQkqopY-Z9Pm41A': {
       0: { angle: 'front', side: 'front', ppi: 18, top: 315, body: { cx: 358, r: 143, yaw: 0 },
         torso: [[215, 320], [265, 290], [310, 280], [358, 300], [405, 280], [450, 290], [505, 320], [505, 735], [215, 735]],
-        logo: { sleeve: { x: 556, y: 480, w: 26, rot: 4 } },
-        sleeveLeft: [[505, 320], [545, 330], [580, 420], [596, 560], [592, 700], [548, 830], [515, 830], [505, 700], [500, 420]] },
+        sleeve: { a: [534, 378], b: [551, 700], r: [42, 47], at: 7, yaw: 70, tilt: 0.15 },
+        sleeveLeft: [[505, 320], [535, 340], [555, 380], [570, 420], [580, 460], [587, 520], [592, 560], [595, 600], [595, 640], [590, 700], [582, 750], [572, 790], [560, 812], [505, 820], [497, 720], [492, 680], [500, 630], [507, 570], [500, 480], [500, 400]] },
       1: { angle: 'back', side: 'back', ppi: 18.5, top: 318, body: { cx: 390, r: 185, yaw: 3 },
         torso: [[200, 320], [260, 290], [330, 272], [400, 270], [470, 272], [540, 290], [575, 330], [570, 770], [205, 770]] },
     },
@@ -1045,7 +1061,11 @@
         body: { cx: fx(p.body.cx), r: fx(p.body.r), yaw: p.body.yaw },
         torso: p.torso.map(([x, y]) => [fx(x), fy(y)]),
       };
-      if (p.logo) cal.logo = { sleeve: { x: fx(p.logo.sleeve.x), y: fy(p.logo.sleeve.y), w: fx(p.logo.sleeve.w), rot: p.logo.sleeve.rot || 0 } };
+      if (p.sleeve) {
+        const sl = p.sleeve;
+        cal.sleeve = { a: [fx(sl.a[0]), fy(sl.a[1])], b: [fx(sl.b[0]), fy(sl.b[1])], r: sl.r.map(fx), at: sl.at, yaw: sl.yaw, tilt: sl.tilt || 0 };
+        cal.logo = { sleeve: cal.sleeve };
+      }
       if (p.sleeveLeft) cal.sleeveLeft = p.sleeveLeft.map(([x, y]) => [fx(x), fy(y)]);
       const [inW, inH] = MAIN_INCHES[tid][p.side];
       Object.assign(cal, photoRect(cal, inW, inH), { warp: { yaw: p.body.yaw, cx: cal.body.cx, r: cal.body.r } });
@@ -1143,6 +1163,73 @@
     const a = (spot.rot || 0) * Math.PI / 180;
     const c = Math.cos(a), s = Math.sin(a);
     return [[0, 0], [w, 0], [w, h], [0, h]].map(([dx, dy]) => [spot.x + dx * c - dy * s, spot.y + (dx * s + dy * c) / ratio]);
+  }
+  // ─── The ES wordmark on the sleeve (sleeve-logo, 2026-11-28) ───────────
+  // Fourthwall's sleeve_left areas (public template GETs, 2026-11-28): the tee's is
+  // 600 x 525 @150 (4 x 3.5 in), the hoodie / long sleeve / crewneck ones 450 x 1800
+  // @150 (3 x 12 in). renderLogo fits the wordmark into it, centred.
+  const SLEEVE_AREA = { pro_Vv1XdaPMSdm6jZ5pj24NCQ: [600, 525], pro_380: [450, 1800], pro_6ae602fcb22447bfbc: [450, 1800], 'pro_14kNy0EJQkqopY-Z9Pm41A': [450, 1800] };
+  // A column of the wordmark counts as seen when its surface is turned at least ~15 deg
+  // from edge-on (cos >= 0.25: letters there are still readable); under 40% of the
+  // wordmark seen, it is not drawn and the caption names it instead.
+  const SLEEVE_SEEN_COS = 0.25;
+  const SLEEVE_MIN_VISIBLE = 0.4;
+  function sleeveSpec(templateId, garment = WHITE, over = {}) {
+    const [pw, ph] = SLEEVE_AREA[templateId] || [600, 525];
+    return { region: 'sleeve_left', pixelsWidth: Number(over.pixelsWidth) || pw, pixelsHeight: Number(over.pixelsHeight) || ph, dpi: Number(over.dpi) || 150, garmentColor: garment };
+  }
+  // The sleeve cylinder on a canvas W x H: point(u, v) for u inches round the arm from
+  // the print's centre line (+ = reading direction, front to back) and v inches down
+  // the arm from the area's centre -> { x, y, c } (c = cos of the angle to the
+  // camera; the point is seen when c > 0).
+  function sleeveFrame(cal, W, H) {
+    const sl = cal.sleeve;
+    const A = [sl.a[0] * W, sl.a[1] * H], B = [sl.b[0] * W, sl.b[1] * H];
+    const len = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
+    const dir = [(B[0] - A[0]) / len, (B[1] - A[1]) / len];
+    const n = [dir[1], -dir[0]]; // across the axis, toward the viewer's right
+    const ppi = cal.ppi * W;
+    const yaw = sl.yaw * Math.PI / 180;
+    const point = (u, v) => {
+      const s = (sl.at + v) * ppi;
+      const t = Math.max(0, Math.min(1, s / len));
+      const r = (sl.r[0] + (sl.r[1] - sl.r[0]) * t) * W;
+      const phi = yaw + (u * ppi) / r;
+      const c = Math.cos(phi), k = r * Math.sin(phi), d = s + sl.tilt * r * c;
+      return { x: A[0] + dir[0] * d + n[0] * k, y: A[1] + dir[1] * d + n[1] * k, c, phi };
+    };
+    return { A, B, dir, n, ppi, len, point };
+  }
+  // Where the sleeve print's wordmark lands on a photo (pure, no canvas):
+  // { scene (the print file's layout), logo (its item), u0, u1, v0, v1 (the wordmark's
+  // inches on the cylinder), visible (share of its width turned toward the camera, cos >= SLEEVE_SEEN_COS), draw
+  // (visible >= SLEEVE_MIN_VISIBLE), outline (canvas px polygon round the seen part),
+  // arcPx (its width round the arm at true scale, px), widthPx (seen width across the
+  // axis, px: the foreshortened width), ppi } or null (no sleeve on this photo).
+  function sleeveLogo(templateId, photoIndex, canvasW = PHOTO_W, canvasH, opts = {}) {
+    const W = Number(canvasW) || PHOTO_W;
+    const H = Number(canvasH) || Math.round(W * PHOTO_H / PHOTO_W);
+    const cal = photoCal(templateId, { photoIndex });
+    if (!cal?.sleeve) return null;
+    const scene = logoLayout(sleeveSpec(templateId, hex(opts.garmentColor) || WHITE, opts.spec || {}));
+    const logo = scene.items[0];
+    const u0 = logo.x / scene.dpi - scene.inW / 2, u1 = (logo.x + logo.w) / scene.dpi - scene.inW / 2;
+    const v0 = logo.y / scene.dpi - scene.inH / 2, v1 = (logo.y + logo.h) / scene.dpi - scene.inH / 2;
+    const f = sleeveFrame(cal, W, H);
+    const N = 64;
+    let seen = 0;
+    const top = [], bot = [];
+    let nMin = Infinity, nMax = -Infinity;
+    for (let i = 0; i <= N; i++) {
+      const u = u0 + (u1 - u0) * (i / N);
+      const p = f.point(u, v0), q = f.point(u, v1);
+      if (i < N && f.point(u + (u1 - u0) / (2 * N), (v0 + v1) / 2).c >= SLEEVE_SEEN_COS) seen += 1;
+      if (p.c <= 0) continue;
+      top.push([p.x, p.y]); bot.push([q.x, q.y]);
+      for (const z of [p, q]) { const w = (z.x - f.A[0]) * f.n[0] + (z.y - f.A[1]) * f.n[1]; nMin = Math.min(nMin, w); nMax = Math.max(nMax, w); }
+    }
+    const visible = seen / N;
+    return { scene, logo, u0, u1, v0, v1, visible, draw: visible >= SLEEVE_MIN_VISIBLE, outline: top.concat(bot.reverse()), arcPx: (u1 - u0) * f.ppi, widthPx: top.length ? nMax - nMin : 0, ppi: f.ppi, frame: f };
   }
   // Where the print area sits on a photo rendered at canvasW x canvasH, with the same
   // calibration math photoMock uses (for a UI overlay: drag / resize on the stage).
@@ -1540,18 +1627,37 @@
     lg.restore();
     // Only spots measured on this photo are drawn (the front photo can't show a
     // back-neck or inside label); the rest are named in the caption instead.
-    const spot = cal.logo?.[opts.logoSpot];
-    const logoNote = opts.logoSpot && opts.logoSpot !== 'none' && opts.logoSpot !== 'inline' && !spot ? opts.logoSpot : '';
+    // The sleeve: the real sleeve print file (renderLogo's layout for the template's
+    // sleeve_left area) wrapped round the sleeve cylinder at true scale, the side
+    // turned away from the camera left out, clipped to the sleeve's outline. Where
+    // too little of it faces the camera, it is named in the caption instead.
+    const sleeve = opts.logoSpot === 'sleeve' ? sleeveLogo(templateId, Object.keys(calsOf(templateId)).find(i => calsOf(templateId)[i] === cal), W, H, { garmentColor: garment, spec: opts.logoSpec }) : null;
+    const spot = opts.logoSpot === 'sleeve' ? (sleeve?.draw ? sleeve : null) : cal.logo?.[opts.logoSpot];
+    const logoNote = opts.logoSpot && opts.logoSpot !== 'none' && opts.logoSpot !== 'inline' && !spot ? (opts.logoSpot === 'sleeve' ? 'left sleeve' : opts.logoSpot) : '';
     if (spot) {
-      const logo = await loadImage(BASE + (contrast(garment, ES_BLUE) < 1.6 ? WORDMARK.white : WORDMARK.blue));
-      if (logo) {
-        const lw = spot.w * W;
-        lg.save();
-        lg.translate(spot.x * W, spot.y * H);
-        lg.rotate((spot.rot || 0) * Math.PI / 180);
-        lg.drawImage(logo, 0, 0, lw, lw * WORDMARK.h / WORDMARK.w);
-        lg.restore();
+      const { scene: ls, logo: li, u0, u1, v0, v1, frame } = sleeve;
+      const k = (3 * frame.ppi) / ls.dpi; // the print file, rastered at 3x the photo's ppi
+      const src = document.createElement('canvas');
+      src.width = Math.max(1, Math.round(li.w * k));
+      src.height = Math.max(1, Math.round(li.h * k));
+      const sg = src.getContext('2d');
+      sg.scale(k, k);
+      sg.translate(-li.x, -li.y);
+      await drawScene(ls, sg);
+      lg.save();
+      polyPath(lg, cal.sleeveLeft, W, H);
+      lg.clip();
+      const N = Math.max(48, Math.min(240, Math.round(src.width / 2)));
+      const sw = src.width / N;
+      for (let i = 0; i < N; i++) {
+        const ua = u0 + (u1 - u0) * (i / N), ub = u0 + (u1 - u0) * ((i + 1) / N);
+        if (frame.point((ua + ub) / 2, (v0 + v1) / 2).c <= 0) continue;
+        const p = frame.point(ua, v0), q = frame.point(ub, v0), r = frame.point(ua, v1);
+        lg.setTransform(q.x - p.x, q.y - p.y, r.x - p.x, r.y - p.y, p.x, p.y);
+        lg.drawImage(src, i * sw, 0, sw, src.height, 0, 0, i < N - 1 ? 1.35 : 1, 1); // a little overlap: no hairline seams
       }
+      lg.setTransform(1, 0, 0, 1, 0, 0);
+      lg.restore();
     }
     const layer = document.createElement('canvas');
     layer.width = W;
@@ -1567,9 +1673,9 @@
     const ty = cal.torso.map(p => p[1]);
     const ax0 = Math.max(pr.x, Math.min(...tx)) * W, ax1 = Math.min(pr.x + pr.w, Math.max(...tx)) * W;
     const ay0 = Math.max(pr.y, Math.min(...ty)) * H, ay1 = Math.min(pr.y + pr.h, Math.max(...ty)) * H;
-    const lc = spot ? logoCorners(spot, PHOTO_H / PHOTO_W) : [];
-    const xs = [ax0, ax1].concat(lc.map(p => p[0] * W));
-    const ys = [ay0, ay1].concat(lc.map(p => p[1] * H));
+    const lc = spot ? sleeve.outline : [];
+    const xs = [ax0, ax1].concat(lc.map(p => p[0]));
+    const ys = [ay0, ay1].concat(lc.map(p => p[1]));
     const box = { x: Math.max(0, Math.floor(Math.min(...xs)) - 2), y: Math.max(0, Math.floor(Math.min(...ys)) - 2) };
     box.w = Math.min(W, Math.ceil(Math.max(...xs)) + 2) - box.x;
     box.h = Math.min(H, Math.ceil(Math.max(...ys)) + 2) - box.y;
@@ -1589,7 +1695,7 @@
     const ms = typeof performance !== 'undefined' ? Math.round(performance.now() - t0) : 0;
     const set = calsOf(templateId);
     const index = Number(Object.keys(set).find(i => set[i] === cal));
-    return { width: W, height: H, scene, logoNote, photoIndex: index, angle: cal.angle, side, drawn: true, realism: !!shaded, shadeMs: ms };
+    return { width: W, height: H, scene, logoNote, photoIndex: index, angle: cal.angle, side, drawn: true, realism: !!shaded, shadeMs: ms, sleeve: sleeve ? { drawn: !!spot, visible: Math.round(sleeve.visible * 100) / 100, widthPx: Math.round(sleeve.widthPx * 10) / 10, arcPx: Math.round(sleeve.arcPx * 10) / 10 } : null };
   }
   const pointInPoly = (x, y, poly) => { let inside = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i]; const [xj, yj] = poly[j]; if (((yi > y) !== (yj > y)) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside; } return inside; };
 
@@ -1772,7 +1878,7 @@
 
   return {
     VERSION: '2026-11-26-merch5', FIT, VARIANTS, fitOf, splitWords, variations, yourWords, hasLine, mainLine, ICONS, ICON_SHAPES, ELEMENT_TYPES, elementsOf, WORDMARK, PHONE_MAX_PIXELS, SMALL, MID, WRAP_AT, MIN_CAP_IN, MIN_CONTRAST, CAP, DEFAULT_AREAS, SAFE_IN, MUG_FACE,
-    render, renderLogo, checks, preview, closeup, photoMock, photoGeometry, designBox, MID_CHEST, photoFor, photosFor, photoRect, photoCal, logoCorners, PHOTO_AREAS, PHOTO_QUADS, PHOTO_PX, PHOTO_HERO, TEMPLATE_KIND, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
+    render, renderLogo, checks, preview, closeup, photoMock, photoGeometry, designBox, MID_CHEST, photoFor, photosFor, photoRect, photoCal, logoCorners, sleeveLogo, SLEEVE_AREA, PHOTO_AREAS, PHOTO_QUADS, PHOTO_PX, PHOTO_HERO, TEMPLATE_KIND, pointInPoly, fallbackConcepts, layout, logoLayout, logoChecks, LOGO_SPOTS,
     kitSports, kitTeams, kitSwatches, paletteFromKit, pillInk, ES_SWATCHES, boxContrast, resolve,
     teamPalette, colorName, areaOf, canvasPlan, approxMeasure, pillGeom, wrapText, rowsOf, rowColors, stackRows, checksFor, blocking,
     loadFonts, solidify, fontOf, findQuote, findNickname, findNumber,

@@ -119,21 +119,74 @@ ok('photo calibrations: the tee and the hoodie, several photos each', () => {
     assert.ok(c.body.r > 0 && Math.abs(c.body.yaw) < 30, `${tid}/${i} body`);
   });
 });
-ok('photo calibrations: every sleeve logo sits inside its measured wearer-left sleeve', () => {
+ok('photo calibrations: the sleeve cylinder, and the wrapped sleeve print stays inside the measured wearer-left sleeve', () => {
   let n = 0;
   CALS.forEach(([tid, i, cal]) => {
-    const s = cal.logo?.sleeve;
-    if (cal.side === 'back') { assert.ok(!cal.logo, `${tid}/${i}: no logo drawn on a back photo`); return; }
+    if (cal.side === 'back') { assert.ok(!cal.logo && !cal.sleeve, `${tid}/${i}: no logo drawn on a back photo`); return; }
     const SLEEVELESS = ['pro_xPL7YjOBRQWVL50Im8eKAA', 'pro_ODh_gv0ESl6jIcRfvSww0w']; // tank, youth tee: no sleeve print areas
-    if (SLEEVELESS.includes(tid)) { assert.ok(!cal.logo, `${tid}/${i}: no sleeve spot on a blank without sleeve areas`); return; }
-    assert.ok(s && cal.sleeveLeft, `${tid}/${i}: front photos measure the sleeve spot`);
-    P.logoCorners(s).forEach(([x, y]) => assert.ok(P.pointInPoly(x, y, cal.sleeveLeft), `${tid}/${i}: corner ${x.toFixed(3)},${y.toFixed(3)} outside the sleeve`));
-    assert.ok(s.x > cal.body.cx, `${tid}/${i}: wearer-left sleeve is on the viewer's right`);
+    if (SLEEVELESS.includes(tid)) { assert.ok(!cal.logo && !cal.sleeve, `${tid}/${i}: no sleeve spot on a blank without sleeve areas`); return; }
+    const sl = cal.sleeve;
+    assert.ok(sl && cal.sleeveLeft, `${tid}/${i}: front photos measure the sleeve cylinder and outline`);
+    assert.equal(cal.logo.sleeve, sl, `${tid}/${i}: the sleeve is the measured logo spot`);
+    assert.ok(sl.b[1] > sl.a[1] && sl.r.every(r => r > 0) && sl.yaw > 20 && sl.yaw < 90 && sl.at > 0, `${tid}/${i}: cylinder shape`);
     assert.ok(cal.sleeveLeft.every(([x]) => x > cal.body.cx), `${tid}/${i}: sleeve outline on the viewer's right`);
     assert.ok(!cal.logo.neck && !cal.logo['back-neck'] && !cal.logo.label, `${tid}/${i}: unmeasured spots are not drawn`);
+    for (const W of [720, 1600]) {
+      const H = Math.round(W * 960 / 720);
+      const g = P.sleeveLogo(tid, i, W, H);
+      assert.ok(g && g.draw, `${tid}/${i}: enough of the wordmark faces the camera (${g && g.visible})`);
+      assert.ok(g.visible >= 0.4 && g.visible <= 1, `${tid}/${i}: visible ${g.visible}`);
+      // every seen point of the wrapped wordmark inside the sleeve outline (1 px slack)
+      const poly = cal.sleeveLeft.map(([x, y]) => [x * W, y * H]);
+      const f = g.frame;
+      for (let a = 0; a <= 40; a++) for (const v of [g.v0, (g.v0 + g.v1) / 2, g.v1]) {
+        const p = f.point(g.u0 + (g.u1 - g.u0) * a / 40, v);
+        if (p.c <= 0.02) continue;
+        const inside = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => P.pointInPoly(p.x + dx, p.y + dy, poly));
+        assert.ok(inside, `${tid}/${i} @${W}: wordmark point ${p.x.toFixed(1)},${p.y.toFixed(1)} outside the sleeve`);
+      }
+      // the wordmark's middle sits roughly half way down the visible sleeve outline's height band
+      const ys = poly.map(q => q[1]);
+      const mid = f.point(0, (g.v0 + g.v1) / 2);
+      assert.ok(mid.y > Math.min(...ys) && mid.y < Math.max(...ys), `${tid}/${i}: wordmark between shoulder and hem`);
+    }
     n += 1;
   });
-  assert.ok(n >= 4);
+  assert.ok(n >= 6);
+});
+ok('sleeve print: true scale (the real sleeve_left print file, foreshortened round the arm)', () => {
+  const ppiOf = (tid, i, W) => P.PHOTO_AREAS[tid][i].ppi * W;
+  CALS.filter(([, , c]) => c.sleeve).forEach(([tid, i, cal]) => {
+    const [pw, ph] = P.SLEEVE_AREA[tid];
+    const scene = P.logoLayout({ pixelsWidth: pw, pixelsHeight: ph, dpi: 150 });
+    const inches = scene.items[0].w / 150;
+    // tee 4 x 3.5 in -> 3 in wordmark; 3 x 12 in sleeves -> 2.64 in
+    assert.ok(Math.abs(inches - (pw === 600 ? 3 : 2.64)) < 0.01, `${tid}: ${inches} in`);
+    for (const W of [720, 2000]) {
+      const g = P.sleeveLogo(tid, i, W);
+      assert.ok(Math.abs(g.arcPx - inches * ppiOf(tid, i, W)) < 0.01 * g.arcPx, `${tid}/${i}: arc ${g.arcPx} = ${inches} in x ppi`);
+      // seen width = the visible arc projected: sum of r |d sin phi| over the seen part
+      const f = g.frame, N = 400;
+      let proj = 0;
+      for (let k = 0; k < N; k++) {
+        const a = f.point(g.u0 + (g.u1 - g.u0) * k / N, (g.v0 + g.v1) / 2), b = f.point(g.u0 + (g.u1 - g.u0) * (k + 1) / N, (g.v0 + g.v1) / 2);
+        if (a.c > 0 && b.c > 0) proj += Math.abs((b.x - a.x) * f.n[0] + (b.y - a.y) * f.n[1]);
+      }
+      assert.ok(Math.abs(g.widthPx - proj) < 0.06 * g.arcPx + 1, `${tid}/${i}@${W}: seen width ${g.widthPx.toFixed(1)} vs projected arc ${proj.toFixed(1)}`);
+      assert.ok(g.widthPx < g.arcPx * 0.8, `${tid}/${i}: the print is foreshortened round the arm (${g.widthPx.toFixed(1)} < ${g.arcPx.toFixed(1)})`);
+      assert.ok(g.widthPx > 0.08 * g.arcPx, `${tid}/${i}: but still visible`);
+    }
+  });
+  // the three-quarter tee photo shows more of the sleeve than the straight front one
+  const T = 'pro_Vv1XdaPMSdm6jZ5pj24NCQ';
+  assert.ok(P.sleeveLogo(T, 1).widthPx > P.sleeveLogo(T, 0).widthPx);
+  assert.ok(P.sleeveLogo(T, 1).visible >= P.sleeveLogo(T, 0).visible);
+  // an edge-on sleeve is not drawn (named in the caption instead); no sleeve on back / sleeveless photos
+  const cal = P.PHOTO_AREAS[T][0], yaw = cal.sleeve.yaw;
+  cal.sleeve.yaw = 89;
+  try { const g = P.sleeveLogo(T, 0); assert.equal(g.draw, false, `edge-on: visible ${g.visible}`); } finally { cal.sleeve.yaw = yaw; }
+  assert.equal(P.sleeveLogo(T, 3), null);
+  assert.equal(P.sleeveLogo('pro_xPL7YjOBRQWVL50Im8eKAA', 0), null);
 });
 ok('photo calibrations: the print area sits on the torso (top corners inside, >= 90% covered)', () => {
   CALS.forEach(([tid, i, cal]) => {
