@@ -72,25 +72,44 @@
   // rank name and words of its text; the reel's team as a backstop.
   function subjectFor(beat = {}, plan = {}) {
     // Reels v3: the director's per-scene subject leads when there is one.
-    const sub = beat.subject && typeof beat.subject === 'object' && beat.subject.name ? subjectOfBeat(beat, plan) : null;
+    const hasSub = (beat.subject && typeof beat.subject === 'object' && beat.subject.name) || (beat.media && beat.media.subject && beat.media.subject.name);
+    const sub = hasSub ? subjectOfBeat(beat, plan) : null;
     const team = sub && sub.team ? sub.team : (plan.team && plan.team.name ? String(plan.team.name) : '');
-    const named = [sub && sub.type === 'player' ? sub.name : '', beat.photo, beat.name, ...(Array.isArray(beat.versus) ? beat.versus.map(v => v && v.name !== '?' ? (v.photo || v.name) : '') : [])].filter(Boolean).map(String);
+    const named = [sub && (sub.type === 'player' || sub.type === 'person') ? sub.name : '', beat.photo, beat.name, ...(Array.isArray(beat.versus) ? beat.versus.map(v => v && v.name !== '?' ? (v.photo || v.name) : '') : [])].filter(Boolean).map(String);
     const players = [...new Set(named.filter(n => !team || norm(n) !== norm(team)))];
     const terms = [...new Set([...named.flatMap(tokens), ...tokens(sub && sub.moment).slice(0, 4), ...tokens(beat.text).slice(0, 6)])];
     const key = sub ? sub.key : (norm(players[0] || team || beat.text || '').slice(0, 40) || 'reel');
     return { key, terms, team, teamTerms: tokens(team), players, ...(sub ? { type: sub.type, name: sub.name, moment: sub.moment || '', date: sub.date || '' } : {}) };
   }
 
-  // ─── Reels v3: styles, scene subjects, the relevance gate ───────────────
-  const STYLE_IDS = ['gametape', 'statcard', 'receipts', 'hypecut'];
+  // ─── Reels v3/v4: styles, scene subjects, the relevance gate ────────────
+  // Reels v4: the four breakdown styles replace the v3 ids (contract); the v3
+  // ids stay readable and map to the new ones (LEGACY_V3).
+  const STYLE_IDS = ['breakdown', 'casefile', 'outlier', 'hotseat'];
+  const V3_STYLE_IDS = ['gametape', 'statcard', 'receipts', 'hypecut'];
   // What media each style puts on its scenes (ENGINE's ReelES.STYLES decides
   // the blocks; this is only the sourcing side). order: what to try, in turn.
+  // v4: every style wants clips where a beat names a subject (the owner's
+  // rule: no video without clips or motion); Hot Seat prefers pressers for
+  // people. The v3 entries only serve old plans read before the map.
   const STYLE_MEDIA = {
+    breakdown: { clips: 1, photos: 1, order: ['clip', 'photo'] },
+    casefile: { clips: 1, photos: 1, order: ['clip', 'photo'] },
+    outlier: { clips: 1, photos: 1, order: ['clip', 'photo'] },
+    hotseat: { clips: 1, photos: 1, order: ['clip', 'photo'], person: 'presser' },
     gametape: { clips: 1, photos: 1, order: ['clip', 'photo'] },
     hypecut: { clips: 1, photos: 1, order: ['clip', 'photo'] },
     statcard: { clips: 0, photos: 1, order: ['photo'] },
     receipts: { clips: 0, photos: 0, order: [] },
   };
+  // Per-beat media kinds (contract) -> what is searched.
+  const MEDIA_KINDS = ['clip', 'presser', 'photo', 'cutout', 'cards', 'none'];
+  const KIND_WANTS = { clip: 'clip', presser: 'presser', photo: 'photo', cutout: 'photo', cards: 'photo', none: 'none' };
+  // Modules / blocks that animate by themselves (motion without media).
+  const V4_MODULES = ['scoreboard', 'bars', 'numberLine', 'dotGrid', 'scatter', 'wl', 'rankList', 'statTiles', 'reveal', 'compare', 'tally', 'calendar', 'timeline', 'playDiagram', 'flow', 'checklist', 'quote', 'lineChart'];
+  const ANIMATED_BLOCKS = ['statTiles', 'dotGrid', 'streak', 'rankTile', 'number', 'dots', 'compare', 'endcard', 'yourCall'];
+  // The retry ladder (contract): most specific first.
+  const RUNGS = ['player+moment', 'player+game', 'team+game', 'team'];
   // Blocks that carry a picture, and which kind ('any' = the style's order).
   const MEDIA_BLOCKS = { hook: 'any', statement: 'any', tagPill: 'any', clipLabel: 'clip', photoCard: 'photo' };
   // Contract legacy map: look / recipe -> style.
@@ -113,24 +132,56 @@
     }
     return hasClips ? 'gametape' : 'receipts';
   }
-  // The reel's style: ENGINE's ReelES.styleOf when loaded, else the plan's own.
+  // v3 id -> v4 id (contract legacy map): receipts / statcard -> outlier when
+  // the plan carries a dot grid or scatter-like data, else breakdown;
+  // gametape / hypecut -> breakdown.
+  function v4Of(id, plan = null) {
+    if (STYLE_IDS.includes(id)) return id;
+    if (id === 'receipts' || id === 'statcard') {
+      const all = beatsOf(plan || {});
+      const dotty = all.some(b => b && ((b.module && ['dotGrid', 'scatter'].includes(b.module.type)) || (b.block && ['dotGrid', 'dots'].includes(b.block.type))));
+      return dotty ? 'outlier' : 'breakdown';
+    }
+    return 'breakdown';
+  }
+  // The reel's style (always a v4 id): ENGINE's ReelES.styleOf when loaded,
+  // else the plan's own; old ids are mapped.
   function styleOf(plan = {}, wanted = '') {
-    if (STYLE_IDS.includes(lc(wanted))) return lc(wanted);
+    const w = lc(wanted);
+    if (STYLE_IDS.includes(w)) return w;
     const p = plan || {};
+    if (V3_STYLE_IDS.includes(w)) return v4Of(w, p);
     const ES = (typeof self !== 'undefined' && self.ReelES) || null;
-    if (ES && typeof ES.styleOf === 'function') { try { const id = ES.styleOf(p); if (STYLE_IDS.includes(id)) return id; } catch { /* fall through */ } }
-    if (STYLE_IDS.includes(p.esStyle)) return p.esStyle;
-    if (STYLE_IDS.includes(p.style)) return p.style;
-    return legacyStyle(p.look, p.recipe, p);
+    if (ES && typeof ES.styleOf === 'function') { try { const id = ES.styleOf(p); if (STYLE_IDS.includes(id)) return id; if (V3_STYLE_IDS.includes(id)) return v4Of(id, p); } catch { /* fall through */ } }
+    for (const v of [p.esStyle, p.style]) {
+      if (STYLE_IDS.includes(v)) return v;
+      if (V3_STYLE_IDS.includes(v)) return v4Of(v, p);
+    }
+    return v4Of(legacyStyle(p.look, p.recipe, p), p);
+  }
+  // Every beat of a plan, flat: v4 chapters in order (each beat carries its
+  // chapterId; a missing id becomes c<i>b<j>), else the v3 beats.
+  function beatsOf(plan = {}) {
+    const p = plan || {};
+    if (Array.isArray(p.chapters) && p.chapters.length) {
+      const out = [];
+      p.chapters.forEach((ch, i) => (Array.isArray(ch && ch.beats) ? ch.beats : []).forEach((b, j) => {
+        if (b && typeof b === 'object') out.push({ ...b, id: b.id || `c${i + 1}b${j + 1}`, chapterId: (ch && ch.id) || `c${i + 1}` });
+      }));
+      return out;
+    }
+    return (Array.isArray(p.beats) ? p.beats : []).filter(b => b && typeof b === 'object').map((b, i) => (b.id ? b : { ...b, id: `b${i + 1}` }));
   }
 
-  const SUBJECT_TYPES = ['player', 'team', 'moment', 'game'];
+  const SUBJECT_TYPES = ['player', 'person', 'team', 'moment', 'game'];
   const cleanText = (v, n) => String(v == null ? '' : v).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
   const subjectKey = sub => norm(sub && sub.name).slice(0, 40) || 'reel';
-  // A scene's subject: the director's (cleaned), else derived from the beat's
-  // photo query, names and the reel's team. -> { type, name, team, date, moment, key }
+  // A scene's subject: the director's (cleaned; v4 beat.media.subject first),
+  // else derived from the beat's photo query, names and the reel's team.
+  // -> { type, name, team, date, moment, key }
   function subjectOfBeat(beat = {}, plan = {}) {
-    const raw = beat.subject && typeof beat.subject === 'object' ? beat.subject : null;
+    const m = beat.media && typeof beat.media === 'object' && beat.media.subject && typeof beat.media.subject === 'object' && beat.media.subject.name ? beat.media.subject : null;
+    const raw = m || (beat.subject && typeof beat.subject === 'object' ? beat.subject : null);
     const reelTeam = plan.team && plan.team.name ? String(plan.team.name) : '';
     let name = raw ? cleanText(raw.name, 60) : '';
     let type = raw && SUBJECT_TYPES.includes(raw.type) ? raw.type : '';
@@ -152,8 +203,19 @@
     return out;
   }
   // What a beat wants on screen in this style: 'clip', 'photo' or 'none'.
-  function wantsFor(beat = {}, style = 'gametape') {
-    const media = STYLE_MEDIA[style] || STYLE_MEDIA.gametape;
+  // v4: 'presser' too, and the beat's own media.kind leads.
+  function wantsFor(beat = {}, style = 'breakdown') {
+    const media = STYLE_MEDIA[style] || STYLE_MEDIA.breakdown;
+    const mk = beat.media && typeof beat.media === 'object' ? beat.media.kind : '';
+    if (MEDIA_KINDS.includes(mk)) return KIND_WANTS[mk];
+    if (beat.kind === 'cta' || (beat.block && beat.block.type === 'endcard')) return 'none';
+    if (STYLE_IDS.includes(style)) {
+      // A v4 beat without media.kind: a module carries it; else the style's first choice.
+      if (hasAnimatedModule(beat)) return 'none';
+      const sub = beat.media && beat.media.subject || beat.subject;
+      if (media.person && sub && sub.type === 'person') return media.person;
+      return media.order[0];
+    }
     if (!media.order.length) return 'none';
     const type = beat.block && beat.block.type ? beat.block.type : (beat.kind === 'hook' ? 'hook' : (['context', 'point', 'payoff'].includes(beat.kind) ? 'statement' : ''));
     const takes = MEDIA_BLOCKS[type];
@@ -164,10 +226,13 @@
   }
   const relOf = (j, key) => (j && j.relevance && Number.isFinite(j.relevance[key]) ? j.relevance[key] : null);
   const momOf = (j, key) => (j && j.moment && Number.isFinite(j.moment[key]) ? j.moment[key] : null);
-  // The judge confirmed this clip for this subject.
-  function passesGate(judgement, subject = {}, gate = GATE) {
+  // The judge confirmed this clip for this subject. A presser beat needs
+  // press-conference / interview footage; a game beat refuses it (v4).
+  const PRESSER_KINDS = ['press-conference', 'interview', 'studio-talk'];
+  function passesGate(judgement, subject = {}, gate = GATE, wants = 'clip') {
     if (!judgement) return false;
-    if ((gate.badKinds || []).includes(judgement.kind)) return false;
+    if (wants === 'presser') { if (!PRESSER_KINDS.includes(judgement.kind)) return false; }
+    else if ([...(gate.badKinds || []), 'press-conference', 'interview'].includes(judgement.kind)) return false;
     const rel = relOf(judgement, subject.key);
     if (rel == null || rel < gate.relevance) return false;
     if (subject.moment) { const m = momOf(judgement, subject.key); if (m == null || m < gate.moment) return false; }
@@ -176,10 +241,15 @@
   // Only when no judge can run (AI off, free mode): the post must name the
   // player in full, or be the team's own official post (strict; never a
   // keyword hit on one word).
-  function textGate(clip = {}, sub = {}) {
+  // v4: a presser beat's clip must say it is a press conference / interview;
+  // a game beat's clip must not.
+  const PRESSER_WORDS = /\b(press conference|presser|media availability|podium|interview|sits? down with|speaks? (?:to|with|about|on)|postgame|post-game|pregame|pre-game|mic['’]?d up|addresses|on the record)\b/i;
+  function textGate(clip = {}, sub = {}, wants = 'clip') {
     const players = Array.isArray(sub.players) ? sub.players : [];
     const subject = { ...sub, name: sub.name || players[0] || sub.team || '', type: sub.type || (players.length ? 'player' : 'team') };
     if (!subject.name) return false;
+    const presserText = PRESSER_WORDS.test(String(clip.text || ''));
+    if (wants === 'presser' ? !presserText : (presserText && !/\b(highlight|touchdown|td|catch|run|sack|interception|home run|homer)\b/i.test(String(clip.text || '')))) return false;
     const text = ` ${norm([clip.text, ...(clip.players || [])].join(' '))} `;
     const source = clip.source || clip.sourceKind;
     const trusted = ['official', 'league', 'media'].includes(source) || clip.trusted === true;
@@ -229,49 +299,226 @@
     const kept = lines.slice(0, 3).map(t => t.toUpperCase());
     return { type: 'statement', lines: kept.map((t, i) => ({ text: t, color: i === kept.length - 1 && kept.length > 1 ? 'blue' : 'ink' })) };
   }
-  // One pick per scene. scenes: [{ beatId, subject, wants, clips, photos, durMs }]
-  //   opts: { judgements, samples, judgeTimes, judgeAvailable, used:Set(clip urls), usedPhotos:Set }
-  // -> { [beatId]: { kind: 'clip'|'photo'|'none', clip?, segment?, relevance?, gate?, photo?, fallback?, why, candidates } }
-  function gatedPicks(scenes = [], { judgements = {}, samples = {}, judgeTimes = {}, judgeAvailable = true, used = new Set(), usedPhotos = new Set(), gate = GATE } = {}) {
+  // ─── Reels v4: motion, Ken Burns, segments, the ladder ─────────────────
+  const moduleOf = beat => (beat && beat.module && typeof beat.module === 'object' && beat.module.type ? beat.module : null);
+  function hasAnimatedModule(beat = {}) {
+    const m = moduleOf(beat);
+    if (m && V4_MODULES.includes(m.type)) return true;
+    const b = beat.block && typeof beat.block === 'object' ? beat.block : null;
+    if (b && ANIMATED_BLOCKS.includes(b.type)) return true;
+    return beat.kind === 'cta' || beat.kind === 'close';
+  }
+  const clamp01 = v => Math.max(0, Math.min(1, Number(v) || 0));
+  const rect = (x, y, w, h) => {
+    const W = Math.max(0.05, Math.min(1, w)); const H = Math.max(0.05, Math.min(1, h));
+    return { x: Math.round(Math.max(0, Math.min(1 - W, x)) * 1000) / 1000, y: Math.round(Math.max(0, Math.min(1 - H, y)) * 1000) / 1000, w: Math.round(W * 1000) / 1000, h: Math.round(H * 1000) / 1000 };
+  };
+  // Ken Burns on a verified photo's focus box (normalized 0..1 rects of the
+  // photo): a slow push from a wide crop to the focus, eased inOut. Needs a
+  // focus box or a head point; a photo with neither gets a gentle centre push.
+  function kenBurnsFor(photo = {}) {
+    const f = photo && photo.focus && Number.isFinite(Number(photo.focus.w)) ? photo.focus : null;
+    const h = photo && (photo.head || photo.focal);
+    let focus;
+    if (f) focus = rect(clamp01(f.x), clamp01(f.y), clamp01(f.w) || 0.4, clamp01(f.h) || 0.5);
+    else if (h && Number.isFinite(Number(h.x))) focus = rect(clamp01(h.x) - 0.2, clamp01(h.y) - 0.12, 0.4, 0.5);
+    else focus = rect(0.25, 0.2, 0.5, 0.6);
+    const cx = focus.x + focus.w / 2; const cy = focus.y + focus.h / 2;
+    const toW = Math.min(1, Math.max(focus.w * 1.6, 0.45)); const toH = Math.min(1, Math.max(focus.h * 1.6, 0.45));
+    const to = rect(cx - toW / 2, cy - toH / 2, toW, toH);
+    const fromW = (1 + to.w) / 2; const fromH = (1 + to.h) / 2;
+    const from = rect(cx - fromW / 2, cy - fromH / 2, fromW, fromH);
+    return { focus, from, to, ease: 'inOut', hasFocus: Boolean(f || h) };
+  }
+  // The judge's best moment inside a clip: a window of the beat's length
+  // centred on the frame with the most action (frames at `times`, seconds).
+  // short: the clip is shorter than the beat (it would loop; flagged).
+  function judgeSegment(action = [], times = [], clipSec = 0, beatSec = 2.5) {
+    const len = Math.max(0, Number(clipSec) || 0);
+    const want = Math.max(0.5, Number(beatSec) || 2.5);
+    if (!len) return null;
+    if (len <= want) return { start: 0, end: Math.round(len * 100) / 100, short: len < want - 0.05 };
+    let at = len / 2;
+    if (action.length && times.length === action.length) {
+      let best = 0;
+      action.forEach((v, i) => { if (v > action[best]) best = i; });
+      at = Number(times[best]) || at;
+    }
+    const start = Math.max(Math.min(0.4, len - want), Math.min(len - want, at - want / 2));
+    return { start: Math.round(start * 100) / 100, end: Math.round((start + want) * 100) / 100 };
+  }
+  // A segment in both spellings (contract {start,end}; the engine's inSec/outSec).
+  function segmentOut(seg, beatSec) {
+    if (!seg) return null;
+    const start = Number.isFinite(seg.start) ? seg.start : Number(seg.inSec) || 0;
+    const end = Number.isFinite(seg.end) ? seg.end : Number(seg.outSec) || 0;
+    const out = { start, end, inSec: start, outSec: end };
+    if (seg.short || (beatSec && end - start < beatSec - 0.05)) out.short = true;
+    if (Number.isFinite(seg.score)) out.score = seg.score;
+    return out;
+  }
+  // Hours back to a named older moment: the subject's date, or a year in its
+  // moment ("2011 season"). null = recent (the sport's own window).
+  function olderWindowHours(subject = {}, now = Date.now()) {
+    let at = NaN;
+    const d = String(subject.date || '').trim();
+    if (d) at = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T12:00:00Z` : d);
+    if (!Number.isFinite(at)) {
+      const y = String(`${subject.moment || ''} ${d}`).match(/\b(19|20)\d{2}\b/);
+      if (y) at = Date.UTC(Number(y[0]), 0, 1);
+    }
+    if (!Number.isFinite(at)) return null;
+    const hours = (now - at) / 3600e3;
+    if (hours < 120) return null;
+    return Math.min(365 * 24, Math.round(hours + 72));
+  }
+  // The retry ladder for one subject: player+moment -> player+game ->
+  // team+game -> team. Each rung is one find-clips body (query or team).
+  // Presser beats: name press conference -> name interview -> team presser.
+  function ladderFor(subject = {}, wants = 'clip', { now = Date.now() } = {}) {
+    const name = cleanText(subject.name, 60);
+    const team = cleanText(subject.team, 60);
+    const isPerson = subject.type === 'player' || subject.type === 'person';
+    const older = olderWindowHours(subject, now);
+    const when = cleanText(subject.date, 20);
+    const moment = cleanText(subject.moment, 60);
+    const win = older ? { windowHours: older } : {};
+    const rungs = [];
+    const add = (rung, body) => { if (!rungs.some(r => JSON.stringify(r.body) === JSON.stringify(body))) rungs.push({ rung, body }); };
+    if (wants === 'presser') {
+      if (isPerson && name) {
+        add('player+moment', { query: `${name} press conference`, kind: 'presser', ...win });
+        add('player+game', { query: `${name} interview`, kind: 'presser', ...win });
+      }
+      if (team) add('team+game', { query: `${team} press conference`, kind: 'presser', ...win });
+      return rungs;
+    }
+    if (isPerson && name) {
+      if (moment) add('player+moment', { query: `${name} ${moment}`, ...win });
+      add('player+game', { query: `${name} ${when || 'highlights'}`.trim(), ...win });
+    }
+    if (team && (moment || when) && !isPerson) add('team+game', { query: `${team} ${moment} ${when}`.replace(/\s+/g, ' ').trim(), ...win });
+    else if (team && (moment || when)) add('team+game', { query: `${team} ${when || moment}`.trim(), ...win });
+    if (subject.type === 'game' || subject.type === 'moment') add('team+game', { query: `${name} ${when}`.trim(), ...win });
+    if (team) add('team', { team });
+    return rungs;
+  }
+  // What makes a beat move. -> 'clip' | 'kenburns' | 'module' | 'none'
+  function motionFor(beat = {}, pick = null) {
+    const p = pick || {};
+    if ((p.kind === 'clip' || p.kind === 'presser') && p.clip && p.clip.url) return 'clip';
+    if ((p.kind === 'photo' || p.kind === 'cutout') && p.photo && p.photo.verified === true) return 'kenburns';
+    if (p.kind === 'cards' && (p.cards || []).some(c => c && c.photo && c.photo.verified === true)) return 'kenburns';
+    if (hasAnimatedModule(beat)) return 'module';
+    if (p.kind === 'none' && p.fallback && ANIMATED_BLOCKS.includes(p.fallback.type)) return 'module';
+    return 'none';
+  }
+  // The motion rule for a whole reel: every beat moves, >= 1 confirmed clip.
+  //   picks: { [beatId]: pick } -> { motionOk, clipCount, needsClips, beats, actions }
+  function motionSummary(plan = {}, picks = {}) {
+    const beats = {};
+    let clipCount = 0;
+    const actions = [];
+    const clipWanting = [];
+    beatsOf(plan).forEach(beat => {
+      const pick = picks[beat.id] || null;
+      const motion = motionFor(beat, pick);
+      if (motion === 'clip') clipCount += 1;
+      beats[beat.id] = { motion, motionOk: motion !== 'none' };
+      const sub = (beat.media && beat.media.subject) || beat.subject;
+      if (motion !== 'clip' && sub && sub.name && !(beat.media && ['none', 'cards'].includes(beat.media.kind))) clipWanting.push(beat.id);
+      if (motion === 'none') actions.push({ action: 'swap-media', beatId: beat.id, label: 'This scene does not move: pick a clip, a photo or a module' });
+    });
+    const needsClips = clipCount === 0;
+    if (needsClips) actions.unshift({ action: 'find-clips', beatIds: clipWanting.length ? clipWanting : Object.keys(beats).slice(0, 3), label: 'Find clips' });
+    return { motionOk: Object.values(beats).every(b => b.motionOk), clipCount, needsClips, beats, actions };
+  }
+
+  // One pick per scene. scenes: [{ beatId, beat, subject, wants, kind, clips, photos, teamPhotos, cards, durMs }]
+  //   opts: { judgements, samples, judgeTimes, judgeAvailable, judgeFailed, used:Set(clip urls), usedPhotos:Set }
+  //   judgeFailed: the judge stopped (error / 429 / cap) -> unjudged clips may
+  //   pass the strict text gate instead of being dropped.
+  //   A clip with `confirmed` (the confirmed-clip library: judged before for
+  //   this subject) passes as gate 'library' without a new judge call.
+  // -> { [beatId]: { kind: 'clip'|'presser'|'photo'|'cutout'|'cards'|'none', clip?, segment?, relevance?, gate?, photo?, kenBurns?, cards?, fallback?, why, failures, candidates } }
+  function gatedPicks(scenes = [], { judgements = {}, samples = {}, judgeTimes = {}, judgeAvailable = true, judgeFailed = false, used = new Set(), usedPhotos = new Set(), gate = GATE } = {}) {
     const out = {};
     const uses = new Map([...used].map(u => [u, 1]));
     const photoUses = new Set(usedPhotos);
     const J = url => { const j = judgements[url]; return j ? (typeof j.actionAt === 'function' ? j : withActionAt(j, judgeTimes[url] || [])) : null; };
-    // Scenes with a named player choose first.
-    const order = scenes.map((s, i) => ({ s, i })).sort((a, b) => ((b.s.subject && b.s.subject.type === 'player') - (a.s.subject && a.s.subject.type === 'player')) || a.i - b.i);
+    const person = s => s.subject && (s.subject.type === 'player' || s.subject.type === 'person');
+    // Scenes with a named person choose first.
+    const order = scenes.map((s, i) => ({ s, i })).sort((a, b) => (person(b.s) - person(a.s)) || a.i - b.i);
     order.forEach(({ s }) => {
       const subject = { ...subjectFor({ subject: s.subject }, {}), key: s.subject ? s.subject.key : 'reel' };
+      const wants = s.wants || 'none';
+      const failures = [];
+      const clipWants = wants === 'presser' ? 'presser' : 'clip';
+      let judgedNo = 0;
       const ok = (s.clips || []).filter(c => c && c.url).map(clip => {
         const j = J(clip.url);
         const judged = Boolean(j && relOf(j, subject.key) != null);
-        const pass = judged ? passesGate(j, subject, gate) : (!judgeAvailable && textGate(clip, subject));
+        const conf = clip.confirmed && Number(clip.confirmed.relevance) >= gate.relevance && (!clip.confirmed.kind || clip.confirmed.kind === clipWants) ? clip.confirmed : null;
+        let pass;
+        let how;
+        if (judged) { pass = passesGate(j, subject, gate, clipWants); how = 'judge'; if (!pass) judgedNo += 1; } else if (conf) { pass = true; how = 'library'; } else { pass = (!judgeAvailable || judgeFailed) && textGate(clip, subject, clipWants); how = 'text'; }
         if (!pass) return null;
         const sc = judgedScore(clip, subject, j);
         const reused = uses.get(clip.url) || 0;
-        return { clip, score: sc.score - reused * 30, reused, relevance: judged ? relOf(j, subject.key) : null, moment: judged ? momOf(j, subject.key) : null, gate: judged ? 'judge' : 'text' };
+        const rel = judged ? relOf(j, subject.key) : conf ? Number(conf.relevance) : null;
+        const rank = conf ? Number(conf.rank) || 0 : 0;
+        return { clip, score: sc.score - reused * 30 + (how === 'library' ? 8 + rank * 3 : 0), reused, relevance: rel, moment: judged ? momOf(j, subject.key) : conf && Number.isFinite(conf.moment) ? conf.moment : null, gate: how, segment0: conf && conf.segment ? conf.segment : (j && j.segment) || null };
       }).filter(Boolean).sort((a, b) => b.score - a.score);
-      const photos = (s.photos || []).filter(p => p && p.verified === true && p.url);
-      const candidates = [...ok.map(x => ({ kind: 'clip', clip: x.clip, relevance: x.relevance, gate: x.gate })), ...photos.map(p => ({ kind: 'photo', photo: p }))];
+      if (['clip', 'presser'].includes(wants)) {
+        if (!(s.clips || []).length) failures.push(s.noClipReason || 'no-candidates');
+        else if (!ok.length) failures.push(judgedNo ? 'judge-rejected' : (judgeAvailable && !judgeFailed ? 'judge-unavailable' : 'text-gate'));
+      }
+      const verified = list => (list || []).filter(p => p && p.verified === true && p.url);
+      const photos = verified(s.photos);
+      const teamPhotos = verified(s.teamPhotos);
+      const candidates = [...ok.map(x => ({ kind: wants === 'presser' ? 'presser' : 'clip', clip: x.clip, relevance: x.relevance, gate: x.gate })), ...photos.map(p => ({ kind: 'photo', photo: p })), ...teamPhotos.map(p => ({ kind: 'photo', photo: p, team: true }))];
+      const beatSec = Math.max(0.5, (Number(s.durMs) || 2500) / 1000);
       const tryClip = () => {
         const pick = ok.find(x => !x.reused) || null; // never the same clip on two scenes by default
         if (!pick) return null;
         const clipSec = (Number(pick.clip.durationMs) || 6000) / 1000;
-        const beatSec = Math.max(0.5, (Number(s.durMs) || 2500) / 1000);
         const sm = (samples[pick.clip.url] || []).map((x, k) => ({ ...x, action: J(pick.clip.url) ? J(pick.clip.url).actionAt(k, x.t) : undefined }));
         uses.set(pick.clip.url, (uses.get(pick.clip.url) || 0) + 1);
-        return { kind: 'clip', clip: pick.clip, segment: bestSegment(sm, beatSec, clipSec), relevance: pick.relevance, moment: pick.moment, gate: pick.gate, why: pick.gate === 'judge' ? `judge confirmed ${subject.name || 'the subject'} (${pick.relevance}/10)` : `post names ${subject.name}` };
+        // Sampled motion + judged action decide the window; without samples the
+        // judge's own segment (or the library's) is used.
+        const seg = sm.length ? bestSegment(sm, beatSec, clipSec) : (pick.segment0 && Number.isFinite(pick.segment0.start) ? pick.segment0 : bestSegment([], beatSec, clipSec));
+        const why = pick.gate === 'judge' ? `judge confirmed ${subject.name || 'the subject'} (${pick.relevance}/10)` : pick.gate === 'library' ? `confirmed before for ${subject.name || 'the subject'} (${pick.relevance}/10)` : `post names ${subject.name}`;
+        return { kind: wants === 'presser' ? 'presser' : 'clip', clip: pick.clip, segment: segmentOut(seg, beatSec), relevance: pick.relevance, moment: pick.moment, gate: pick.gate, ...(pick.clip.rung ? { rung: pick.clip.rung } : {}), why };
       };
-      const tryPhoto = () => {
-        const p = photos.find(x => !photoUses.has(x.sourceUrl || x.url)) || null;
+      const photoPick = (list, team) => {
+        const p = list.find(x => !photoUses.has(x.sourceUrl || x.url)) || list[0] || null;
         if (!p) return null;
         photoUses.add(p.sourceUrl || p.url);
-        return { kind: 'photo', photo: p, why: `verified photo of ${subject.name || 'the subject'}` };
+        const kind = s.kind === 'cutout' ? 'cutout' : 'photo';
+        return { kind, photo: p, kenBurns: kenBurnsFor(p), ...(kind === 'cutout' ? { cutout: true } : {}), why: `verified photo of ${team ? (subject.team || 'the team') : (subject.name || 'the subject')}${team ? ' (team photo: no verified photo of the subject)' : ''}` };
+      };
+      const tryPhoto = () => photoPick(photos.filter(x => !photoUses.has(x.sourceUrl || x.url)), false) || photoPick(photos, false);
+      const tryTeamPhoto = () => photoPick(teamPhotos, true);
+      const tryCards = () => {
+        const cards = (Array.isArray(s.cards) ? s.cards : []).slice(0, 4).map(card => {
+          const list = verified(card.photos);
+          const p = list.find(x => !photoUses.has(x.sourceUrl || x.url)) || list[0] || null;
+          if (p) photoUses.add(p.sourceUrl || p.url);
+          return { name: card.name, ...(card.tag ? { tag: card.tag } : {}), ...(card.sticker ? { sticker: card.sticker } : {}), photo: p, ...(p ? { kenBurns: kenBurnsFor(p) } : {}) };
+        });
+        if (!cards.some(c => c.photo)) return null;
+        return { kind: 'cards', cards, why: `${cards.filter(c => c.photo).length} of ${cards.length} cards with verified photos` };
       };
       let pick = null;
-      if (s.wants === 'clip') pick = tryClip() || tryPhoto();
-      else if (s.wants === 'photo') pick = tryPhoto();
-      if (!pick) pick = { kind: 'none', fallback: s.beat ? fallbackBlock(s.beat) : null, why: s.wants === 'none' ? 'no media in this style' : 'no relevant clip or verified photo' };
-      out[s.beatId] = { ...pick, candidates };
+      if (wants === 'clip' || wants === 'presser') pick = tryClip() || tryPhoto();
+      else if (s.kind === 'cards') pick = tryCards();
+      else if (wants === 'photo') pick = tryPhoto();
+      if (!pick && wants === 'photo' && s.kind !== 'cards' && !photos.length) failures.push('no-photo');
+      // Motion rule: a beat that would not move takes the subject's (then the
+      // team's) verified photo with Ken Burns before it falls back to a block.
+      if (!pick && !hasAnimatedModule(s.beat || {})) pick = tryPhoto() || tryTeamPhoto();
+      if (!pick) pick = { kind: 'none', fallback: s.beat && !s.beat.module ? fallbackBlock(s.beat) : null, why: wants === 'none' ? (hasAnimatedModule(s.beat || {}) ? 'the module carries this scene' : 'no media in this style') : 'no relevant clip or verified photo' };
+      out[s.beatId] = { ...pick, failures, candidates };
     });
     return out;
   }
@@ -442,6 +689,9 @@
       moment,
       textOverlay: raw.textOverlay === true,
       note: String(raw.note || '').replace(/\s+/g, ' ').slice(0, 80),
+      // v4: the best moment inside the clip (seconds), when given.
+      ...(raw.segment && Number.isFinite(Number(raw.segment.start)) && Number(raw.segment.end) > Number(raw.segment.start) && Number(raw.segment.start) >= 0
+        ? { segment: { start: Math.round(Number(raw.segment.start) * 100) / 100, end: Math.round(Math.min(Number(raw.segment.end), Number(raw.segment.start) + 120) * 100) / 100, ...(raw.segment.short ? { short: true } : {}) } } : {}),
     };
   }
   // The action score at sample k (judge frames are a subset of the samples:
@@ -529,10 +779,15 @@
         if (pickEvery.has(i)) { bg.drawImage(video, 0, 0, big.width, big.height); frames.push(big.toDataURL('image/jpeg', 0.6)); frameTimes.push(times[i]); }
       } catch { greys.push(null); }
     }
-    const motion = motionEnergy(greys.filter(Boolean));
-    const samples = times.map((t, i) => ({ t: Math.round(t * 100) / 100, motion: motion[i] ?? 0.5 }));
+    // Motion per sample time: frames that failed to draw keep their slot
+    // (0.5), so a value never shifts onto another time.
+    const good = greys.map((g, i) => (g ? i : -1)).filter(i => i >= 0);
+    const energy = motionEnergy(good.map(i => greys[i]));
+    const motion = times.map(() => 0.5);
+    good.forEach((i, k) => { motion[i] = energy[k] ?? 0.5; });
+    const samples = times.map((t, i) => ({ t: Math.round(t * 100) / 100, motion: motion[i] }));
     return { samples, frames, times: frameTimes };
   }
 
-  return { JUDGE, GATE, PRICES, KINDS, KIND_FIT, SOURCE_FIT, STYLE_IDS, STYLE_MEDIA, MEDIA_BLOCKS, styleOf, legacyStyle, subjectOfBeat, subjectKey, wantsFor, passesGate, textGate, judgeQueue, gatedPicks, fallbackBlock, subjectFor, heuristicScore, judgedScore, motionEnergy, bestSegment, preselect, assign, validateJudgement, withActionAt, judgeCost, reelJudgeEstimate, makeCache, sampleClip, norm };
+  return { JUDGE, GATE, PRICES, KINDS, KIND_FIT, SOURCE_FIT, STYLE_IDS, V3_STYLE_IDS, STYLE_MEDIA, MEDIA_BLOCKS, MEDIA_KINDS, KIND_WANTS, V4_MODULES, ANIMATED_BLOCKS, RUNGS, PRESSER_KINDS, PRESSER_WORDS, v4Of, beatsOf, hasAnimatedModule, kenBurnsFor, judgeSegment, segmentOut, olderWindowHours, ladderFor, motionFor, motionSummary, styleOf, legacyStyle, subjectOfBeat, subjectKey, wantsFor, passesGate, textGate, judgeQueue, gatedPicks, fallbackBlock, subjectFor, heuristicScore, judgedScore, motionEnergy, bestSegment, preselect, assign, validateJudgement, withActionAt, judgeCost, reelJudgeEstimate, makeCache, sampleClip, norm };
 }));
