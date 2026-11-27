@@ -496,10 +496,10 @@ const TAKES = [
   ['video-ads.js', /track\?\.\('download', \{ tool: 'video-ads', action: 'download-again'/, 'Video Ads download again'],
   ['reels.js', /FrameUpTrack\.exported\(\{ tool: 'reels', format: format\.ext, dest: 'download'/, 'Reel Captions MP4'],
   ['reels.js', /FrameUpTrack\.exported\(\{ tool: 'reels', format: 'srt', dest: 'download'/, 'Reel Captions SRT'],
-  ['reel-maker.js', /track\?\.\('export', \{ tool: 'reels-studio', action: result\.ext/, 'Reels Studio / explainer MP4'],
-  ['reel-maker.js', /track\?\.\('export', \{ tool: 'reels-studio', action: 'zip'/, 'Reels Studio carousel ZIP'],
+  ['reel-maker.js', /exported\?\.\(\{ tool: 'reels-studio', format: result\.ext, dest: 'download'/, 'Reels Studio / explainer MP4'],
+  ['reel-maker.js', /exported\?\.\(\{ tool: 'reels-studio', format: 'zip', dest: 'download'/, 'Reels Studio carousel ZIP'],
   ['reel-maker.js', /track\?\.\('download', \{ tool: 'reels-studio', action: 'download-again'/, 'Reels Studio download again'],
-  ['reel-captions-export.js', /track\?\.\('download', \{ tool: 'reels-studio', action: kind/, 'Reels Studio caption files (SRT, VTT, transcript)'],
+  ['reel-captions-export.js', /exported\?\.\(\{ tool: 'reels-studio', format: kind, dest: 'download'/, 'Reels Studio caption files (SRT, VTT, transcript)'],
   ['image-pool.html', /FrameUpTrack\?\.exported\?\.\(\{ tool: 'image-pool', format: 'photo-link', dest: 'link'/, 'Image Pool copy link'],
   ['image-pool.html', /FrameUpTrack\?\.exported\?\.\(\{ tool: 'image-pool', format: 'photo', dest: 'download'/, 'Image Pool download'],
   ['gallery.html', /track\?\.\('open', \{ tool: 'gallery', action: 'open-in-editor'/, 'Gallery open in editor'],
@@ -530,8 +530,8 @@ const EXPORT_POINTS = {
   'merch.js': [1, 'product description copy: text, logged as copy (not an export)'],
   'video-ads.js': [1, 'Video Ads MP4 / WebM per file (exported); "Download again" links are logged as download'],
   'reels.js': [2, 'Reel Captions MP4 + SRT (exported)'],
-  'reel-maker.js': [2, 'Reels Studio MP4 / carousel ZIP (track export; reels3 branch moves to exported)'],
-  'reel-captions-export.js': [1, 'Reels Studio caption files (track download)'],
+  'reel-maker.js': [2, 'Reels Studio MP4 / carousel ZIP (exported)'],
+  'reel-captions-export.js': [1, 'Reels Studio caption files (exported)'],
   'image-pool.html': [4, 'ES photo download (grid link + its dataset.download index + viewer, exported) and photo link copy (exported dest link)'],
   'design-request.html': [1, 'legacy editor copy; its export goes through recordDesignExport'],
   'trends-view.js': [2, 'headline / kit / shortlist text copies: logged as copy (not an export)'],
@@ -563,10 +563,9 @@ await test('export inventory: every download / copy site in the app is listed an
 await test('exports leave through exported(): no tool logs a finished file with plain track()', () => {
   // Only Reels Studio (other branch) and download-again / caption-file
   // downloads still use track(); everything else carries dest/size/thumb.
-  const allowed = { 'reel-maker.js': true, 'reel-captions-export.js': true, 'dashboard-data.js': true };
+  const allowed = { 'dashboard-data.js': true };
   const offenders = fs.readdirSync(ROOT).filter(f => /\.(js|html)$/.test(f) && !/^(frameup-track|frameup-usage|frameup-exports)/.test(f) && !allowed[f])
     .filter(f => /\btrack\s*(\?\.)?\(\s*'export'/.test(read(f)));
-  assert.ok(/\btrack\s*(\?\.)?\(\s*'export'/.test(read('reel-maker.js')), 'the check sees track?.(\'export\'');
   assert.deepEqual(offenders, []);
 });
 

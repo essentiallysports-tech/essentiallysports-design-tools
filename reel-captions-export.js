@@ -112,7 +112,7 @@
         ctx.toast(`Saved ${name}`);
         ctx.logEvent('captions_export', { kind, cues: count(), seconds: Math.round((tl.durationMs || 0) / 1000) });
         // Usage tracking (frameup-track.js): a caption file is a take, like the Reel Captions SRT.
-        window.FrameUpTrack?.track?.('download', { tool: 'reels-studio', action: kind, label: name, meta: { kind: 'captions', count: count() } });
+        window.FrameUpTrack?.exported?.({ tool: 'reels-studio', format: kind, dest: 'download', label: name, meta: { kind: 'captions', lines: count() } });
         return true;
       }
       const api = { srt: () => (timeline() ? toSrt(timeline()) : ''), vtt: () => (timeline() ? toVtt(timeline()) : ''), transcript: () => (timeline() ? toTranscript(timeline()) : ''), download, cues: () => (timeline() ? cues(timeline()) : []), mount };

@@ -2958,7 +2958,7 @@
       fileUrl = URL.createObjectURL(result.blob);
       const name = exportName(tl, result.ext);
       saveFile(fileUrl, name);
-      window.FrameUpTrack?.track?.('export', { tool: 'reels-studio', action: result.ext, label: name, meta: { format: state.plan.format, seconds: Math.round(tl.durationMs / 1000), audio: Boolean(result.hasAudio) } });
+      window.FrameUpTrack?.exported?.({ tool: 'reels-studio', format: result.ext, dest: 'download', label: name, width: (tl.size || [1080, 1920])[0], height: (tl.size || [1080, 1920])[1], bytes: result.blob.size, seconds: Math.round(tl.durationMs / 1000), template: state.plan.format, thumb: els.canvas, meta: { audio: Boolean(result.hasAudio), esStyle: curStyle() } });
       els.files.hidden = false;
       els.files.innerHTML = `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(result.blob.size / 1048576).toFixed(1)} MB · ${(tl.durationMs / 1000).toFixed(1)} s</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`;
       els.files.querySelector('a[download]')?.addEventListener('click', () => window.FrameUpTrack?.track?.('download', { tool: 'reels-studio', action: 'download-again', label: name }));
@@ -2991,7 +2991,7 @@
       fileUrl = URL.createObjectURL(result.blob);
       const name = exportName(x.tl, result.ext);
       saveFile(fileUrl, name);
-      window.FrameUpTrack?.track?.('export', { tool: 'reels-studio', action: result.ext, label: name, meta: { format: state.plan.format, seconds: Math.round(x.tl.durationMs / 1000), audio: Boolean(result.hasAudio), size: aspect } });
+      window.FrameUpTrack?.exported?.({ tool: 'reels-studio', format: result.ext, dest: 'download', label: name, width: (x.tl.size || [1080, 1920])[0], height: (x.tl.size || [1080, 1920])[1], bytes: result.blob.size, seconds: Math.round(x.tl.durationMs / 1000), template: state.plan.format, thumb: els.canvas, meta: { audio: Boolean(result.hasAudio), size: aspect, esStyle: curStyle() } });
       els.files.hidden = false;
       els.files.insertAdjacentHTML('beforeend', `<li><span class="rm-files__icon">${window.FrameUpMotion ? window.FrameUpMotion.check() : ICON.check}</span><span class="rm-files__name">${esc(name)}</span><span class="rm-meta">${(result.blob.size / 1048576).toFixed(1)} MB · ${(x.tl.durationMs / 1000).toFixed(1)} s</span><a class="rm-link" href="${fileUrl}" download="${esc(name)}">Download again</a></li>`);
       els.exportStatus.textContent = `Exported the ${aspect} version${audioLine(result, x.tl)}. ${aiLine(x.tl)}`;
@@ -4445,7 +4445,7 @@
       document.body.append(a); a.click(); setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 4000);
       els.carouselStatus.textContent = `Exported ${slides.length} slides (${(blob.size / 1048576).toFixed(1)} MB).`;
       logEvent('carousel_export', { slides: slides.length, format: state.plan.format, target: state.target });
-      window.FrameUpTrack?.track?.('export', { tool: 'reels-studio', action: 'zip', label: name, meta: { kind: 'carousel', count: slides.length, format: state.plan.format } });
+      window.FrameUpTrack?.exported?.({ tool: 'reels-studio', format: 'zip', dest: 'download', label: name, width: 1080, height: 1350, bytes: blob.size, count: slides.length, template: state.plan.format, thumb: els.canvas, meta: { kind: 'carousel' } });
       toast('Carousel exported', { tone: 'good' });
     } catch (error) {
       els.carouselStatus.textContent = error.message || 'The carousel export failed. Try again.';
