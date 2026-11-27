@@ -55,11 +55,23 @@ const REF = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/fixtures/reels4/
 const PLAN_FOR = { breakdown: 'dallas-21-point-lead', casefile: 'rodgers-who-should-call', outlier: 'kittle-outlier', hotseat: 'ravens-perfect-cover' };
 const clone = o => JSON.parse(JSON.stringify(o));
 const allBeats = plan => (plan && Array.isArray(plan.chapters) ? plan.chapters.flatMap(c => (c.beats || []).map(b => ({ ...b, chapterId: c.id }))) : (plan?.beats || []));
-function fixturePlan(style, length) {
+// v4 is script-first: the reference structure, with the person's script spread over the beats in
+// order, word for word (sentences in contiguous runs; beats past the last sentence are dropped).
+function fixturePlan(style, length, script = '') {
   const ref = REF.plans.find(p => p.id === PLAN_FOR[style]) || REF.plans[0];
   const plan = clone(ref.plan);
   plan.esStyle = style; plan.style = 'es';
   if (length === 'short') { plan.chapters = plan.chapters.slice(0, 2); plan.length = 'short'; } else plan.length = 'full';
+  const text = String(script || '').replace(/\s+/g, ' ').trim();
+  if (text) {
+    const sentences = text.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g).map(x => x.trim()).filter(Boolean);
+    const beats = plan.chapters.flatMap(c => c.beats);
+    const n = Math.min(beats.length, sentences.length);
+    const keep = new Set(beats.slice(0, n).map(b => b.id));
+    beats.slice(0, n).forEach((b, i) => { const a = Math.floor(i * sentences.length / n), z = Math.floor((i + 1) * sentences.length / n); b.vo = sentences.slice(a, z).join(' '); });
+    plan.chapters = plan.chapters.map(c => ({ ...c, beats: c.beats.filter(b => keep.has(b.id)) })).filter(c => c.beats.length);
+    plan.script = text;
+  }
   return plan;
 }
 const lengthOf = body => {
@@ -81,7 +93,8 @@ const TRENDS = {
 };
 const CLIP = { url: 'https://x.com/NFL/status/1855000000000000001', handle: 'NFL', text: 'Cowboys 4th and 1', thumb: '/design-request-hero.webp', postedAt: new Date(now - 3600e3).toISOString(), durationMs: 8000, variants: [{ url: '/design-request-banner.webm', width: 1280, height: 720 }] };
 const PHOTOS = ['/how-step-choose.webp', '/how-step-content.webp', '/how-step-export.webp', '/how-step-format.webp', '/how-step-review.webp', '/login-artwork.webp'];
-const BRIEF = 'Dallas blew a 21-point lead and lost to the Eagles on a 59-yard field goal with 0:02 left. Their pass rate went from 47% to 57%; on 4th and 1 they dropped back and were sacked for -9. Source: ESPN play-by-play.';
+// v4 is script-first: the prompt is the voiceover script (the Dallas reference reel's words).
+const BRIEF = REF.plans.find(p => p.id === 'dallas-21-point-lead').plan.script;
 
 // ─── Stubbed API ─────────────────────────────────────────────────────────────
 const scenario = { trends: 'ok', config: 'ok', slow: 0, planDelay: 0, planFrom: 'fixture', clips: 'ok', critic: 'pass', motion: 'ok' };
@@ -137,7 +150,7 @@ async function reelApi(pathname, body) {
     if (v4Req && !free && String(body.script || '').trim().split(/\s+/).filter(Boolean).length < 6) return { status: 400, body: { ok: false, reason: 'need-script', error: 'Paste or write your script first: a sentence or two at least. It is read word for word.' } };
     if (scenario.planFrom === 'fixture' && !free) {
       const style = STYLE_IDS.includes(body.esStyle) ? body.esStyle : 'breakdown';
-      const plan = fixturePlan(style, lengthOf(body) || 'full');
+      const plan = fixturePlan(style, lengthOf(body) || 'full', body.script);
       return { status: 200, body: { ok: true, plan, source: 'ai', model: 'qa', esStyle: style, style: 'es', sources: plan.sources, corpus: BRIEF, issues: [], lint: { critical: 0, warnings: 0 }, costs: {}, cost: 0 } };
     }
     const r = await server_.plan(body, { email: 'qa@essentiallysports.com' }, free ? { free: true } : { off: true });
@@ -377,7 +390,8 @@ for (const w of WIDTHS) {
       await sleep(80);
       const hint = await evaluate(`document.querySelector('#rm-make-hint')?.textContent || ''`);
       expect(hint.includes(STYLE_LABELS[i]), `hint does not name ${STYLE_LABELS[i]}: "${hint}"`);
-      expect(/\d+\s?(s|sec|seconds)\b/i.test(hint), `hint has no length: "${hint}"`);
+      const lenText = hint + ' ' + await evaluate(`(document.querySelector('#rm-meter-target')?.textContent || '') + ' ' + (document.querySelector('#rm-length [aria-checked="true"]')?.textContent || '')`);
+      expect(/\d+\s?(s|sec|seconds)\b/i.test(lenText), `no length shown with the style (hint, meter target or length toggle): "${lenText}"`);
     }
   });
   await step('Create: the style cards are one radio group (arrow keys move the pick)', async () => {
@@ -397,8 +411,8 @@ for (const w of WIDTHS) {
     expect(/\b(8\d|9\d|100)\b/.test(opts.find(o => o.id === 'full').text) && /\b[34]\d\b/.test(opts.find(o => o.id === 'short').text), `the options do not say their length: ${opts.map(o => o.text).join(' | ')}`);
     expect(await pickLength('short'), 'could not pick Short');
     await sleep(80);
-    const hint = await evaluate(`document.querySelector('#rm-make-hint')?.textContent || ''`);
-    expect(/\b[34]\d\s?(s|sec|seconds)\b/i.test(hint), `the hint does not show the short length: "${hint}"`);
+    const hint = await evaluate(`(document.querySelector('#rm-make-hint')?.textContent || '') + ' ' + (document.querySelector('#rm-meter-target')?.textContent || '') + ' ' + (document.querySelector('#rm-length [aria-checked="true"]')?.textContent || '')`);
+    expect(/\b[34]\d\s?(s|sec|seconds)\b/i.test(hint), `the short length is not shown (hint, meter target, toggle): "${hint}"`);
     await pickLength('full');
   });
   await step('Create: no Review controls, no old Start UI, nothing marked Soon', async () => {
