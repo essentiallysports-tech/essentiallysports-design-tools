@@ -211,10 +211,10 @@ function build(fix, topic, styleId) {
     raw.id = key;
     if (raw.media) {
       const m = fix.media[raw.media];
-      assets[raw.media] = { kind: m.kind, url: '/__qa/media/' + raw.media + '.svg', subject: m.subject, verified: true, ...(m.focus ? { focus: m.focus, head: { x: m.focus.x + m.focus.w / 2, y: m.focus.y + m.focus.h / 2 } } : {}), ...(m.kind === 'clip' ? { durationMs: m.durationMs || 6000, clipIn: 0.4 } : {}), rights: { source: 'qa', ok: true } };
+      assets[raw.media] = { kind: m.kind, url: '/__qa/media/' + raw.media + '.svg', subject: m.subject, verified: true, ...(m.focus ? { focus: m.focus, head: { x: m.focus.x + m.focus.w / 2, y: m.focus.y + m.focus.h / 2 } } : {}), ...(m.kind === 'clip' ? { durationMs: m.durationMs || 6000, clipIn: 0.4 } : {}), rights: { source: 'QA stand-in (SVG)', licence: 'QA fixture, no rights needed', organic: true, paid: true } };
       photos[key] = [raw.media];
     }
-    if (raw.block && raw.block.photo && fix.media[raw.block.photo] && !assets[raw.block.photo]) { const m = fix.media[raw.block.photo]; assets[raw.block.photo] = { kind: 'photo', url: '/__qa/media/' + raw.block.photo + '.svg', verified: true, focus: m.focus, head: { x: m.focus.x + m.focus.w / 2, y: m.focus.y + m.focus.h / 2 }, rights: { source: 'qa', ok: true } }; photos[key] = [raw.block.photo]; }
+    if (raw.block && raw.block.photo && fix.media[raw.block.photo] && !assets[raw.block.photo]) { const m = fix.media[raw.block.photo]; assets[raw.block.photo] = { kind: 'photo', url: '/__qa/media/' + raw.block.photo + '.svg', verified: true, focus: m.focus, head: { x: m.focus.x + m.focus.w / 2, y: m.focus.y + m.focus.h / 2 }, rights: { source: 'QA stand-in (SVG)', licence: 'QA fixture, no rights needed', organic: true, paid: true } }; photos[key] = [raw.block.photo]; }
     return V3 ? raw : downgrade(raw);
   });
   const plan = { title: topic.title, format: topic.format || 'stat', sport: topic.sport, style: V3 ? styleId : 'es', ...(V3 ? { reelStyle: styleId } : {}), sourceLine: 'Source: ' + ((topic.sources || [])[0]?.source || 'ES'), sources: topic.sources, team: topic.team || undefined, beats };
@@ -403,7 +403,7 @@ async function renderReel(fix, topicId, styleId, opts2 = {}) {
   });
   // The engine's own checks, for the lint-gap cross-check.
   let lint = null;
-  try { if (L && L.lintTimeline) { const boxes = R.allBoxes ? R.allBoxes(measure, tl) : null; const r = L.lintTimeline(tl, { boxes, measure }); lint = { critical: r.critical, warnings: r.warnings, ids: [...new Set(r.issues.map(i => i.id || i.code || i.kind || ''))].filter(Boolean) }; } } catch (e) { lint = { error: e.message }; }
+  try { if (L && L.lintTimeline) { const boxes = R.allBoxes ? R.allBoxes(measure, tl) : null; const r = L.lintTimeline(tl, { boxes, measure, extraSources: topic.facts || '' }); lint = { critical: r.critical, warnings: r.warnings, ids: [...new Set(r.issues.map(i => i.id || i.code || i.kind || ''))].filter(Boolean), criticals: r.issues.filter(i => i.severity === 'critical').map(i => (i.id || i.code || '') + ': ' + String(i.message || '').slice(0, 140)) }; } } catch (e) { lint = { error: e.message }; }
   return { v3: V3, style: tl.style, durationMs: tl.durationMs, frames, lint, sheet: opts2.sheet ? sheet.toDataURL('image/png') : '' };
 }
 

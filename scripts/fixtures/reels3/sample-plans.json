@@ -360,7 +360,8 @@
           "clip1",
           "end"
         ]
-      }
+      },
+      "facts": "Aaron Rodgers 2011 (Green Bay Packers): 45 touchdown passes, 6 interceptions, 122.5 passer rating (the single-season record at the time), 15-1 record, NFL MVP. 45 / 6 = 7.5 touchdowns per interception. Tom Brady 2007: 50 touchdowns, 8 interceptions (6.3 per interception). Stat Twin episode 10. 13 years later."
     },
     {
       "id": "achilles-67",
@@ -603,7 +604,8 @@
           "clip1",
           "end"
         ]
-      }
+      },
+      "facts": "ES research: 67 NFL Achilles tears tracked; 52 players made it back; 26 got back to 90% of their old level; 15 did not return. George Kittle tore his Achilles on January 11."
     },
     {
       "id": "kittle-1-te",
@@ -812,7 +814,8 @@
           "clip1",
           "end"
         ]
-      }
+      },
+      "facts": "PFF: George Kittle was the #1 graded tight end in 2024 (grade 92.6) and 2025 (grade 90.4). He tore his Achilles on January 11. Number 1, two years running."
     },
     {
       "id": "green-bay-2011",
@@ -1032,7 +1035,8 @@
           "clip2",
           "end"
         ]
-      }
+      },
+      "facts": "2011 Green Bay Packers: 15-1 regular season, started 13-0, only loss at Kansas City in week 15. Aaron Rodgers threw 45 touchdowns and 6 interceptions."
     }
   ]
 }
