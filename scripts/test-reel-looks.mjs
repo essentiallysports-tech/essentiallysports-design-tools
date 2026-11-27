@@ -461,12 +461,11 @@ await test('old styles retired: ES only in the picker, each retired style has a 
   assert.match(js, /function adoptLook\(plan, savedStyle = ''\)/);
   assert.match(js, /plan\.look = ES\.lookForStyle\(old\);/);
   assert.match(js, /const block = ES\.blockOf\(beat\);/);
-  assert.match(js, /const lookNote = adoptLook\(state\.plan, t\.style\);[\s\S]{0,120}if \(lookNote\) toast\(lookNote\);/);
-  assert.match(js, /data-look="\$\{lk\.id\}"/);
+  assert.match(js, /const lookNote = adoptLook\(state\.plan, t\.style\);[\s\S]{0,240}if \(lookNote\) toast\(lookNote\);/); // v3: the reel also opens in its style
+  // Reels v3: the looks picker is retired; the four style cards pick the look.
+  assert.doesNotMatch(js, /data-look="\$\{lk\.id\}"/, 'the looks picker is gone');
   assert.doesNotMatch(js, /S\.STYLE_IDS\.map\(id => S\.STYLES\[id\]\)/, 'the old style picker is gone');
-  assert.match(js, /pageCtx\.register\('looks', looksApi\);/);
-  assert.match(js, /const looksApi = \{\s*list: [\s\S]*?set: [\s\S]*?current: [\s\S]*?thumb: /);
-  assert.match(js, /style: styleId\(\), look: lookId\(\),/);
+  assert.match(js, /style: styleId\(\), look: lookId\(\), esStyle: curStyle\(\),/);
   assert.match(read('../reel-maker.html'), /<script src="reel-es-themes\.js\?v=[\w-]+"><\/script>\s*<script src="reel-styles\.js[^\n]+\n\s*<script src="reel-es\.js/, 'the looks load before the styles and the engine');
 });
 

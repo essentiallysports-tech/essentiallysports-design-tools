@@ -145,12 +145,11 @@
     kicker: 'Reels Studio',
     icon: I.film,
     steps: [
-      { page: 'reel-maker.html', pageLabel: 'Reels Studio', navTarget: '.es-sidebar [data-shell-id="reel-maker"]', target: '#rm-steps', icon: I.steps, title: 'Start, Storyboard, Export', text: 'Three steps, built on the ES video system.' },
-      { page: 'reel-maker.html', target: '#rm-fmt-entry', placement: 'left', icon: I.trending, title: 'Start from anything', text: 'A trend, your script, a game, a clip, a player, or inspiration.' },
-      { page: 'reel-maker.html', target: ['#rm-recipes', '#rm-write'], placement: 'left', icon: I.sparkles, title: 'Pick a recipe, then make it', text: 'Stat drop, Quote reaction, Verdict and more. One button makes the reel.' },
-      { page: 'reel-maker.html', target: ['#rm-storyboard', '#rm-stage'], placement: 'top', icon: I.grid, title: 'Every scene on one board', text: 'Change words and colours, drop in media, drag to reorder.' },
-      { page: 'reel-maker.html', target: '#rm-settings', placement: 'left', icon: I.sliders, title: 'One settings rail', text: 'Look, size, voice (or your own), music, captions and cost.' },
-      { page: 'reel-maker.html', target: '.rm-step[data-step="export"]', icon: I.download, title: 'Check and export', text: 'MP4 in 9:16 and 4:5, plus caption files, or export it all at once.' },
+      { page: 'reel-maker.html', pageLabel: 'Reels Studio', navTarget: '.es-sidebar [data-shell-id="reel-maker"]', target: '#rm-steps', icon: I.steps, title: 'Create, Review, Export', text: 'Three steps, built on the ES video system.' },
+      { page: 'reel-maker.html', target: '#rm-prompt', placement: 'bottom', icon: I.trending, title: 'Say what it is about', text: 'A topic, a trend, a link or your own script.' },
+      { page: 'reel-maker.html', target: ['#rm-styles4', '#rm-make'], placement: 'top', icon: I.sparkles, title: 'Pick one of four styles', text: 'Game Tape, Stat Card, Receipts or Hype Cut. One button makes the reel.' },
+      { page: 'reel-maker.html', target: ['#rm-scenes', '#rm-steps'], placement: 'top', icon: I.grid, title: 'Review every scene', text: 'Swap a clip or photo, change words, or ask AI to revise.' },
+      { page: 'reel-maker.html', target: '.rm-step[data-step="export"]', icon: I.download, title: 'Ready to post, then export', text: 'Every scene is checked first. MP4 in 9:16 or 4:5, plus captions.' },
     ],
   });
 
