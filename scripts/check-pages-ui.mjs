@@ -34,6 +34,8 @@ if (typeof WebSocket !== 'function') { console.log('pages ui: skipped (needs Nod
 const STARTED = Date.now();
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
+// NBA, WNBA and NASCAR are their own sports now (e472b86), so the LeBron story
+// is NBA: the NHL story keeps an Others row in the feed for the sport-others state.
 // The Trends feed is built by the real server code (trend-design.js) from
 // synthetic RSS, so the page sees exactly the shape production sends.
 const require = createRequire(import.meta.url);
@@ -42,7 +44,7 @@ async function trendsFixture() {
   const at = h => new Date(now - h * 3600e3).toUTCString();
   const news = list => `<rss><channel>${list.map(([title, source, h]) => `<item><title>${title} - ${source}</title><link>https://example.com/${encodeURIComponent(title.slice(0, 40))}</link><pubDate>${at(h)}</pubDate><source url="https://${source.toLowerCase().replace(/[^a-z]/g, '')}.com">${source}</source></item>`).join('')}</channel></rss>`;
   const FEEDS = {
-    sports: news([['Patrick Mahomes throws 4 touchdowns as Chiefs beat Bills 31-17', 'ESPN', 2], ['LeBron James scores 40 in Lakers win over Warriors', 'ESPN', 3], ['Ohio State tops Michigan in College Football Playoff rankings update', 'CBS Sports', 4]]),
+    sports: news([['Patrick Mahomes throws 4 touchdowns as Chiefs beat Bills 31-17', 'ESPN', 2], ['LeBron James scores 40 in Lakers win over Warriors', 'ESPN', 3], ['Ohio State tops Michigan in College Football Playoff rankings update', 'CBS Sports', 4], ['Connor McDavid scores twice as Oilers beat Maple Leafs in NHL thriller', 'TSN', 3]]),
     nfl: news([['Mahomes, Chiefs top Bills in AFC thriller at Arrowhead', 'Yahoo Sports', 1], ['Andy Reid: "We have to clean up the turnovers before the playoffs start"', 'NFL.com', 2], ['NFL power rankings Week 12: Lions climb back to No. 1', 'CBS Sports', 5], ['Detroit Lions head coach Dan Campbell explains the decision to go for it on fourth down three times in the second half against the Green Bay Packers', 'The Athletic', 6], ['Chiefs beat Bills behind four Mahomes touchdowns', 'The Ringer', 3]]),
     cfb: news([['Heisman watch: Arch Manning throws for 412 yards in Texas win', 'On3', 3], ['College Football Playoff rankings: Ohio State, Oregon stay on top', 'ESPN', 7], ['Deion Sanders says Colorado will be ready for bowl season', 'Sports Illustrated', 9]]),
     mlb: news([['Shohei Ohtani wins third MVP award with Dodgers', 'MLB.com', 2], ['Yankees agree to a new deal with Juan Soto', 'New York Post', 8], ['MLB free agency tracker: every signing so far', 'The Athletic', 10]]),
