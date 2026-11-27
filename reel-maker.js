@@ -1131,30 +1131,51 @@
     let made = null;
     let why = '';
     // The server plans in every mode it can answer (AI on: the director; AI off or capped: its code plan).
+    // A plan whose words differ from the script is never used: the server is asked again for its
+    // code plan (forceCode, $0), and the page builds the scenes itself only when the server fails.
+    const body = { mode: 'plan', v: 4, script, scriptLocked: true, brief: topic, trend, length: state.length, format: state.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style, esStyle: style, ...(realStyles() ? {} : { look: STUB_LOOK[style] }) };
+    const usable = data => {
+      const plan = data && data.plan ? ensureV4(data.plan) : null;
+      // The old v3 'draft' is a plan written from a brief, not from the script.
+      if (!plan || String(data.source || '') === 'draft') return null;
+      // The server's own check (credits / links are not spoken) or the page's.
+      const kept = (data.voMatchesScript === true && plan.script && plan.script.text && SBC && SBC.keepsScript(plan, plan.script.text) && SBC.keepsScript(plan, script)) || (SBC && SBC.keepsScript(plan, script));
+      return kept ? plan : null;
+    };
+    const take = (data, plan) => {
+      if (!(plan.script && plan.script.text)) plan.script = { text: script.replace(/\s+/g, ' ').trim(), locked: true };
+      plan.script.locked = true;
+      applyStyle(plan, style);
+      return { ...data, plan, corpus: [data.corpus, corpus, ...sourceClaims(plan)].filter(Boolean).join('\n'), sources: [...sources, ...(data.sources || []).filter(x => x && x.type !== 'brief')] };
+    };
     if (!state.config.offline) {
       try {
-        const data = await api({ mode: 'plan', v: 4, script, scriptLocked: true, brief: topic, trend, length: state.length, format: state.format, sport: state.sport, tier: state.tier, factCheck: state.factCheck, style: state.style, esStyle: style, ...(realStyles() ? {} : { look: STUB_LOOK[style] }) });
+        const data = await api(body);
         state.spent.director += Number(data.costs?.director) || 0;
         state.spent.factCheck += Number(data.costs?.factCheck) || 0;
-        const plan = data.plan ? ensureV4(data.plan) : null;
-        // The server's plan is used whenever it keeps the words: the AI's, or its own code plan
-        // (AI off or capped: one beat per sentence, chapters, sourced headlines). Only the old
-        // v3 'draft' (a plan written from a brief, not the script) gives way to the page's code plan.
-        const planned = plan && String(data.source || '') !== 'draft';
-        if (planned && SBC && SBC.keepsScript(plan, script)) {
-          plan.script = { text: script.replace(/\s+/g, ' ').trim(), locked: true };
-          applyStyle(plan, style);
-          made = { ...data, plan, corpus: [data.corpus, corpus, ...sourceClaims(plan)].filter(Boolean).join('\n'), sources: [...sources, ...(data.sources || []).filter(x => x && x.type !== 'brief')] };
-        } else if (planned) why = 'The AI plan changed some of your words, so the scenes were built from your script by code.';
+        const plan = usable(data);
+        if (plan) made = take(data, plan);
+        else if (data && data.plan && String(data.source || '') !== 'code') {
+          // The AI changed some words: the server's code plan instead (one beat per sentence, sourced headlines).
+          const again = await api({ ...body, forceCode: true }).catch(() => null);
+          const code = again && String(again.source || '') === 'code' ? usable(again) : null;
+          if (code) made = take({ ...again, notice: 'The AI plan changed some of your words, so your script was laid out by code. Your words are exactly as written.' }, code);
+          else why = 'The AI plan changed some of your words, so the scenes were built from your script by code.';
+        }
       } catch (error) {
         why = error.offline ? '' : 'The AI planner is unavailable right now, so the scenes were built from your script by code.';
       }
     }
     if (!made) {
-      let plan = ES.scriptToPlan(script, { sourceLine: '', voLengthSec: 0, sport: state.sport, format: state.format === 'auto' ? 'explainer' : state.format });
+      // The page's own builder (server unreachable): credits are not spoken; every scene gets something that moves.
+      const spoken = SBC ? SBC.unspoken(script).replace(/\s+/g, ' ').trim() || script : script;
+      const credit = (script.match(/(?:^|[.!?\n]\s*)(?:sources?|via|per)\s*:\s*([^\n.]{2,80})/i) || [])[1] || '';
+      let plan = ES.scriptToPlan(spoken, { sourceLine: credit ? `Source: ${credit.trim()}` : '', voLengthSec: 0, sport: state.sport, format: state.format === 'auto' ? 'explainer' : state.format });
       plan.style = 'es';
       applyStyle(plan, style, { reshape: true });
       plan = ensureV4(plan);
+      if (SBC && typeof SBC.shoreUp === 'function') SBC.shoreUp(plan);
+      plan.script = { text: spoken, locked: true, ...(credit ? { credits: [credit.trim()] } : {}) };
       made = { plan, source: 'script', notice: why || (aiOn() ? '' : 'AI is off, so the scenes were built from your script by code. Your words are exactly as written.'), corpus, sources };
     }
     applyPlan(made, { brief: script, trend, go: false });

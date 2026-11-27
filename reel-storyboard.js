@@ -164,10 +164,64 @@
   // The words people say, compared loosely (case, punctuation, *emphasis* and spacing ignored).
   const looseWords = text => String(text || '').toLowerCase().replace(/[*]/g, '').replace(/[’‘]/g, "'").replace(/[^a-z0-9'%$.\s-]/g, ' ').replace(/[.\-]+(\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
   // Does the plan say the script word for word? (The AI never rewrites it.)
+  // Credits and links are not spoken (the server keeps them as sources): "Source: …", "Sources: …", "Via …", "Per …", URLs.
+  const unspoken = text => String(text || '').replace(/https?:\/\/\S+/gi, ' ').replace(/(^|[.!?\n]\s*)(?:sources?|via|per|credit)\s*:[^\n]*?(?=$|\n)/gi, '$1').replace(/(^|[.!?\n]\s*)(?:sources?|via|per|credit)\s*:[^.!?\n]*[.!?]?/gi, '$1');
   function keepsScript(plan, script) {
-    const said = (plan && Array.isArray(plan.beats) ? plan.beats : []).map(b => b && b.vo).filter(Boolean).join(' ');
-    return Boolean(looseWords(script)) && looseWords(said) === looseWords(script);
+    const said = looseWords((plan && Array.isArray(plan.beats) ? plan.beats : []).map(b => b && b.vo).filter(Boolean).join(' '));
+    if (!looseWords(script) || !said) return false;
+    return said === looseWords(script) || said === looseWords(unspoken(script));
   }
+  // A beat that shows nothing that moves: no media (or media 'none') and no module.
+  const bareBeat = b => Boolean(b) && !(b.module && b.module.type) && !(b.media && b.media.kind && b.media.kind !== 'none') && !(b.block && b.block.type && b.block.type !== 'statement' && b.block.type !== 'hook');
+  // ── The page's own builder (server unreachable): never a scene that shows nothing ──
+  // The figures a line says, with the word(s) after each: "45 touchdowns, 6 interceptions,
+  // a 122.5 passer rating" -> [{ value: '45', label: 'TOUCHDOWNS' }, …]. Years are dates, not figures.
+  function figuresOf(vo) {
+    const text = String(vo || '').replace(/[*]/g, '');
+    const out = [];
+    const re = /(\d[\d,]*(?:\.\d+)?(?:-\d+)?%?)\s+((?:[A-Za-z][A-Za-z'’-]*)(?:\s+(?!and\b|or\b|a\b|an\b|the\b|in\b|on\b|of\b)[A-Za-z][A-Za-z'’-]*)?)/g;
+    let m;
+    while ((m = re.exec(text)) && out.length < 3) {
+      const value = m[1];
+      if (/^(19|20)\d\d$/.test(value)) continue;
+      out.push({ value, label: m[2].toUpperCase().slice(0, 18) });
+    }
+    return out;
+  }
+  // The headline a chapter opens on: the first clause of its first line (up to ~9 words),
+  // in capitals, with its last word marked.
+  function headlineOf(vo) {
+    const first = String(vo || '').replace(/[*]/g, '').split(/[:;.!?]/)[0].trim();
+    const words = first.split(/\s+/).filter(Boolean).slice(0, 9);
+    if (words.length < 2) return '';
+    const last = words.pop();
+    return `${words.join(' ')} *${last}*`.toUpperCase();
+  }
+  // Fills the gaps of a page-built v4 plan: a hook headline from the first line, and a
+  // module on every scene that has neither a module nor media of its own (the figures it
+  // says as stat tiles or a reveal; a line with no figures as a one-row checklist that
+  // ticks in). Words are never changed.
+  function shoreUp(plan) {
+    if (!isV4(plan)) return plan;
+    const first = plan.chapters[0];
+    const firstBeat = first && first.beats[0];
+    const hook = firstBeat ? headlineOf(firstBeat.vo) : '';
+    if (hook) first.headline = hook;
+    plan.chapters.forEach(c => (c.beats || []).forEach(b => {
+      if (b.module && b.module.type) return;
+      const hasMedia = b.media && b.media.kind && !['none', 'auto'].includes(b.media.kind);
+      if (hasMedia) return;
+      const figs = figuresOf(b.vo);
+      if (figs.length >= 2) b.module = { type: 'statTiles', tiles: figs.map((f, i) => ({ ...f, tone: i === 0 ? 'blue' : 'ink' })) };
+      else if (figs.length === 1) b.module = { type: 'reveal', from: '?', to: figs[0].value, label: figs[0].label };
+      else {
+        const clause = String(b.vo || '').replace(/[*]/g, '').split(/[.!?]/)[0].trim().split(/\s+/).slice(0, 6).join(' ');
+        if (clause) b.module = { type: 'checklist', rows: [{ text: clause.toUpperCase(), checked: true }] };
+      }
+    }));
+    return plan;
+  }
+  const bareBeats = plan => (isV4(plan) ? plan.chapters.flatMap(c => c.beats || []).filter(b => !(b.module && b.module.type) && !(b.media && b.media.kind && !['none', 'auto'].includes(b.media.kind))) : []);
   // Words, seconds and the length target for the script meter (2.6 words a second).
   function scriptMeter(text, target = { min: 80, max: 100 }, wps = 2.6) {
     const words = String(text || '').replace(/[*]/g, '').trim().split(/\s+/).filter(Boolean).length;
@@ -343,14 +397,14 @@
       }
 
       // ── What a scene shows ──
-      const SOURCE = { 'x-clip': 'Official clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', paper: 'Infographic', none: 'Infographic' };
+      const SOURCE = { 'x-clip': 'Official clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', paper: 'No clip or photo', none: 'No clip or photo' };
       function mediaOf(beat) {
         const ids = state.photos[beat.id] || [];
         const asset = ids[0] ? state.assets[ids[0]] : null;
         const src = state.visualSrc[beat.id] || (asset ? (asset.kind === 'clip' ? 'x-clip' : 'photo') : 'none');
         return { asset, src, img: ids[0] && state.images[ids[0]], clip: Boolean(asset && asset.kind === 'clip'), verified: Boolean(asset && asset.verified) };
       }
-      const mediaBadge = m => (m.asset ? `${m.clip ? 'Clip' : 'Photo'}${m.verified ? ' ✓' : ''}` : 'Infographic');
+      const mediaBadge = m => (m.asset ? `${m.clip ? 'Clip' : 'Photo'}${m.verified ? ' ✓' : ''}` : 'No clip or photo');
       // Allowed blocks for the scene: the style's list when the engine gives one.
       function blockOptions(beat, i) {
         const type = ES.blockOf(beat).type;
@@ -513,7 +567,7 @@
         const by = m.asset && m.asset.checkedBy;
         const what = m.clip ? 'Checked: right subject and moment' : (by === 'caption' ? 'From an agency caption' : (by && by !== 'vision' ? 'Checked by its source' : 'Checked: shows the right person'));
         const shortNote = m.clip && m.asset.short ? '<span class="rm-meta">The clip is shorter than the scene, so it loops.</span>' : '';
-        const status = m.asset ? (m.verified ? `<span class="rm-verified${by === 'caption' && !m.clip ? ' is-caption' : ''}">${by === 'caption' && !m.clip ? '' : ICON.check}<span>${what}</span></span>${shortNote}` : (ui.sourcingOn && ui.sourcingOn() ? '' : '<span class="rm-meta">Not checked yet</span>')) : '<span class="rm-meta">No clip or photo matched this scene, so it is an infographic.</span>';
+        const status = m.asset ? (m.verified ? `<span class="rm-verified${by === 'caption' && !m.clip ? ' is-caption' : ''}">${by === 'caption' && !m.clip ? '' : ICON.check}<span>${what}</span></span>${shortNote}` : (ui.sourcingOn && ui.sourcingOn() ? '' : '<span class="rm-meta">Not checked yet</span>')) : (beat.module && beat.module.type ? `<span class="rm-meta">No clip or photo: the ${esc((ui.moduleLabel && ui.moduleLabel[beat.module.type]) || beat.module.type)} carries this scene.</span>` : (ES && !(ui.v4Beat && ui.v4Beat(beat)) && ['number', 'dots', 'compare', 'statTiles', 'dotGrid', 'streak', 'rankTile'].includes(ES.blockOf(beat).type) ? '<span class="rm-meta">No clip or photo: the data block carries this scene.</span>' : '<span class="rm-meta">Nothing moves here yet: find a clip, add a photo, or pick a module.</span>'));
         return `<div class="rm-scene__media">
           <div class="rm-scene__mediarow">
             <span class="rm-scene__thumb${m.img ? '' : ' is-empty'}" aria-hidden="true">${m.img ? (m.img.tagName === 'CANVAS' ? '<span data-sb-poster></span>' : `<img src="${esc(m.img.src)}" alt="">`) : ICON.image}</span>
@@ -525,7 +579,7 @@
             <div class="rm-swap__more" role="group" aria-label="More ways">
               <button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-visual="photo">${ICON.image}<span>Search ES photos</span></button>
               <button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-visual="upload">${ICON.upload}<span>Upload</span></button>
-              ${m.asset ? `<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sb-nomedia>${ICON.stat}<span>Use an infographic</span></button>` : ''}
+              ${m.asset ? `<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sb-nomedia>${ICON.stat}<span>No picture: data only</span></button>` : ''}
             </div>
           </div>
         </div>`;
@@ -856,5 +910,5 @@
     else document.addEventListener('reelmaker:ready', event => start((event.detail && event.detail.ctx) || window.ReelMakerCtx), { once: true });
   }
 
-  return { COLORS, ROWS, endIndex, canMove, move, dropIndex, stampWord, dotsLine, markerText, chaptersOf, motionOf, readiness, MOTION_BLOCKS, relink, linkV4, ensureV4, isV4, keepsScript, looseWords, scriptMeter, attach };
+  return { COLORS, ROWS, endIndex, canMove, move, dropIndex, stampWord, dotsLine, markerText, chaptersOf, motionOf, readiness, MOTION_BLOCKS, relink, linkV4, ensureV4, isV4, keepsScript, looseWords, unspoken, bareBeat, bareBeats, figuresOf, headlineOf, shoreUp, scriptMeter, attach };
 }));
