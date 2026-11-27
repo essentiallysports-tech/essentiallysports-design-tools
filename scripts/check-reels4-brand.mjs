@@ -134,6 +134,8 @@ function analyse(f, voc, ctx) {
     // In motion (a pop or a morph)? The same words 400 ms later settle on a step.
     const later = ctx.later ? ctx.later.filter(x => x.op === 'text' && x.text === t.text) : [];
     if (later.length && later.every(x => ctx.steps.some(s => Math.abs(s - x.size) <= 0.6))) return;
+    // A flip (a "?" that turns into its number on the spoken word): a different text settles in the same box within 400 ms.
+    if (!later.length && ctx.later && t.l != null && ctx.later.some(x => x.op === 'text' && x.text !== t.text && x.l != null && Math.abs(((x.l + x.r) / 2) - ((t.l + t.r) / 2)) < 40 && Math.abs(((x.t + x.b) / 2) - ((t.t + t.b) / 2)) < 40 && ctx.steps.some(s => Math.abs(s - x.size) <= 0.6))) return;
     add('scale', '"' + t.text.slice(0, 24) + '" (' + t.role + ') is ' + t.size + ' px, not on the type scale' + (later.length ? ' (also ' + later[0].size + ' px 400 ms later)' : ''), t);
   });
   texts.forEach(t => {
@@ -272,7 +274,7 @@ function statics(v3plans) {
     if (!S[id]) continue;
     if (S[id].label !== label) out.fails.push('style ' + id + ' label "' + S[id].label + '" (want "' + label + '")');
     if (!S[id].previewPlan || S[id].previewPlan.v !== 4 || !Array.isArray(S[id].previewPlan.chapters)) out.fails.push('style ' + id + ' has no v4 previewPlan');
-    else if (S[id].previewPlan.close && !['yourCall', 'endcard'].includes(S[id].previewPlan.close.kind)) out.fails.push('style ' + id + ' previewPlan.close.kind is "' + S[id].previewPlan.close.kind + '" (contract: yourCall | endcard)');
+    else if (S[id].previewPlan.close && !(window.ReelES4 && window.ReelES4.CLOSE_KINDS || ['yourCall', 'endcard', 'checklist']).includes(S[id].previewPlan.close.kind)) out.fails.push('style ' + id + ' previewPlan.close.kind is "' + S[id].previewPlan.close.kind + '" (allowed: yourCall | endcard | checklist)');
   }
   const TH = window.ReelESThemes || ES.themes || ES;
   const styleOf = (TH && TH.styleOf) || ES.styleOf;
