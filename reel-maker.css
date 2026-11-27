@@ -1328,3 +1328,9 @@ html[data-theme="dark"] .rm-ideas { background: #1F2126; color: #fff; }
   .rm-stage { padding: var(--es-space-4, 16px); }
 }
 .rm-scenes__head { flex-wrap: wrap; }
+/* Fix text on a tinted issue row: ink-2 keeps 4.5:1 on the red / amber tints. */
+.rm-issue div span { color: var(--rm-ink-2); }
+.rm-ideas, .rm-ideas button, .rm-ideas input, .rm-ideas select, .rm-ideas textarea { font-family: var(--es-font-ui); }
+.rm-prompt__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--es-space-2, 8px) var(--es-space-3, 12px); }
+.rm-prompt__tools .ri-script-voice svg { width: 16px; height: 16px; }
+.rm-scenes__head .es-btn { flex: none; padding-inline: var(--es-space-2, 8px); }

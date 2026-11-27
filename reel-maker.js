@@ -434,8 +434,13 @@
   }
   // Puts a style on a plan. The renderer engine stays 'es'; the style rides
   // on plan.esStyle (and, until the engine lane lands, on the closest look).
-  function applyStyle(plan, id) {
+  // reshape: a plan made by code (script, free draft) takes the style's
+  // blocks by code ($0, words unchanged; ReelRecipes.applyStyle, engine lane).
+  function applyStyle(plan, id, { reshape = false } = {}) {
     if (!plan) return;
+    if (reshape && realStyles() && window.ReelRecipes && typeof window.ReelRecipes.applyStyle === 'function') {
+      try { const out = window.ReelRecipes.applyStyle(plan, id); if (out && out.plan && Array.isArray(out.plan.beats)) { plan.beats = out.plan.beats; delete plan.recipe; } } catch (error) { window.FrameUpErrors?.report?.(error, 'reels applyStyle'); }
+    }
     plan.esStyle = STYLE_IDS.includes(id) ? id : 'gametape';
     if (!realStyles() && ES && ES.LOOKS && ES.LOOKS[STUB_LOOK[plan.esStyle]]) plan.look = STUB_LOOK[plan.esStyle];
   }
@@ -624,16 +629,31 @@
     els.radarHost.hidden = !radar || state.inspo !== 'radar';
     els.ideasHost.hidden = !ideas || state.inspo !== 'ideas';
   }
-  inspoTabs.addEventListener('click', event => { const btn = event.target.closest('[data-inspo]'); if (btn) mountInspo(btn.dataset.inspo); });
+  // The ideas room starts from what is on Create: the picked trend, else the words in the prompt.
+  function seedIdeas() {
+    const ideas = mods().ideas;
+    if (!ideas) return;
+    const trend = state.trend || null;
+    const topic = els.prompt.value.trim() || (trend ? trend.title : '');
+    if (topic || trend) ideas.open({ trend, topic, sport: (trend && trend.sport) || state.sport || '' });
+  }
+  inspoTabs.addEventListener('click', event => {
+    const btn = event.target.closest('[data-inspo]');
+    if (!btn) return;
+    mountInspo(btn.dataset.inspo);
+    if (btn.dataset.inspo === 'ideas') seedIdeas();
+  });
   function openInspo(show = '') {
     mountInspo(show);
     if (!els.ideasDialog.open) els.ideasDialog.showModal();
-    const topic = els.prompt.value.trim();
-    if (state.inspo === 'ideas' && mods().ideas && (topic || state.trend)) mods().ideas.open({ trend: state.trend, topic: topic || (state.trend ? state.trend.title : ''), sport: (state.trend && state.trend.sport) || state.sport || '' });
+    if (state.inspo === 'ideas') seedIdeas();
+    else if (state.inspo === 'radar' && state.trend && mods().radar) mods().radar.open({ trend: state.trend });
     logEvent('edit', { what: 'inspiration' });
   }
   els.inspireLink.addEventListener('click', () => openInspo());
   els.ideasDialog.addEventListener('click', event => { if (event.target === els.ideasDialog) els.ideasDialog.close(); });
+  // Esc, the close button or a backdrop click: focus goes back to "Need an idea?".
+  els.ideasDialog.addEventListener('close', () => { if (state.step === 'topic') els.inspireLink.focus({ preventScroll: true }); });
 
   // ─── Start from a trend ──────────────────────────────────────────────────
   function leagueTile(sport, size = 20) {
@@ -1004,7 +1024,7 @@
       state.spent.director += Number(data.costs?.director) || 0;
       state.spent.factCheck += Number(data.costs?.factCheck) || 0;
       if (data.suggestedStyle) state.styleSuggested = data.suggestedStyle;
-      applyStyle(data.plan, style);
+      applyStyle(data.plan, style, { reshape: !/^director/.test(data.source || '') });
       applyPlan(data, { brief, trend, go: false });
       logEvent('plan', { source: data.source, format: data.plan.format, style: data.plan.style, esStyle: style, escalated: data.escalated, cost: data.cost, issues: (data.issues || []).length, beats: data.plan.beats.length });
       flowEvent({ type: 'stage-done', stage: 'script', note: `${data.plan.beats.length} scenes · ${styleDef(style).label}` });
@@ -1014,7 +1034,7 @@
         const corpus = [brief, trend?.title, ...(trend?.related || []).map(r => r.title)].filter(Boolean).join('\n');
         const plan = F.fallbackPlan({ brief: corpus, title: trend?.title || '', format: state.format, sport: state.sport || trend?.sport || '' });
         plan.style = state.style === 'auto' ? state.styleSuggested.id : state.style;
-        applyStyle(plan, style);
+        applyStyle(plan, style, { reshape: true });
         const draft = { plan, source: 'draft', notice: 'The AI server is not reachable here, so this is a draft built from your words.', corpus, sources: trend ? [{ type: 'trend', title: trend.title, url: trend.url }] : [{ type: 'brief', title: 'Your brief' }] };
         applyPlan(draft, { brief, trend, go: false });
         flowEvent({ type: 'stage-done', stage: 'script', note: 'Draft from your words' });
@@ -1039,7 +1059,7 @@
     const started = Date.now();
     const plan = ES.scriptToPlan(script, { sourceLine: '', voLengthSec: 0, sport: state.sport, format: state.format === 'auto' ? 'explainer' : state.format });
     plan.style = state.style === 'auto' ? 'es' : state.style;
-    applyStyle(plan, state.esStyle);
+    applyStyle(plan, state.esStyle, { reshape: true });
     logStart();
     const made = { plan, source: 'script', notice: 'Your script, word for word: each line is a scene. Change a scene’s block or its on-screen words; your voiceover lines stay as you wrote them.', corpus: script, sources: [{ type: 'script', title: 'Your script' }] };
     applyPlan(made, { brief: script, go: false });
@@ -1144,6 +1164,8 @@
     state.notice = data.notice || (data.source === 'draft' ? 'This is a draft built from your words. Edit the beats, or write again when AI is available.' : '');
     state.corpus = data.corpus || [brief, trend?.title].filter(Boolean).join('\n');
     state.sources = data.sources || [];
+    // A code plan (free mode, a draft, your script) has no source line: it comes from the sources it used.
+    if (!plan.sourceLine) { const line = sourceLineFrom([...(trend && trend.source ? [{ source: trend.source }] : []), ...state.sources], [brief, trend && trend.title].filter(Boolean).join(' ')); if (line) plan.sourceLine = line; }
     state.brief = brief;
     state.trendRef = trend ? { id: trend.id, title: trend.title, sport: trend.sport, url: trend.url } : null;
     state.photos = {};
@@ -1160,6 +1182,17 @@
     emit('plan', { source: state.planSource }); // ── Reels 2.0: D (interface) ──
     if (go) { goStep('edit', { focus: false }); fillVisuals().then(() => rebuild()); }
     if (data.issues?.length) els.writeStatus.textContent = '';
+  }
+  // "Source: ESPN" from a trend's outlet, a link's site or a "Source: …" line in the words. '' when none.
+  function sourceLineFrom(sources = [], words = '') {
+    const said = String(words || '').match(/(?:^|\n|\.\s)\s*(?:source|sources|via|per)\s*:\s*([^\n.]{2,80})/i);
+    if (said) return `Source: ${said[1].trim()}`;
+    const names = [];
+    const host = url => { try { return new URL(url).hostname.replace(/^www\./, '').split('.').slice(-2, -1)[0]; } catch { return ''; } };
+    (sources || []).forEach(s => { const n = s.source || s.outlet || (s.url ? host(s.url) : ''); if (n && !names.includes(n)) names.push(n); });
+    (String(words || '').match(/https?:\/\/[^\s]+/g) || []).forEach(u => { const n = host(u); if (n && !names.includes(n)) names.push(n); });
+    const pretty = n => (n.length <= 4 ? n.toUpperCase() : n[0].toUpperCase() + n.slice(1));
+    return names.length ? `Source: ${names.slice(0, 3).map(pretty).join(', ')}` : '';
   }
   async function loadTeamLogo() {
     delete state.images['logo:team'];
@@ -1351,48 +1384,6 @@
   // when AI is on (capped per reel, cached per clip URL), then each beat gets
   // its best free clip and the best segment of it for the beat's length.
   const CLIPS = window.ReelClips || null;
-  let judgeCache = null;
-  async function pickClips(pool, beats, plan, used) {
-    if (!CLIPS || !pool.length || !beats.length) return {};
-    const cands = CLIPS.preselect(pool, beats, plan, CLIPS.JUDGE.maxClips);
-    const samples = {};
-    const judgeTimes = {};
-    const frames = {};
-    const loaded = [];
-    for (let i = 0; i < cands.length; i += 3) {
-      await Promise.all(cands.slice(i, i + 3).map(async clip => {
-        const id = await loadClip(clip).catch(() => '');
-        if (!id || !state.videos[id]) return;
-        loaded.push(clip);
-        const sm = await CLIPS.sampleClip(state.videos[id]).catch(() => null);
-        if (!sm) return;
-        samples[clip.url] = sm.samples;
-        judgeTimes[clip.url] = sm.times;
-        frames[clip.url] = sm.frames;
-      }));
-    }
-    const subjects = [...new Map(beats.map(b => CLIPS.subjectFor(b, plan)).map(sub => [sub.key, { key: sub.key, label: sub.players[0] || sub.team || sub.key }])).values()];
-    const judgements = {};
-    try { judgeCache = judgeCache || CLIPS.makeCache(window.localStorage); } catch { judgeCache = CLIPS.makeCache(null); }
-    loaded.forEach(c => { const j = judgeCache.get(c.url); if (j && subjects.every(sub => sub.key in j.relevance)) judgements[c.url] = j; });
-    const ai = state.config.ai && !state.config.offline && state.config.clipJudge?.ready !== false;
-    const todo = loaded.filter(c => !judgements[c.url] && frames[c.url]?.length);
-    state.spent.clipJudge = Number(state.spent.clipJudge) || 0;
-    for (let i = 0; ai && i < todo.length; i += CLIPS.JUDGE.perCall) {
-      const left = CLIPS.JUDGE.maxUsdPerReel - state.spent.clipJudge;
-      if (left <= 0) break;
-      const batch = todo.slice(i, i + CLIPS.JUDGE.perCall);
-      try {
-        const data = await api({ mode: 'clip-judge', budgetUsd: left, subjects, clips: batch.map(c => ({ url: c.url, text: c.text, handle: c.handle, frames: frames[c.url], times: judgeTimes[c.url] })) });
-        state.spent.clipJudge += Number(data.cost) || 0;
-        Object.entries(data.judgements || {}).forEach(([url, raw]) => { const j = CLIPS.validateJudgement(raw); if (j) { judgements[url] = j; judgeCache.set(url, j); } });
-        if (data.capped) break;
-      } catch { break; } // AI off, over a cap or failing: the free ranking decides
-    }
-    state.clipPicks = CLIPS.assign(loaded, beats, plan, { judgements, samples, judgeTimes, used });
-    return state.clipPicks;
-  }
-
   // Stills.
   async function teamTile(beatId, team, { key = '' } = {}) {
     if (!team || !team.name) return '';
@@ -1518,7 +1509,6 @@
   const SRC = () => window.ReelSourcing || null;
   const srcOn = () => { const s = SRC(); return Boolean(s && typeof s.mediaFor === 'function'); };
   state.cands = {};
-  const mediaRows = out => (Array.isArray(out) ? out : (out && (out.beats || out.scenes || out.media)) || []).filter(r => r && r.beatId);
   function photoFrom(p, subject) {
     const url = typeof p === 'string' ? p : (p.proxyUrl || p.url || p.src || '');
     return { id: `img:${p.id || url}`, src: url, title: p.title || subject?.name || 'ES photo', credit: p.credit || '', width: p.width, height: p.height, source: p.source || '', focus: p.focus || null, head: p.head || null, verified: p.verified === true };
@@ -1660,19 +1650,14 @@
     if (srcOn() && !(F.isDataFormat && F.isDataFormat(plan.format))) return fillFromSourcing(plan, beats, { force });
     return legacyFill(plan, beats, { force });
   }
-  // The Reels 2.0 chain (data formats, and news reels until ReelSourcing is merged).
+  // Data formats (Game Swing plays keep their matched clip) and the page
+  // without ReelSourcing: verified-sourcing first for every other scene,
+  // the ES image pool / team graphic chain only when the module is missing.
   async function legacyFill(plan, beats, { force = false } = {}) {
-    const pool = await clipPool(plan);
-    const aiLeft = state.aiClips && state.config.aiClips?.ready ? Math.max(0, state.config.aiClips.max - state.aiClipsUsed) : 0;
-    const durs = plan.beats.map(b => { const t = state.timeline.beats.find(x => x.id === b.id); return { id: b.id, kind: b.kind, visual: b.visual, durMs: t ? t.outMs - t.inMs : 2000 }; });
-    const mix = F.planVisualMix(durs, { target: 0.8, clipsAvailable: state.useClips ? pool.length + aiLeft : 0 });
-    // Clips already on a beat of THIS reel (not every clip this tab has seen).
     const usedClips = new Set(plan.beats.flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean));
     const usedPhotos = new Set(Object.values(state.photos).flat());
-    // Game Swing plays show only the clip matched to that play (sure matches), else a photo.
     const swingPlay = b => plan.format === 'gameswing' && b.kind === 'play';
-    const clipBeats = beats.filter(b => b.kind !== 'cta' && !swingPlay(b) && mix.mode[b.id] === 'clip' && (force || !state.photos[b.id]?.length)).map(b => ({ ...b, durMs: (durs.find(d => d.id === b.id) || {}).durMs || 2500 }));
-    const picks = state.useClips && pool.length ? await pickClips(pool, clipBeats, plan, usedClips).catch(() => ({})) : {};
+    const rest = [];
     let n = 0;
     for (const beat of beats) {
       if (state.plan !== plan) return { note: '' };
@@ -1683,15 +1668,14 @@
       if (swingPlay(beat)) {
         const m = state.useClips && beat.clip?.url ? state.clipMatches.find(c => c.url === beat.clip.url) : null;
         if (m && !usedClips.has(m.url)) { usedClips.add(m.url); done = await useXClip(beat.id, m); }
-      } else if (mix.mode[beat.id] === 'clip') {
-        const pick = picks[beat.id];
-        if (pick) { usedClips.add(pick.clip.url); done = await useXClip(beat.id, pick.clip, pick.segment); }
-        if (!done && beat.visual === 'scene' && state.aiClips && state.config.aiClips?.ready && state.aiClipsUsed < state.config.aiClips.max) done = await aiClip(beat);
       }
-      if (!done) await stillChain(beat, usedPhotos);
+      if (done) continue;
+      if (srcOn()) { rest.push(beat); continue; }
+      await stillChain(beat, usedPhotos);
       n += 1;
       if (n % 2 === 0) { rebuild(); renderBeats(); }
     }
+    if (rest.length) await fillFromSourcing(plan, rest, { force: true });
     rebuild();
     renderBeats();
     const share = clipShare();
@@ -4631,7 +4615,19 @@
   pageCtx.on('module', ({ name }) => {
     const m = pageCtx.modules[name];
     if (name === 'tray') m.mount($('ri-tray'));
-    if (name === 'voiceInput') m.mount($('ri-voice-panel'));
+    if (name === 'voiceInput') {
+      m.mount($('ri-voice-panel'));
+      // "Record or upload your voiceover" on the prompt card (scenes and captions follow your words).
+      if (!$('ri-script-voice')) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'ri-script-voice';
+        btn.className = 'es-btn es-btn--sm es-btn--tertiary ri-script-voice';
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg><span>Record your voiceover</span>`;
+        btn.addEventListener('click', () => m.open());
+        $('rm-prompt-tools')?.append(btn);
+      }
+    }
     if (name === 'captions') m.mount($('rm-captions-host'));
     // Lane B's panels: their temporary buttons under the trend list give way to the Inspiration tile and "Brainstorm angles".
     if (name === 'ideas' || name === 'radar') { queueMicrotask(() => document.getElementById('rb-entry')?.remove()); syncStart(); if (els.ideasDialog.open) mountInspo(); }
