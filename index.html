@@ -7940,7 +7940,7 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
-<link rel="stylesheet" href="studio-inspector.css?v=20261121-rel2">
+<link rel="stylesheet" href="studio-inspector.css?v=20261127-panel2">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
 <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
@@ -8301,7 +8301,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <div class="youtube-quote-control" id="youtube-quote-control">
         <button class="quote-switch" id="youtube-quote-toggle" type="button" role="switch" aria-checked="false">
-          <span>Quote Mode</span>
+          <span>Quote mode</span>
           <span class="quote-switch-track" aria-hidden="true"></span>
         </button>
       </div>
@@ -8309,7 +8309,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <div class="newsletter-control-row" aria-label="Newsletter asset options">
       <div class="card" id="newsletter-asset-card">
-        <div class="card-title">Newsletter Asset</div>
+        <div class="card-title">Newsletter asset</div>
         <select id="newsletter-asset-select" aria-label="Newsletter asset type">
           <optgroup label="Feature images">
             <option value="feature-image" data-tag="locked">Feature Image</option>
@@ -8332,7 +8332,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         </select>
       </div>
       <div class="card" id="newsletter-brand-card">
-        <div class="card-title">Newsletter Brand</div>
+        <div class="card-title">Newsletter brand</div>
         <select id="newsletter-brand-select" aria-label="Newsletter brand"></select>
       </div>
       <p class="widget-builder-hint" id="widget-builder-hint" role="status" aria-live="polite"></p>
@@ -8340,7 +8340,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <div class="post-type-control" id="post-type-control" aria-label="Instagram post type">
       <div class="card">
-        <div class="card-title">Post Type</div>
+        <div class="card-title">Post type</div>
         <select id="instagram-post-type-select" aria-label="Social Media post type">
           <option value="cover">Cover Image</option>
           <option value="quote">Quote</option>
@@ -8405,7 +8405,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     <!-- TEXT ON DESIGN CARD -->
     <div class="card text-card">
       <div class="tod-row">
-        <span class="tod-label" id="tod-label">Text On Design</span>
+        <span class="tod-label" id="tod-label">Text on design</span>
       </div>
       <div class="input-wrap" style="margin-bottom:10px">
         <textarea id="pill-text" class="pill-entry" placeholder="Your Quote Text Goes Here" spellcheck="true" aria-labelledby="tod-label" aria-describedby="pill-text-hint"></textarea>
@@ -8540,7 +8540,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         </div>
         <div class="stats-double-fields" id="stats-double-fields">
           <section class="stats-double-post-section" aria-labelledby="stats-double-main-title">
-            <label class="section-label" id="stats-double-main-title" for="stats-double-headline">Post Title</label>
+            <label class="section-label" id="stats-double-main-title" for="stats-double-headline">Post title</label>
             <div class="input-wrap">
               <input id="stats-double-headline" class="pill-entry" type="text" placeholder="Who won the trade?" spellcheck="true">
             </div>
@@ -8743,7 +8743,7 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
 
     <div class="card pill-position-card" id="pill-position-card">
-      <div class="card-title">Pill Position</div>
+      <div class="card-title">Pill position</div>
       <div class="pill-position-list" id="pill-position-list">
         <div class="pill-position-empty">Add text lines to adjust individual pill positions.</div>
       </div>
@@ -8770,7 +8770,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
 
       <!-- CUSTOM COLORS -->
-      <div class="color-group-label">Pill &amp; Text</div>
+      <div class="color-group-label">Pill &amp; text</div>
       <div class="palette-row" id="palette-row">
         <!-- swatches rendered by JS -->
       </div>
@@ -8779,8 +8779,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     <input type="file" id="photo-input" accept="image/*" style="display:none">
 
     <div class="card advanced-card" id="entity-image-card">
-      <div class="card-title" id="entity-card-title">Foreground Image 1</div>
-      <div class="photo-drop" id="entity-photo-drop" onclick="document.getElementById('entity-photo-input').click()">
+      <div class="card-title" id="entity-card-title">Foreground image 1</div>
+      <div class="photo-drop" id="entity-photo-drop" role="button" tabindex="0" aria-label="Upload a foreground image" onclick="document.getElementById('entity-photo-input').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <div class="photo-drop-main">Click here <span class="upload-arrow" aria-hidden="true"></span> to upload Foreground Image 1</div>
         <div class="photo-supported">Transparent PNG recommended</div>
       </div>
@@ -8813,8 +8813,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
 
     <div class="card advanced-card" id="entity-image-card-2">
-      <div class="card-title">Foreground Image 2</div>
-      <div class="photo-drop" id="entity-photo-drop-2" onclick="document.getElementById('entity-photo-input-2').click()">
+      <div class="card-title">Foreground image 2</div>
+      <div class="photo-drop" id="entity-photo-drop-2" role="button" tabindex="0" aria-label="Upload a foreground image" onclick="document.getElementById('entity-photo-input-2').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
         <div class="photo-drop-main">Click here <span class="upload-arrow" aria-hidden="true"></span> to upload Foreground Image 2</div>
         <div class="photo-supported">Transparent PNG recommended</div>
       </div>
@@ -8848,7 +8848,7 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <div id="widget-main-fields">
       <div class="widget-field-group">
-        <label class="widget-field-label">Header Image Link</label>
+        <label class="widget-field-label">Header image link</label>
         <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="headerImages.main" placeholder="https://... (leave blank to use the default brand header)">
       </div>
       <div class="widget-field-group">
@@ -8889,12 +8889,12 @@ body[data-current-page="faq"] .faq-cta-art img {
 
     <div id="widget-picks-fields">
       <div class="widget-field-group">
-        <label class="widget-field-label">Header Image Link</label>
+        <label class="widget-field-label">Header image link</label>
         <input spellcheck="false" type="text" class="widget-text-input" data-widget-field="headerImages.picks" placeholder="https://... (leave blank to use the default brand header)">
       </div>
       <div class="widget-field-group" data-widget-pick-group="0">
         <div class="widget-pick-head">
-          <label class="widget-field-label widget-pick-label">Top Pick 1</label>
+          <label class="widget-field-label widget-pick-label">Top pick 1</label>
           <button type="button" class="widget-pick-switch" data-widget-pick-toggle="0" role="switch" aria-checked="true" aria-label="Show Top Pick 1 in the newsletter">
             <span class="widget-pick-switch-label">Show</span>
             <span class="widget-pick-switch-track" aria-hidden="true"></span>
@@ -8926,7 +8926,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <div class="widget-field-group" data-widget-pick-group="1">
         <div class="widget-pick-head">
-          <label class="widget-field-label widget-pick-label">Top Pick 2</label>
+          <label class="widget-field-label widget-pick-label">Top pick 2</label>
           <button type="button" class="widget-pick-switch" data-widget-pick-toggle="1" role="switch" aria-checked="true" aria-label="Show Top Pick 2 in the newsletter">
             <span class="widget-pick-switch-label">Show</span>
             <span class="widget-pick-switch-track" aria-hidden="true"></span>
@@ -8958,7 +8958,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <div class="widget-field-group" data-widget-pick-group="2">
         <div class="widget-pick-head">
-          <label class="widget-field-label widget-pick-label">Top Pick 3</label>
+          <label class="widget-field-label widget-pick-label">Top pick 3</label>
           <button type="button" class="widget-pick-switch" data-widget-pick-toggle="2" role="switch" aria-checked="true" aria-label="Show Top Pick 3 in the newsletter">
             <span class="widget-pick-switch-label">Show</span>
             <span class="widget-pick-switch-track" aria-hidden="true"></span>
@@ -8990,7 +8990,7 @@ body[data-current-page="faq"] .faq-cta-art img {
       </div>
       <div class="widget-field-group" data-widget-pick-group="3">
         <div class="widget-pick-head">
-          <label class="widget-field-label widget-pick-label">Top Pick 4</label>
+          <label class="widget-field-label widget-pick-label">Top pick 4</label>
           <button type="button" class="widget-pick-switch" data-widget-pick-toggle="3" role="switch" aria-checked="true" aria-label="Show Top Pick 4 in the newsletter">
             <span class="widget-pick-switch-label">Show</span>
             <span class="widget-pick-switch-track" aria-hidden="true"></span>
@@ -9023,11 +9023,11 @@ body[data-current-page="faq"] .faq-cta-art img {
     </div>
     <div id="trivia-fields">
       <div class="widget-field-group">
-        <label class="widget-field-label">Header Banner Link</label>
+        <label class="widget-field-label">Header banner link</label>
         <input spellcheck="false" type="text" class="widget-text-input" data-trivia-field="headerImage" placeholder="https://... (leave blank to use the brand's default banner)">
       </div>
       <div class="widget-field-group">
-        <label class="widget-field-label">Trivia Image</label>
+        <label class="widget-field-label">Trivia image</label>
         <div class="widget-image-row">
           <div class="widget-image-thumb" data-trivia-thumb><img loading="lazy" decoding="async" alt=""></div>
           <div class="widget-image-actions">
@@ -9069,7 +9069,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <input type="text" class="widget-text-input" data-trivia-field="options.3" placeholder="Answer D">
       </div>
       <div class="widget-field-group">
-        <label class="widget-field-label">Trivia Link</label>
+        <label class="widget-field-label">Trivia link</label>
         <input spellcheck="false" type="text" class="widget-text-input" data-trivia-field="link" placeholder="https://www.essentiallysports.com/es-playzone/...">
       </div>
       <input type="file" id="trivia-upload-input" accept="image/*" hidden>
@@ -9106,11 +9106,11 @@ body[data-current-page="faq"] .faq-cta-art img {
         <textarea class="widget-text-area" data-ticker-field="summary" placeholder="One-line summary"></textarea>
       </div>
       <div class="widget-field-group">
-        <label class="widget-field-label">Article Link</label>
+        <label class="widget-field-label">Article link</label>
         <input spellcheck="false" type="text" class="widget-text-input" data-ticker-field="link" placeholder="https://www.essentiallysports.com/...">
       </div>
       <div class="widget-field-group">
-        <label class="widget-field-label">Ticker Label</label>
+        <label class="widget-field-label">Ticker label</label>
         <input type="text" class="widget-text-input" data-ticker-field="label" placeholder="VALUATIONS">
       </div>
       <div class="widget-field-group">
@@ -9118,7 +9118,7 @@ body[data-current-page="faq"] .faq-cta-art img {
         <input type="text" class="widget-text-input" data-ticker-field="category" placeholder="BUSINESS OF SPORTS">
       </div>
       <div class="widget-field-group">
-        <label class="widget-field-label">Ticker Direction</label>
+        <label class="widget-field-label">Ticker direction</label>
         <div class="post-type-options" role="group" aria-label="Ticker direction">
           <button class="post-type-option is-active" type="button" data-ticker-direction="up" aria-pressed="true">Up</button>
           <button class="post-type-option" type="button" data-ticker-direction="down" aria-pressed="false">Down</button>
@@ -21942,24 +21942,24 @@ function syncPostTypeControls() {
             : isInstagram && activeType === 'stats-single-ent'
               ? 'Headline'
               : isInstagram && activeType === 'stats-double-ent'
-                ? 'Head-to-Head Stats'
+                ? 'Head-to-head stats'
                 : isInstagram && activeType === 'double-entity-quote'
-                  ? 'Quote Details'
+                  ? 'Quote details'
                   : isInstagram && activeType === 'listicle-type-1'
-                    ? 'Table Rows'
+                    ? 'Table rows'
                     : isInstagram && activeType === 'listicle-type-2'
-                    ? 'List Items'
+                    ? 'List items'
                     : isInstagram && activeType === 'asap-template-1'
-                      ? 'Timeline Entries'
+                      ? 'Timeline entries'
                       : isInstagram && activeType === 'twitter-quote'
-                        ? 'Tweet Link'
+                        ? 'Tweet link'
                         : isInstagram && activeType === 'twitter-multi'
                         ? 'Tweets'
                         : isInstagram && activeType === 'player-stat-line'
-                        ? 'Player Stat Line'
+                        ? 'Player stat line'
                         : isInstagram && activeType === 'team-record'
-                        ? 'Record or Score'
-                        : 'Text On Design';
+                        ? 'Record or score'
+                        : 'Text on design';
   }
 
   control.classList.toggle('is-visible', isInstagram);
@@ -24054,15 +24054,15 @@ loadFont().then(() => render());
 
   const studioSectionLabels = {
     content: 'Content',
-    layout: 'Text Placement',
-    brand: 'Brand & Colors',
-    images: 'Photo Layers',
-    widgetMain: 'Main Story',
-    widgetPicks: 'Top Picks',
+    layout: 'Text placement',
+    brand: 'Brand & colors',
+    images: 'Photo layers',
+    widgetMain: 'Main story',
+    widgetPicks: 'Top picks',
     trivia: 'Trivia',
-    ticker: 'Financial Ticker',
-    list: 'Headline List',
-    list2: 'Headline List',
+    ticker: 'Financial ticker',
+    list: 'Headline list',
+    list2: 'Headline list',
   };
 
   // Which inspector tab each section lives in (default: Content).
@@ -25065,6 +25065,6 @@ loadFont().then(() => render());
 <!-- Editor UI styles load here, after first paint: they only style what frameup-editor-ui.js adds. -->
 <link rel="stylesheet" href="frameup-editor-ui.css?v=20261121-rel2">
 <script src="frameup-editor-ui.js?v=20261121-rel2"></script>
-<script src="frameup-inspector.js?v=20261121-hyg4" defer></script>
+<script src="frameup-inspector.js?v=20261127-panel2" defer></script>
 </body>
 </html>

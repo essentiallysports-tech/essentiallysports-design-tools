@@ -62,7 +62,7 @@
     if (list.length === 1) {
       const target = targetForLayer(list[0]);
       const name = names[0] || target?.name || 'Layer';
-      const where = target?.section === 'brand' ? 'Brand & Colors'
+      const where = target?.section === 'brand' ? 'Brand & colors'
         : target?.block === 'photo' ? (workspace === 'youtube' ? 'Photos' : 'Photo')
         : 'Content';
       return { kind: target?.kind || 'layer', title: name, sub: `Selected layer · settings in ${where}`, selection: true };
