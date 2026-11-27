@@ -34,7 +34,7 @@
 <link rel="stylesheet" href="../frameup-tour.css?v=20261128-ux2">
 <script src="../frameup-tour.js?v=20261117-tour1"></script>
 <script src="../tours/updates.js?v=20261121-notes"></script>
-<script src="../tours/tours.js?v=20261125-reels2"></script>
+<script src="../tours/tours.js?v=20261127-rv4ui"></script>
 <script src="../tours/tour-launcher.js?v=20261128-ux2"></script>
 </head>
 <body class="settings-page account-v2">
@@ -157,7 +157,7 @@
           <div class="es-card__head">
             <div>
               <h2 class="acc-card__title" id="usage-title">AI usage</h2>
-              <p class="es-card__sub">What your AI requests cost this week (Generate, Trends, Video Ads, Reels Studio).</p>
+              <p class="es-card__sub">What your AI requests cost this week (Generate, Trends, Video Ads, Reels Studio, Merch Designs).</p>
             </div>
             <button class="es-btn es-btn--tertiary es-btn--sm" type="button" id="usage-refresh" aria-label="Refresh AI usage">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
@@ -290,7 +290,7 @@
       // The live limit comes from /api/ai-status (the sidebar card uses the same);
       // $20 is only the fallback (it said "$20" beside a "$50" sidebar card).
       let LIMIT = Number(window.FrameUpUsage?.limit) || 20;
-      const FEATURES = [[/^generate-scene-image/, 'Scene images'], [/^generate/, 'Generate'], [/^trend/, 'Trends'], [/^video-ads/, 'Video Ads'], [/^reels/, 'Reels Studio']];
+      const FEATURES = [[/^generate-scene-image/, 'Scene images'], [/^generate/, 'Generate'], [/^trend/, 'Trends'], [/^video-ads/, 'Video Ads'], [/^reels/, 'Reels Studio'], [/^merch/, 'Merch Designs']];
       const money = value => `$${(Math.round(value * 100) / 100).toFixed(2)}`;
       const esc = value => String(value).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 
@@ -330,7 +330,7 @@
             <div class="acc-usage__bar" role="progressbar" aria-label="AI usage this week" aria-valuemin="0" aria-valuemax="${LIMIT}" aria-valuenow="${Math.min(LIMIT, Math.round(total * 100) / 100)}" aria-valuetext="${money(total)} of $${LIMIT}"><span style="width:${Math.min(100, Math.round(ratio * 100))}%"></span></div>
             ${rows.length
               ? `<ul class="acc-usage__list" aria-label="By feature">${rows.map(([label, usd]) => `<li><span>${esc(label)}</span><span>${money(usd)}</span></li>`).join('')}</ul>`
-              : '<p class="acc-usage__note">No AI requests yet this week. Generate, Trends angles, Video Ads copy and Reels Studio scripts count here.</p>'}
+              : data?.fromStatus ? '<p class="acc-usage__note">The by-feature breakdown isn’t available right now; the total is this week’s AI spend.</p>' : '<p class="acc-usage__note">No AI requests yet this week. Generate, Trends angles, Video Ads copy, Reels Studio scripts and Merch Designs count here.</p>'}
             <p class="acc-usage__note">${calls ? `${calls} AI ${calls === 1 ? 'request' : 'requests'} · ` : ''}${state === 'over' ? 'Weekly limit reached: AI features pause until the reset.' : `A $${LIMIT} weekly limit per person keeps costs in check.`}</p>
           </div>`;
       }
@@ -361,10 +361,15 @@
           }
           if (!client || typeof client.rpc !== 'function') throw new Error('The sign-in service didn’t load. Check your connection.');
           const result = await client.rpc('frameup_my_ai_spend', { p_since: weekStartUtc().toISOString() });
-          if (result?.error) throw new Error('The usage report couldn’t be read. It may not be set up yet.');
-          const data = Array.isArray(result?.data) ? result.data[0] || null : result?.data || null;
+          let data = !result?.error && (Array.isArray(result?.data) ? result.data[0] || null : result?.data || null);
           const ai = await (window.FrameUpAI?.status?.() || Promise.resolve(null)).catch(() => null);
           if (Number(ai?.userLimitUsd) > 0) LIMIT = Number(ai.userLimitUsd);
+          // Same rule as the sidebar card (app-shell.js renderUsage): when the
+          // database has no row for this week (or can't be read) but
+          // /api/ai-status has this person's spend, show that, not $0.00
+          // beside a sidebar that says otherwise (UX audit P3).
+          if ((!data || !Number.isFinite(Number(data.total_usd))) && Number.isFinite(Number(ai?.userSpentUsd))) data = { total_usd: Number(ai.userSpentUsd), by_feature: {}, calls: 0, fromStatus: true };
+          if (!data && result?.error) throw new Error('The usage report couldn’t be read. It may not be set up yet.');
           renderUsage(data || { total_usd: 0, by_feature: {}, calls: 0 });
           window.FrameUpUsage?.refresh?.();
         } catch (error) {

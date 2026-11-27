@@ -3275,3 +3275,8 @@ html:not([data-theme="dark"]) #reels-caption-count { color: #0A62C7; }
 @media (min-width: 901px) {
   .reels-transcript-list:has(> .reels-empty-upload:only-child) { display: none; }
 }
+/* With a clip in and no captions yet: the next step, in words. */
+.reels-empty-hint { margin: 0 0 var(--es-space-3, 12px); color: var(--es-ink-2, #3a3f48); font-size: 14px; line-height: 20px; }
+/* The first ruler label starts clear of the playhead handle (14px wide at
+   0:00), which covered it (":00"). */
+.reels-timeline-ruler > .reels-tick--major:first-child span { left: 12px; }

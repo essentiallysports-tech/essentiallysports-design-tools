@@ -534,6 +534,7 @@
     els.addCaptionBtn.disabled = false;
     els.totalTime.textContent = formatTime(els.video.duration || 0);
     setStatus(els.transcribeStatus, 'Ready for captions.');
+    if (!state.captions.length) renderTranscript();
     layoutTimeline();
     drawFrame();
   }
@@ -1142,8 +1143,12 @@
     els.transcriptSource.textContent = state.captions.length ? 'Editable draft' : '';
     els.transcriptList.classList.toggle('has-captions', !!state.captions.length);
     if (!state.captions.length) {
-      els.transcriptList.innerHTML = '<button type="button" class="reels-btn is-secondary reels-empty-upload" id="reels-upload-btn" data-reels-upload-trigger>Upload Clip</button>';
-      els.transcriptList.querySelector('[data-reels-upload-trigger]')?.addEventListener('click', function () { els.fileInput.click(); });
+      // With a clip in, say what to do next instead of an empty rail (and the
+      // button reads Change Clip); before a clip, the upload button only.
+      els.transcriptList.innerHTML = (state.videoLoaded ? '<p class="reels-empty-hint">No captions yet. Press Auto-caption, or Add Caption to write your own.</p>' : '') +
+        '<button type="button" class="reels-btn is-secondary reels-empty-upload" id="reels-upload-btn" data-reels-upload-trigger>' + (state.videoLoaded ? 'Change Clip' : 'Upload Clip') + '</button>';
+      els.uploadBtn = els.transcriptList.querySelector('[data-reels-upload-trigger]');
+      els.uploadBtn?.addEventListener('click', function () { els.fileInput.click(); });
       els.captionCount.textContent = '0 segments';
       return;
     }
@@ -1266,14 +1271,19 @@
     return TICK_STEP_LADDER[TICK_STEP_LADDER.length - 1];
   }
 
+  // Sub-second steps keep the digits the step needs (0.25 s steps read
+  // 0:00.25, not a rounded 0:00.3 that repeats or skips; UX audit P2).
   function formatTick(seconds, step) {
     if (step < 1) {
-      var whole = Math.floor(seconds);
-      var tenths = Math.round((seconds - whole) * 10);
-      if (tenths === 10) { whole += 1; tenths = 0; }
+      var digits = Math.abs(Math.round(step * 10) - step * 10) > 1e-6 ? 2 : 1;
+      var scale = Math.pow(10, digits);
+      var total = Math.round(seconds * scale);
+      var whole = Math.floor(total / scale);
+      var frac = String(total - whole * scale);
+      while (frac.length < digits) frac = '0' + frac;
       var m = Math.floor(whole / 60);
       var s = whole % 60;
-      return m + ':' + (s < 10 ? '0' : '') + s + '.' + tenths;
+      return m + ':' + (s < 10 ? '0' : '') + s + '.' + frac;
     }
     return formatTime(seconds);
   }
@@ -1373,17 +1383,25 @@
     var html = '';
     var subdivisions = (step === 15 || step === 30 || step === 60) ? 4 : 5;
     var minorStep = step / subdivisions;
-    for (var t = 0; t <= duration + 0.001; t += minorStep) {
+    // The end label sits flush right: a major label that would run into it
+    // keeps its tick but drops its text (no "0:01 0:01" pile-up at the end).
+    var endLabel = step < 1 ? formatTick(duration, step) : formatTime(duration);
+    var labelRoom = 12 + (endLabel.length + 6) * 7.5;
+    // Count ticks, don't add up floats: 0.2 + 0.2 + … reached 1.9999 and the
+    // "2 s" tick read 0:01 ("0:01 0:01", UX audit P2).
+    for (var i = 0; i * minorStep <= duration + 0.001; i++) {
+      var t = Math.round(i * minorStep * 1000) / 1000;
       var isMajor = Math.abs(Math.round(t / step) * step - t) < minorStep / 2;
       var x = t * state.timeline.pps;
       if (isMajor) {
-        html += '<i class="reels-tick reels-tick--major" style="left:' + x.toFixed(1) + 'px"><span>' + formatTick(t, step) + '</span></i>';
+        var label = x + labelRoom > contentW && t > 0 ? '' : '<span>' + formatTick(t, step) + '</span>';
+        html += '<i class="reels-tick reels-tick--major" style="left:' + x.toFixed(1) + 'px">' + label + '</i>';
       } else if (minorStep * state.timeline.pps >= 8) {
         html += '<i class="reels-tick reels-tick--minor" style="left:' + x.toFixed(1) + 'px"></i>';
       }
     }
     // Always show the true end label, flush inside the right edge.
-    html += '<span class="reels-tick-end">' + formatTime(duration) + '</span>';
+    html += '<span class="reels-tick-end">' + endLabel + '</span>';
     els.timelineRuler.innerHTML = html;
   }
 

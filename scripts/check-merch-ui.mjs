@@ -383,7 +383,12 @@ async function flow(width, theme, mode) {
   if (blockPut) ok(bodies.some(b => b.mode === 'upload-relay') && stored.every(k => /^merch-art\//.test(k)), `${tag}: upload relay carries a blocked upload`);
   blockPut = false;
   await until("/earn/.test(document.getElementById('mx-earn').textContent)", `${tag} earnings`);
-  ok(await ev("document.getElementById('mx-create-fw').disabled && !document.getElementById('mx-pub-blocker').hidden && /rights/i.test(document.getElementById('mx-pub-blocker').textContent)"), `${tag}: Create waits for the rights tick, one blocker line`);
+  // UX audit P3 (2026-11-28): no red rights line before an attempt; pressing
+  // Create without the tick shows it, moves focus to the box, sends nothing.
+  ok(await ev("document.getElementById('mx-pub-blocker').hidden"), `${tag}: no rights warning before an attempt`);
+  { const before = bodies.length; await click('#mx-create-fw'); await sleep(300);
+    ok(await ev("!document.getElementById('mx-pub-blocker').hidden && /rights/i.test(document.getElementById('mx-pub-blocker').textContent) && document.activeElement?.id === 'mx-ack'"), `${tag}: Create without the tick explains and focuses the rights box`);
+    ok(!bodies.slice(before).some(b => b.mode === 'create'), `${tag}: nothing is created without the rights tick`); }
   ok(await ev("/Created hidden/.test(document.getElementById('mx-view-publish').textContent)"), `${tag}: created hidden note`);
   await audit(`${tag}-publish`);
   await click('#mx-pub-color-change');

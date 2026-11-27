@@ -165,6 +165,74 @@
       copy: null, quick: false,
     };
 
+    // ── Draft: a reload must not lose the line and the designs (UX audit P1,
+    // 2026-11-28). The line, step, designs and the picked one are kept in
+    // this tab's sessionStorage, per signed-in user (id only), capped at
+    // ~1.5 MB, and come back after a reload or Back. Cleared after a product
+    // is created on Fourthwall, on "Start over", and after a day.
+    // While designs exist and are not in the shop, leaving asks first.
+    const ACK_BLOCKER = 'Tick the rights box to create it.';
+    const DRAFT_PREFIX = 'frameup.merch.draft.v1:';
+    const DRAFT_MAX = 1.5e6;
+    const DRAFT_TTL = 24 * 3600e3;
+    const draft = (() => {
+      let timer = 0;
+      let restoring = false;
+      const who = () => {
+        try {
+          const k = Object.keys(window.localStorage).find(name => /^sb-.+-auth-token$/.test(name));
+          return String(JSON.parse(window.localStorage.getItem(k) || 'null')?.user?.id || 'anon');
+        } catch { return 'anon'; }
+      };
+      const key = () => DRAFT_PREFIX + who();
+      const plain = c => { const x = { ...c }; delete x.image; delete x.thumb; return x; };
+      function snapshot() {
+        if (!state.concepts.length || state.product || state.making) return null;
+        const base = { v: 1, at: Date.now(), step: state.step === 'publish' ? 'publish' : 'designs', text: val('mx-text'), url: val('mx-url'), selected: state.selected, plan: state.plan, madeMode: state.madeMode, conceptsFree: state.conceptsFree, fellBack: state.fellBack, made: state.made || null, trend: state.trend || null };
+        let concepts = state.concepts.map(plain);
+        let json = JSON.stringify({ ...base, concepts });
+        // Too big: keep the picked design and its neighbours first.
+        while (json.length > DRAFT_MAX && concepts.length > 1) {
+          const pickAt = concepts.findIndex(c => c.id === state.selected);
+          concepts = concepts.filter((c, i) => i === pickAt || i < Math.ceil(concepts.length / 2));
+          json = JSON.stringify({ ...base, concepts });
+        }
+        return json.length > DRAFT_MAX ? null : json;
+      }
+      function save() {
+        timer = 0;
+        if (restoring) return;
+        const json = snapshot();
+        try {
+          if (json) window.sessionStorage.setItem(key(), json);
+          else if (!state.making && !state.concepts.length) window.sessionStorage.removeItem(key());
+        } catch { /* full or blocked: the warning on leave still stands */ }
+      }
+      function schedule() { if (!timer) timer = setTimeout(save, 400); }
+      function clear() { clearTimeout(timer); timer = 0; try { window.sessionStorage.removeItem(key()); } catch { /* ignore */ } }
+      function read() {
+        try {
+          const d = JSON.parse(window.sessionStorage.getItem(key()) || 'null');
+          if (!d || d.v !== 1 || !Array.isArray(d.concepts) || !d.concepts.length || Date.now() - d.at > DRAFT_TTL) return null;
+          return d;
+        } catch { return null; }
+      }
+      return { save, schedule, clear, read, set restoring(on) { restoring = on; } };
+    })();
+    // Unsaved designs: the browser asks before a reload or leaving the page.
+    window.addEventListener('beforeunload', event => {
+      draft.save();
+      // Browsers only show the prompt after a real gesture; without one, asking
+      // just logs a "blocked" warning.
+      if (!state.concepts.length || state.product || demoQuiet() || navigator.userActivation?.hasBeenActive === false) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+    window.addEventListener('pagehide', () => draft.save());
+    // Sample-data mode (localhost / ?demo=merch) stays quiet so scripted checks
+    // can navigate; a check opts in with html[data-mx-leave-warn].
+    function demoQuiet() { return demo && !document.documentElement.hasAttribute('data-mx-leave-warn'); }
+
     // ── API ──
     async function api(body, { signal } = {}) {
       if (demo && window.MerchDemo) {
@@ -189,7 +257,19 @@
       if (error.status === 429) return { kind: 'rate', text: 'Fourthwall is busy (5 requests a minute). Wait a minute, then try again.' };
       return { kind: 'error', text: error.message || 'Something went wrong. Try again.' };
     }
-    const track = (event, data) => { try { window.FrameUpTrack?.track?.(event, data); } catch { /* tracking never breaks the page */ } };
+    // Merch interaction events. The usage log takes only take-actions, so AI
+    // runs that make something are logged as 'generate' (tool merch); pure
+    // screen events (steps, zoom, palette…) are not sent. Exports and the
+    // Fourthwall create use FrameUpTrack.exported elsewhere.
+    const MERCH_GENERATE = new Set(['concepts', 'moment', 'refine', 'variations', 'brainstorm-turn', 'brainstorm-design', 'brainstorm-line', 'angle']);
+    const track = (event, data = {}) => {
+      try {
+        if (event !== 'merch') { window.FrameUpTrack?.track?.(event, data); return; }
+        if (!MERCH_GENERATE.has(data.action)) return;
+        const { action, ...meta } = data;
+        window.FrameUpTrack?.track?.('generate', { tool: 'merch', action, meta });
+      } catch { /* tracking never breaks the page */ }
+    };
 
     // ── Banner (page-level state) ──
     function banner(kind, text, { retry = null } = {}) {
@@ -276,6 +356,7 @@
       if (s === 'publish') state.enterP = enterPublish();
       if (s === 'list' && !state.list && !state.listBusy) loadList();
       if (from !== s) track('merch', { action: 'step', step: s, from });
+      draft.schedule();
       if (focus === 'heading') { const h = $(`mx-h-${s}`); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
       window.scrollTo(0, 0);
       return true;
@@ -694,6 +775,7 @@
       state.image = null; state.copyFor = ''; state.product = null; state.progFailed = false;
       track('merch', { action: 'concepts', mode: state.madeMode, asked, count: all.length, ai: next.length, trend: Boolean(trend) });
       if (state.step === 'designs') enterStudio(); else renderSteps();
+      draft.schedule();
     }
 
     // ── 2 Design studio ──
@@ -851,6 +933,7 @@
       state.selected = id;
       state.ack = false; if ($('mx-ack')) $('mx-ack').checked = false;
       state.image = null; state.copyFor = '';
+      draft.schedule();
       closePop(false);
       if (template()) pickColorFor(selectedConcept());
       $('mx-strip')?.querySelectorAll('[data-pick]').forEach(b => { const sel = b.dataset.pick === id; b.classList.toggle('is-on', sel); b.setAttribute('aria-checked', String(sel)); b.tabIndex = sel ? 0 : -1; });
@@ -1395,6 +1478,7 @@
     function designChanged() {
       const c = selectedConcept();
       state.image = null;
+      draft.schedule();
       clearTimeout(drawT);
       drawT = setTimeout(() => { drawStage(); drawThumb(c); }, 80);
       renderStudioChecks();
@@ -2363,14 +2447,19 @@
       if (bad.length) return `Fix the print check first: ${bad[0].text}`;
       if (val('mx-title-input').trim().length <= 2) return 'Add a product title.';
       if (!(Number(val('mx-price')) > base())) return `Set a price above the base cost of ${money(base())}.`;
-      if (!state.ack) return 'Tick the rights box to create it.';
+      if (!state.ack) return ACK_BLOCKER;
       return '';
     }
     function syncPublish() {
       const btn = $('mx-create-fw');
       const busy = state.busy === 'create';
-      const blocker = busy || liveShown() ? '' : pubBlocker();
-      if (btn) btn.disabled = busy || Boolean(blocker) || liveShown();
+      let blocker = busy || liveShown() ? '' : pubBlocker();
+      // The rights box is the last step, not an error: no red line until the
+      // person tries to create without it (UX audit P3). The button stays
+      // pressable for that one case; the click explains and moves to the box.
+      const ackOnly = blocker === ACK_BLOCKER;
+      if (ackOnly && !state.ackTried) blocker = '';
+      if (btn) btn.disabled = busy || (Boolean(blocker) && !ackOnly) || liveShown();
       setText('mx-pub-blocker', blocker);
       show('mx-pub-blocker', Boolean(blocker));
       const left = state.status?.caps?.person?.left;
@@ -2730,6 +2819,7 @@
     async function createOnFourthwall() {
       const gate = pushAllowed();
       if (!gate.ok) { setText('mx-pub-blocker', gate.text); show('mx-pub-blocker', true); return false; }
+      if (state.busy !== 'create' && pubBlocker() === ACK_BLOCKER) { state.ackTried = true; syncPublish(); $('mx-ack')?.focus(); return false; }
       if (state.busy === 'create' || pubBlocker()) return false;
       state.busy = 'create';
       state.pushError = '';
@@ -2752,6 +2842,7 @@
         const data = await api(body);
         const made = Array.isArray(data.colors) && data.colors.length ? data.colors.map(x => (typeof x === 'string' ? x : x?.name)).filter(Boolean) : (body.colors || []);
         state.product = { id: data.productId, forId: c.id, name: data.title || body.title, description: data.description || body.description, url: data.productUrl || '', state: data.state || 'HIDDEN', price: data.price?.retail ?? body.retail, margin: data.price?.margin, images: data.images || [], color: body.color, colors: made, blank: kind(), collectionIds: [] };
+        draft.clear(); // in the shop now: nothing left to restore
         if (body.colors && body.colors.length > 1 && made.length < body.colors.length) collNote = `Fourthwall made it in ${made.join(', ') || body.color} only.`;
         if (data.caps && state.status) state.status.caps = data.caps;
         // Published to the shop (hidden): Dashboard -> Exports, with the product photo.
@@ -3965,7 +4056,50 @@
       });
     }
     try { attachStageCanvas(); } catch (error) { console.warn('merch canvas', error); }
-    window.MerchUI = { state, go, demo, refine, undo, redo, stop: stopMaking, openPop, closePop, brainstorm: openBrainstorm, bsRefresh: refreshBoard, get canvas() { return canvasCtl; } }; // for the UI check
+
+    // Restore the draft after a reload or Back (not on a fresh visit: a new
+    // link starts clean), with a slim note and a way to start over.
+    function startOver() {
+      draft.clear();
+      if (state.making) stopMaking();
+      state.concepts = []; state.selected = null; state.product = null; state.plan = null; state.image = null;
+      state.history = {}; state.future = []; state.chat = {}; state.notes = {}; state.lastEdit = {};
+      const text = $('mx-text'); if (text) text.value = '';
+      syncContent(); syncCreateBtn();
+      banner(null);
+      go('content', { focus: 'none' });
+      $('mx-text')?.focus();
+    }
+    function restoreDraft() {
+      const navType = performance.getEntriesByType?.('navigation')?.[0]?.type || '';
+      if (navType !== 'reload' && navType !== 'back_forward') return false;
+      const d = draft.read();
+      if (!d) return false;
+      draft.restoring = true;
+      try {
+        const text = $('mx-text'); if (text) text.value = d.text || '';
+        const url = $('mx-url'); if (url && d.url) url.value = d.url;
+        state.concepts = d.concepts;
+        state.selected = d.concepts.some(c => c.id === d.selected) ? d.selected : d.concepts[0].id;
+        state.plan = d.plan || null; state.madeMode = d.madeMode || ''; state.conceptsFree = Boolean(d.conceptsFree); state.fellBack = d.fellBack || '';
+        state.made = d.made || state.made; if (d.trend) state.trend = d.trend;
+        renderUrl(); renderChip(); syncContent(); syncCreateBtn();
+        go('designs', { focus: 'none' });
+        if (d.step === 'publish') go('publish', { focus: 'none' });
+      } finally { draft.restoring = false; }
+      const el = $('mx-banner');
+      if (el) {
+        el.hidden = false;
+        el.dataset.kind = 'restored';
+        el.className = 'mx-banner mx-banner--restored';
+        el.innerHTML = '<span>Restored your line and designs from before the reload.</span><button class="es-btn es-btn--sm" type="button" data-start-over>Start over</button>';
+        el.querySelector('[data-start-over]').addEventListener('click', startOver);
+      }
+      track('merch', { action: 'draft-restored', count: state.concepts.length });
+      return true;
+    }
+    try { restoreDraft(); } catch (error) { console.warn('merch draft', error); draft.restoring = false; }
+    window.MerchUI = { state, go, demo, draft, startOver, refine, undo, redo, stop: stopMaking, openPop, closePop, brainstorm: openBrainstorm, bsRefresh: refreshBoard, get canvas() { return canvasCtl; } }; // for the UI check
   }
   // Small line icons for the blanks (decorative; 24px box, currentColor).
   const svg = d => `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">${d}</svg>`;
