@@ -616,7 +616,9 @@
       // v3: a reel built in one of the four styles draws with that style's
       // look; an old reel keeps its look and opens in the closest style.
       ...(style.engine === 'es' && getES() ? { look: getES().themes.lookId(v3Id && !opts.look ? getES().themes.lookForReelStyle(reelStyle) : (opts.look || (plan && plan.look))) } : {}),
-      ...(reelStyle ? { reelStyle, esStyle: reelStyle } : {}),
+      // reelStyle: the style the reel draws in (an old reel: its closest style).
+      // esStyle: only when the reel was made in a v3 style (the page or director set it).
+      ...(reelStyle ? { reelStyle } : {}), ...(v3Id ? { esStyle: v3Id } : {}),
       eyebrow: clean(plan && plan.eyebrow, 48), series: plan && plan.series && plan.series.tag ? { tag: clean(plan.series.tag, 28) } : null,
       strip: style.chrome.strip ? sx : null,
       team, highlight, captionStyle, voice: { mode: voiceMode },

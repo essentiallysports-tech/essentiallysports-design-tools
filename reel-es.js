@@ -163,6 +163,9 @@
   const pillClass = (size, T = 1) => { const n = stepName(size / T); return n === 'h1' ? 'L' : n === 'caption' ? 'M' : n === 'label' || n === 'body' ? 'S' : n === 'h2' ? 'M' : 'XL'; };
   // Element limits per frame: a headline, one picture, one data block, two pills.
   const ELEMENT_LIMITS = Object.freeze({ headline: 1, media: 1, data: 1, pills: 2 });
+  // One inner inset for everything drawn inside a box (tiles, the photo card):
+  // the gap from its edge to the words and pills in it.
+  const TILE_INSET = 32;
 
   // ─── Blocks (references/blocks.md; the only building blocks) ───────────
   // kind: the Reels Studio beat kind each block rides on, so formats, the
@@ -339,7 +342,7 @@
       const list = Array.isArray(b.items) && b.items.length ? b.items : [b];
       out.items = list.slice(0, 2).map((it, i) => {
         const r = str(it && it.rank, 6).replace(/^#?/, '#');
-        return { kicker: str(it && it.kicker, 16), rank: r === '#' ? '' : r, pos: str(it && it.pos, 8), chip: str(it && it.chip, 20), tone: toneOf(it && it.tone, ['ink', 'blue'], i === 0 ? 'ink' : 'ink') };
+        return { kicker: str(it && it.kicker, 16), rank: r === '#' ? '' : r, pos: str(it && it.pos, 20), chip: str(it && it.chip, 20), tone: toneOf(it && it.tone, ['ink', 'blue'], i === 0 ? 'ink' : 'ink') };
       }).filter(it => it.rank || it.pos);
       const tag = tagOf(b.tag);
       if (tag) out.tag = tag;
@@ -745,7 +748,7 @@
   function opBottom(o) { return o.box ? o.box.y + o.box.h : (o.type === 'text' || o.type === 'count') ? o.y : o.y + (o.h || 0); }
   function centreGroup(ops, block, geo) {
     if (!CENTRED.has(block.type) || block.top != null) return;
-    if (ops.some(o => o.type === 'media' || o.legend || o.slot === 'lower' || (o.type === 'tile' && o.y >= geo.slots.lower - 0.5))) return;
+    if (ops.some(o => o.type === 'media' || o.slot === 'lower' || (o.type === 'tile' && o.y >= geo.slots.lower - 0.5))) return;
     const group = ops.filter(o => o.type !== 'rect' && o.type !== 'logotype' && o.y != null);
     if (!group.length) return;
     const top = Math.min(...group.map(opTop));
@@ -784,6 +787,59 @@
     // The widest a top-row part can be beside the ES mark (and its clear space).
     const besideMark = top => (markHere && top < geo.mark.y + geo.mark.size + geo.mark.clear ? geo.mark.x - geo.mark.clear - X : CW);
     const pill = (text, x, top, size, fill, extra) => pillOp(m, text, x, top, size, fl(fill), extra, theme);
+    // A pill row with *emphasis*: only the marked words turn blue. The row is
+    // split at them into pills that touch (ink | blue | ink), never one pill
+    // all blue. Alignment marks stay on the row's first pill.
+    const pillRow = (toks, x, top, size, fill, extra = {}) => {
+      if (!toks.some(t => t.em) || toks.every(t => t.em)) return [pill(tokText(toks), x, top, size, toks.length && toks.every(t => t.em) ? (fill === 'blue' ? 'ink' : 'blue') : fill, extra)];
+      const out = [];
+      let cx = x;
+      let i = 0;
+      while (i < toks.length) {
+        let j = i;
+        while (j + 1 < toks.length && toks[j + 1].em === toks[i].em) j += 1;
+        const f = toks[i].em ? (fill === 'blue' ? 'ink' : 'blue') : fill;
+        const op = pill(tokText(toks.slice(i, j + 1)), cx, top, size, f, out.length ? { ...extra, align: 'row', slot: undefined, delay: (extra.delay || 0) + 60 * out.length } : extra);
+        out.push(op);
+        cx = op.box.x + op.box.w;
+        i = j + 1;
+      }
+      return out;
+    };
+    // Where the face is in a full-frame picture (frame px, top and bottom),
+    // from the block's focus box or the picture's verified head / focus box.
+    // Pictures fill the 9:16 frame by height, so a box's y maps straight across.
+    const faceBand = () => {
+      const shot = ((timeline.tracks && timeline.tracks.video) || []).find(v => v.beat === graphic.beat && v.asset);
+      const asset = shot && timeline.assets ? timeline.assets[shot.asset] : null;
+      let f = focusBox(block.focus);
+      if (!f && asset) {
+        const hd = Array.isArray(asset.head) ? { x: asset.head[0], y: asset.head[1] } : asset.head;
+        if (hd && Number.isFinite(Number(hd.y))) f = { x: Number(hd.x) - 0.1, y: Number(hd.y) - 0.07, w: 0.2, h: 0.14 };
+        else f = focusBox(asset.focus);
+      }
+      if (!f) return null;
+      const h = Math.min(f.h, 0.24);
+      return { top: f.y * geo.h, bottom: (f.y + h) * geo.h };
+    };
+    // Words over a full-frame picture never cover the face: the group stays at
+    // its slot when the face is clear of it, else moves below the face, else
+    // above it, else to the lower slot (8-pt steps).
+    const clearFace = group => {
+      const band = faceBand();
+      if (!band || !group.length) return;
+      const top = Math.min(...group.map(opTop));
+      const bottom = Math.max(...group.map(opBottom));
+      const h = bottom - top;
+      const gap = sp(SPACE.xxl);
+      if (bottom <= band.top - gap || top >= band.bottom + gap) return;
+      const snap = v => Math.ceil(v / geo.unit) * geo.unit;
+      const options = [snap(band.bottom + gap), Math.floor((band.top - gap - h) / geo.unit) * geo.unit, geo.slots.lower];
+      const to = options.find((t, i) => (i === 0 ? t + h <= geo.contentBottom : i === 1 ? t >= geo.slots.head : t + h <= geo.safe.bottom));
+      if (to == null) return;
+      const dy = to - top;
+      group.forEach(o => { o.y += dy; if (o.box) o.box = { ...o.box, y: o.box.y + dy }; if (o.slot) { delete o.slot; o.clearsFace = true; } });
+    };
     // A pill whose words fit `width`: the size steps down (never in between),
     // and at the smallest step the words are cut at a word (flagged).
     const fitPill = (text, x, top, maxStep, minStep, fill, width, extra = {}) => {
@@ -841,7 +897,7 @@
       if (!n) return top;
       const gap = sp(SPACE.m);
       let tw = (CW - gap * (n - 1)) / n;
-      const pad = sp(40);
+      const pad = sp(TILE_INSET);
       let inner = tw - 2 * pad;
       const values = tiles.map(t => String(t.value).toUpperCase());
       const vk = pickStep(n === 1 ? 'statXL' : maxValue, 'h2', T, s => values.every(v => tracked(m, v, s) <= inner + 0.01));
@@ -910,10 +966,12 @@
         if (LY.pillBoxed) {
           const toks = emTokens(text);
           const fitToks = pk.fits ? toks : cutToFit(m, toks, pk.size, CW, pillPad(pk.size));
-          const color = (p.color === 'blue' || /\*/.test(p.text)) ? 'blue' : (p.color || 'ink');
-          const op = pill(tokText(fitToks), X, top, pk.size, color, { role: 'pill', pillSize: pillClass(pk.size, T), enter: 'left', delay: i * st, align: 'col', ...(i === 0 ? { slot: 'head' } : {}), ...(pk.fits ? {} : { shortened: true }) });
-          ops.push(op);
-          bottom = top + op.box.h;
+          const marked = emTokens(String(p.text).toUpperCase());
+          const rowToks = marked.length === fitToks.length ? marked : fitToks;
+          const color = p.color || 'ink';
+          const row = pillRow(rowToks, X, top, pk.size, color, { role: 'pill', pillSize: pillClass(pk.size, T), enter: 'left', delay: i * st, align: 'col', ...(i === 0 ? { slot: 'head' } : {}), ...(pk.fits ? {} : { shortened: true }) });
+          row.forEach(o => ops.push(o));
+          bottom = top + row[0].box.h;
           top += pillStep(pk.size);
         } else {
           // Plain pills (Minimal): the same words as display type, no box.
@@ -939,6 +997,7 @@
         op.box.x += shift;
         ops.push(op);
       }
+      if (graphic.media && full) clearFace(ops.filter(o => o.role === 'pill' || o.role === 'stamp'));
     } else if (block.type === 'statement') {
       const lines = (block.lines || []).map(l => ({ ...l, toks: emTokens(l.text) }));
       const lineColor = l => (l.color === 'yellow' || l.color === 'white' ? 'ink' : l.color);
@@ -955,12 +1014,12 @@
         let top = graphic.media && LY.media.statement === 'full' && block.top == null ? Math.max(top0, geo.contentBottom - 40 * K - stack) : top0;
         lines.forEach((l, i) => {
           const toks = pk.fits ? l.toks : cutToFit(m, l.toks, pk.size, CW, pillPad(pk.size));
-          const fill = toks.some(t => t.em) ? 'blue' : (lineColor(l) || 'ink');
-          const op = pill(tokText(toks), X, top, pk.size, fill, { role: 'line', pillSize: pillClass(pk.size, T), enter: theme.motion.id === 'punchy' ? 'left' : 'up', delay: i * st, align: 'col', ...(i === 0 && block.top == null && top === top0 ? { slot: 'head' } : {}), ...(pk.fits ? {} : { shortened: true }) });
-          ops.push(op);
+          const fill = lineColor(l) || 'ink';
+          pillRow(toks, X, top, pk.size, fill, { role: 'line', pillSize: pillClass(pk.size, T), enter: theme.motion.id === 'punchy' ? 'left' : 'up', delay: i * st, align: 'col', ...(i === 0 && block.top == null && top === top0 ? { slot: 'head' } : {}), ...(pk.fits ? {} : { shortened: true }) }).forEach(o => ops.push(o));
           top += pillStep(pk.size);
         });
         bottom = top - pillStep(pk.size) + pillMetricsAt(pk.size).h;
+        if (graphic.media && LY.media.statement === 'full' && block.top == null) clearFace(ops.filter(o => o.role === 'line'));
       } else {
         const pk = pickStep(maxStep, 'h2', T, s => lines.every(l => tracked(m, tokText(l.toks), s) <= CW + 0.01));
         const size = pk.size;
@@ -1138,31 +1197,43 @@
           tilesOps(tiles, Math.max(y, head), {});
           return;
         }
-        const y1 = tiles.length ? geo.slots.cardBottom : geo.slots.cardBottomSolo;
+        // The card ends 64 px above the caption bar (captions never sit on it).
+        const y1 = geo.contentBottom;
         const card = { type: 'media', role: 'card', fit: 'focus', x: X, y, w: CW, h: Math.max(320 * K, y1 - y), focus: b.focus || null, scan: Boolean(b.scan), bracket: true, enter: 'up', delay: 0, align: 'col' };
         ops.push(card);
-        let py = card.y + sp(SPACE.m);
-        const inset = X + sp(SPACE.m);
+        let py = card.y + sp(TILE_INSET);
+        const inset = X + sp(TILE_INSET);
         if (b.label && drawn.has('label')) {
           // Pills on the card ride in with it (same direction, a beat later).
-          const op = fitPill(b.label, inset, py, PILL_SIZES.S, PILL_SIZES.S, 'blue', CW - 2 * sp(SPACE.m), { role: 'label', enter: 'up', delay: st, inCard: true });
+          const op = fitPill(b.label, inset, py, PILL_SIZES.S, PILL_SIZES.S, 'blue', CW - 2 * sp(TILE_INSET), { role: 'label', enter: 'up', delay: st, inCard: true });
           ops.push(op);
           py += op.box.h + sp(SPACE.xs);
         }
-        if (b.tag && drawn.has('tag')) ops.push(fitPill(b.tag.text, inset, py, PILL_SIZES.S, PILL_SIZES.S, b.tag.tone, CW - 2 * sp(SPACE.m), { role: 'tag', enter: 'up', delay: 2 * st, inCard: true }));
+        if (b.tag && drawn.has('tag')) ops.push(fitPill(b.tag.text, inset, py, PILL_SIZES.S, PILL_SIZES.S, b.tag.tone, CW - 2 * sp(TILE_INSET), { role: 'tag', enter: 'up', delay: 2 * st, inCard: true }));
         if (tiles.length) tilesOps(tiles, geo.slots.lower, { maxValue: 'display', delay0: 3 * st });
       } else if (b.type === 'statTiles') {
         tagBelow();
         tilesOps((b.tiles || []).slice(0, 3), y, {});
       } else if (b.type === 'rankTile') {
         tagBelow();
-        tilesOps((b.items || []).map(it => ({ kicker: it.kicker, value: `${it.rank} ${it.pos}`.trim(), chip: it.chip, tone: it.tone })), y, {});
+        // The rank is the tile's value; the position is its own label line
+        // ("#1" over "PASSER RATING"), so a long position is never cut.
+        tilesOps((b.items || []).map(it => ({ kicker: it.kicker, value: it.rank || it.pos, label: it.rank ? it.pos : '', chip: it.chip, tone: it.tone })), y, {});
       } else if (b.type === 'dotGrid') {
         // The grid fills the column: the biggest cell that fits the space
         // between the headline and the caption line; the legend sits below it.
         const groups = b.groups || [];
         const n = Math.max(1, b.total);
-        const region = { y, h: Math.max(200 * K, geo.contentBottom - y) };
+        // The legend is part of the data block: directly under the grid, above
+        // the caption bar. One row of M pills when they fit, else one row of S
+        // pills, else M pills stacked 8 px apart, left on the grid.
+        const labelled = groups.filter(g => g.label);
+        const rowW = size => labelled.reduce((a, g, i) => a + tracked(m, g.label.toUpperCase(), size) + pillPad(size) + (i ? sp(SPACE.s) : 0), 0);
+        const row = [sz(PILL_SIZES.M), sz(PILL_SIZES.S)].find(size => rowW(size) <= CW + 0.01);
+        const ls = row || sz(PILL_SIZES.M);
+        const lh = Math.ceil(pillMetricsAt(ls).h / 8) * 8;
+        const legendH = labelled.length ? (row ? lh : labelled.length * lh + (labelled.length - 1) * sp(SPACE.xs)) + sp(SPACE.m) : 0;
+        const region = { y, h: Math.max(200 * K, geo.contentBottom - y - legendH) };
         let cols = 1;
         let cell = CW;
         for (let c = 1; c <= n; c += 1) {
@@ -1172,19 +1243,13 @@
         }
         const rows = Math.ceil(n / cols);
         ops.push({ type: 'dotgrid', role: 'dotgrid', x: X, y: region.y, w: cols * cell, h: rows * cell, n, cols, cell, groups: groups.map(g => ({ n: g.n, tone: fl(g.tone === 'grey' ? 'grey' : g.tone) })), rest: 'grey', enter: 'none', delay: st, align: 'col' });
-        // Legend: one row of M pills when they fit, else one row of S pills,
-        // else M pills stacked 8 px apart; always left on the grid, in the lower slot.
-        const labelled = groups.filter(g => g.label);
-        const rowW = size => labelled.reduce((a, g, i) => a + tracked(m, g.label.toUpperCase(), size) + pillPad(size) + (i ? sp(SPACE.s) : 0), 0);
-        const row = [sz(PILL_SIZES.M), sz(PILL_SIZES.S)].find(size => rowW(size) <= CW + 0.01);
-        const ls = row || sz(PILL_SIZES.M);
         let lx = X;
-        let ly = geo.slots.lower;
+        let ly = Math.ceil((region.y + rows * cell + sp(SPACE.m)) / 8) * 8;
         labelled.forEach((g, i) => {
           const op = pill(g.label, lx, ly, ls, g.tone, { role: 'legend', pillSize: pillClass(ls, T), enter: 'left', delay: 1400 + i * st, legend: true, align: row && i > 0 ? 'row' : 'col' });
           ops.push(op);
           if (row) lx = op.box.x + op.box.w + sp(SPACE.s);
-          else ly += Math.ceil(op.box.h / 8) * 8 + sp(SPACE.xs);
+          else ly += lh + sp(SPACE.xs);
         });
       } else if (b.type === 'streak') {
         const items = b.items || [];
@@ -1227,6 +1292,19 @@
           });
         }
         if (b.text && drawn.has('text')) ops.push(fitPill(b.text, X, geo.slots.lower, PILL_SIZES.M, PILL_SIZES.S, b.tone, CW, { role: 'tag', enter: 'left', delay: 2 * st, align: 'col', slot: 'lower' }));
+      } else if (b.type === 'tagPill' && !t && b.text && drawn.has('text')) {
+        // A tag alone (no picture, no headline) is the headline: its parts
+        // ("TORE ACHILLES · JAN. 11") stack as H1 pills, the first in the tag's
+        // colour, the rest ink, centred as one group.
+        const parts = b.text.split(/\s+·\s+/).map(x => x.trim()).filter(Boolean);
+        const rows = parts.length > 1 ? parts : [b.text];
+        const pk = pickStep('h1', 'caption', T, s => rows.every(r => tracked(m, r.toUpperCase(), s) + pillPad(s) <= CW + 0.01));
+        let ty = y;
+        rows.forEach((r, i) => {
+          const op = pill(r, X, ty, pk.size, i === 0 ? b.tone : 'ink', { role: 'tag', pillSize: pillClass(pk.size, T), enter: 'left', delay: st + i * st, align: 'col' });
+          ops.push(op);
+          ty += pillStep(pk.size);
+        });
       } else if (b.type === 'tagPill') {
         if (b.text && drawn.has('text')) {
           const op = fitPill(b.text, X, y, PILL_SIZES.M, PILL_SIZES.S, b.tone, CW, { role: 'tag', enter: 'left', delay: st, align: 'col', ...(t ? {} : { slot: 'head' }) });
@@ -1685,14 +1763,16 @@
     const layout = env.captionCache ? env.captionCache(card) : layoutCaption(env.measure, card, timeline);
     if (!layout.ops.length) return;
     const theme = themeOf(timeline);
-    const cap = theme.caption;
+    // A reel made in a v3 style (timeline.esStyle): caption emphasis is ES
+    // blue on the ink bar (4.6:1), not yellow; older reels keep the kit's yellow.
+    const cap = TH.isStyle && TH.isStyle(timeline.esStyle) ? { ...theme.caption, em: 'blue', mode: 'text' } : theme.caption;
     ctx.save();
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = colorOf(cap.fill, theme);
     ctx.fillRect(layout.box.x, layout.box.y, layout.box.w, layout.box.h);
     layout.ops.forEach(op => {
       ctx.font = op.font;
-      // Emphasis is always yellow: yellow words on a dark box, or (a light
+      // Emphasis (yellow in the kit looks, blue in v3): words on a dark box, or (a light
       // box) the word in ink on a yellow highlight the height of the box.
       if (op.em && cap.mode === 'highlight') {
         ctx.fillStyle = colorOf(cap.em, theme);

@@ -535,11 +535,15 @@ await test('v3 layout: one grid (column 60, slots kicker 330 / head 480 / lower 
   const hook = opsOf(sc, 0);
   const kicker = hook.find(o => o.role === 'kicker');
   assert.equal(kicker.box.y, 330); assert.equal(kicker.box.x, 60);
-  assert.equal(hook.find(o => o.role === 'pill').box.y, 480);
+  // The hook's pills keep clear of the verified face (head at y 0.275 of the frame).
+  const hp = hook.filter(o => o.role === 'pill');
+  const faceTop = (0.275 - 0.07) * 1920; const faceBottom = faceTop + 0.14 * 1920;
+  assert.ok(hp.every(o => o.box.y >= faceBottom + 64 || o.box.y + o.box.h <= faceTop - 64), 'pills clear of the face');
+  assert.ok(hp.every(o => o.box.y >= 480));
   const card = opsOf(sc, 1);
   const media = card.find(o => o.role === 'card');
   assert.equal(media.fit, 'focus'); assert.ok(media.bracket && media.scan); assert.equal(media.x, 60); assert.equal(media.w, 960);
-  assert.ok(media.y + media.h <= 1240, 'the card ends above the tiles');
+  assert.ok(media.y + media.h <= 1072, 'the card ends 64 px above the caption bar');
   const tiles = card.filter(o => o.type === 'tile');
   assert.equal(tiles.length, 2); assert.equal(tiles[0].y, 1288); assert.equal(tiles[0].h, tiles[1].h, 'one tile height');
   assert.equal(tiles[0].x, 60); assert.equal(tiles[1].x + tiles[1].w, 1020);
@@ -555,8 +559,9 @@ await test('v3 layout: one grid (column 60, slots kicker 330 / head 480 / lower 
   const dg = opsOf(rc, 1);
   const grid = dg.find(o => o.type === 'dotgrid');
   assert.deepEqual(grid.groups.map(g => [g.n, g.tone]), [[26, 'blue'], [26, 'ink'], [15, 'grey']]);
-  assert.ok(grid.w <= 960 + 0.5 && grid.y + grid.h <= 1100);
-  assert.ok(dg.filter(o => o.role === 'legend').every(o => o.box.y >= 1288));
+  assert.ok(grid.w <= 960 + 0.5 && grid.y + grid.h <= 1072);
+  // The legend is part of the data block: right under the grid, above the caption bar.
+  assert.ok(dg.filter(o => o.role === 'legend').every(o => o.box.y >= grid.y + grid.h && o.box.y + o.box.h <= 1072));
   // Streak: W green, L ink.
   const sk = opsOf(sc, 3).filter(o => o.type === 'square');
   assert.equal(sk.length, 16); assert.equal(sk.filter(o => o.fill === 'green').length, 15); assert.equal(sk.find(o => o.fill !== 'green').fill, 'ink');
