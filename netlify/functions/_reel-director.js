@@ -161,8 +161,52 @@ function lookRequest(look) {
   const l = ES.LOOKS[look];
   return `LOOK: ${l.label}. Follow the ${ES.LOOK_LAYOUTS[l.layout].director.split(':')[0]} line above.`;
 }
-function styleRequest(style, look = '') {
-  if (style && style.engine === 'es') return [ES_SPEC, lookRequest(look)].filter(Boolean).join('\n');
+// ─── Reels v3: the four styles (Game Tape, Stat Card, Receipts, Hype Cut) ──
+// ENGINE's ReelES.STYLES decides the blocks when it is loaded; this local
+// table is the same contract (reels3-contract.md) so the director works
+// before and after the engine lands.
+const CLIPS = require('../../reel-clips.js');
+const V3_STYLES = {
+  gametape: { label: 'Game Tape', blocks: ['hook', 'clipLabel', 'statement', 'statTiles', 'tagPill', 'endcard'], brief: 'Video-first highlight reel: 80-100% of scenes are verified game clips with short type over them. Hook pills over a clip, clip scenes with a lower-third label (clipLabel), a statement or one statTiles strip at most, the end card.' },
+  statcard: { label: 'Stat Card', blocks: ['hook', 'photoCard', 'statTiles', 'streak', 'rankTile', 'tagPill', 'statement', 'compare', 'endcard'], brief: 'Player cards with infographic motion: verified photos in photoCard blocks (a label pill like "2011 · GB"), paired statTiles, a W/L streak, a rankTile with a grade chip. Data first: every card is built on numbers from SOURCES.' },
+  receipts: { label: 'Receipts', blocks: ['hook', 'statTiles', 'dotGrid', 'compare', 'streak', 'rankTile', 'tagPill', 'statement', 'quote', 'endcard'], brief: 'Pure motion infographics, no footage and no photos: a headline with one word in blue, statTiles, a dotGrid (blue / ink / grey), compare bars, a streak row, tag pills. Data first: at least two data blocks, every number from SOURCES.' },
+  hypecut: { label: 'Hype Cut', blocks: ['hook', 'statement', 'tagPill', 'statTiles', 'clipLabel', 'endcard'], brief: 'Fast kinetic type over clips: short punchy statement words (1-2 per line), a stamp-like tagPill, quick statTiles pops, clip scenes. Faster pacing: 2-3 seconds a scene.' },
+};
+const V3_IDS = Object.keys(V3_STYLES);
+const V3_TYPES = ['photoCard', 'statTiles', 'dotGrid', 'streak', 'rankTile', 'tagPill', 'clipLabel'];
+// The beat kind each new block rides on (formats, provenance and lint keep working).
+const V3_KIND = { photoCard: 'point', statTiles: 'stat', dotGrid: 'stat', streak: 'point', rankTile: 'stat', tagPill: 'point', clipLabel: 'point' };
+const DATA_BLOCKS = ['statTiles', 'dotGrid', 'compare', 'streak', 'rankTile', 'number', 'dots'];
+function v3Blocks(id) {
+  const fromEngine = ES.STYLES && ES.STYLES[id] && Array.isArray(ES.STYLES[id].blocks) ? ES.STYLES[id].blocks : null;
+  return fromEngine || (V3_STYLES[id] ? V3_STYLES[id].blocks : []);
+}
+const V3_SPEC = [
+  'REELS v3 BLOCKS (in addition to hook, statement, quote, compare, endcard above; use only the ones your STYLE allows):',
+  '- photoCard (kind "point"): {"type":"photoCard","photo":"Aaron Rodgers","label":"2011 · GB","scan":true}. A verified photo of the subject with a label pill (<= 14 characters). photo = the subject\'s full name.',
+  '- statTiles (kind "stat"): {"type":"statTiles","tiles":[{"value":"45","label":"TD","tone":"blue"},{"value":"6","label":"INT","tone":"ink"}]}. 1-3 tiles, value up to 6 characters, label <= 12, optional "chip" ("Grade 92.6"). Also set "stat" to the first tile.',
+  '- dotGrid (kind "stat"): {"type":"dotGrid","total":67,"title":"ACHILLES TEARS","groups":[{"n":26,"tone":"blue","label":"BACK TO 90%"},{"n":26,"tone":"ink","label":"RETURNED"},{"n":15,"tone":"grey","label":"DID NOT"}]}. total <= 300, groups add up to total. Also set "stat":{"value":"67","label":"..."}.',
+  '- streak (kind "point"): {"type":"streak","items":"WWWLWWWW","label":"2011 · 15-1"}. W / L / T only, up to 20.',
+  '- rankTile (kind "stat"): {"type":"rankTile","kicker":"2024","rank":"#1","pos":"TE","chip":"Grade 92.6"}. Also set "stat":{"value":"#1","label":"TE"}.',
+  '- tagPill (kind "point"): {"type":"tagPill","text":"TORE ACHILLES · JAN. 11","tone":"red|blue|ink"}. <= 28 characters, an event tag.',
+  '- clipLabel (kind "point"): {"type":"clipLabel","text":"GEORGE KITTLE"}. A game clip with a lower-third label pill (<= 22 characters).',
+  'Every number in every block comes from SOURCES exactly. Do not use the old "number" and "dots" blocks: use statTiles and dotGrid.',
+  'Every beat ALSO carries "subject": who or what the picture must show: {"type":"player|team|moment|game","name":"Aaron Rodgers","team":"Green Bay Packers","date":"2011","moment":"45 TD season"}. name: a full name, team or game exactly as in SOURCES; moment: <= 8 words, what should be on screen (the play, the season, the injury); "" when the scene is about the whole story.',
+].join('\n');
+function v3Request(esStyle) {
+  const st = V3_STYLES[esStyle];
+  if (!st) return '';
+  return [V3_SPEC, `STYLE v3: ${st.label}. ${st.brief}`, `Allowed blocks in this style: ${v3Blocks(esStyle).join(', ')}.`, 'Ignore the LOOKS lines above: the style decides the layout.'].join('\n');
+}
+// The v3 style a request names: an exact v3 id, else the legacy map.
+function v3StyleOf({ esStyle = '', style = '', look = '', recipe = '' } = {}) {
+  if (V3_IDS.includes(esStyle)) return esStyle;
+  if (V3_IDS.includes(style)) return style;
+  return CLIPS.legacyStyle(look, recipe, null);
+}
+
+function styleRequest(style, look = '', esStyle = '') {
+  if (style && style.engine === 'es') return [ES_SPEC, V3_IDS.includes(esStyle) ? v3Request(esStyle) : lookRequest(look)].filter(Boolean).join('\n');
   if (!style || !style.components.length) return '';
   const long = style.seconds.max > 90;
   return [
@@ -175,11 +219,11 @@ function styleRequest(style, look = '') {
   ].filter(Boolean).join('\n');
 }
 
-function directorRequest({ read, format, steer = '', style = null, look = '', today = new Date() }) {
+function directorRequest({ read, format, steer = '', style = null, look = '', esStyle = '', today = new Date() }) {
   const fmt = F.FORMATS[format];
   return [
     `FORMAT: ${read.auto ? `auto (the router suggests ${fmt.id}; candidates: ${read.route.candidates.join(', ')})` : fmt.id}`,
-    styleRequest(style, look),
+    styleRequest(style, look, esStyle),
     `SPORT: ${(F.SPORTS.find(s => s.id === read.sport) || {}).label || 'unknown'}`,
     read.team ? `TEAM: ${read.team.name}` : '',
     steer ? `EDITOR NOTE: ${clean(steer, 300)}` : '',
@@ -225,7 +269,101 @@ const COMPONENT_OK = {
   mystery: () => true,
 };
 
-function validatePlan(parsed, { read, format, steer = '', style: styleId = '', look = '' } = {}) {
+// ─── Reels v3 blocks: shaped to exactly their fields ──────────────────────
+const TONES2 = ['blue', 'ink'];
+const TONES3 = ['blue', 'ink', 'grey'];
+const TAG_TONES = ['red', 'blue', 'ink'];
+const nInt = (v, lo, hi) => { const n = Math.round(Number(String(v == null ? '' : v).replace(/[,\s]/g, ''))); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : NaN; };
+function cleanV3Block(raw) {
+  const b = raw && typeof raw === 'object' ? raw : {};
+  const type = V3_TYPES.includes(b.type) ? b.type : '';
+  if (!type) return null;
+  if (type === 'photoCard') {
+    const out = { type, photo: str(b.photo, 60).replace(/[^\p{L}\p{N} .'-]/gu, ''), label: str(b.label, 22) };
+    if (b.scan === true) out.scan = true;
+    if (b.focus && typeof b.focus === 'object' && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(Number(b.focus[k])))) out.focus = Object.fromEntries(['x', 'y', 'w', 'h'].map(k => [k, Math.max(0, Math.min(1, Number(b.focus[k])))]));
+    return out;
+  }
+  if (type === 'statTiles') {
+    const tiles = (Array.isArray(b.tiles) ? b.tiles : []).slice(0, 3).map((t, i) => ({ value: str(t && t.value, 8), label: str(t && t.label, 18), ...(t && str(t.chip, 16) ? { chip: str(t.chip, 16) } : {}), tone: TONES2.includes(t && t.tone) ? t.tone : (i === 0 ? 'blue' : 'ink') })).filter(t => t.value && /\d/.test(t.value));
+    return tiles.length ? { type, tiles } : null;
+  }
+  if (type === 'dotGrid') {
+    const total = nInt(b.total, 1, 300);
+    if (!Number.isFinite(total)) return null;
+    let left = total;
+    const groups = (Array.isArray(b.groups) ? b.groups : []).slice(0, 3).map((g, i) => {
+      const n = nInt(g && g.n, 0, left);
+      if (!Number.isFinite(n)) return null;
+      left -= n;
+      return { n, tone: TONES3.includes(g && g.tone) ? g.tone : TONES3[i], label: str(g && g.label, 22) };
+    }).filter(Boolean);
+    return groups.length ? { type, total, groups, title: str(b.title, 28) } : null;
+  }
+  if (type === 'streak') {
+    const src = Array.isArray(b.items) ? b.items.map(x => (x && typeof x === 'object' ? x.r : x)).join('') : String(b.items || '');
+    const items = src.toUpperCase().replace(/[^WLT]/g, '').slice(0, 20);
+    return items ? { type, items, label: str(b.label, 28) } : null;
+  }
+  if (type === 'rankTile') {
+    const rank = str(b.rank, 6);
+    return /\d/.test(rank) ? { type, kicker: str(b.kicker, 16), rank: rank.startsWith('#') ? rank : `#${rank}`, pos: str(b.pos, 12), chip: str(b.chip, 16) } : null;
+  }
+  if (type === 'tagPill') { const text = str(b.text, 28); return text ? { type, text, tone: TAG_TONES.includes(b.tone) ? b.tone : 'red' } : null; }
+  if (type === 'clipLabel') { const text = str(b.text, 22); return text ? { type, text } : null; }
+  return null;
+}
+// The legacy fields a v3 block implies (kind, text, stat) so the rest of
+// Reels Studio sees a normal beat.
+function v3Legacy(block) {
+  const out = { kind: V3_KIND[block.type] };
+  if (block.type === 'statTiles') out.stat = { value: block.tiles[0].value, label: block.tiles[0].label };
+  if (block.type === 'dotGrid') out.stat = { value: String(block.total), label: block.title };
+  if (block.type === 'rankTile') out.stat = { value: block.rank, label: block.pos };
+  return out;
+}
+function v3Text(block) {
+  if (block.type === 'photoCard') return block.label || block.photo;
+  if (block.type === 'statTiles') return block.tiles.map(t => `${t.value} ${t.label}`).join(' · ');
+  if (block.type === 'dotGrid') return block.title || String(block.total);
+  if (block.type === 'streak') return block.label || block.items;
+  if (block.type === 'rankTile') return [block.kicker, block.rank, block.pos].filter(Boolean).join(' ');
+  return block.text || '';
+}
+// The old "number" / "dots" blocks become statTiles / dotGrid in a v3 style.
+function upgradeBlock(raw) {
+  const b = raw && typeof raw === 'object' ? raw : null;
+  if (!b) return b;
+  if (b.type === 'number') {
+    const value = str(b.display || `${b.prefix || ''}${b.value}${b.suffix || ''}`, 8);
+    return { type: 'statTiles', tiles: [{ value, label: str(b.label || b.kicker, 18), tone: b.color === 'ink' ? 'ink' : 'blue' }] };
+  }
+  if (b.type === 'dots') return { type: 'dotGrid', total: b.count, title: str(b.label, 28), groups: [{ n: b.highlight, tone: 'blue', label: str(b.note, 22) }] };
+  return b;
+}
+// A scene's subject: the model's, if its name is in the sources (or is the
+// reel's team); else derived by code from the beat (reel-clips subjectOfBeat).
+function validSubject(raw, beat, read, teamName) {
+  const r = raw && typeof raw === 'object' ? raw : null;
+  const corpus = squash(read.corpus);
+  if (r) {
+    const name = clean(r.name, 60);
+    const ok = name && (corpus.includes(squash(name)) || (teamName && squash(teamName) === squash(name)));
+    if (ok) {
+      const team = clean(r.team, 60);
+      const sub = CLIPS.subjectOfBeat({ subject: { type: r.type, name, team: team && (corpus.includes(squash(team)) || squash(team) === squash(teamName)) ? team : teamName, date: clean(r.date, 20), moment: clean(r.moment, 60) } }, { team: teamName ? { name: teamName } : null });
+      if (sub.date && !corpus.includes(squash(sub.date))) delete sub.date;
+      return sub;
+    }
+  }
+  return CLIPS.subjectOfBeat({ ...beat, subject: null }, { team: teamName ? { name: teamName } : null });
+}
+
+function validatePlan(parsed, { read, format, steer = '', style: styleId = '', look = '', esStyle = '' } = {}) {
+  const v3 = V3_IDS.includes(esStyle) ? esStyle : '';
+  const v3Allowed = v3 ? v3Blocks(v3) : [];
+  const SRC = require('./_reel-sourcing.js');
+  const teamHint = clean(parsed && parsed.team, 80) || (read.team && read.team.name) || '';
   const issues = [];
   const style = STYLES.get(styleId);
   let fmt = F.FORMATS[format] ? format : 'explainer';
@@ -244,11 +382,22 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '', l
   const beats = [];
   raw.forEach((b0, index) => {
     if (!b0 || typeof b0 !== 'object') { dropped += 1; return; }
+    // Reels v3: old number / dots blocks are upgraded, the new blocks are
+    // shaped here, and a block the style does not allow becomes a statement.
+    let rawBlock = v3 && b0.block ? upgradeBlock(b0.block) : b0.block;
+    if (v3 && rawBlock && rawBlock.type && !v3Allowed.includes(rawBlock.type) && !(index === 0 && rawBlock.type === 'hook')) {
+      issues.push(`A ${clean(rawBlock.type, 20)} block is not part of ${V3_STYLES[v3].label}, so it became a statement.`);
+      rawBlock = CLIPS.fallbackBlock({ text: b0.text || clean(rawBlock.text || rawBlock.label || rawBlock.title, 90), stat: b0.stat });
+      if (rawBlock.type !== 'statement' && !v3Allowed.includes(rawBlock.type)) rawBlock = CLIPS.fallbackBlock({ text: b0.text });
+    }
+    const v3Block = v3 && rawBlock && V3_TYPES.includes(rawBlock.type) ? cleanV3Block(rawBlock) : null;
+    if (v3 && rawBlock && V3_TYPES.includes(rawBlock.type) && !v3Block) { dropped += 1; issues.push(`A ${rawBlock.type} block without its data was dropped.`); return; }
     // ES Reels: the block decides the kind and fills the fields the checks
     // below read (stat, bars, dotrank, quote), so its numbers and quotes are
     // held to the same rules.
-    const esBlock = style.engine === 'es' && b0.block && ES.BLOCK_TYPES.includes(b0.block.type) ? ES.cleanBlock(b0.block) : null;
-    const b = esBlock ? { ...b0, ...ES.legacyFields(esBlock), text: b0.text || ES.blockText(esBlock), vo: b0.vo } : b0;
+    const esBlock = !v3Block && style.engine === 'es' && rawBlock && ES.BLOCK_TYPES.includes(rawBlock.type) ? ES.cleanBlock(rawBlock) : null;
+    const b = v3Block ? { ...b0, ...v3Legacy(v3Block), text: b0.text || v3Text(v3Block), vo: b0.vo }
+      : esBlock ? { ...b0, ...ES.legacyFields(esBlock), text: b0.text || ES.blockText(esBlock), vo: b0.vo } : b0;
     let kind = F.KINDS.includes(b.kind) ? b.kind : 'point';
     if (!allowed.includes(kind)) kind = index === 0 ? 'hook' : (spec.kinds.includes('point') ? 'point' : 'context');
     if (fmt === 'top5' && !['hook', 'rank', 'cta'].includes(kind)) { dropped += 1; issues.push('A non-ranked beat was dropped from the Top 5.'); return; }
@@ -288,6 +437,18 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '', l
     const bad = F.unsourcedNumbers(beat, sourceSet, fmt);
     if (bad.length) { dropped += 1; issues.push(`A beat with ${bad.join(', ')} (not in the sources) was dropped.`); return; }
     if (beat.emphasis && !squash(beat.text).includes(squash(beat.emphasis))) beat.emphasis = '';
+    if (v3Block && V3_KIND[v3Block.type] === beat.kind) {
+      const bad3 = SRC.unsourcedIn({ block: v3Block }, sourceSet, fmt);
+      if (bad3.length) { dropped += 1; issues.push(`A beat with ${bad3.join(', ')} (not in the sources) was dropped.`); return; }
+      beat.block = v3Block;
+    } else if (v3Block && index === 0) {
+      // The hook stays a hook; the block's words lead it.
+      beat.block = { type: 'hook', pills: ES.cleanBlock({ type: 'hook', pills: ES.splitLines(beat.text.toUpperCase(), 14).slice(0, 3).map((t, k) => ({ text: t, color: k === 0 ? 'ink' : 'blue' })) }).pills };
+    }
+    if (v3) {
+      beat.subject = validSubject(b0.subject, beat, read, teamHint);
+      if (beat.block && beat.block.type === 'photoCard') beat.block.photo = beat.subject.type === 'team' ? beat.subject.name : (beat.subject.name || beat.block.photo);
+    }
     if (esBlock && ES.KIND_FOR[esBlock.type] === beat.kind) {
       beat.block = esBlock;
       if (esBlock.type === 'quote' && beat.quote) beat.block = { ...esBlock, text: beat.quote.text, who: esBlock.who || beat.quote.by.toUpperCase() };
@@ -332,6 +493,15 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '', l
   if (dropped >= (longForm ? 3 : 2)) weak = true;
   const voWords = final.reduce((n, b) => n + F.wordCount(b.vo), 0);
   if (voWords < (longForm ? 70 : 35)) weak = true;
+  // Reels v3, data first: Receipts needs two data blocks; Stat Card a photo
+  // card and stat tiles. Short of that the plan is weak (Sonnet is asked).
+  if (v3) {
+    const types = final.map(b => b.block && b.block.type).filter(Boolean);
+    const data = types.filter(t => DATA_BLOCKS.includes(t)).length;
+    if (v3 === 'receipts' && data < 2) { weak = true; issues.push('Receipts needs at least two data blocks from the sources.'); }
+    if (v3 === 'statcard' && !(types.includes('photoCard') && types.includes('statTiles'))) { if (!types.includes('photoCard') && !types.includes('statTiles')) weak = true; issues.push('Stat Card works best with a photo card and stat tiles.'); }
+    if ((v3 === 'gametape' || v3 === 'hypecut') && !types.includes('clipLabel') && types.filter(t => ['hook', 'statement'].includes(t)).length < 2) issues.push(`${V3_STYLES[v3].label} has few scenes that can carry a clip.`);
+  }
 
   // Banned style (frameup-rules): kept as issues so the UI can show them.
   final.forEach((b, i) => RULES.BANNED.forEach(rule => { if (rule.re.test(`${b.text} ${b.vo}`)) issues.push(`Beat ${i + 1}: ${rule.why}.`); }));
@@ -350,6 +520,8 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '', l
     style: style.id,
     // The ES look (only a real look id is kept; the page defaults to Paper).
     ...(style.engine === 'es' && look && ES.LOOKS[look] ? { look } : {}),
+    // Reels v3: the style (Game Tape, Stat Card, Receipts, Hype Cut).
+    ...(v3 ? { esStyle: v3 } : {}),
   };
   // Plan-level chrome: eyebrow, series tag, the data strip (numbers sourced).
   const eyebrow = clean(parsed && parsed.eyebrow, 48);
@@ -371,11 +543,12 @@ function validatePlan(parsed, { read, format, steer = '', style: styleId = '', l
 
 // ─── Director ────────────────────────────────────────────────────────────
 // tier: 'economy' = Haiku only; 'standard' = Haiku, then Sonnet when weak.
-async function runReelDirector({ brief = '', trend = null, facts = '', format = 'auto', sport = '', tier = 'standard', steer = '', style: styleId = 'es', look = '', track = null, timeoutMs = 22000, startedAt = Date.now(), budgetMs = 45000, now = () => Date.now() } = {}) {
+async function runReelDirector({ brief = '', trend = null, facts = '', format = 'auto', sport = '', tier = 'standard', steer = '', style: styleId = 'es', look = '', esStyle = '', track = null, timeoutMs = 22000, startedAt = Date.now(), budgetMs = 45000, now = () => Date.now() } = {}) {
   const read = readReelBrief({ brief, trend, facts, sport, format });
   // Reels 2.0: the older styles are retired; a request for one is written in ES.
   const style = STYLES.get(STYLES.currentStyle(styleId));
   const lookId = look && ES.LOOKS[look] ? look : '';
+  const v3 = V3_IDS.includes(esStyle) ? esStyle : '';
   const longForm = style.seconds.max > 90;
   const result = { plan: null, read, model: '', cost: 0, source: 'draft', issues: [], escalated: false };
   const draft = () => {
@@ -383,6 +556,7 @@ async function runReelDirector({ brief = '', trend = null, facts = '', format = 
     plan.team = read.team;
     plan.style = style.id;
     if (lookId) plan.look = lookId;
+    if (v3) plan.esStyle = v3;
     return plan;
   };
   let api;
@@ -393,9 +567,9 @@ async function runReelDirector({ brief = '', trend = null, facts = '', format = 
     system: DIRECTOR_SYSTEM,
     cacheSystem: true,
     json: true,
-    messages: [{ role: 'user', content: directorRequest({ read, format: read.format, steer, style, look: lookId }) }],
+    messages: [{ role: 'user', content: directorRequest({ read, format: read.format, steer, style, look: lookId, esStyle: v3 }) }],
     effort: 'low',
-    maxTokens: longForm ? 5200 : 2600,
+    maxTokens: longForm ? 5200 : (v3 ? 3200 : 2600),
     timeoutMs,
     track: track ? { ...track, feature: askTier === 'best' ? 'reels-director-sonnet' : 'reels-director' } : undefined,
   });
@@ -403,7 +577,7 @@ async function runReelDirector({ brief = '', trend = null, facts = '', format = 
   const attempt = async askTier => {
     const reply = await ask(askTier);
     result.cost += Number(reply.cost) || 0;
-    const checked = validatePlan(extractJson(reply.text), { read, format: read.format, steer, style: style.id, look: lookId });
+    const checked = validatePlan(extractJson(reply.text), { read, format: read.format, steer, style: style.id, look: lookId, esStyle: v3 });
     checked.model = reply.model;
     if (!best || (best.weak && !checked.weak) || (best.weak === checked.weak && checked.plan.beats.length > best.plan.beats.length)) best = checked;
     return checked;
@@ -443,19 +617,20 @@ async function revisePlan({ plan, instruction = '', corpus = '', track = null, t
   if (!ask) throw new Error('Say what to change.');
   const style = STYLES.get(STYLES.currentStyle(plan && plan.style));
   const lookId = plan && ES.LOOKS[plan.look] ? plan.look : '';
+  const v3 = plan && V3_IDS.includes(plan.esStyle) ? plan.esStyle : '';
   const current = { format: plan.format, title: plan.title, team: plan.team ? plan.team.name : '', eyebrow: plan.eyebrow, series: plan.series, strip: plan.strip, beats: (plan.beats || []).slice(0, style.beats.max) };
   const reply = await api.aiText({
     tier: 'main',
     system: DIRECTOR_SYSTEM,
     cacheSystem: true,
     json: true,
-    messages: [{ role: 'user', content: `${directorRequest({ read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style, look: lookId })}\n\nCURRENT REEL:\n${JSON.stringify(current)}\n\nCHANGE: ${ask}\nReturn the whole revised reel as JSON in the same shape. Keep the format.` }],
+    messages: [{ role: 'user', content: `${directorRequest({ read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style, look: lookId, esStyle: v3 })}\n\nCURRENT REEL:\n${JSON.stringify(current)}\n\nCHANGE: ${ask}\nReturn the whole revised reel as JSON in the same shape. Keep the format.` }],
     effort: 'low',
     maxTokens: style.seconds.max > 90 ? 5200 : 2600,
     timeoutMs,
     track: track ? { ...track, feature: 'reels-revise' } : undefined,
   });
-  const checked = validatePlan(extractJson(reply.text), { read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style: style.id, look: lookId });
+  const checked = validatePlan(extractJson(reply.text), { read, format: F.FORMATS[plan.format] ? plan.format : 'explainer', style: style.id, look: lookId, esStyle: v3 });
   return { ...checked, model: reply.model, cost: Number(reply.cost) || 0 };
 }
 
@@ -655,6 +830,7 @@ async function runDataDirector(input, { style = '', look = '', tier = 'standard'
 }
 
 module.exports = {
+  V3_STYLES, V3_IDS, V3_TYPES, V3_KIND, V3_SPEC, v3Request, v3StyleOf, v3Blocks, cleanV3Block, upgradeBlock, validSubject,
   readReelBrief, directorRequest, styleRequest, lookRequest, ES_SPEC, validatePlan, runReelDirector, COMPONENT_SPEC, revisePlan, factCheck, teamInfo,
   DIRECTOR_SYSTEM, REVISE_PRESETS, FACT_CHECK, KIT_SPORT,
   DATA_SYSTEM, runDataDirector, readDataInput, hasDataInput, codeDataPlan, dataFacts, validateDataCopy, planTimeline, DATA_CACHE,

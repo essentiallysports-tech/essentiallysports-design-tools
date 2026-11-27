@@ -200,6 +200,8 @@ async function dataPlan(input, body, track, gates) {
   const tier = body.tier === 'economy' ? 'economy' : 'standard';
   const out = await director.runDataDirector(input, { style, look, tier: body.aiCopy === false ? 'off' : tier, steer: clean(body.steer, 300), voice: body.voice === true, blocked, track });
   if (!out.plan) return { ok: false, status: 422, reason: 'no-data', error: 'There is not enough data for this reel; use the brief.' };
+  // Reels v3: data reels default to Receipts unless the person picked a style.
+  out.plan.esStyle = director.v3StyleOf({ esStyle: clean(body.esStyle, 20), style: clean(body.style, 20), look, recipe: clean(body.recipe, 30) || 'data' });
   const MAXP = require('../../reel-data.js').MAX_KEY_PLAYS;
   const dropped = input.playIds && input.playIds.length > MAXP ? [`Kept the ${MAXP} strongest of your ${input.playIds.length} ticked plays.`] : [];
   return {
@@ -232,7 +234,10 @@ async function plan(body, track, gates) {
   const suggested = STYLES.suggestStyle({ format, text: [trend?.title, ...(trend?.related || []).map(r => r.title), brief].filter(Boolean).join(' ') });
   const style = STYLES.currentStyle(STYLES.STYLES[body.style] ? body.style : suggested.id);
   const look = clean(body.look, 20);
-  const key = planKey([trend?.id || trend?.title || '', brief, format, tier, steer, sport, Boolean(body.factCheck), style]);
+  // Reels v3: the style (Game Tape, Stat Card, Receipts, Hype Cut); an old
+  // look / recipe maps to the closest one.
+  const esStyle = director.v3StyleOf({ esStyle: clean(body.esStyle, 20), style: clean(body.style, 20), look, recipe: clean(body.recipe, 30) });
+  const key = planKey([trend?.id || trend?.title || '', brief, format, tier, steer, sport, Boolean(body.factCheck), style, esStyle]);
   const hit = PLAN_CACHE.get(key);
   if (hit && Date.now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: 0, costs: { director: 0, factCheck: 0 } };
 
@@ -266,9 +271,10 @@ async function plan(body, track, gates) {
     draft.team = read.team;
     draft.style = style;
     if (look) draft.look = look;
+    draft.esStyle = esStyle;
     result = { plan: draft, read, source: 'draft', cost: 0, model: '', issues: [] };
   } else {
-    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, look, track, facts: extraFacts });
+    result = await director.runReelDirector({ brief, trend, format, sport, tier, steer, style, look, esStyle, track, facts: extraFacts });
   }
   const corpus = result.read.corpus;
   const value = {
@@ -283,7 +289,7 @@ async function plan(body, track, gates) {
     corpus: corpus.slice(0, 12000),
     sources: [...sourcesOf(trend, brief, facts), ...(esText ? es.sources : [])].slice(0, 16),
     route: result.read.route,
-    style, suggestedStyle: suggested,
+    style, suggestedStyle: suggested, esStyle,
     lint: lintPlan(result.plan, { corpus }),
     costs: { director: money(result.cost), factCheck: money(factCost) },
     cost: money(result.cost + factCost),
@@ -300,6 +306,7 @@ async function revise(body, track) {
   const out = await director.revisePlan({ plan: current, instruction: clean(body.instruction, 300), corpus: clean(body.corpus, 12000), track });
   if (!out.plan.beats.length || out.weak && out.plan.beats.length < 3) return { ok: false, status: 422, error: 'That change did not come back clean. Try a different wording.', issues: out.issues };
   out.plan.team = current.team || out.plan.team;
+  if (current.esStyle && !out.plan.esStyle) out.plan.esStyle = current.esStyle;
   return { ok: true, plan: out.plan, issues: out.issues.slice(0, 8), model: out.model, cost: money(out.cost), lint: lintPlan(out.plan, { corpus: clean(body.corpus, 12000) }) };
 }
 
