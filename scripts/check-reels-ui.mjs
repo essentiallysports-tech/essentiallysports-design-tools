@@ -321,6 +321,8 @@ async function makeReel({ style = 'breakdown', text = BRIEF, script = false, len
   if (length) await pickLength(length);
   if (await evaluate(`Boolean(document.querySelector('#rm-script-mode'))`)) await evaluate(`(() => { const s = document.querySelector('#rm-script-mode'); if (s.checked !== ${script}) s.click(); return 1; })()`);
   await typeInto('#rm-prompt', text);
+  // The sources field (script-first Create): the reference reel's sourced claims, so the number lint has them.
+  if (await evaluate(`Boolean(document.querySelector('#rm-topic'))`)) await typeInto('#rm-topic', (REF.plans.find(p => p.id === PLAN_FOR[style]) || REF.plans[0]).plan.sources.map(x => `${x.source}: ${x.claim}`).join('\n'));
   await must('#rm-make', 'Make my reel');
   await waitFor(inReview, 40000, 'the Review step');
 }
