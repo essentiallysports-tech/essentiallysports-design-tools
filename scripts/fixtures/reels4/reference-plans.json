@@ -11,7 +11,7 @@
         "esStyle": "breakdown",
         "skin": "clean",
         "length": "full",
-        "script": "Plot every NFL team since 2000 by how often they throw the ball and how often they win. Almost everyone sits on the same line. One dot sits all *alone*. That dot is the Rams. And they got there this month without Davante Adams and without Puka Nacua, their two best receivers, both out. So Sean McVay did something nobody expected from him. He stopped throwing. Against Arizona, only 44 percent of his plays were passes. Against Green Bay it was 47 percent. Run the ball, run it again, and then run it one more time. In the second half alone they ran it 35 times. That is the most second-half runs by any team in the league this season. And here is the strange part. Under half of those runs were actually successful. On paper, it was not *working*. It did not matter, because the point was never the yards. The Rams held the ball for 40 minutes and 40 seconds. Green Bay had it for 19 minutes and 20 seconds. More than two to one. You cannot score if you never touch the ball. So this was a choice between two coaches. McVay kept running even when the runs were not working, because the clock was. Matt LaFleur never got the ball back long enough to answer. One plan won the clock. The other plan won *nothing*.",
+        "script": "Plot every NFL team by how often they throw and how often they win. One dot sits all *alone*. That dot is the Rams. And they got there without Davante Adams and Puka Nacua, both out. So Sean McVay did something nobody expected from him. He stopped throwing. Against Arizona, only 44 percent of his plays were passes. Against Green Bay it was 47 percent. Run the ball, run it again, and then run it one more time. In the second half alone they ran it 35 times. The most in the league. And here is the strange part. Under half of those runs were actually successful. On paper, it was not *working*. It did not matter, because the point was never the yards. The Rams held the ball for 40 minutes and 40 seconds. Green Bay had it for 19 minutes and 20 seconds. More than two to one. You cannot score if you never touch the ball. So this was a choice between two coaches. McVay kept running even when the runs were not working, because the clock was. Matt LaFleur never got the ball back long enough to answer. One plan won the clock. The other plan won *nothing*.",
         "title": "1 in 100 teams do this",
         "team": "Los Angeles Rams",
         "sport": "nfl",
@@ -31,7 +31,7 @@
             "beats": [
               {
                 "id": "c1b1",
-                "vo": "Plot every NFL team since 2000 by how often they throw the ball and how often they win. Almost everyone sits on the same line. One dot sits all *alone*.",
+                "vo": "Plot every NFL team by how often they throw and how often they win. One dot sits all *alone*.",
                 "media": {
                   "kind": "none"
                 },
@@ -52,7 +52,7 @@
               },
               {
                 "id": "c1b2",
-                "vo": "That dot is the Rams. And they got there this month without Davante Adams and without Puka Nacua, their two best receivers, both out.",
+                "vo": "That dot is the Rams. And they got there without Davante Adams and Puka Nacua, both out.",
                 "media": {
                   "kind": "cards",
                   "subject": {
@@ -157,7 +157,7 @@
               },
               {
                 "id": "c2b3",
-                "vo": "In the second half alone they ran it 35 times. That is the most second-half runs by any team in the league this season.",
+                "vo": "In the second half alone they ran it 35 times. The most in the league.",
                 "media": {
                   "kind": "clip",
                   "subject": {
@@ -380,7 +380,7 @@
           "comment": "COMMENT: GENIUS OR LUCKY?"
         }
       },
-      "voWords": 229
+      "voWords": 202
     },
     {
       "id": "dallas-21-point-lead",
@@ -775,7 +775,7 @@
         "esStyle": "outlier",
         "skin": "clean",
         "length": "full",
-        "script": "The Achilles is the injury that ends tight ends. Ask anyone who has studied it. George Kittle *tore* his, and he should not be this good again. We looked at 67 Achilles tears in the NFL. Only 26 of those players got back to 90 percent of their old level. Another 26 came back to the field, but they were never the same player again. And 15 of them never returned at all. And it gets worse with age. The older you are when it tears, the worse your odds of ever coming back. George Kittle tore his Achilles on January 11, already in his thirties. Before that, he was the number one graded tight end in football in 2024, with a grade of 92.6. And he was number one again in 2025, at 90.4. Back to back, the best at his position. Measured against his own old level, he is not just close. He is already past the line most players never reach. Week by week this season, the catches kept coming, and so did the touchdowns. He is near the very top of the league in receiving yards for a tight end, again. And San Francisco is nine and one, with Kittle in the middle of all of it. So go back to those 67 tears. Nobody his age came back better than before. Nobody, except *one*. A dot that should not exist.",
+        "script": "The Achilles is the injury that ends tight ends. George Kittle *tore* his. We looked at 67 Achilles tears in the NFL. Only 26 of those players got back to 90 percent of their old level. Another 26 came back, but never the same. 15 never returned at all. And it gets worse with age. The older you are when it tears, the worse your odds of ever coming back. George Kittle tore his Achilles on January 11, already in his thirties. Before that, he was the number one graded tight end in football in 2024, with a grade of 92.6. And he was number one again in 2025, at 90.4. Back to back, the best at his position. Against his own old level, he is already past the line. Week by week this season, the catches kept coming, and so did the touchdowns. He is near the top in receiving yards for a tight end, again. And San Francisco is nine and one, with Kittle in the middle of all of it. So go back to those 67 tears. Nobody his age came back better than before. Nobody, except *one*. A dot that should not exist.",
         "title": "Kittle shouldn't be this good again",
         "team": "San Francisco 49ers",
         "sport": "nfl",
@@ -783,7 +783,7 @@
           {
             "title": "Achilles return study",
             "source": "ES research",
-            "claim": "67 Achilles tears: 26 back to 90%, 26 returned, 15 did not"
+            "claim": "67 Achilles tears: 26 back to 90%, 26 returned, 15 did not; Kittle at 98% of his old level; weeks 1-4 receiving yards 64, 82, 71, 95"
           },
           {
             "title": "TE grades",
@@ -800,7 +800,7 @@
             "beats": [
               {
                 "id": "c1b1",
-                "vo": "The Achilles is the injury that ends tight ends. Ask anyone who has studied it. George Kittle *tore* his, and he should not be this good again.",
+                "vo": "The Achilles is the injury that ends tight ends. George Kittle *tore* his.",
                 "media": {
                   "kind": "clip",
                   "subject": {
@@ -844,7 +844,7 @@
               },
               {
                 "id": "c2b2",
-                "vo": "Another 26 came back to the field, but they were never the same player again. And 15 of them never returned at all.",
+                "vo": "Another 26 came back, but never the same. 15 never returned at all.",
                 "media": {
                   "kind": "none"
                 },
@@ -983,7 +983,7 @@
               },
               {
                 "id": "c3b4",
-                "vo": "Measured against his own old level, he is not just close. He is already past the line most players never reach.",
+                "vo": "Against his own old level, he is already past the line.",
                 "media": {
                   "kind": "clip",
                   "subject": {
@@ -1066,7 +1066,7 @@
               },
               {
                 "id": "c4b2",
-                "vo": "He is near the very top of the league in receiving yards for a tight end, again.",
+                "vo": "He is near the top in receiving yards for a tight end, again.",
                 "media": {
                   "kind": "clip",
                   "subject": {
@@ -1168,7 +1168,7 @@
           "kind": "endcard"
         }
       },
-      "voWords": 235
+      "voWords": 197
     },
     {
       "id": "rodgers-who-should-call",

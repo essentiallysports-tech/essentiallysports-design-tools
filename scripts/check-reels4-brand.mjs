@@ -159,6 +159,8 @@ function analyse(f, voc, ctx) {
     const m = Q.pillMetrics(t.size);
     const h = b.b - b.t;
     if (!m) { notes.push('no FrameUpRules.pillMetrics'); continue; }
+    const bw = b.r - b.l;
+    if (Math.abs(bw - h) <= Math.max(3, 0.15 * Math.max(bw, h)) && bw <= 96 && inner.every(x => x.text.trim().length <= 3)) { notes.push('a chip ' + Math.round(bw) + 'x' + Math.round(h) + ' "' + t.text + '" (pill h ' + Math.round(m.h) + ')'); continue; }
     if (h >= m.h * 1.6) { notes.push('a card / button (' + Math.round(b.r - b.l) + 'x' + Math.round(h) + ') holding "' + t.text.slice(0, 20) + '"'); continue; }
     if (!(near(h, m.h, 2.5) && (near(t.l - b.l, m.padLeft, 4) || near((b.l + b.r) / 2, (t.l + t.r) / 2, 4)))) add('pill', 'a one-line box (' + inner.map(x => x.role).join('/') + ' "' + t.text.slice(0, 20) + '") is not an ES pill: h ' + Math.round(h) + ', pad ' + Math.round(t.l - b.l) + ' (pill at ' + t.size + ' px: h ' + Math.round(m.h) + ', pad ' + Math.round(m.padLeft) + ')', b);
   }

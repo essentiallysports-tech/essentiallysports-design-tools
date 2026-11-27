@@ -223,10 +223,12 @@ function vocabFor(plan, beatId) {
   const b = beatsOf(plan).find(x => x.id === beatId) || {};
   const ch = plan.chapters.find(c => c.id === b.chapterId) || {};
   const set = k => new Set(strings(k).flatMap(words));
-  const marker = ch.marker == null ? [] : (typeof ch.marker === 'string' ? [ch.marker] : ['#' + ch.marker.n, String(ch.marker.n), String(ch.marker.i), String(ch.marker.of), '3·2·1']);
+  // A countdown / progress marker draws every chip: #1..#of and 1..of.
+  const marker = ch.marker == null ? [] : (typeof ch.marker === 'string' ? [ch.marker] : [...Array.from({ length: Number(ch.marker.of) || 0 }, (_, k) => ['#' + (k + 1), String(k + 1)]).flat(), '3·2·1']);
   return {
     headline: set(ch.headline), marker: set(marker), vo: set(b.vo), module: set([b.module, b.module && b.module.type === 'wl' ? ['W', 'L', 'T'] : []]), stamp: set(b.stamp && b.stamp.text), tag: set([b.tag && b.tag.text, b.module && b.module.tag]),
     label: set([b.media && b.media.label, b.media && b.media.cards]), close: set(plan.close), source: set([plan.sourceLine, (plan.sources || []).map(s => s.source)]),
+    stampText: words(b.stamp && b.stamp.text || '').join(' '),
     all: set([ch.headline, marker, b.vo, b.module, b.module && b.module.type === 'wl' ? ['W', 'L', 'T'] : [], b.stamp, b.tag, b.media && b.media.label, b.media && b.media.cards, plan.sourceLine, plan.close]),
     headlineRaw: plain(ch.headline || ''), emphasis: (String(ch.headline || '').match(/\*([^*]+)\*/) || [])[1] || '', tone: ch.tone || 'blue',
   };
@@ -241,10 +243,10 @@ function classify(log, voc, captionBand) {
     let role = 'other';
     const inBand = captionBand && cy >= captionBand[0] && cy <= captionBand[1];
     if (Math.abs(t.rot) >= 1 && within(voc.stamp, t.text, true)) role = 'stamp';
-    else if (inBand && within(voc.vo, t.text) && !within(voc.headline, t.text, true) && !within(voc.module, t.text, true) && !within(voc.tag, t.text, true) && !within(voc.label, t.text, true) && !within(voc.stamp, t.text, true)) role = 'caption';
+    else if (inBand && within(voc.vo, t.text) && !within(voc.headline, t.text, true) && !within(voc.module, t.text, true) && !within(voc.tag, t.text, true) && !within(voc.label, t.text, true)) role = 'caption';
     else if (within(voc.headline, t.text, true) && t.size >= 64 && (!captionBand || t.b < captionBand[0])) role = 'headline';
     else if (within(voc.marker, t.text, true)) role = 'marker';
-    else if (within(voc.stamp, t.text, true)) role = 'stamp';
+    else if (within(voc.stamp, t.text, true) && words(t.text).join(' ') === voc.stampText) role = 'stamp'; // an unrotated stamp: only the whole stamp text
     else if (within(voc.tag, t.text, true)) role = 'tag';
     else if (within(voc.label, t.text, true)) role = 'label';
     else if (within(voc.module, t.text)) role = 'module';
