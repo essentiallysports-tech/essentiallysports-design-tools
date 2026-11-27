@@ -3,6 +3,26 @@
   "about": "FrameUp release notes, newest first. One file feeds the What's new panel (app-shell.js) and the What's new tour (tours/updates.js). Add entries with: node scripts/add-release-note.mjs. Item fields: title, text, page (file, optional), route (hash, optional), target (CSS selector, optional). templates: [workspace, dropdown value] pairs tagged New for 30 days. commit: HEAD when the note was written (the CLI reads commits after it).",
   "entries": [
     {
+      "id": "2026-11-28-custom-logos",
+      "date": "2026-11-28",
+      "title": "Your own logos in Social Media and Newsletter",
+      "items": [
+        {
+          "title": "Upload a logo once, use it anywhere",
+          "text": "Every logo picker (team logos, Rankings and Ranked List rows, newsletter infographic logos) has My logos. Upload a PNG, JPG, WebP or SVG up to 5 MB, crop it to a square, and it is saved to your account for next time. Rename or delete it there.",
+          "page": "index.html",
+          "route": "#instagram"
+        },
+        {
+          "title": "Custom brand logo",
+          "text": "In Brand & Colors, pick Custom next to the ES, Golf and W logos to put your own square logo in the corner of Social Media and YouTube designs.",
+          "page": "index.html",
+          "route": "#instagram",
+          "target": "#brand-logo-control"
+        }
+      ]
+    },
+    {
       "id": "2026-11-28-trends-nba-wnba-nascar",
       "date": "2026-11-28",
       "title": "Trends: NBA, WNBA and NASCAR get their own feeds",
