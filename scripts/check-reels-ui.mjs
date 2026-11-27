@@ -226,7 +226,10 @@ async function expectFeedback(name, what) {
   const t0 = Date.now();
   let evs = [];
   while (Date.now() - t0 < 3000) { evs = await feedbackEvents(); if (evs.some(e => evName(e) === name)) break; await sleep(150); }
-  const hit = evs.find(e => evName(e) === name);
+  let hit = evs.find(e => evName(e) === name);
+  // What is actually sent: ReelFeedback normalises the event; check that copy when it exposes its queue or it went over the wire.
+  const sent = feedback.find(e => evName(e) === name) || (await evaluate(`(window.ReelFeedback && window.ReelFeedback._queue || []).slice()`).catch(() => [])).find(e => evName(e) === name);
+  if (hit && sent) hit = { ...sent, via: 'sent' };
   if (!hit) throw new Error(`${what}: no "${name}" feedback event (got ${[...new Set(evs.map(evName))].join(', ') || 'none'}; window.ReelFeedback is ${await evaluate('typeof window.ReelFeedback')})`);
   const bad = [];
   if (!(hit.reelId || hit.reel_id)) bad.push('reel id');
@@ -301,7 +304,7 @@ async function makeReel({ style = 'breakdown', text = BRIEF, script = false, len
   await waitFor(inReview, 40000, 'the Review step');
 }
 // The chapter strip.
-const CHAPTERS = `[...document.querySelectorAll('#rm-scenes [data-chapter]')].filter(e => ${SHOWN}(e))`;
+const CHAPTERS = `[...document.querySelectorAll('#rm-scenes [data-chapter], #rm-scenes [data-chap]')].filter(e => ${SHOWN}(e))`;
 const BEAT_CARDS = `[...document.querySelectorAll('#rm-scenes [data-beat]')].filter(e => ${SHOWN}(e))`;
 const beatCardExpr = idExpr => `document.querySelector('#rm-scenes [data-beat="' + ${idExpr} + '"]')`;
 const beatCard = id => beatCardExpr(JSON.stringify(id));
@@ -340,7 +343,7 @@ for (const w of WIDTHS) {
   await step('Create: one prompt card and one Make my reel', async () => {
     expect(await visible('#rm-prompt'), 'the prompt (#rm-prompt) is not shown');
     expect(await visible('#rm-make'), 'Make my reel (#rm-make) is not shown');
-    expect(/make my reel/i.test(await evaluate(`document.querySelector('#rm-make').textContent`)), 'the button does not say Make my reel');
+    expect(/(make|build) my reel/i.test(await evaluate(`document.querySelector('#rm-make').textContent`)), 'the button does not say Make / Build my reel');
     expect(await evaluate(`document.querySelector('#rm-make').matches('.es-btn--primary')`), 'Make my reel is not the primary button');
   });
   await step('Create: four v4 style cards (Breakdown, Case File, The Outlier, Hot Seat) with a preview and one line', async () => {
@@ -478,9 +481,9 @@ for (const w of WIDTHS) {
   await audit('review-ready-open', w);
   await click('#rm-ready');
   await step('Review: the chapter strip has one group per chapter and one card per beat', async () => {
-    const r = await ctx(`({ ch: (c.state.plan.chapters || []).map(x => ({ id: x.id, n: x.beats.length })), groups: ${CHAPTERS}.map(g => ({ id: g.dataset.chapter, n: g.querySelectorAll('[data-beat]').length })), cards: ${BEAT_CARDS}.length, shown: ${SHOWN}(document.querySelector('#rm-scenes')) })`);
+    const r = await ctx(`({ ch: (c.state.plan.chapters || []).map(x => ({ id: x.id, n: x.beats.length })), groups: ${CHAPTERS}.map(g => ({ id: g.dataset.chapter || g.dataset.chap, n: g.querySelectorAll('[data-beat]').length })), cards: ${BEAT_CARDS}.length, shown: ${SHOWN}(document.querySelector('#rm-scenes')) })`);
     expect(r.shown, 'the chapter strip (#rm-scenes) is not shown');
-    expect(r.groups.length === r.ch.length, `${r.groups.length} [data-chapter] groups for ${r.ch.length} chapters`);
+    expect(r.groups.length === r.ch.length, `${r.groups.length} [data-chapter] / [data-chap] groups for ${r.ch.length} chapters`);
     r.ch.forEach((c, i) => {
       const g = r.groups[i];
       expect(g && g.id === c.id, `group ${i + 1} is chapter ${g && g.id} (want ${c.id})`);
@@ -533,11 +536,13 @@ for (const w of WIDTHS) {
       expect(target, 'no module beat in the plan');
       const before = await ctx(`(${PAGE_BEATS}(c.state.plan).find(b => b.id === ${JSON.stringify(target)}) || {}).module.type`);
       await selectBeat(target);
-      await clickAction('/module/i', target, 'Change module');
-      const OPTS = `[...document.querySelectorAll('[data-module-pick], [data-module-option], [role="menu"] [role="menuitemradio"], [role="menu"] [role="menuitem"], [role="listbox"] [role="option"], dialog[open] [data-module], #rm-scene-edit select option, #rm-beat-edit select option')].filter(e => e.tagName === 'OPTION' || ${SHOWN}(e))`;
+      await sleep(200);
+      const SELECT = `[...document.querySelectorAll('#rm-scene-edit select[data-sb-module], #rm-beat-edit select[data-sb-module], #rm-scenes select[data-sb-module], #rm-scene-edit select[id^="rm-module"]')].filter(e => ${SHOWN}(e))`;
+      if (!(await evaluate(`${SELECT}.length`).catch(() => 0))) await clickAction('/module/i', target, 'Change module');
+      const OPTS = `[...document.querySelectorAll('[data-module-pick], [data-module-option], [role="menu"] [role="menuitemradio"], [role="menu"] [role="menuitem"], [role="listbox"] [role="option"], dialog[open] [data-module], #rm-scene-edit select[data-sb-module] option, #rm-scene-edit select[id^="rm-module"] option, #rm-beat-edit select option')].filter(e => e.tagName === 'OPTION' || ${SHOWN}(e))`;
       await waitFor(`${OPTS}.length >= 2`, 3000, 'module choices ([data-module-pick] / menu / listbox / select)');
       await audit('review-change-module', w);
-      const picked = await evaluate(`(() => { const list = ${OPTS}; const id = e => e.dataset.modulePick || e.dataset.moduleOption || e.dataset.module || e.value || e.textContent.trim(); const o = list.find(e => id(e) && id(e) !== ${JSON.stringify(before)} && !/^(cancel|close|none)$/i.test(id(e))); if (!o) return ''; if (o.tagName === 'OPTION') { const s = o.closest('select'); s.value = o.value; s.dispatchEvent(new Event('change', { bubbles: true })); } else o.click(); return id(o); })()`);
+      const picked = await evaluate(`(() => { const list = ${OPTS}; const id = e => e.dataset.modulePick || e.dataset.moduleOption || e.dataset.module || e.value || e.textContent.trim(); const o = list.find(e => id(e) && id(e) !== ${JSON.stringify(before)} && !/^(cancel|close|none)/i.test(id(e))); if (!o) return ''; if (o.tagName === 'OPTION') { const s = o.closest('select'); s.value = o.value; s.dispatchEvent(new Event('change', { bubbles: true })); } else o.click(); return id(o); })()`);
       expect(picked, 'no other module to pick');
       await sleep(400);
       const after = await ctx(`((${PAGE_BEATS}(c.state.plan).find(b => b.id === ${JSON.stringify(target)}) || {}).module || {}).type`);

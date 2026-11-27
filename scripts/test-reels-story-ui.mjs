@@ -38,7 +38,7 @@ t('Create: one prompt, four style cards, Make my reel, trends, Need an idea?', (
   ['rm-pane-topic', 'rm-prompt', 'rm-styles4', 'rm-make', 'rm-inspire-link', 'rm-trends'].forEach(once);
   assert.match(html, /id="rm-styles4"[^>]*role="radiogroup"/, 'the style cards are a radio group');
   assert.match(html, /<textarea[^>]*id="rm-prompt"/, 'the prompt is a textarea');
-  assert.match(html, /id="rm-make"[^>]*>[\s\S]*?Make my reel/, 'the button says Make my reel');
+  assert.match(html, /id="rm-make"[^>]*>[\s\S]*?(Make|Build) my reel/, 'the button says Make (or Build) my reel');
   assert.match(html, /class="[^"]*es-btn--primary[^"]*"[^>]*id="rm-make"|id="rm-make"[^>]*class="[^"]*es-btn--primary/, 'Make my reel is the primary button');
   assert.match(html, /id="rm-inspire-link"[^>]*>Need an idea\?</);
   assert.match(html, /Start from a trend/);
@@ -62,16 +62,18 @@ t('Create: the four v4 styles; the retired v3 ids are not offered as cards', () 
 });
 
 t('Review: the chapter strip groups beats by chapter', () => {
-  assert.match(js, /data-chapter/, 'chapter groups carry data-chapter');
-  assert.match(js, /data-beat/, 'beat cards carry data-beat');
-  assert.match(js, /\.chapters\b/, 'the strip reads plan.chapters');
+  const sb = js + readFileSync(path.join(root, 'reel-storyboard.js'), 'utf8');
+  assert.match(sb, /data-chap(ter)?=/, 'chapter groups carry data-chapter (or data-chap)');
+  assert.match(sb, /data-beat/, 'beat cards carry data-beat');
+  assert.match(sb, /\.chapters\b/, 'the strip reads plan.chapters');
 });
 
 t('Review: every beat offers Swap media, Edit, Change module and Ask AI', () => {
-  assert.match(js, /Swap( media)?/, 'Swap media');
-  assert.match(js, />\s*Edit\b|'Edit'|"Edit"|`Edit/, 'Edit');
-  assert.match(js, /Change module/, 'Change module');
-  assert.match(js, /Ask AI/, 'Ask AI');
+  const sb = js + readFileSync(path.join(root, 'reel-storyboard.js'), 'utf8');
+  assert.match(sb, /Swap( media)?/, 'Swap media');
+  assert.match(sb, />\s*Edit( script)?\b|'Edit|"Edit|`Edit/, 'Edit');
+  assert.match(sb, /Change module|data-sb-module|>Module</, 'Change module (a button or the Module select)');
+  assert.match(sb, /Ask AI/, 'Ask AI');
 });
 
 t('Review: Ready to post needs the motion rule, a clip and the critic; offers Find clips', () => {
@@ -84,7 +86,14 @@ t('Review: Ready to post needs the motion rule, a clip and the critic; offers Fi
 
 t('Learning: the page logs feedback for swap, edit, module, regenerate and export', () => {
   const src = js + readFileSync(path.join(root, 'reel-storyboard.js'), 'utf8');
-  assert.match(src, /ReelFeedback\.log/, 'ReelFeedback.log is called');
+  assert.match(src, /ReelFeedback\??\.log/, 'ReelFeedback.log is called');
+  assert.match(html, /<script[^>]*src="reel-feedback\.js(\?[^"]*)?"/, 'reel-feedback.js is loaded on the page (else window.ReelFeedback is undefined and nothing is logged)');
+  const fb = (() => { try { return readFileSync(path.join(root, 'reel-feedback.js'), 'utf8'); } catch { return ''; } })();
+  if (fb) {
+    assert.ok(!/ReelFeedback\??\.log\??\.?\(\{[^}]*\breel_id\b/.test(src) || /e\.reel_id/.test(fb), 'the page logs reel_id / beat_id but ReelFeedback.log reads reelId / beatId (the ids are dropped)');
+    const evs = (fb.match(/EVENTS = \[([^\]]+)\]/) || [, ''])[1];
+    for (const m of src.matchAll(/(?:ReelFeedback\??\.log\??\.?\(\{\s*event:\s*|feedback(?:Soon)?\()'([a-z_]+)'/g)) assert.ok(evs.includes(`'${m[1]}'`), `the page logs "${m[1]}", which ReelFeedback.log drops (not in its EVENTS)`);
+  }
   for (const ev of ['swap_media', 'edit_text', 'change_module', 'regenerate', 'export']) assert.ok(src.includes(`'${ev}'`) || src.includes(`"${ev}"`), `logs ${ev}`);
 });
 
