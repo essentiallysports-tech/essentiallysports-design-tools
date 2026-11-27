@@ -1323,7 +1323,7 @@ html[data-theme="dark"] .rm-ideas { background: #1F2126; color: #fff; }
 .rm-panel .ri-nudge__list { grid-template-columns: minmax(0, 1fr); }
 .rm-panel .ri-vo { display: flex; flex-direction: column; align-items: stretch; }
 .rm-panel .ri-vo p { overflow-wrap: anywhere; }
-@media (max-width: 1180px) {
+@media (min-width: 901px) and (max-width: 1180px) {
   .rm-work { grid-template-columns: minmax(0, 1fr) minmax(320px, 360px); gap: var(--es-space-4, 16px); }
   .rm-stage { padding: var(--es-space-4, 16px); }
 }

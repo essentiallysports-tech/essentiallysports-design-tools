@@ -1970,7 +1970,7 @@
     const row = (ok, label, severity = 'warning', n = 0) => `<li class="rm-check-row${ok ? ' is-ok' : ` is-${severity}`}"><span class="rm-check-row__mark" aria-hidden="true">${ok ? ICON.check : (severity === 'critical' ? ICON.alert : ICON.warn)}</span><span>${esc(label)}${!ok && n > 1 ? ` (${n})` : ''}</span><span class="es-sr-only">${ok ? ', passes' : ', needs a look'}</span></li>`;
     const rows = esOn() ? ES.checklist(lint.issues).map(r => row(r.ok, r.label, r.severity, r.n)) : [];
     rows.push(rv ? row(!rvOpen.length, rvOpen.length ? 'AI review: some scenes need a look' : `AI review: pictures match their words, facts are sourced${rv.fixed ? ` (${rv.fixed} fixed for you)` : ''}`, rvCritical ? 'critical' : 'warning', rvOpen.length)
-      : row(true, window.ReelSourcing ? 'AI review runs when the reel is made' : 'Code checks: words, safe frame, captions, rights'));
+      : row(true, window.ReelSourcing ? 'AI review did not run (AI is off or capped); the code checks above did' : 'Code checks: words, safe frame, captions, rights'));
     els.checklist.innerHTML = rows.join('');
     const beatN = id => (state.plan ? state.plan.beats.findIndex(b => b.id === id) : -1);
     const go = (id, n) => (n >= 0 ? `<button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-goto="${esc(id)}">Scene ${n + 1}</button>` : '');
