@@ -144,16 +144,16 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
   align-items: center;
   justify-content: center;
   gap: var(--es-space-2, 8px);
-  height: 40px;
+  height: var(--fi-ctl-h, 40px);
   margin: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--fi-ctl-radius, 8px);
   font: 500 14px/20px var(--es-font-ui, "Roboto", sans-serif);
   cursor: pointer;
   transition: background-color var(--es-dur, 160ms) var(--es-ease, ease), color var(--es-dur, 160ms) var(--es-ease, ease), opacity var(--es-dur, 160ms) var(--es-ease, ease);
 }
 .fu-brief__icon {
-  width: 40px;
+  width: var(--fi-ctl-h, 40px);
   padding: 0;
   background: transparent;
   color: var(--fb-ink-3);
@@ -168,7 +168,7 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
 .fu-brief__go:disabled { opacity: .5; cursor: progress; }
 .fu-brief__go svg { flex: none; }
 @container fubrief (max-width: 380px) {
-  .fu-brief__go { width: 40px; padding: 0; }
+  .fu-brief__go { width: var(--fi-ctl-h, 40px); padding: 0; }
   .fu-brief__go-text { display: none; }
   .fu-brief__spark { width: 24px; }
 }
@@ -219,7 +219,7 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
   display: flex;
   align-items: center;
   gap: var(--es-space-3, 12px);
-  min-height: 32px;
+  min-height: var(--fi-ctl-h, 40px);
   font: 500 14px/20px var(--es-font-ui, "Roboto", sans-serif);
 }
 .fu-brief__step { flex: 1 1 auto; min-width: 0; color: var(--fb-ink-2); }
@@ -237,7 +237,7 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
 
 .fu-brief__link {
   flex: none;
-  min-height: 32px;
+  min-height: var(--fi-ctl-h, 40px);
   padding: 0 8px;
   border: 0;
   border-radius: 8px;
@@ -249,7 +249,7 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
 .fu-brief__link:hover { background: var(--fb-brand-soft); }
 .fu-brief__link[hidden] { display: none; }
 
-.fu-brief__result:not([hidden]) { display: grid; gap: var(--es-space-3, 12px); }
+.fu-brief__result:not([hidden]) { display: grid; gap: var(--fi-stack, 16px); }
 .fu-brief__head { display: flex; align-items: flex-start; gap: var(--es-space-2, 8px); }
 .fu-brief__why {
   flex: 1 1 auto;
@@ -268,8 +268,8 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
   flex: none;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: var(--fi-ctl-h, 40px);
+  height: var(--fi-ctl-h, 40px);
   padding: 0;
   border: 0;
   border-radius: 8px;
@@ -315,6 +315,11 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
   box-shadow: inset 0 0 0 1px var(--fb-line);
 }
 .fu-brief__thumb { display: block; width: 100%; height: 100%; object-fit: cover; }
+.fu-brief__thumb-html { display: grid; place-items: center; width: 100%; height: 100%; color: var(--fb-brand); }
+.fu-brief__act[hidden] { display: none; }
+
+/* HTML widgets: the box sits above the email preview, at its width. */
+.fu-brief.is-widget { max-width: 420px; margin: 0 auto 16px; }
 .fu-brief__thumb:not([src]) { visibility: hidden; }
 .fu-brief__opt.is-loading .fu-brief__thumb-box {
   background: linear-gradient(100deg, var(--fb-sunk) 30%, var(--fb-bg) 50%, var(--fb-sunk) 70%) 0 0 / 300% 100%;
@@ -335,11 +340,11 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
   display: inline-flex;
   align-items: center;
   gap: var(--es-space-2, 8px);
-  height: 32px;
+  height: var(--fi-ctl-h, 40px);
   margin: 0;
   padding: 0 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--fi-ctl-radius, 8px);
   background: var(--fb-bg);
   box-shadow: inset 0 0 0 1px var(--fb-line);
   color: var(--fb-ink);
@@ -364,7 +369,7 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
   box-shadow: inset 0 0 0 1px var(--fb-line), 0 16px 40px -12px rgb(14 16 20 / .35);
 }
 .fu-brief__menu [role="menuitem"] {
-  min-height: 36px;
+  min-height: var(--fi-ctl-h, 40px);
   padding: 0 12px;
   border: 0;
   border-radius: 8px;
@@ -403,7 +408,7 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
 @container fubrief (max-width: 460px) {
   .fu-brief__opt { justify-content: center; padding: 4px; }
   .fu-brief__opt-text { display: none; }
-  .fu-brief__act { width: 40px; padding: 0; justify-content: center; }
+  .fu-brief__act { width: var(--fi-ctl-h, 40px); padding: 0; justify-content: center; }
   .fu-brief__act-text,
   .fu-brief__act > svg:last-child:not(:first-child) { display: none; }
   .fu-brief__actions { justify-content: space-between; }
@@ -413,3 +418,7 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
   .fu-brief *,
   .fu-brief *::before { animation: none !important; transition: none !important; }
 }
+
+/* Phones: while a bottom sheet is open the editor lifts the canvas up under
+   the top bar, over where the box sits; the box steps aside until it closes. */
+body.is-mobile-sheet-open .fu-brief { visibility: hidden; }

@@ -39,7 +39,45 @@ const eq = (a, b, message) => { assert.deepEqual(a, b, message); passed += 1; };
   ok(!Core.shortlist('Steph Curry posted on X after the game', 'instagram').some(item => /^twitter/.test(item.value)), 'no tweet template without a link');
   eq(top('Steph reacts', { tweets: 1 }), 'twitter-quote', 'one linked X post');
   eq(top('Fans react', { tweets: 2 }), 'twitter-multi', 'two linked X posts');
-  eq(Core.shortlist('anything here', 'newsletter'), [], 'no Newsletter templates yet (R2)');
+  // Newsletter (R2).
+  const nl = (text, opts) => Core.shortlist(text, 'newsletter', opts).map(item => item.value);
+  eq(nl('Trade Talk')[0], 'section-header', 'newsletter: a short title is a section header');
+  eq(nl('Watch the full highlights of the Lakers win')[0], 'youtube-fi', 'newsletter: a video');
+  eq(nl('Top NBA stories this week', { articles: 6 }).slice(0, 2), ['list', 'list2'], 'newsletter: a roundup of ES stories');
+  ok(!nl('Top NBA stories this week', { articles: 3 }).includes('list'), 'newsletter: lists need five ES articles');
+  eq(nl('NBA trivia about LeBron James records')[0], 'trivia', 'newsletter: a quiz');
+  eq(nl('Kelce on retirement: "I still love this game"')[0], 'ig-player-quote', 'newsletter: a quote');
+  ok(nl('The Lakers sale to a new owner closes at 10 billion').includes('ticker'), 'newsletter: money news');
+  ok(['ig-headline-photo', 'tag-fi'].includes(nl('Caitlin Clark is changing the WNBA forever')[0]), 'newsletter: a feature image by default');
+  ok(!Object.keys(Core.templatesFor('newsletter')).some(t => t === 'feature-image' || t === 'widgets'), 'newsletter: locked templates are never offered');
+  eq(Core.checkFields('newsletter', 'tag-fi', { tag: 'TENNIS' }).lines, ['TENNIS']);
+  ok(Core.checkFields('newsletter', 'tag-fi', { tag: 'A VERY LONG TAG HERE' }).error, 'tag max 16');
+  eq(Core.checkFields('newsletter', 'archive-page-fi', {}).fields.tag, 'QUICK READ', 'archive tag default');
+  eq(Core.checkFields('newsletter', 'youtube-fi', {}).lines, [], 'video FI has no text');
+  ok(Core.checkFields('newsletter', 'section-header', { title: 'X'.repeat(21) }).error, 'section header max 20');
+  eq(Core.checkFields('newsletter', 'ig-player-quote', { line1: '"I still love', line2: 'this game"' }).fields, { line1: 'I still love', line2: 'this game' }, 'quote marks stripped');
+  const five = [1, 2, 3, 4, 5].map(n => ({ text: `ES headline number ${n} about the Lakers`, url: `https://www.essentiallysports.com/nba-news-${n}/` }));
+  eq(Core.checkFields('newsletter', 'list', { items: five }).links.length, 5, 'list: five ES links');
+  ok(Core.checkFields('newsletter', 'list', { items: five.slice(0, 4) }).error, 'list: exactly five');
+  ok(Core.checkFields('newsletter', 'list2', { items: [...five.slice(0, 4), { text: 'Another headline here', url: 'https://espn.com/x' }] }).error, 'list: ES links only');
+  ok(Core.checkFields('newsletter', 'list', { items: [...five.slice(0, 4), five[0]] }).error, 'list: no repeats');
+  ok(Core.checkFields('newsletter', 'trivia', { question: 'Who scored the most points in Lakers history?', options: ['Kobe', 'LeBron', 'Kareem', 'Kobe'], answer: 2 }).error, 'trivia: four different answers');
+  ok(Core.checkFields('newsletter', 'trivia', { question: 'Who scored the most points in Lakers history?', options: ['Kobe', 'LeBron', 'Kareem', 'West'], answer: 9 }).error, 'trivia: the right answer is 1-4');
+  eq(Core.checkFields('newsletter', 'ticker', { label: 'VALUATIONS', category: 'BUSINESS OF SPORTS', headline: 'Lakers sale closes at a record price', summary: 'The deal is the largest in NBA history.', direction: 'sideways' }).fields.direction, 'up', 'ticker: up or down');
+  eq(Core.rulesFill('newsletter', 'tag-fi', 'Big NBA night in Phoenix'), { tag: 'NBA' }, 'rules: the sport is the tag');
+  eq(Core.rulesFill('newsletter', 'list', 'Top stories', { articles: five.map(a => ({ title: a.text, url: a.url })) }).items.length, 5, 'rules: a list from ES articles');
+  eq(Core.rulesFill('newsletter', 'list', 'Top stories', { articles: [] }), null, 'rules: no articles, no list');
+  // YouTube (R3).
+  const yt = (text, opts) => Core.shortlist(text, 'youtube', opts).map(item => item.value);
+  eq(yt('Caitlin Clark is changing the WNBA'), ['variation-1'], 'youtube: one image by default');
+  eq(yt('Caitlin Clark is changing the WNBA', { cutouts: 1 })[0], 'variation-2', 'youtube: a player cut-out when there is one');
+  eq(yt('Mahomes vs Allen: who wins Sunday', { cutouts: 2 })[0], 'variation-3', 'youtube: two players for a matchup');
+  eq(yt('Kelce said "I still love this game"')[0], 'quote', 'youtube: a quote thumbnail');
+  eq(Core.checkFields('youtube', 'variation-1', { pills: ['Mahomes', 'Is Back'] }).lines, ['Mahomes', 'Is Back']);
+  ok(Core.checkFields('youtube', 'variation-2', { pills: ['a', 'b', 'c'] }).error, 'youtube: two pills max');
+  ok(Core.checkFields('youtube', 'quote', { lines: ['x'.repeat(19)] }).error, 'youtube quote: 18 chars a line');
+  eq(Core.rulesFill('youtube', 'quote', 'Kelce: "I still love this game"'), { lines: ['I still love this', 'game'] }, 'rules: the quote from the brief');
+  eq(Core.rulesFill('youtube', 'variation-1', 'Mahomes is back, again'), { pills: ['Mahomes is back'] }, 'rules: pills from the brief');
   // Acceptance nudge.
   eq(Core.acceptanceBonus({ applied: 4, exported: 4, kept: 4 }), 0, 'needs 5 brief designs');
   ok(Core.acceptanceBonus({ applied: 20, exported: 18, kept: 15 }) > 0, 'often kept: up');
@@ -314,11 +352,65 @@ const reset = () => { aiQueue = []; aiCalls = []; photoCalls = []; fetched.lengt
 }
 
 {
+  // Newsletter: headline lists link only ES articles research returned; a
+  // quote FI only carries words someone said.
+  reset();
+  T.deps.esCoverage = async () => ({ articles: [1, 2, 3, 4, 5, 6].map(n => ({ title: `Lakers story ${n}: LeBron James scores 41`, url: `https://www.essentiallysports.com/nba-news-story-${n}/`, date: '2026-11-26', excerpt: 'LeBron scored 41 points.', body: '' })) });
+  const items = [1, 2, 3, 4, 5].map(n => ({ text: `Lakers story ${n}: LeBron James scores 41`, url: `https://www.essentiallysports.com/nba-news-story-${n}/` }));
+  const badItems = [...items.slice(0, 4), { text: 'A story we made up about the Lakers', url: 'https://www.essentiallysports.com/nba-news-made-up/' }];
+  aiQueue.push({ subject: 'LeBron James', options: [
+    { template: 'list', why: 'A roundup', fields: { items } },
+    { template: 'list2', why: 'A simple roundup', fields: { items: badItems } },
+    { template: 'ig-player-quote', why: 'His words', fields: { line1: 'I am the best', line2: 'ever' } },
+    { template: 'tag-fi', why: 'A feature image', fields: { tag: 'NBA' } },
+  ] });
+  aiQueue.push({ options: [] });
+  const { status, body } = await call({ mode: 'design', workspace: 'newsletter', brief: 'Top Lakers stories this week as LeBron James scores 41' });
+  eq(status, 200, 'newsletter: 200');
+  ok(/"list"/.test(aiCalls[0].system) && /Tag FI/.test(aiCalls[0].system), 'newsletter: its own template list');
+  ok(/nba-news-story-1\//.test(aiCalls[0].messages[0].content), 'newsletter: article links in the prompt');
+  eq(body.options[0].template, 'list', 'newsletter: the list with real links');
+  ok(!body.options.some(o => o.template === 'list2' && o.source === 'ai'), 'newsletter: a made-up link is refused');
+  ok(/not one of the ES articles/.test(aiCalls[1].messages[0].content), 'newsletter: the repair names the bad link');
+  ok(!body.options.some(o => o.template === 'ig-player-quote'), 'newsletter: an invented quote is refused');
+  ok(body.options.some(o => o.template === 'tag-fi'), 'newsletter: the feature image passes');
+  T.deps.esCoverage = async () => ({ articles: [{ title: 'LeBron James leads the Lakers past the Suns', url: 'https://www.essentiallysports.com/nba-news-lebron/', date: '2026-11-26', excerpt: 'LeBron scored 41 points.', body: 'He also had 12 assists and 9 rebounds in the 120-112 win.' }] });
+}
+
+{
+  // YouTube: player layouts keep their cut-outs, else become one image.
+  reset();
+  let withCutout = true;
+  const realFind = T.deps.findPhotos;
+  T.deps.findPhotos = async args => { const res = await realFind(args); return withCutout ? { ...res, cutouts: [{ url: 'https://store.example.com/cutouts/lebron.png', person: args.person }] } : res; };
+  const v2 = { template: 'variation-2', why: 'The player over the scene', layout: 'stagger', fields: { pills: ['LeBron Drops 41'] } };
+  const v1 = { template: 'variation-1', why: 'One image', fields: { pills: ['Lakers Beat Suns'] } };
+  aiQueue.push({ subject: 'LeBron James', options: [v2, v1] });
+  let res = await call({ mode: 'design', workspace: 'youtube', brief: BRIEF });
+  eq(res.status, 200, 'youtube: 200');
+  eq(res.body.options[0].template, 'variation-2', 'youtube: the player layout with a cut-out');
+  eq(res.body.cutouts[0].url, 'https://store.example.com/cutouts/lebron.png', 'youtube: the cut-out goes to the page');
+  ok(/variation-2/.test(aiCalls[0].system) && /Quote thumbnail/.test(aiCalls[0].system), 'youtube: its own templates');
+  reset();
+  withCutout = false;
+  aiQueue.push({ subject: 'LeBron James', options: [v2, { ...v1, fields: { pills: ['LeBron Drops 41'] } }] });
+  res = await call({ mode: 'design', workspace: 'youtube', brief: BRIEF });
+  eq(res.body.options[0].template, 'variation-1', 'youtube: no cut-out, one image');
+  eq(res.body.options.filter(o => o.lines.join() === 'LeBron Drops 41').length, 1, 'youtube: no duplicate after the fallback');
+  reset();
+  aiQueue.push({ subject: 'LeBron James', options: [{ template: 'quote', why: 'His words', fields: { lines: ['I Am The', 'Best Ever'] } }] });
+  aiQueue.push({ options: [] });
+  res = await call({ mode: 'design', workspace: 'youtube', brief: BRIEF });
+  ok(!res.body.options.some(o => o.template === 'quote'), 'youtube: an invented quote is refused');
+  T.deps.findPhotos = realFind;
+}
+
+{
   // Validation and the switch.
   reset();
   eq((await call({ mode: 'design', workspace: 'instagram', brief: ' ' })).status, 400, 'empty brief');
   eq((await call({ mode: 'design', workspace: 'reels', brief: BRIEF })).status, 400, 'unknown editor');
-  eq((await call({ mode: 'design', workspace: 'newsletter', brief: BRIEF })).status, 400, 'Newsletter not yet (R2)');
+
   process.env.AI_DISABLE = 'brief-design';
   const off = await call({ mode: 'design', workspace: 'instagram', brief: BRIEF });
   eq(off.status, 503, 'switched off');

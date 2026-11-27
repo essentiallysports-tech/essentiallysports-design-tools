@@ -77,6 +77,8 @@
     pen: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
     grid: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
     download: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+    code: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>',
+    undo: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/></svg>',
     chevron: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
   };
 
@@ -161,7 +163,8 @@
           for (let i = 0; i < 150 && !(frame.contentWindow.FrameUpBriefApply && frame.contentWindow.FrameUpSpec); i += 1) await new Promise(r => setTimeout(r, 100));
           const api = frame.contentWindow.FrameUpBriefApply;
           if (!api) throw new Error('The preview renderer is unavailable.');
-          await frame.contentWindow.FrameUpSpec?.ready?.();
+          // Ready without switching editors (Social's own ready opens Social).
+          await api.editorReady();
           clearTimeout(timer);
           resolve(api);
         } catch (error) {
@@ -283,6 +286,7 @@
             </div>
             <button type="button" class="fu-brief__act" data-brief="swap" aria-label="Swap photo">${ICON.swap}<span class="fu-brief__act-text">Swap photo</span></button>
             <button type="button" class="fu-brief__act" data-brief="export" aria-label="Export" title="Export">${ICON.download}<span class="fu-brief__act-text">Export</span></button>
+            <button type="button" class="fu-brief__act" data-brief="restore" aria-label="Restore what was there" title="Undo doesn't cover HTML widgets: this puts back what was there" hidden>${ICON.undo}<span class="fu-brief__act-text">Restore</span></button>
           </div>
           <ul class="fu-brief__notes"></ul>
         </div>
@@ -296,7 +300,7 @@
       error: q('.fu-brief__error'), errorText: q('.fu-brief__error-text'), retry: q('[data-brief="retry"]'),
       result: q('.fu-brief__result'), why: q('.fu-brief__why'), opts: q('.fu-brief__opts'), notes: q('.fu-brief__notes'),
       rewrite: q('[data-brief="rewrite"]'), menu: q('.fu-brief__menu'), swap: q('[data-brief="swap"]'), another: q('[data-brief="another"]'),
-      exportBtn: q('[data-brief="export"]'), live: q('[role="status"]'),
+      exportBtn: q('[data-brief="export"]'), restoreBtn: q('[data-brief="restore"]'), live: q('[role="status"]'),
     };
     wire(section);
     return section;
@@ -388,6 +392,7 @@
         case 'rewrite': toggleMenu(); break;
         case 'swap': swapPhoto(); break;
         case 'export': exportNow(); break;
+        case 'restore': restoreWidget(); break;
         default: break;
       }
     });
@@ -493,10 +498,10 @@
     els.step.textContent = `${STEPS[3]}…`;
     const options = (data.options || []).filter(option => option && option.template);
     if (!options.length) { running = null; fail(new Error('Nothing in that brief could fill a template. Add a name, a headline or a link.')); return; }
-    const photos = [...(ownPhoto ? [ownPhoto] : []), ...(data.photos || []).map(p => ({ url: p.url, title: p.title }))];
+    const photos = [...(ownPhoto ? [ownPhoto] : []), ...(data.photos || []).map(p => ({ url: p.url, title: p.title, sourceUrl: p.sourceUrl || '' }))];
     session = {
       ws, brief, options, photos, photoIndex: 0, current: -1, thumbs: [], startedAt: started,
-      tweets: data.tweets || [], subject: data.subject || '', article: data.article || null,
+      tweets: data.tweets || [], cutouts: data.cutouts || [], subject: data.subject || '', article: data.article || null,
       engine: data.mode === 'free' ? 'free' : (data.engine || 'ai'), notice: data.mode === 'free' ? (data.notice || 'AI is in free mode, so this was designed from your words.') : '',
       notes: data.notes || [], fixed: [], left: [], serverMs: data.ms || 0, costUsd: data.costUsd || 0,
     };
@@ -525,7 +530,8 @@
       brief: session.brief,
       subject: session.subject,
       tweets: session.tweets,
-      photo: photo ? { url: photo.url, title: photo.title } : null,
+      cutouts: session.cutouts,
+      photo: photo ? { url: photo.url, title: photo.title, sourceUrl: photo.sourceUrl || '' } : null,
       palette: paletteFor(session.options, index),
       factsText: session.article?.title || '',
     };
@@ -535,6 +541,25 @@
     const A = Apply();
     const option = session.options[index];
     let ctx = ctxFor(index);
+    let fromVariation = '';
+    try { fromVariation = session.ws === 'youtube' ? activeYoutubeVariation : ''; } catch (error) { fromVariation = ''; }
+    // A YouTube layout keeps its own design and history: give the layout the
+    // brief opens in a starting point, so Undo is there and returns to it.
+    try {
+      const target = session.ws === 'youtube' && option.template !== 'quote' ? option.template : '';
+      if (target && target !== fromVariation && youtubeVariationStates[target]) {
+        const history = getDesignHistory(youtubeVariationStates[target]);
+        if (history && !history.current) {
+          const snapshot = cloneDesignValue(youtubeVariationStates[target]);
+          history.current = { snapshot, signature: designSignature(snapshot) };
+        }
+      }
+    } catch (error) { /* history is optional */ }
+    // Undo covers canvas designs, not the HTML widget forms: keep what was
+    // there so Restore can put it back.
+    if (A.isHtml(session.ws, option.template) && !session.restore?.[option.template]) {
+      session.restore = { ...(session.restore || {}), [option.template]: A.widgetSnapshot(option.template) };
+    }
     await asOneStep(async () => {
       await A.apply(option, ctx);
       let left = A.checks(session.ws, option);
@@ -555,11 +580,12 @@
     applied = {
       ws: session.ws, place: A.placeKey(), template: opened.template, label: opened.label, rank: index,
       baseline: A.currentText(), at: Date.now(), brief: session.brief, engine: session.engine,
+      fromVariation, variation: (() => { try { return session.ws === 'youtube' ? activeYoutubeVariation : ''; } catch (error) { return ''; } })(),
       viaSpec: session.ws === 'instagram' && Boolean(window.FrameUpSpec?.SUPPORTED?.includes(opened.template)),
     };
     track('brief-design', { from: 'brief', ws: session.ws, template: opened.template, rank: index, engine: session.engine, reason, photo: session.photos[session.photoIndex]?.own ? 'own' : (session.photos.length ? 'es' : 'none'), fixed: session.fixed.length, left: session.left.length, ms: Math.round(performance.now() - (reason === 'open' ? session.startedAt : performance.now())) }, opened.label);
     // This option's thumbnail from the real canvas.
-    const canvas = document.getElementById('preview');
+    const canvas = A.isHtml(session.ws, opened.template) ? null : document.getElementById('preview');
     if (canvas) {
       try {
         const out = document.createElement('canvas');
@@ -582,6 +608,7 @@
       try {
         const shot = await api.thumb(mine.options[i], ctxFor(i), 240);
         if (session !== mine) return;
+        if (!shot) { els.opts.querySelector(`[data-option="${i}"]`)?.classList.remove('is-loading'); continue; }
         mine.thumbs[i] = shot.dataUrl;
         const img = els.opts.querySelector(`[data-option="${i}"] .fu-brief__thumb`);
         if (img) { img.src = shot.dataUrl; img.closest('.fu-brief__opt')?.classList.remove('is-loading'); }
@@ -591,8 +618,8 @@
 
   function renderOptions() {
     els.opts.innerHTML = session.options.map((option, i) => `
-      <button type="button" class="fu-brief__opt is-loading" role="radio" aria-checked="false" data-option="${i}" aria-label="${esc(`${option.label}${i === 0 ? ', best match' : ''}: ${option.why}`)}" title="${esc(`${option.label}: ${option.why}`)}">
-        <span class="fu-brief__thumb-box"><img class="fu-brief__thumb" alt=""></span>
+      <button type="button" class="fu-brief__opt${Apply().isHtml(session.ws, option.template) ? ' is-html' : ' is-loading'}" role="radio" aria-checked="false" data-option="${i}" aria-label="${esc(`${option.label}${i === 0 ? ', best match' : ''}: ${option.why}`)}" title="${esc(`${option.label}: ${option.why}`)}">
+        <span class="fu-brief__thumb-box">${Apply().isHtml(session.ws, option.template) ? `<span class="fu-brief__thumb-html" aria-hidden="true">${ICON.code}</span>` : '<img class="fu-brief__thumb" alt="">'}</span>
         <span class="fu-brief__opt-text">
           <span class="fu-brief__opt-label">${esc(option.label)}</span>
           <span class="fu-brief__opt-meta">${i === 0 ? 'Best match' : `Option ${i + 1}`}</span>
@@ -612,11 +639,17 @@
       const img = button.querySelector('.fu-brief__thumb');
       if (session.thumbs[i] && img && img.src !== session.thumbs[i]) { img.src = session.thumbs[i]; button.classList.remove('is-loading'); }
     });
-    const hasPhoto = Boolean(Core()?.templateOf(session.ws, option.template)?.photo);
+    const html = Apply().isHtml(session.ws, option.template);
+    const hasPhoto = Boolean(Core()?.templateOf(session.ws, option.template)?.photo) || (html && ['ticker', 'trivia'].includes(option.template) && session.photos.some(p => p.sourceUrl));
     const swapOff = !hasPhoto || session.photos.length < 2;
     els.swap.dataset.off = String(swapOff);
     els.swap.disabled = swapOff;
     els.swap.title = !hasPhoto ? 'This template has no photo' : session.photos.length < 2 ? 'No other checked photos for this brief' : 'Use the next checked photo';
+    const exportLabel = html ? 'Copy HTML' : 'Export';
+    els.exportBtn.setAttribute('aria-label', exportLabel);
+    els.exportBtn.title = exportLabel;
+    els.exportBtn.querySelector('.fu-brief__act-text').textContent = exportLabel;
+    els.restoreBtn.hidden = !(html && session.restore?.[option.template]);
     els.another.dataset.off = String(session.options.length < 2);
     els.another.disabled = session.options.length < 2;
     const notes = noteList({ notes: session.notes, warnings: option.warnings || [], fixed: session.fixed, left: session.left, notice: session.notice });
@@ -669,7 +702,7 @@
     setBusy(true);
     try {
       await asOneStep(() => Apply().serial(async () => {
-        await Apply().setPhoto(photo);
+        await Apply().swapPhoto(session.ws, session.options[session.current], photo);
         render();
         try { flushPendingRender(); } catch (error) { /* ignore */ }
       }));
@@ -682,8 +715,31 @@
   }
 
   function exportNow() {
+    const option = session?.options[session.current];
+    if (session && option && Apply().isHtml(session.ws, option.template)) {
+      // HTML widgets are copied, not exported as images: log the export here.
+      document.getElementById('widget-copy-btn')?.click();
+      const value = originNow()?.value;
+      if (!value) track('brief-export', { from: 'brief', ws: session.ws, template: option.template, rank: session.current, kept: true, changed: 0, engine: session.engine, dest: 'clipboard' }, option.label);
+      return;
+    }
     if (typeof window.downloadImage === 'function') window.downloadImage();
     else document.getElementById('studio-export-btn')?.click();
+  }
+
+  function restoreWidget() {
+    const option = session?.options[session.current];
+    const saved = option ? session.restore?.[option.template] : null;
+    if (!saved) return;
+    const target = { list: () => listBuilderState, list2: () => list2BuilderState, ticker: () => tickerBuilderState, trivia: () => triviaBuilderState }[option.template]?.();
+    if (!target) return;
+    Object.assign(target, JSON.parse(JSON.stringify(saved)));
+    try { window.FrameUpAutosave?.applyBuilders?.({ [option.template]: target }); } catch (error) { /* forms only */ }
+    try { renderWidgetPreview(); } catch (error) { /* preview only */ }
+    delete session.restore[option.template];
+    applied = null;
+    paintResult();
+    announce('Restored what was there before.');
   }
 
   // ─── Mount / unmount with the page ───────────────────────────────────────
@@ -693,17 +749,22 @@
   }
   function mount() {
     const ws = page();
-    const stack = document.querySelector('.canvas-stack');
+    // HTML widgets hide the canvas stage: sit above their preview instead.
+    const pane = document.getElementById('widget-preview-pane');
+    const widgetMode = ws === 'newsletter' && pane && getComputedStyle(pane).display !== 'none' && document.querySelector('.canvas-stage') && getComputedStyle(document.querySelector('.canvas-stage')).display === 'none';
+    const stack = widgetMode ? pane.parentElement : document.querySelector('.canvas-stack');
     const want = available(ws) && stack;
     if (!want) {
       if (root?.isConnected) { root.remove(); refit(); }
       return;
     }
     if (!root) root = build();
-    if (root.parentElement !== stack) {
-      stack.insertBefore(root, stack.firstElementChild);
+    const before = widgetMode ? pane : stack.firstElementChild;
+    if (root.parentElement !== stack || (widgetMode && root.nextElementSibling !== pane)) {
+      stack.insertBefore(root, before);
       refit();
     }
+    root.classList.toggle('is-widget', Boolean(widgetMode));
     root.dataset.workspace = ws;
     if (session && session.ws !== ws) { session = null; showPanel(null); }
   }
@@ -720,9 +781,61 @@
     els.input?.select();
   }
 
+  // Newsletter: the asset is an editor global that Undo / Redo don't move, so
+  // undoing a brief design that switched assets left the old asset's state
+  // under the new asset's canvas. After Undo / Redo of a brief design, the
+  // asset follows the restored state. (Only while a Newsletter brief design is
+  // in play; the general fix belongs in index.html applyDesignHistoryEntry.)
+  // YouTube: each layout (variation) keeps its own design and history, so a
+  // brief design that moved to another layout is undone by moving back.
+  function followYoutube(redo) {
+    try {
+      if (applied?.ws !== 'youtube' || activeWorkspace !== 'youtube' || !applied.fromVariation || applied.fromVariation === applied.variation) return false;
+      if (redo) return false; // Redo stays in the layout you are on.
+      const history = getDesignHistory();
+      const [from, to] = [applied.variation, applied.fromVariation];
+      // Only the Undo that takes the brief design off this layout moves back.
+      if (activeYoutubeVariation !== from || (history?.past?.length || 0) !== 1) return false;
+      setTimeout(() => {
+        const select = document.getElementById('youtube-variation-select');
+        if (select) select.value = to;
+        switchYoutubeVariation(to);
+        syncAllCustomSelects();
+      }, 0);
+      return true;
+    } catch (error) { return false; }
+  }
+  function historyIntent(event) {
+    if (event.type === 'click') return event.target.closest?.('[data-history]')?.dataset.history || '';
+    if (!(event.metaKey || event.ctrlKey) || event.altKey || event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return '';
+    const key = (event.key || '').toLowerCase();
+    return key === 'y' || (key === 'z' && event.shiftKey) ? 'redo' : key === 'z' ? 'undo' : '';
+  }
+  // Capture phase: decide before the editor's own Undo / Redo runs.
+  ['click', 'keydown'].forEach(type => document.addEventListener(type, event => {
+    const intent = historyIntent(event);
+    if (intent) followYoutube(intent === 'redo');
+  }, true));
+
+  function followHistory() {
+    if (applied?.ws !== 'newsletter') return;
+    setTimeout(() => {
+      try {
+        const want = state.newsletterAsset;
+        if (activeWorkspace !== 'newsletter' || !want || want === activeNewsletterAsset || !NEWSLETTER_ASSET_TYPES[want]) return;
+        const select = document.getElementById('newsletter-asset-select');
+        if (select) select.value = want;
+        switchNewsletterAsset(want);
+        syncAllCustomSelects();
+      } catch (error) { /* the editor keeps its own state */ }
+    }, 0);
+  }
+  document.addEventListener('click', event => { if (event.target.closest?.('[data-history]')) followHistory(); });
+  document.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && /^[zy]$/i.test(event.key || '')) followHistory(); });
+
   libs.then(() => {
     mount();
-    new MutationObserver(mount).observe(document.body, { attributes: true, attributeFilter: ['data-current-page'] });
+    new MutationObserver(mount).observe(document.body, { attributes: true, attributeFilter: ['data-current-page', 'data-newsletter-asset'] });
     window.addEventListener('hashchange', () => setTimeout(mount, 60));
     try { window.FrameUpSpec?.setOrigin?.(originNow); } catch (error) { /* export origin is optional */ }
     window.FrameUpShell?.addPaletteSource?.(() => [{
