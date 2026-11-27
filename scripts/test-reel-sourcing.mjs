@@ -58,10 +58,10 @@ function mockDeps({ clipsByKey = {}, photosBy = {}, calls = {} } = {}) {
     },
     findPhotos: async (args, ctx) => {
       calls.photos.push({ args, vision: Boolean(ctx.deps.verify) });
-      if (ctx.deps.verify) await ctx.deps.verify({ name: args.person || args.team }, [], {});
+      if (ctx.deps.verify) await ctx.deps.verify({ name: args.person || args.team }, [], { max: 12 });
       return { ok: true, photos: photosBy[args.person || args.team || args.query] || [], cost: ctx.deps.verify ? 0.01 : 0 };
     },
-    verifyWithVision: async (subject, photos, opts) => { await opts.gateway.aiText({ track: { feature: 'generate-photo-pick' } }); return { verdicts: new Map(), cost: 0.01 }; },
+    verifyWithVision: async (subject, photos, opts) => { calls.maxPhotos = opts.max; await opts.gateway.aiText({ track: { feature: 'generate-photo-pick' } }); return { verdicts: new Map(), cost: 0.01 }; },
   };
 }
 
@@ -206,7 +206,8 @@ await test('scene-media: one search per team (shared by its scenes), photos only
   assert.ok(res.judgeQueue.length >= 3 && res.judgeQueue.length <= 24);
   assert.equal(res.beats[3].pick.kind, 'none');
   assert.equal(res.beats[3].pick.fallback.type, 'statement', 'no picture: an infographic block');
-  assert.ok(calls.verifyGateways.every(f => f === 'reels-photo-verify'), 'photo vision logged as a Reels feature');
+  assert.ok(calls.verifyGateways.length && calls.verifyGateways.every(f => f === 'reels-photo-verify'), 'photo vision logged as a Reels feature');
+  assert.equal(calls.maxPhotos, 6, 'at most 6 photos per vision check');
   assert.equal(res.judge.threshold.relevance, 7);
 });
 
@@ -226,13 +227,13 @@ await test('scene-media: judgements in -> the confirmed clip is picked; an irrel
   assert.equal(res.beats[1].clips[0].gate, '');
 });
 
-await test('scene-media: live clip search for at most 2 subjects, vision for at most 3; AI off -> library + text evidence, no queue', async () => {
+await test('scene-media: live clip search for at most 2 subjects, vision for at most 2 (6 photos each); AI off -> library + text evidence, no queue', async () => {
   const plan = { ...PLAN, beats: ['Aaron Rodgers|Green Bay Packers', 'George Kittle|San Francisco 49ers', 'Josh Allen|Buffalo Bills', 'Patrick Mahomes|Kansas City Chiefs', 'Lamar Jackson|Baltimore Ravens'].map((x, i) => ({ id: `b${i + 1}`, kind: i ? 'point' : 'hook', text: x, block: { type: i ? 'statement' : 'hook' }, subject: { type: 'player', name: x.split('|')[0], team: x.split('|')[1] } })) };
   const calls = {};
   const res = await SRC.sceneMedia({ plan }, { deps: mockDeps({ calls }), aiAllowed: true });
   assert.equal(calls.find.filter(c => !c.freeOnly).length, 2);
   assert.equal(calls.find.filter(c => c.freeOnly).length, 3);
-  assert.equal(calls.photos.filter(c => c.vision).length, 3);
+  assert.equal(calls.photos.filter(c => c.vision).length, 2);
   assert.equal(res.capped.clips, true);
   assert.equal(res.capped.photos, true);
   const off = {};
