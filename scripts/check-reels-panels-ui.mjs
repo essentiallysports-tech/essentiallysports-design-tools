@@ -226,8 +226,9 @@ try {
     apiCalls.length = 0;
     await must('.rb-angle [data-use="i1"]', 'Use this angle');
     await waitFor(`window.ReelMakerCtx.state.plan && window.ReelMakerCtx.state.plan.lens === 'money'`, 5000, 'the plan to be applied');
-    const plan = await evaluate(`(() => { const p = window.ReelMakerCtx.state.plan; return { beats: p.beats.length, first: p.beats[0].block.type, last: p.beats[p.beats.length - 1].block.type, style: p.esStyle, ids: p.beats.every(b => b.id), tl: window.ReelMakerCtx.state.timeline ? window.ReelMakerCtx.state.timeline.beats.length : 0, sources: window.ReelMakerCtx.state.sources.length, pane: Boolean(document.querySelector('#rm-pane-edit') && !document.querySelector('#rm-pane-edit').hidden) }; })()`);
-    expect(at, plan.beats === 6 && plan.first === 'hook' && plan.last === 'endcard' && ['gametape', 'statcard', 'receipts', 'hypecut'].includes(plan.style) && plan.ids && plan.tl === 6, `the storyboard was not built from the angle: ${JSON.stringify(plan)}`);
+    // v4: the angle's plan opens as chapters (ReelES.toV4) in a v4 style; a v3 plan (flat beats) is reported.
+    const plan = await evaluate(`(() => { const p = window.ReelMakerCtx.state.plan; const beats = Array.isArray(p.chapters) ? p.chapters.flatMap(c => c.beats || []) : (p.beats || []); return { v: p.v, chapters: Array.isArray(p.chapters) ? p.chapters.length : 0, beats: beats.length, style: p.esStyle, ids: beats.every(b => b.id), close: p.close ? p.close.kind : '', tl: window.ReelMakerCtx.state.timeline ? (window.ReelMakerCtx.state.timeline.beats || []).length : 0, sources: window.ReelMakerCtx.state.sources.length, pane: Boolean(document.querySelector('#rm-pane-edit') && !document.querySelector('#rm-pane-edit').hidden) }; })()`);
+    expect(at, plan.v === 4 && plan.chapters >= 1 && plan.beats >= 3 && ['breakdown', 'casefile', 'outlier', 'hotseat'].includes(plan.style) && plan.ids && plan.tl >= plan.beats && ['yourCall', 'endcard'].includes(plan.close), `the storyboard was not built from the angle as a v4 plan: ${JSON.stringify(plan)}`);
     expect(at, !(await count('dialog[open]')), 'the inspiration dialog stayed open after "Use this angle"');
     expect(at, plan.sources === 7 && plan.pane, `the reel did not open in Review with its sources: ${JSON.stringify(plan)}`);
     await sleep(600);

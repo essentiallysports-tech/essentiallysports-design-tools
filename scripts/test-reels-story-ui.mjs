@@ -1,7 +1,10 @@
-// Reels Studio v3: the page's static contract (QA lane, 2026-11-27).
+// Reels Studio v4: the page's static contract (QA lane, 2026-11-27).
 // The markup the journey depends on (Create → Review → Export, contract ids),
-// what was removed, and the few behaviours that can be read from the source.
-// The real-browser walk is scripts/check-reels-ui.mjs.
+// what was removed, and the few behaviours that can be read from the source:
+// the 4 v4 style cards come from ReelES.STYLES, the length toggle, the chapter
+// strip, the per-beat actions (Swap media / Edit / Change module / Ask AI),
+// the Ready to post gate (motion rule, clips, critic, Find clips) and the
+// feedback log calls. The real-browser walk is scripts/check-reels-ui.mjs.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -41,6 +44,50 @@ t('Create: one prompt, four style cards, Make my reel, trends, Need an idea?', (
   assert.match(html, /Start from a trend/);
 });
 
+t('Create: the length toggle (Full / Short) is one radio group', () => {
+  once('rm-length');
+  const at = html.indexOf('id="rm-length"');
+  const tag = html.slice(html.lastIndexOf('<', at), html.indexOf('>', at) + 1);
+  assert.match(tag, /role="radiogroup"|<fieldset/, `#rm-length is a radiogroup or fieldset: ${tag}`);
+  const block = html.slice(at, html.indexOf('</', html.indexOf('data-length="short"', at)) + 200);
+  assert.match(block, /data-length="full"/, 'a Full option');
+  assert.match(block, /data-length="short"/, 'a Short option');
+  assert.match(block, /Full[\s\S]{0,80}\b(8\d|9\d|100)\s?s/, 'Full says its length (~90 s)');
+  assert.match(block, /Short[\s\S]{0,80}\b[34]\d\s?s/, 'Short says its length (~40 s)');
+});
+
+t('Create: the four v4 styles; the retired v3 ids are not offered as cards', () => {
+  for (const id of ['gametape', 'statcard', 'receipts', 'hypecut']) assert.ok(!new RegExp(`data-style4="${id}"`).test(html), `${id} is not a card in the markup`);
+  assert.match(js, /previewPlan/, 'the cards preview with the engine previewPlan');
+});
+
+t('Review: the chapter strip groups beats by chapter', () => {
+  assert.match(js, /data-chapter/, 'chapter groups carry data-chapter');
+  assert.match(js, /data-beat/, 'beat cards carry data-beat');
+  assert.match(js, /\.chapters\b/, 'the strip reads plan.chapters');
+});
+
+t('Review: every beat offers Swap media, Edit, Change module and Ask AI', () => {
+  assert.match(js, /Swap( media)?/, 'Swap media');
+  assert.match(js, />\s*Edit\b|'Edit'|"Edit"|`Edit/, 'Edit');
+  assert.match(js, /Change module/, 'Change module');
+  assert.match(js, /Ask AI/, 'Ask AI');
+});
+
+t('Review: Ready to post needs the motion rule, a clip and the critic; offers Find clips', () => {
+  assert.match(js, /Ready to post/, 'the badge says Ready to post');
+  assert.match(js, /motionOk/, 'the gate reads motionOk');
+  assert.match(js, /clipCount|needsClips/, 'the gate reads clipCount / needsClips');
+  assert.match(js, /critique/, 'the critic runs (mode critique)');
+  assert.match(js, /Find clips/, 'the Find clips action');
+});
+
+t('Learning: the page logs feedback for swap, edit, module, regenerate and export', () => {
+  const src = js + readFileSync(path.join(root, 'reel-storyboard.js'), 'utf8');
+  assert.match(src, /ReelFeedback\.log/, 'ReelFeedback.log is called');
+  for (const ev of ['swap_media', 'edit_text', 'change_module', 'regenerate', 'export']) assert.ok(src.includes(`'${ev}'`) || src.includes(`"${ev}"`), `logs ${ev}`);
+});
+
 t('Create: the style cards come from the engine (ReelES.STYLES), not a second list', () => {
   assert.match(js, /\bSTYLES\b/, 'the page reads ReelES.STYLES');
   assert.ok(!/LOOK_IDS\.map|lookList\(\)\.map/.test(js), 'the old look picker is not drawn');
@@ -57,7 +104,7 @@ t('Making: the step checklist with a live region', () => {
   assert.match(html, /id="rm-making-live" aria-live="polite"/);
 });
 
-t('Review: scene strip, Ready to post badge, Ask AI and three folds', () => {
+t('Review: chapter strip, Ready to post badge, Ask AI and three folds', () => {
   ['rm-pane-edit', 'rm-scenes', 'rm-beats', 'rm-ready', 'rm-panel', 'rm-revise', 'rm-ask', 'rm-ask-input', 'rm-voice', 'rm-captions', 'rm-details', 'rm-checklist', 'rm-lint'].forEach(once);
   assert.match(html, /id="rm-ready"[^>]*aria-controls="rm-lint"/, 'the badge controls the checklist');
   const review = between('id="rm-pane-edit"', 'id="rm-pane-export"');
@@ -108,5 +155,5 @@ t('disclosure headers are inset rounded rows; focus ring; reduced motion', () =>
 });
 
 for (const f of fails) console.log(`FAIL ${f}`);
-console.log(fails.length ? `reels story ui: ${n}/${n + fails.length} passed` : `All ${n} Reels Studio v3 page tests passed.`);
+console.log(fails.length ? `reels story ui: ${n}/${n + fails.length} passed` : `All ${n} Reels Studio v4 page tests passed.`);
 process.exit(fails.length ? 1 : 0);
