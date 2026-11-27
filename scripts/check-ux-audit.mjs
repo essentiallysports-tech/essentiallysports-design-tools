@@ -567,6 +567,34 @@ const CHECKS = [
       return '';
     },
   },
+  {
+    // P2: the Reel Captions ruler read "0:01 0:01" (floats added up to 1.999),
+    // the playhead covered the first label (":00"), and after an upload the
+    // left rail was empty.
+    id: 'reels-ruler-and-rail',
+    async run() {
+      await c.send('Page.bringToFront'); // media only loads in a visible tab
+      if (!await open('/reels.html', { ready: "document.querySelector('#reels-file-input')", ms: 15000 })) return 'Reel Captions never loaded';
+      const doc = await c.send('DOM.getDocument', {});
+      const q = await c.send('DOM.querySelector', { nodeId: doc.result.root.nodeId, selector: '#reels-file-input' });
+      await c.send('DOM.setFileInputFiles', { nodeId: q.result.nodeId, files: [ROOT_DIR + '/design-request-banner.webm'] });
+      if (!await waitFor("document.querySelector('video')?.readyState >= 2 && document.querySelector('.reels-tick--major')", 12000)) return 'the clip never loaded';
+      await sleep(800);
+      const r = await c.evaluate(`(() => {
+        const labels = [...document.querySelectorAll('.reels-timeline-ruler .reels-tick--major span, .reels-timeline-ruler .reels-tick-end')];
+        const texts = labels.map(e => e.textContent);
+        const first = labels[0]?.getBoundingClientRect(); const head = document.querySelector('.reels-playhead')?.getBoundingClientRect();
+        const boxes = labels.map(e => e.getBoundingClientRect());
+        return { texts, dup: texts.filter((t, i) => texts.indexOf(t) !== i), overlap: boxes.some((a, i) => boxes.some((b, j) => i < j && a.left < b.right && b.left < a.right)), clear: first && head ? first.left >= head.left + 7 : false, hint: document.querySelector('.reels-empty-hint')?.textContent || '', button: document.querySelector('#reels-upload-btn')?.textContent || '' };
+      })()`);
+      if (r.dup.length) return 'repeated ruler labels: ' + r.texts.join(' ');
+      if (r.overlap) return 'ruler labels overlap: ' + r.texts.join(' ');
+      if (!r.clear) return 'the playhead handle covers the first ruler label';
+      if (!/Auto-caption/.test(r.hint)) return 'the left rail is empty after the upload';
+      if (r.button !== 'Change Clip') return 'the rail still offers "' + r.button + '" with a clip loaded';
+      return '';
+    },
+  },
 ];
 
 let failed = 0; let ran = 0;
