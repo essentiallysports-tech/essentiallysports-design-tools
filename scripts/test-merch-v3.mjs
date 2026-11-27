@@ -510,6 +510,34 @@ console.log(`merch7 photos: ${n} checks passed`);
           out.flat = [];
           for (const kind of ['tote', 'longsleeve', 'tank']) { try { const f = document.createElement('canvas'); f.width = 300; await P.preview(tc, '#F6EBCD', f, { kind, spec: ts, size: 300 }); out.flat.push(kind); } catch (e) { out.flat.push(kind + ': ' + e.message); } }
         }
+        // sleeve-logo: the wordmark's ink on the synthetic photo lands inside the measured
+        // sleeve outline (and near the projected wordmark); edge-on -> not drawn, caption note
+        {
+          out.sleeve = [];
+          const none = { palette: { a: '#FFFFFF', b: '#FFFFFF', ink: '#FFFFFF' }, stack: [{ text: '.', size: 'small', fill: 'a', ink: 'white' }] };
+          for (const [tid, kind] of [[T, 'tee'], ['pro_380', 'hoodie'], ['pro_6ae602fcb22447bfbc', 'longsleeve'], ['pro_14kNy0EJQkqopY-Z9Pm41A', 'crewneck']]) {
+            for (const [idx, cal] of Object.entries(P.PHOTO_AREAS[tid])) {
+              if (!cal.sleeve) continue;
+              const cv = document.createElement('canvas'); cv.width = 720;
+              const res = await P.photoMock(none, cv, { photo, kind, templateId: tid, photoIndex: Number(idx), spec: { regionId: 'front_large', pixelsWidth: 2250, pixelsHeight: 2700, dpi: 150 }, garmentColor: '#FFFFFF', realism: false, logoSpot: 'sleeve', width: 1440 });
+              const W = cv.width, H = cv.height, d = cv.getContext('2d').getImageData(0, 0, W, H).data;
+              const poly = cal.sleeveLeft.map(([x, y]) => [x * W, y * H]);
+              const g = P.sleeveLogo(tid, idx, W, H);
+              let blue = 0, outside = 0, far = 0;
+              const xs = g.outline.map(p => p[0]), ys = g.outline.map(p => p[1]);
+              for (let y = 0; y < H; y++) for (let x = W >> 1; x < W; x++) {
+                const i = (y * W + x) * 4;
+                if (!(d[i + 2] > 150 && d[i + 2] - d[i] > 60)) continue; // the blue wordmark pill
+                blue += 1;
+                if (![[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => P.pointInPoly(x + 0.5 + dx, y + 0.5 + dy, poly))) outside += 1; // anti-aliased clip edge: 1 px
+                if (x < Math.min(...xs) - 3 || x > Math.max(...xs) + 3 || y < Math.min(...ys) - 3 || y > Math.max(...ys) + 3) far += 1;
+              }
+              out.sleeve.push({ tid, idx, blue, outside, far, note: res.logoNote, drawn: res.sleeve && res.sleeve.drawn });
+            }
+          }
+          const cal = P.PHOTO_AREAS[T][0], yaw = cal.sleeve.yaw; cal.sleeve.yaw = 89;
+          try { const cv = document.createElement('canvas'); cv.width = 720; const res = await P.photoMock(none, cv, { photo, templateId: T, photoIndex: 0, spec, garmentColor: '#FFFFFF', realism: false, logoSpot: 'sleeve' }); out.edgeOn = { note: res.logoNote, drawn: res.sleeve.drawn }; } finally { cal.sleeve.yaw = yaw; }
+        }
         // the print PNG: byte-identical to the base engine for a fixed concept (explicit fit)
         if (window.MPBase) {
           const fixed = { id: 'fixed', palette: { a: '#0A7DFA', b: '#0B1F3A', ink: '#FFFFFF' }, stack: ['WE CENTER', 'FANS IN', 'EVERYTHING'].map((t, i) => ({ text: t, size: i ? 'mid' : 'big', fill: i % 2 ? 'b' : 'a', ink: 'white' })), elements: [{ type: 'icon', name: 'tennis', position: 'above', color: 'a' }], fit: { scale: 1, topIn: 1.75 } };
@@ -517,6 +545,10 @@ console.log(`merch7 photos: ${n} checks passed`);
           const logo = async lib => { const c = document.createElement('canvas'); await lib.renderLogo({ pixelsWidth: 600, pixelsHeight: 300, dpi: 150, garmentColor: '#000000' }, c, { blob: false }); return c.toDataURL('image/png'); };
           const [a1, b1, a2, b2] = [await png(window.MPBase), await png(P), await logo(window.MPBase), await logo(P)];
           out.renderSame = a1 === b1; out.renderLen = a1.length; out.logoSame = a2 === b2;
+          // the real sleeve print files (tee 600 x 525; hoodie / long sleeve / crewneck 450 x 1800), light and dark shirts
+          const sleevePng = async (lib, pw, ph, gc) => { const c = document.createElement('canvas'); await lib.renderLogo({ region: 'sleeve_left', regionId: 'sleeve_left', pixelsWidth: pw, pixelsHeight: ph, dpi: 150, garmentColor: gc }, c, { blob: false }); return c.toDataURL('image/png'); };
+          out.sleeveFilesSame = true;
+          for (const [pw, ph] of [[600, 525], [450, 1800]]) for (const gc of ['#FFFFFF', '#020202', '#2D407D']) if (await sleevePng(window.MPBase, pw, ph, gc) !== await sleevePng(P, pw, ph, gc)) out.sleeveFilesSame = false;
         }
         return out;
       })()`);
@@ -536,7 +568,17 @@ console.log(`merch7 photos: ${n} checks passed`);
       assert.deepEqual(r.flat, ['tote', 'longsleeve', 'tank'], 'flat preview has a shape for every blank');
       console.log(`ok tote photoMock: ${r.tote.inkN} ink px inside the projected box, none on the strap; flat preview for tote / merch7 tops`);
       if (r.renderSame === undefined) console.log('skip print PNG comparison (no base ref)');
-      else { assert.equal(r.renderSame, true, 'render() PNG changed vs the base'); assert.ok(r.renderLen > 1000); assert.equal(r.logoSame, true, 'renderLogo() PNG changed'); console.log('ok render() / renderLogo() PNGs byte-identical to the base engine'); }
+      else { assert.equal(r.renderSame, true, 'render() PNG changed vs the base'); assert.ok(r.renderLen > 1000); assert.equal(r.logoSame, true, 'renderLogo() PNG changed'); assert.equal(r.sleeveFilesSame, true, 'renderLogo() sleeve print files changed'); console.log('ok render() / renderLogo() PNGs byte-identical to the base engine (incl. 600x525 and 450x1800 sleeve files)'); }
+      assert.ok(r.sleeve.length >= 6, 'every calibrated sleeve photo checked');
+      r.sleeve.forEach(s => {
+        assert.equal(s.drawn, true, `${s.tid}/${s.idx}: sleeve logo drawn`);
+        assert.equal(s.note, '', `${s.tid}/${s.idx}: no caption note when drawn`);
+        assert.ok(s.blue > 15, `${s.tid}/${s.idx}: wordmark ink on the sleeve (${s.blue} px)`);
+        assert.equal(s.outside, 0, `${s.tid}/${s.idx}: wordmark ink outside the sleeve outline`);
+        assert.equal(s.far, 0, `${s.tid}/${s.idx}: wordmark ink away from the projected wordmark`);
+      });
+      assert.deepEqual(r.edgeOn, { note: 'left sleeve', drawn: false }, 'edge-on sleeve: not drawn, caption names the left sleeve');
+      console.log(`ok sleeve logo ink inside the sleeve outline on ${r.sleeve.length} photos (${r.sleeve.map(s => s.blue).join('/')} px); edge-on -> logoNote`);
     } finally { chrome.close(); server.close(); }
   }
 }
