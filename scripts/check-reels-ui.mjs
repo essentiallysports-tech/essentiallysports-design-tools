@@ -605,8 +605,10 @@ for (const w of WIDTHS) {
       while (Date.now() - t1 < 4000 && calls.filter(c => c.mode === 'revise').length === n0) await sleep(150);
       const rv = calls.filter(c => c.mode === 'revise')[n0];
       expect(rv, 'no revise call from the beat\'s Ask AI');
-      const scoped = Object.entries(rv.body).some(([k, v]) => /beat|scope|target|chapter/i.test(k) && JSON.stringify(v).includes(target));
-      expect(scoped, `the beat's Ask AI did not name beat ${target} (keys: ${Object.keys(rv.body).join(',')})`);
+      const named = rv.body.beatId || rv.body.beat || rv.body.target || '';
+      expect(named && (rv.body.scope === 'beat' || /beat/i.test(Object.keys(rv.body).join(' '))), `the beat's Ask AI is not scoped to a beat (keys: ${Object.keys(rv.body).join(',')})`);
+      expect(named === target, `the beat's Ask AI went to beat ${named}, the picked beat is ${target} (the editor shows another beat than the one picked?)`);
+      expect(rv.body.keepVo === true, 'the beat\'s Ask AI does not ask to keep the voiceover words (keepVo)');
     });
     await step('Review: Delete beat (if offered) logs delete_beat', async () => {
       const target = await ctx(`(${PAGE_BEATS}(c.state.plan)[3] || {}).id`);
