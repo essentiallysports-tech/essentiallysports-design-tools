@@ -716,7 +716,9 @@
       while (j + 1 < toks.length && toks[j + 1].em === toks[i].em) j += 1;
       const text = tokText(toks.slice(i, j + 1));
       const w = tracked(measure, text, size);
-      ops.push({ type: 'text', text, font, size, x: cx, y, w, color: toks[i].em ? emColor : color, track: TYPE.tracking * size, ...extra });
+      // Alignment marks belong to the line's first run only.
+      const own = ops.length ? { ...extra, align: '', slot: undefined } : extra;
+      ops.push({ type: 'text', text, font, size, x: cx, y, w, color: toks[i].em ? emColor : color, track: TYPE.tracking * size, ...own });
       cx += w + space;
       i = j + 1;
     }
@@ -808,9 +810,9 @@
       const n = tiles.length;
       if (!n) return top;
       const gap = sp(SPACE.m);
-      const tw = (CW - gap * (n - 1)) / n;
-      const pad = sp(32);
-      const inner = tw - 2 * pad;
+      let tw = (CW - gap * (n - 1)) / n;
+      const pad = sp(40);
+      let inner = tw - 2 * pad;
       const values = tiles.map(t => String(t.value).toUpperCase());
       const vk = pickStep(n === 1 ? 'statXL' : maxValue, 'h2', T, s => values.every(v => tracked(m, v, s) <= inner + 0.01));
       const labels = tiles.map(t => String(t.label || '').toUpperCase());
@@ -824,6 +826,12 @@
       const chipH = pillMetricsAt(cs).h;
       const vs = vk.size;
       const ls = lk.size;
+      // One tile hugs its words (at least half the column), never a full-width slab.
+      if (n === 1) {
+        const need = Math.max(tracked(m, values[0], vs), labels[0] ? tracked(m, labels[0], ls) : 0, kickers[0] ? tracked(m, kickers[0], ks) : 0, tiles[0].chip ? tracked(m, String(tiles[0].chip).toUpperCase(), cs) + pillPad(cs) : 0);
+        tw = Math.min(CW, Math.max(CW / 2, Math.ceil((need + 2 * pad) / 8) * 8));
+        inner = tw - 2 * pad;
+      }
       const h = pad + (hasK ? TYPE.cap * ks + sp(SPACE.m) : 0) + TYPE.cap * vs + (hasL ? sp(SPACE.m) + TYPE.cap * ls : 0) + (hasChip ? sp(SPACE.m) + chipH : 0) + pad;
       tiles.forEach((t, i) => {
         const x = X + i * (tw + gap);
@@ -1104,11 +1112,12 @@
         let py = card.y + sp(SPACE.m);
         const inset = X + sp(SPACE.m);
         if (b.label && drawn.has('label')) {
-          const op = fitPill(b.label, inset, py, PILL_SIZES.S, PILL_SIZES.S, 'blue', CW - 2 * sp(SPACE.m), { role: 'label', enter: 'left', delay: st, inCard: true });
+          // Pills on the card ride in with it (same direction, a beat later).
+          const op = fitPill(b.label, inset, py, PILL_SIZES.S, PILL_SIZES.S, 'blue', CW - 2 * sp(SPACE.m), { role: 'label', enter: 'up', delay: st, inCard: true });
           ops.push(op);
           py += op.box.h + sp(SPACE.xs);
         }
-        if (b.tag && drawn.has('tag')) ops.push(fitPill(b.tag.text, inset, py, PILL_SIZES.S, PILL_SIZES.S, b.tag.tone, CW - 2 * sp(SPACE.m), { role: 'tag', enter: 'left', delay: 2 * st, inCard: true }));
+        if (b.tag && drawn.has('tag')) ops.push(fitPill(b.tag.text, inset, py, PILL_SIZES.S, PILL_SIZES.S, b.tag.tone, CW - 2 * sp(SPACE.m), { role: 'tag', enter: 'up', delay: 2 * st, inCard: true }));
         if (tiles.length) tilesOps(tiles, geo.slots.lower, { maxValue: 'display', delay0: 3 * st });
       } else if (b.type === 'statTiles') {
         tagBelow();
@@ -1131,12 +1140,15 @@
         }
         const rows = Math.ceil(n / cols);
         ops.push({ type: 'dotgrid', role: 'dotgrid', x: X, y: region.y, w: cols * cell, h: rows * cell, n, cols, cell, groups: groups.map(g => ({ n: g.n, tone: fl(g.tone === 'grey' ? 'grey' : g.tone) })), rest: 'grey', enter: 'none', delay: st, align: 'col' });
-        // Legend: one S pill per group, in a row (wrapping), in the lower slot.
+        // Legend: one M pill per group (S when three will not fit in two
+        // rows), in a row that wraps, in the lower slot.
         let lx = X;
         let ly = geo.slots.lower;
-        const ls = sz(PILL_SIZES.S);
-        groups.filter(g => g.label).forEach((g, i) => {
-          const op = pill(g.label, lx, ly, ls, g.tone, { role: 'legend', pillSize: 'S', enter: 'left', delay: 1400 + i * st, legend: true });
+        const labelled = groups.filter(g => g.label);
+        const rowsAt = size => { let x = 0; let r = 1; labelled.forEach(g => { const w = tracked(m, g.label.toUpperCase(), size) + pillPad(size); if (x && x + w > CW) { r += 1; x = 0; } x += w + sp(SPACE.s); }); return r; };
+        const ls = rowsAt(sz(PILL_SIZES.M)) <= 2 ? sz(PILL_SIZES.M) : sz(PILL_SIZES.S);
+        labelled.forEach((g, i) => {
+          const op = pill(g.label, lx, ly, ls, g.tone, { role: 'legend', pillSize: pillClass(ls, T), enter: 'left', delay: 1400 + i * st, legend: true });
           if (lx > X && op.box.x + op.box.w > X + CW) { lx = X; ly += op.box.h + sp(SPACE.xs); op.box.x = lx; op.box.y = ly; op.x = lx + pillMetricsAt(ls).padLeft; op.y = ly + pillMetricsAt(ls).baseline; }
           if (lx === X) op.align = 'col';
           ops.push(op);
@@ -1149,7 +1161,7 @@
           const perRow = n <= 10 ? n : Math.ceil(n / 2);
           const gap = sp(SPACE.s) / 2 + sp(4);
           const sq = Math.min(128 * T, Math.floor((CW - gap * (perRow - 1)) / perRow));
-          const letter = snapStep((sq * 0.56) / T) * T;
+          const letter = snapStep((sq * 0.62) / T) * T;
           const FILL = { W: 'green', L: 'ink', T: 'grey' };
           items.forEach((r, i) => {
             const x = X + (i % perRow) * (sq + gap);
@@ -1167,6 +1179,22 @@
             ops.push({ type: 'text', role: 'streak-label', text: lt, font: displayFont(ls), size: ls, x: X, y: y + sp(SPACE.gap) + TYPE.cap * ls, w: tracked(m, lt, ls), color: tx('ink'), track: TYPE.tracking * ls, enter: 'up', delay: st + n * 50 + 120, align: 'col' });
           }
         }
+      } else if (b.type === 'tagPill' && graphic.media) {
+        // Over a clip or photo (Game Tape, Hype Cut): the picture fills the
+        // frame, the headline is boxed, the tag is a lower-third pill.
+        ops.unshift({ ...mediaFull(), fit: 'focus', focus: b.focus || null, full: true });
+        ops.splice(0, ops.length, ...ops.filter(o => o.role !== 'title'));
+        if (b.title) {
+          const toks = emTokens(b.title);
+          const pk = pickStep('h1', 'h2', T, s => wrapTokens(m, toks, s, CW - pillPad(s)).length <= 2);
+          let ty = head;
+          wrapTokens(m, toks, pk.size, CW - pillPad(pk.size)).slice(0, 2).forEach((l, i) => {
+            const op = pill(tokText(l), X, ty, pk.size, l.some(x => x.em) ? 'blue' : 'ink', { role: 'title', pillSize: pillClass(pk.size, T), enter: 'left', delay: i * st, align: 'col', ...(i === 0 ? { slot: 'head' } : {}) });
+            ops.push(op);
+            ty += pillStep(pk.size);
+          });
+        }
+        if (b.text && drawn.has('text')) ops.push(fitPill(b.text, X, geo.slots.lower, PILL_SIZES.M, PILL_SIZES.S, b.tone, CW, { role: 'tag', enter: 'left', delay: 2 * st, align: 'col', slot: 'lower' }));
       } else if (b.type === 'tagPill') {
         if (b.text && drawn.has('text')) {
           const op = fitPill(b.text, X, y, PILL_SIZES.M, PILL_SIZES.S, b.tone, CW, { role: 'tag', enter: 'left', delay: st, align: 'col', ...(t ? {} : { slot: 'head' }) });
@@ -1373,10 +1401,12 @@
   // The crop that keeps the face in frame: the face about half the frame's
   // height (never below a cover fit), its centre a little above the middle,
   // drifting in by up to 6% over the scene.
-  function focusCrop(size, rect, face, zoom = 1) {
+  // share: how much of the frame's height the face takes (a card frames the
+  // face close; a full-frame clip keeps the player in shot).
+  function focusCrop(size, rect, face, zoom = 1, share = 0.46) {
     const [sw, sh] = size;
     const cover = Math.max(rect.w / sw, rect.h / sh);
-    const want = face ? (rect.h * 0.46) / face.h : cover;
+    const want = face ? (rect.h * share) / face.h : cover;
     const scale = Math.max(cover, Math.min(want, cover * 2.4)) * zoom;
     const cw = rect.w / scale;
     const ch = rect.h / scale;
@@ -1405,7 +1435,7 @@
     }
     const face = faceBox(size, op.focus, asset);
     const zoom = MOTION.driftFrom + (1.06 - MOTION.driftFrom) * ease.inOutSine(p);
-    const c = focusCrop(size, op, face, zoom);
+    const c = focusCrop(size, op, face, zoom, op.full ? 0.16 : 0.46);
     ctx.drawImage(media, c.sx, c.sy, c.sw, c.sh, op.x, op.y, op.w, op.h);
     ctx.restore();
     if (face && (op.bracket || op.scan)) {
@@ -1831,6 +1861,8 @@
         const shown = blockStrings(b).flatMap(numberTokens);
         shown.forEach(n => {
           if (!said.length) return;
+          // A year on screen ("2011 · GB") is a label, not a figure to speak.
+          if (/^(?:19|20)\d\d$/.test(n.raw)) return;
           const same = said.find(s => Math.abs(s.value - n.value) < 1e-9);
           if (!same) out.push(issue('as-spoken', 'warning', `${label(i)} shows ${n.raw}, but the voiceover doesn't say it.`, 'Show numbers exactly as the voiceover says them.', g.beat));
           else if (same.form.replace(/,/g, '') !== n.form.replace(/,/g, '') || (/,/.test(same.raw) !== /,/.test(n.raw) && n.value >= 10000)) out.push(issue('as-spoken', 'warning', `${label(i)} shows ${n.raw}; the voiceover says ${same.raw}.`, `Show it as “${same.raw}”.`, g.beat));
