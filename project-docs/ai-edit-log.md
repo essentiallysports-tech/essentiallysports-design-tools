@@ -4,6 +4,15 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-29 — Suhail (Claude, UX audit lane): UX audit slice 3 (branch qa/ux-audit-2)
+- Status: committed on qa/ux-audit-2 (base origin/main 5d14560 = live), not pushed. $0, no AI, no env vars, no migration, no Fourthwall writes.
+- Merch (merch.js / merch.html only): a draft of the line, link, step, designs, picked design, plan and trend lives in this tab's sessionStorage per signed-in user id (`frameup.merch.draft.v1:<id>`, capped ~1.5 MB, a day max), restored after a reload / Back (a fresh visit starts clean) with a "Restored your line and designs" note + Start over; cleared on product create and Start over; beforeunload asks while designs exist and are not in the shop (only after a real gesture; quiet in sample-data mode unless html[data-mx-leave-warn]). "Tick the rights box" shows only after a Create attempt (the button stays pressable for that case, focuses the box, sends nothing).
+- Reel Captions (reels.js / reels.css): ruler ticks counted (float sums made "0:01 0:01"), sub-second labels keep their digits, no label under the end label, first label clear of the playhead; after an upload with no captions the rail says what to do next and the button reads Change Clip.
+- Settings: AI usage uses the sidebar's fallback to /api/ai-status userSpentUsd when the DB has no row (was $0.00 beside $3.42; a real mismatch, not only the stub); Merch Designs listed. ai-page tours.js key aligned (20261127-rv4ui).
+- Tests: check-ux-audit +3 (merch-draft-restore, reels-ruler-and-rail, settings-usage-and-keys; each fails on 5d14560); check-merch-ui rights step updated (intended). run-suite: 168 files; failures beyond the 3 accepted: check-reels-inputs-ui (Reels Studio, passes alone: load flake) and check-custom-logos "focus back on Rename" (flaky on e3d939b and 5d14560 too: pre-existing, not this branch).
+- Cache keys: merch.js, reels.js, reels.css -> 20261129-ux3.
+- Left (owner call): Settings delete-account.
+
 ## 2026-11-28 — Suhail (Claude, UX audit lane): UX debug sweep, slice 2 (branch qa/ux-audit-2)
 - Status: committed on qa/ux-audit-2 (base origin/main e3d939b; merged fa7271a and c7b6a70: brief R2/R3 + Reels v4), not pushed. run-suite after the c7b6a70 merge: 168 files, only the 3 accepted failures; check-editor-ui 0 problems, off-grid 59 (baseline 103); check-ux-audit 17/17. $0, no AI, no env vars, no migration, no Fourthwall writes (Merch walked in its local demo mode).
 - Owner decisions done: R4 (dashboard hides Design Requests while FEATURES.requests is false: Open requests KPI, Board / Requests tabs, request queue rows, request insights and request activity; #board falls back to Overview; all back when requests are on) and R5 (Generate live-trend cards fill the brief and ask "Generate designs for this trend? Uses AI budget"; nothing is sent until confirm; Cancel / Esc return focus to the card).
