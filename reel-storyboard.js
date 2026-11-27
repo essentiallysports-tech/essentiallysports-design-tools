@@ -381,12 +381,12 @@
         const mv = ui.motionOf ? ui.motionOf(beat) : null;
         const still = Boolean(mv && !mv.ok && !end);
         return `<li class="rm-card${on ? ' is-on' : ''}${end ? ' is-end' : ''}${still ? ' is-still' : ''}" data-beat="${esc(id)}" data-ri-beat="${esc(id)}" data-kind="${esc(beat.kind)}">
-          <button class="rm-card__face" type="button" data-sb-face draggable="${end ? 'false' : 'true'}" aria-pressed="${on}" aria-label="Scene ${i + 1} of ${n}, ${esc(name)}${media ? `, ${esc(mediaBadge(m))}` : ''}${still ? ', no motion yet' : ''}${time ? `, ${time}` : ''}. ${end ? 'Always last.' : 'Alt and an arrow key moves it.'}" title="${esc(`${name}: ${words || ''}`)}">
+          <button class="rm-card__face" type="button" data-sb-face data-beat-select draggable="${end ? 'false' : 'true'}" aria-pressed="${on}" aria-label="Scene ${i + 1} of ${n}, ${esc(name)}${words ? `: ${esc(String(words).replace(/[*]/g, '').slice(0, 80))}` : ''}${media ? `, ${esc(mediaBadge(m))}` : ''}${still ? ', no motion yet' : ''}${time ? `, ${time}` : ''}. ${end ? 'Always last.' : 'Alt and an arrow key moves it.'}" title="${esc(`${name}: ${words || ''}`)}">
             <span class="rm-card__media"><canvas class="rm-card__thumb" width="${tw}" height="${th}" data-sb-thumb aria-hidden="true"></canvas>
               <span class="rm-card__n" aria-hidden="true">${i + 1}</span>
               ${media ? `<span class="rm-card__badge${m.asset ? (m.clip ? ' is-clip' : (m.verified ? ' is-verified' : '')) : ' is-none'}" aria-hidden="true">${m.asset ? (m.clip ? ICON.film : ICON.image) : ICON.stat}</span>` : ''}
               ${still ? '<span class="rm-card__still" aria-hidden="true">Static</span>' : ''}</span>
-            <span class="rm-card__label" aria-hidden="true"><b>${esc(name)}</b><span class="rm-card__words">${words && shortTitle(words, 13 - name.length - 3) ? ` · ${esc(shortTitle(words, 13 - name.length - 3))}` : ''}</span></span>
+            <span class="rm-card__label" aria-hidden="true"><b class="rm-card__type">${esc(name)}</b><span class="rm-card__words">${esc(String(words || '').replace(/[*]/g, '').replace(/\s+/g, ' ').trim() || '—')}</span></span>
           </button>
           ${media ? `<button class="rm-card__swap" type="button" data-visual="swap" aria-label="Swap the media for scene ${i + 1}" title="Swap media">${ICON.refresh}<span class="es-sr-only">Swap</span></button>` : ''}
           <p class="rm-beat__flag" aria-live="polite"></p>
@@ -427,7 +427,7 @@
           drawThumb(card);
           const beat = beatOf(card.dataset.beat);
           const w = card.querySelector('.rm-card__words');
-          if (beat && w && es() && ES.blockText && !(ui.v4Beat && ui.v4Beat(beat))) { const nm = ui.beatName(beat); const t = shortTitle(ES.blockText(ES.blockOf(beat)), 13 - nm.length - 3); w.textContent = t ? ` · ${t}` : ''; }
+          if (beat && w) { const said = ui.v4Beat && ui.v4Beat(beat) ? (beat.vo || '') : (es() && ES.blockText ? ES.blockText(ES.blockOf(beat)) : (beat.text || '')); w.textContent = String(said || '').replace(/[*]/g, '').replace(/\s+/g, ' ').trim() || '—'; }
         });
         drawEditorThumb();
         seen = Object.keys(state.images).length;
@@ -565,7 +565,7 @@
         if (ch && ch.beats[0] && ch.beats[0].id === id) parts.push(field(id, 'chap.headline', 'Chapter headline', ch.headline || '', { max: 60, ph: 'DALLAS BLEW A *21-POINT LEAD*' }), '<p class="rm-hint">Holds for the whole chapter. Wrap one word in *asterisks* to colour it.</p>');
         if (beat.media && beat.media.kind !== 'none') parts.push(field(id, 'v4.media.label', 'Media label', (beat.media && beat.media.label) || '', { max: 24, ph: 'EAGLES BALL' }));
         parts.push(`<div class="rm-bf-pair">${field(id, 'v4.stamp.text', 'Stamp', (beat.stamp && beat.stamp.text) || '', { max: 24, ph: 'BAD CALL' })}${field(id, 'v4.tag.text', 'Tag', (beat.tag && beat.tag.text) || '', { max: 28, ph: '0:02 LEFT' })}</div>`);
-        if (beat.module && beat.module.type) parts.push(`<div class="rm-modfields">${genericBody(id, beat.module).replace(/data-field="es\./g, 'data-field="v4.module.').replace(/id="rm-es-/g, 'id="rm-v4m-')}</div><p class="rm-hint">Numbers must come from a source.</p>`);
+        if (beat.module && beat.module.type) parts.push(`<div class="rm-modfields">${genericBody(id, beat.module).replace(/data-field="es\./g, 'data-field="v4.module.').replace(/(id|for)="rm-es-/g, '$1="rm-v4m-')}</div><p class="rm-hint">Numbers must come from a source.</p>`);
         parts.push(voHtml(beat));
         return parts.join('');
       }
@@ -782,7 +782,8 @@
         const card = t.closest('[data-beat]');
         if (!card) return;
         const id = card.dataset.beat;
-        if (t.closest('[data-sb-face]')) { ctx.selectBeat(id, { seek: true }); }
+        // The face, or anywhere on the card but its Swap: pick the scene.
+        if (t.closest('[data-sb-face]') || !t.closest('button, a, input, select, textarea')) { ctx.selectBeat(id, { seek: true }); }
       });
       list.addEventListener('focusin', event => {
         const face = event.target.closest('[data-sb-face]');

@@ -1625,3 +1625,19 @@ html[data-theme="dark"] .rm-scenes { border-top-color: #2A2D34; }
 .rm-verified.is-caption { color: var(--rm-ink-2); }
 /* The house button reads its colours from these variables (with !important), so the fill is set through them. */
 .rm-findclips.is-go, html[data-theme="dark"] .rm-findclips.is-go { --es-btn-bg: #0A7DFA; --es-btn-bg-hover: #0A6FDE; --es-btn-ink: #FFFFFF; --es-btn-ink-hover: #FFFFFF; --es-btn-line: transparent; --es-btn-line-hover: transparent; }
+
+/* QA pass (v4 checks): readable card numbers, Find clips at 4.5:1, words under each thumbnail */
+.rm-findclips.is-go, html[data-theme="dark"] .rm-findclips.is-go { --es-btn-bg: #0A62C7; --es-btn-bg-hover: #0A55AD; }
+@media (hover: hover) { .rm-findclips.is-go:not(:disabled):hover { background: #0A55AD; } }
+.rm-findclips.is-go { background: #0A62C7; }
+.rm-card.is-live .rm-card__n { background: #0A62C7; }
+html[data-theme="dark"] .rm-card.has-warning:not(.is-on) .rm-card__n { color: #101114; }
+.rm-card__label { display: flex; flex-direction: column; gap: 0; white-space: normal; }
+.rm-card__type, .rm-card__label .rm-card__words { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.rm-card__type { color: var(--rm-ink); font: 600 11px/16px var(--es-font-ui); }
+.rm-card__label .rm-card__words { color: var(--rm-ink-3); font: 400 11px/16px var(--es-font-ui); }
+.rm-prompt__tools:not(:has(> :not([hidden]):not(input[type="checkbox"]))) { display: none; }
+.rm-inspire { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.rm-inspire__line { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 4px 6px; margin: 0; text-align: center; }
+.rm-inspire .rm-link { padding: 0; border: 0; background: none; font: 600 14px/1.4 var(--es-font-ui); cursor: pointer; }
+.rm-inspire .rm-link[aria-busy="true"] { opacity: .6; cursor: progress; }
