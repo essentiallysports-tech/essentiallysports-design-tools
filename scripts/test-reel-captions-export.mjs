@@ -48,7 +48,8 @@ test('cues: one per burned-in card, at the card\'s own start, with the card\'s o
 
 test('cues: built with ReelRender.captionCards, so a re-card of the words gives the same cues', () => {
   const words = voiced.tracks.captions.words;
-  const again = R.captionCards(words, { style: 'highlight', maxWords: 3, maxChars: 22 });
+  // v3: ES captions follow phrases (phrases: true), as buildTimeline cards them.
+  const again = R.captionCards(words, { style: 'highlight', maxWords: 3, maxChars: 22, phrases: true });
   assert.deepEqual(C.cues({ ...voiced, tracks: { captions: { words, cards: again } } }).map(c => [c.s, c.text]), C.cues(voiced).map(c => [c.s, c.text]));
   // The recorded take's word times are the cue times.
   assert.equal(C.cues(voiced)[0].s, voiced.tracks.captions.words[0].s);

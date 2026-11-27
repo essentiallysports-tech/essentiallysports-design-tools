@@ -158,7 +158,11 @@ await test('layout: boxed pills hug their glyphs on the 60 px column; statements
   // v3: boxed words are the FrameUp ES pill (op.box from pillMetrics).
   const box = pill.box;
   assert.equal(Math.round(box.x), 60, 'box on the column');
-  assert.equal(Math.round(box.y), 480, 'hook pills start below the mark\'s clear space');
+  // v3: with no picture the hook's pills are one group centred on y 880 (never above 480).
+  assert.ok(box.y >= 480, 'hook pills start below the mark\'s clear space');
+  const pills = hook.filter(o => o.role === 'pill');
+  const mid = (pills[0].box.y + pills[pills.length - 1].box.y + pills[pills.length - 1].box.h) / 2;
+  assert.ok(Math.abs(mid - 880) <= 8 || pills[pills.length - 1].box.y + pills[pills.length - 1].box.h <= 1072, `centred (${mid})`);
   assert.equal(pill.fill, 'ink');
   assert.equal(hook.find(o => o.role === 'pill' && o.fill === 'red').color, 'white');
   const stamp = hook.find(o => o.role === 'stamp');
@@ -198,7 +202,7 @@ await test('number, dots, compare: count-up, up to 2,600 dots with the green one
 });
 
 // ─── Captions ────────────────────────────────────────────────────────────
-await test('captions: 1-3 words a card, one line at y 1172 centred, *word* in yellow, asterisks never shown or spoken', () => {
+await test('captions: 1-3 words a card, one line at y 1172 on the column, *word* in yellow, asterisks never shown or spoken', () => {
   assert.deepEqual(E.parseEmphasis('The Cubs lost. This bar got *paid.*'), { words: ['The', 'Cubs', 'lost.', 'This', 'bar', 'got', 'paid.'], flags: [false, false, false, false, false, false, true], text: 'The Cubs lost. This bar got paid.' });
   assert.deepEqual(E.parseEmphasis('a *very big* deal').flags, [false, true, true, false]);
   assert.equal(E.plainVo('got *paid.*'), 'got paid.');
@@ -211,7 +215,7 @@ await test('captions: 1-3 words a card, one line at y 1172 centred, *word* in ye
     const cap = R.layoutCaption(measure, card, tl);
     assert.equal(cap.style, 'es');
     assert.ok(Math.abs(cap.box.y + cap.box.h / 2 - 1172) < 0.01, 'centred on the caption line');
-    assert.ok(Math.abs(cap.box.x + cap.box.w / 2 - 540) < 0.01, 'centred');
+    assert.ok(Math.abs(cap.box.x - 60) < 0.01, 'v3: on the column, left');
     assert.equal(new Set(cap.ops.map(o => o.y)).size, 1, 'one line');
   });
   // Cut on together: every word of the card is drawn on its first frame.

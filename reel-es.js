@@ -101,14 +101,17 @@
       mark: { size: 80, x: w - 60 - 80, y: r(330), clear: 40 },
       logotype: { h: 96 },
       top: { hook: r(480), statement: r(440), block: r(440) },
-      contentBottom: r(1100), // blocks stay above the caption line
+      // Blocks stay above the caption line, 64 px clear of its bar (v3).
+      contentBottom: r(1072),
       lowerTop: r(1268), // below the caption line (dots note)
       sourceY: r(1590),
       // v3 slots (the one grid): every block's parts start on these.
       //   kicker  the series / label pill, level with the top of the ES mark
       //   head    the headline (hook pills, titles, statement lines)
       //   lower   the second element, below the caption line (tiles, legend, label pills)
-      slots: { kicker: r(330), head: r(480), lower: r(1288), cardBottom: r(1240), cardBottomSolo: r(1400) },
+      //   centre  where a scene's group of words and data is centred when it
+      //           has no picture (the optical centre of the word zone)
+      slots: { kicker: r(330), head: r(480), centre: r(880), lower: r(1288), cardBottom: r(1240), cardBottomSolo: r(1400) },
       unit: 8,
     };
   }
@@ -733,6 +736,33 @@
     return { type: 'text', text: t, font: displayFont(size), size, x: x + pm.padLeft, y: top + pm.baseline, w, color: inkOn(fill, theme), fill, track: TYPE.tracking * size, box: { x, y: top, w: pm.padLeft + w + pm.padRight, h: pm.h }, pill: true, ...extra };
   }
 
+  // v3 vertical balance: a scene with no picture and nothing in the lower
+  // slot is one group, centred on the word zone's optical centre (y 880),
+  // never above the headline slot and always 64 px clear of the caption bar.
+  // Moves are 8-pt steps. A statement placed by hand (block.top) stays put.
+  const CENTRED = new Set(['hook', 'statement', 'number', 'quote', 'statTiles', 'rankTile', 'streak', 'tagPill', 'photoCard', 'compare', 'dots']);
+  function opTop(o) { return o.box ? o.box.y : (o.type === 'text' || o.type === 'count') ? o.y - TYPE.cap * o.size : o.y; }
+  function opBottom(o) { return o.box ? o.box.y + o.box.h : (o.type === 'text' || o.type === 'count') ? o.y : o.y + (o.h || 0); }
+  function centreGroup(ops, block, geo) {
+    if (!CENTRED.has(block.type) || block.top != null) return;
+    if (ops.some(o => o.type === 'media' || o.legend || o.slot === 'lower' || (o.type === 'tile' && o.y >= geo.slots.lower - 0.5))) return;
+    const group = ops.filter(o => o.type !== 'rect' && o.type !== 'logotype' && o.y != null);
+    if (!group.length) return;
+    const top = Math.min(...group.map(opTop));
+    const bottom = Math.max(...group.map(opBottom));
+    const h = bottom - top;
+    const zoneTop = geo.slots.head;
+    const zoneBottom = geo.contentBottom;
+    if (h >= zoneBottom - zoneTop) return;
+    const want = Math.max(zoneTop, Math.min(geo.slots.centre - h / 2, zoneBottom - h));
+    const dy = Math.floor((want - top) / geo.unit) * geo.unit;
+    if (dy <= 0) return;
+    group.forEach(o => {
+      o.y += dy;
+      if (o.box) o.box = { ...o.box, y: o.box.y + dy };
+      if (o.slot) { delete o.slot; o.centred = true; }
+    });
+  }
   function layoutBlock(measure, graphic, timeline = {}) {
     const geo = geometry(timeline.size);
     const block = (graphic.data && graphic.data.block) || blockOf(graphic.data || {});
@@ -1088,8 +1118,10 @@
       if (b.kicker && drawn.has('kicker')) kickerOp(b.kicker, 'ink');
       if (b.type === 'rankTile' && b.label && drawn.has('label')) kickerOp(b.label, 'ink');
       const head = geo.slots.head;
-      const titleMax = theme.motion.id === 'punchy' ? 'display' : 'h1';
-      const t = b.title ? titleOps(b.title, head, { maxStep: titleMax, minStep: 'h2', maxLines: 2 }) : null;
+      const bare = b.type === 'tagPill' && !graphic.media;
+      // A tag with no picture grows: a Display headline (up to three lines) over the tag, centred.
+      const titleMax = theme.motion.id === 'punchy' || bare ? 'display' : 'h1';
+      const t = b.title ? titleOps(b.title, head, { maxStep: titleMax, minStep: 'h2', maxLines: bare ? 3 : 2 }) : null;
       let y = t ? t.bottom + sp(SPACE.gap) : head;
       // A tag below the headline (photo cards carry theirs on the card).
       const tagBelow = () => {
@@ -1140,26 +1172,26 @@
         }
         const rows = Math.ceil(n / cols);
         ops.push({ type: 'dotgrid', role: 'dotgrid', x: X, y: region.y, w: cols * cell, h: rows * cell, n, cols, cell, groups: groups.map(g => ({ n: g.n, tone: fl(g.tone === 'grey' ? 'grey' : g.tone) })), rest: 'grey', enter: 'none', delay: st, align: 'col' });
-        // Legend: one M pill per group (S when three will not fit in two
-        // rows), in a row that wraps, in the lower slot.
+        // Legend: one row of M pills when they fit, else one row of S pills,
+        // else M pills stacked 8 px apart; always left on the grid, in the lower slot.
+        const labelled = groups.filter(g => g.label);
+        const rowW = size => labelled.reduce((a, g, i) => a + tracked(m, g.label.toUpperCase(), size) + pillPad(size) + (i ? sp(SPACE.s) : 0), 0);
+        const row = [sz(PILL_SIZES.M), sz(PILL_SIZES.S)].find(size => rowW(size) <= CW + 0.01);
+        const ls = row || sz(PILL_SIZES.M);
         let lx = X;
         let ly = geo.slots.lower;
-        const labelled = groups.filter(g => g.label);
-        const rowsAt = size => { let x = 0; let r = 1; labelled.forEach(g => { const w = tracked(m, g.label.toUpperCase(), size) + pillPad(size); if (x && x + w > CW) { r += 1; x = 0; } x += w + sp(SPACE.s); }); return r; };
-        const ls = rowsAt(sz(PILL_SIZES.M)) <= 2 ? sz(PILL_SIZES.M) : sz(PILL_SIZES.S);
         labelled.forEach((g, i) => {
-          const op = pill(g.label, lx, ly, ls, g.tone, { role: 'legend', pillSize: pillClass(ls, T), enter: 'left', delay: 1400 + i * st, legend: true });
-          if (lx > X && op.box.x + op.box.w > X + CW) { lx = X; ly += op.box.h + sp(SPACE.xs); op.box.x = lx; op.box.y = ly; op.x = lx + pillMetricsAt(ls).padLeft; op.y = ly + pillMetricsAt(ls).baseline; }
-          if (lx === X) op.align = 'col';
+          const op = pill(g.label, lx, ly, ls, g.tone, { role: 'legend', pillSize: pillClass(ls, T), enter: 'left', delay: 1400 + i * st, legend: true, align: row && i > 0 ? 'row' : 'col' });
           ops.push(op);
-          lx = op.box.x + op.box.w + sp(SPACE.s);
+          if (row) lx = op.box.x + op.box.w + sp(SPACE.s);
+          else ly += Math.ceil(op.box.h / 8) * 8 + sp(SPACE.xs);
         });
       } else if (b.type === 'streak') {
         const items = b.items || [];
         const n = items.length;
         if (n) {
           const perRow = n <= 10 ? n : Math.ceil(n / 2);
-          const gap = sp(SPACE.s) / 2 + sp(4);
+          const gap = sp(SPACE.s);
           const sq = Math.min(128 * T, Math.floor((CW - gap * (perRow - 1)) / perRow));
           const letter = snapStep((sq * 0.62) / T) * T;
           const FILL = { W: 'green', L: 'ink', T: 'grey' };
@@ -1214,6 +1246,7 @@
         if (b.sub && drawn.has('sub')) ops.push(fitPill(b.sub, X, ly, PILL_SIZES.S, PILL_SIZES.S, 'ink', CW, { role: 'sub', enter: 'left', delay: 2 * st, align: 'col' }));
       }
     }
+    centreGroup(ops, block, geo);
     plateOps(ops, S, theme, geo);
     // A scene that leaves the look's ground (the kit's quote on ink) paints its own first.
     if (S.ground !== theme.base.ground) ops.unshift({ type: 'rect', role: 'ground', x: 0, y: 0, w: geo.w, h: geo.h, fill: S.ground, noBox: true, enter: 'none' });
@@ -1252,7 +1285,8 @@
     const size = pickStep('caption', 'label', geo.type, s => tracked(measure, line, s) + 2 * TYPE.pad * s <= geo.col.w + 0.01).size;
     const w = tracked(measure, line, size);
     const box = hugBox(0, 0, w, size);
-    const x0 = (geo.w - w) / 2;
+    // v3: the caption bar sits on the column (x 60), like every other part.
+    const x0 = geo.col.x + TYPE.pad * size;
     const y = geo.captionY - box.h / 2 + TYPE.pad * size + TYPE.cap * size;
     const space = measure(' ', displayFont(size)) + TYPE.tracking * size;
     let x = x0;

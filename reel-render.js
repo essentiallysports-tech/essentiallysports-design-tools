@@ -173,9 +173,55 @@
 
   // Caption cards: 1–3 words for hype ('highlight'), up to 6 on two short
   // lines for 'box'. A card ends at punctuation or a pause, never mid-beat.
-  function captionCards(words, { style = 'highlight', maxWords, maxChars } = {}) {
+  // v3 (ES captions): cards follow phrases. Words are split into phrases at
+  // punctuation, a beat change or a pause; each phrase is cut into cards of
+  // 1-3 words so no card ends on a word that leads into the next ("to",
+  // "his", "on") and lone words are rare: "26 GOT BACK / TO 90%." rather than
+  // "BACK, 26 GOT".
+  const CARD_LEAD = new Set(['the', 'a', 'an', 'to', 'of', 'in', 'on', 'at', 'for', 'and', 'but', 'or', 'with', 'by', 'his', 'her', 'their', 'its', 'our', 'your', 'my', 'from', 'as', 'than', 'that', 'into']);
+  function phraseCards(words, mw, mc) {
+    const bare = w => String(w || '').toLowerCase().replace(/[^a-z0-9']/g, '');
+    const phrases = [];
+    let cur = [];
+    words.forEach((word, i) => {
+      const prev = words[i - 1];
+      if (cur.length && (prev.beat !== word.beat || word.s - prev.e > 350)) { phrases.push(cur); cur = []; }
+      cur.push(i);
+      // "Jan. 11", "No. 1", "St. Louis": an abbreviation's full stop is not a phrase end.
+      const next = words[i + 1];
+      const abbr = /^(?:[A-Z][a-z]{0,3}|[A-Z])\.$/.test(word.w) && next && next.beat === word.beat && /^[\dA-Z]/.test(next.w);
+      if (/[.!?;:,]$/.test(word.w) && !abbr) { phrases.push(cur); cur = []; }
+    });
+    if (cur.length) phrases.push(cur);
+    const out = [];
+    phrases.forEach(ph => {
+      const n = ph.length;
+      const best = new Array(n + 1).fill(null);
+      best[0] = { cost: 0, cuts: [] };
+      for (let i = 1; i <= n; i += 1) {
+        for (let k = 1; k <= Math.min(mw, i); k += 1) {
+          const from = i - k;
+          if (!best[from]) continue;
+          const ids = ph.slice(from, i);
+          const chars = ids.reduce((a, j) => a + words[j].w.length, 0) + k - 1;
+          if (chars > mc && k > 1) continue;
+          const last = bare(words[ids[ids.length - 1]].w);
+          const cost = best[from].cost + 1 + (k === 1 && n > 1 ? 1.5 : 0) + (i < n && CARD_LEAD.has(last) ? 3 : 0);
+          if (!best[i] || cost < best[i].cost) best[i] = { cost, cuts: [...best[from].cuts, ids] };
+        }
+      }
+      (best[n] ? best[n].cuts : ph.map(j => [j])).forEach(ids => out.push({ s: words[ids[0]].s, e: words[ids[ids.length - 1]].e, words: ids, beat: words[ids[0]].beat }));
+    });
+    out.forEach((c, i) => {
+      const next = out[i + 1];
+      c.e = next && next.beat === c.beat && next.s - c.e < 600 ? next.s : c.e + 220;
+    });
+    return out;
+  }
+  function captionCards(words, { style = 'highlight', maxWords, maxChars, phrases = false } = {}) {
     const mw = maxWords || (style === 'box' ? 6 : 3);
     const mc = maxChars || (style === 'box' ? 34 : 20);
+    if (phrases) return phraseCards(words, mw, mc);
     const cards = [];
     let card = null;
     words.forEach((word, index) => {
@@ -560,7 +606,7 @@
     }
 
     const highlight = accessibleHighlight(team ? team.colors : []);
-    const cards = captionCards(words, captionStyle === 'es' ? { style: 'highlight', maxWords: 3, maxChars: 22 } : { style: captionStyle === 'box' ? 'box' : 'highlight' });
+    const cards = captionCards(words, captionStyle === 'es' ? { style: 'highlight', maxWords: 3, maxChars: 22, phrases: true } : { style: captionStyle === 'box' ? 'box' : 'highlight' });
     const sx = plan && plan.strip && plan.strip.value ? { label: clean(plan.strip.label, 32), value: clean(plan.strip.value, 14), of: clean(plan.strip.of, 14), note: clean(plan.strip.note, 48), tone: plan.strip.tone === 'good' ? 'good' : 'bad' } : null;
     const out = {
       v: 1, fps: FPS, size: [W, H], durationMs,
