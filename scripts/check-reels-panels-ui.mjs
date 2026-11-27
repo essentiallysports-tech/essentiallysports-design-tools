@@ -144,7 +144,7 @@ async function audit(name, w) {
       const box = d.getBoundingClientRect();
       const out2 = [...d.querySelectorAll('*')].filter(e => e.offsetParent && !e.closest('.es-sr-only')).filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && (r.right > box.right + 1 || r.left < box.left - 1); });
       if (out2.length) out.push('sticks out of the panel: ' + out2.slice(0, 3).map(e => (e.className || e.tagName) + ' by ' + Math.round(Math.max(e.getBoundingClientRect().right - box.right, box.left - e.getBoundingClientRect().left))).join(' | '));
-      const primary = [...document.querySelectorAll('#main .es-btn--primary')].filter(b => b.offsetParent && !b.closest('[inert]'));
+      const modal = [...document.querySelectorAll('dialog[open]')].find(x => x.matches(':modal')); const primary = [...document.querySelectorAll('#main .es-btn--primary')].filter(b => b.offsetParent && !b.closest('[inert]') && (!modal || modal.contains(b)));
       if (primary.length !== 1 || !d.contains(primary[0])) out.push(primary.length + ' primary buttons on the screen (want 1, in the panel): ' + primary.map(b => b.id || b.textContent.trim()).join(', '));
       const small = [...d.querySelectorAll('button, a.rb-clip__link, summary, select, input[type=text], textarea')].filter(b => b.offsetParent && b.getBoundingClientRect().height < 31);
       if (small.length) out.push('tap targets under 32px: ' + small.slice(0, 3).map(b => (b.className || b.tagName) + ' ' + Math.round(b.getBoundingClientRect().height)).join(' | '));

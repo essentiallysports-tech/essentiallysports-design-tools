@@ -97,6 +97,8 @@ async function reelApi(body) {
     if (scenario.planDelay) await sleep(scenario.planDelay);
     const r = await server_.plan(body, { email: 'qa@essentiallysports.com' }, free ? { free: true } : { off: true });
     if (r.plan && body.esStyle && !r.plan.esStyle) r.plan.esStyle = body.esStyle;
+    // The director carries the brief's source line to the end card; the code plan here does not.
+    if (r.plan && !r.plan.sourceLine && /Source: ([^.]+)/.test(body.brief || '')) r.plan.sourceLine = `Source: ${body.brief.match(/Source: ([^.]+)/)[1]}`;
     return { status: r.ok ? 200 : (r.status || 502), body: free ? { ...r, mode: 'free', reason: 'user-limit' } : r };
   }
   if (mode === 'scene-media') { if (scenario.planDelay) await sleep(scenario.planDelay / 2); return { status: 200, body: sceneMedia(body) }; }
@@ -202,7 +204,7 @@ const behaviour = [];
 async function step(name, fn) { try { await fn(); } catch (error) { behaviour.push(`${name}: ${error.message}`); } }
 const ctx = expr => evaluate(`(() => { const c = window.ReelMakerCtx || window.ReelMakerPage; return ${expr}; })()`);
 const STYLE_CARDS = `[...document.querySelectorAll('#rm-styles4 [role="radio"]')]`;
-const pickStyle = id => evaluate(`(() => { const b = ${STYLE_CARDS}.find(x => (x.dataset.style4 || x.dataset.style) === ${JSON.stringify(id)}); if (!b) return false; b.click(); return b.getAttribute('aria-checked') === 'true'; })()`);
+const pickStyle = id => evaluate(`(() => { const b = ${STYLE_CARDS}.find(x => (x.dataset.style4 || x.dataset.style) === ${JSON.stringify(id)}); if (!b) return false; b.click(); return true; })()`).then(async ok => { if (!ok) return false; await sleep(60); return evaluate(`${STYLE_CARDS}.some(x => (x.dataset.style4 || x.dataset.style) === ${JSON.stringify(id)} && x.getAttribute('aria-checked') === 'true')`); });
 const inReview = `${SHOWN}(document.querySelector('#rm-pane-edit')) && !document.querySelector('#rm-pane-edit').hidden`;
 async function makeReel({ style = 'statcard', text = BRIEF, script = false } = {}) {
   await pickStyle(style);
@@ -329,13 +331,14 @@ for (const w of WIDTHS) {
     expect(modes.includes('scene-media'), `no scene-media call (calls: ${[...new Set(modes)].join(',')})`);
     expect(modes.includes('review'), `no review call (calls: ${[...new Set(modes)].join(',')})`);
     const sm = calls.find(c => c.mode === 'scene-media');
-    expect(v3Style(sm.body) === 'statcard', `scene-media sent esStyle ${sm.body.esStyle} / style ${sm.body.style}`);
+    const pl = calls.find(c => c.mode === 'plan');
+    expect(v3Style(sm.body) === 'statcard', `scene-media sent esStyle ${sm.body.esStyle} / style ${sm.body.style} / plan.esStyle ${sm.body.plan?.esStyle} (plan request esStyle ${pl && pl.body.esStyle})`);
   });
   await scrollTop();
   await audit('review', w);
   await step('Review: Ready to post badge, expands to the checklist', async () => {
     expect(await visible('#rm-ready'), 'no Ready badge (#rm-ready)');
-    await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready').textContent)`, 6000, '"Ready to post"');
+    await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready').textContent)`, 6000, '"Ready to post"').catch(async e => { throw new Error(e.message + ' (badge: "' + (await evaluate(`document.querySelector('#rm-ready').textContent.trim()`)) + '"; checklist: ' + (await evaluate(`[...document.querySelectorAll('#rm-issues li, #rm-checklist li')].map(l => l.textContent.trim()).slice(0, 4).join(' / ')`)) + ')'); });
     await must('#rm-ready');
     await waitFor(`document.querySelector('#rm-ready').getAttribute('aria-expanded') === 'true' && ${SHOWN}(document.querySelector('#rm-lint'))`, 2000, 'the checklist');
     expect(await evaluate(`document.querySelectorAll('#rm-checklist li').length`) >= 3, 'the checklist has fewer than 3 rows');
@@ -354,7 +357,7 @@ for (const w of WIDTHS) {
     const before = await ctx(`(() => { const b = c.state.plan.beats.find(x => (c.state.photos[x.id] || []).length); return b ? { id: b.id, media: c.state.photos[b.id][0] } : null; })()`);
     await evaluate(`(${SWAP}[0].click(), 1)`);
     const CAND = `[...document.querySelectorAll('#rm-scenes [data-candidate], #rm-scene-edit [data-candidate], dialog[open] [data-candidate], [data-swap-pick], [data-swap-list] button, [role="listbox"] [role="option"]')].filter(e => ${SHOWN}(e))`;
-    await waitFor(`${CAND}.length >= 1`, 4000, 'swap candidates ([data-candidate], [data-swap-pick] or listbox options)');
+    await waitFor(`${CAND}.length >= 1`, 4000, 'swap candidates ([data-candidate], [data-swap-pick], [data-swap-list] button or listbox options)');
     await audit('review-swap-open', w);
     await evaluate(`(() => { const list = ${CAND}; const pick = list.find(e => e.getAttribute('aria-selected') !== 'true' && e.getAttribute('aria-checked') !== 'true') || list[list.length - 1]; pick.click(); return 1; })()`);
     await sleep(400);
@@ -420,7 +423,7 @@ for (const w of WIDTHS) {
   if (first) {
     await step('Export MP4', async () => {
       await must('#rm-export');
-      await waitFor(`!document.querySelector('#rm-files')?.hidden || /fail|cancel|fix/i.test(document.querySelector('#rm-export-status')?.textContent || '')`, 90000, 'exported file row');
+      await waitFor(`!document.querySelector('#rm-files')?.hidden || /fail|cancel|fix/i.test(document.querySelector('#rm-export-status')?.textContent || '')`, 90000, 'exported file row').catch(async e => { throw new Error(e.message + ' (status: "' + (await evaluate(`(document.querySelector('#rm-export-status')?.textContent || '') + '" gate: "' + (document.querySelector('#rm-gate')?.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 200)`)) + '")'); });
       const st = await evaluate(`document.querySelector('#rm-export-status').textContent`);
       expect(/^Exported/.test(st), `export said: ${st}`);
     });
