@@ -434,8 +434,13 @@
   }
   // Puts a style on a plan. The renderer engine stays 'es'; the style rides
   // on plan.esStyle (and, until the engine lane lands, on the closest look).
-  function applyStyle(plan, id) {
+  // reshape: a plan made by code (script, free draft) takes the style's
+  // blocks by code ($0, words unchanged; ReelRecipes.applyStyle, engine lane).
+  function applyStyle(plan, id, { reshape = false } = {}) {
     if (!plan) return;
+    if (reshape && realStyles() && window.ReelRecipes && typeof window.ReelRecipes.applyStyle === 'function') {
+      try { const out = window.ReelRecipes.applyStyle(plan, id); if (out && out.plan && Array.isArray(out.plan.beats)) { plan.beats = out.plan.beats; delete plan.recipe; } } catch (error) { window.FrameUpErrors?.report?.(error, 'reels applyStyle'); }
+    }
     plan.esStyle = STYLE_IDS.includes(id) ? id : 'gametape';
     if (!realStyles() && ES && ES.LOOKS && ES.LOOKS[STUB_LOOK[plan.esStyle]]) plan.look = STUB_LOOK[plan.esStyle];
   }
@@ -464,7 +469,10 @@
     const k = canvas.width / 1080;
     c.save();
     c.setTransform(k, 0, 0, k, 0, -CROP.y * k);
-    try { R.drawFrame(c, tl, t % Math.max(1, tl.durationMs), { measure, images: state.images, videos: {}, cutouts: {}, grain }); } catch (error) { /* a preview never breaks the page */ }
+    // Loop the style's own scenes, not the shared end card.
+    const scenes = (tl.beats || []).filter(b => b.kind !== 'cta');
+    const loop = scenes.length ? scenes[scenes.length - 1].outMs : tl.durationMs;
+    try { R.drawFrame(c, tl, t % Math.max(1, loop), { measure, images: state.images, videos: {}, cutouts: {}, grain }); } catch (error) { /* a preview never breaks the page */ }
     c.restore();
   }
   function renderStyles4() {
@@ -621,16 +629,31 @@
     els.radarHost.hidden = !radar || state.inspo !== 'radar';
     els.ideasHost.hidden = !ideas || state.inspo !== 'ideas';
   }
-  inspoTabs.addEventListener('click', event => { const btn = event.target.closest('[data-inspo]'); if (btn) mountInspo(btn.dataset.inspo); });
+  // The ideas room starts from what is on Create: the picked trend, else the words in the prompt.
+  function seedIdeas() {
+    const ideas = mods().ideas;
+    if (!ideas) return;
+    const trend = state.trend || null;
+    const topic = els.prompt.value.trim() || (trend ? trend.title : '');
+    if (topic || trend) ideas.open({ trend, topic, sport: (trend && trend.sport) || state.sport || '' });
+  }
+  inspoTabs.addEventListener('click', event => {
+    const btn = event.target.closest('[data-inspo]');
+    if (!btn) return;
+    mountInspo(btn.dataset.inspo);
+    if (btn.dataset.inspo === 'ideas') seedIdeas();
+  });
   function openInspo(show = '') {
     mountInspo(show);
     if (!els.ideasDialog.open) els.ideasDialog.showModal();
-    const topic = els.prompt.value.trim();
-    if (state.inspo === 'ideas' && mods().ideas && (topic || state.trend)) mods().ideas.open({ trend: state.trend, topic: topic || (state.trend ? state.trend.title : ''), sport: (state.trend && state.trend.sport) || state.sport || '' });
+    if (state.inspo === 'ideas') seedIdeas();
+    else if (state.inspo === 'radar' && state.trend && mods().radar) mods().radar.open({ trend: state.trend });
     logEvent('edit', { what: 'inspiration' });
   }
   els.inspireLink.addEventListener('click', () => openInspo());
   els.ideasDialog.addEventListener('click', event => { if (event.target === els.ideasDialog) els.ideasDialog.close(); });
+  // Esc, the close button or a backdrop click: focus goes back to "Need an idea?".
+  els.ideasDialog.addEventListener('close', () => { if (state.step === 'topic') els.inspireLink.focus({ preventScroll: true }); });
 
   // ─── Start from a trend ──────────────────────────────────────────────────
   function leagueTile(sport, size = 20) {
@@ -1001,7 +1024,7 @@
       state.spent.director += Number(data.costs?.director) || 0;
       state.spent.factCheck += Number(data.costs?.factCheck) || 0;
       if (data.suggestedStyle) state.styleSuggested = data.suggestedStyle;
-      applyStyle(data.plan, style);
+      applyStyle(data.plan, style, { reshape: !/^director/.test(data.source || '') });
       applyPlan(data, { brief, trend, go: false });
       logEvent('plan', { source: data.source, format: data.plan.format, style: data.plan.style, esStyle: style, escalated: data.escalated, cost: data.cost, issues: (data.issues || []).length, beats: data.plan.beats.length });
       flowEvent({ type: 'stage-done', stage: 'script', note: `${data.plan.beats.length} scenes · ${styleDef(style).label}` });
@@ -1011,7 +1034,7 @@
         const corpus = [brief, trend?.title, ...(trend?.related || []).map(r => r.title)].filter(Boolean).join('\n');
         const plan = F.fallbackPlan({ brief: corpus, title: trend?.title || '', format: state.format, sport: state.sport || trend?.sport || '' });
         plan.style = state.style === 'auto' ? state.styleSuggested.id : state.style;
-        applyStyle(plan, style);
+        applyStyle(plan, style, { reshape: true });
         const draft = { plan, source: 'draft', notice: 'The AI server is not reachable here, so this is a draft built from your words.', corpus, sources: trend ? [{ type: 'trend', title: trend.title, url: trend.url }] : [{ type: 'brief', title: 'Your brief' }] };
         applyPlan(draft, { brief, trend, go: false });
         flowEvent({ type: 'stage-done', stage: 'script', note: 'Draft from your words' });
@@ -1036,7 +1059,7 @@
     const started = Date.now();
     const plan = ES.scriptToPlan(script, { sourceLine: '', voLengthSec: 0, sport: state.sport, format: state.format === 'auto' ? 'explainer' : state.format });
     plan.style = state.style === 'auto' ? 'es' : state.style;
-    applyStyle(plan, state.esStyle);
+    applyStyle(plan, state.esStyle, { reshape: true });
     logStart();
     const made = { plan, source: 'script', notice: 'Your script, word for word: each line is a scene. Change a scene’s block or its on-screen words; your voiceover lines stay as you wrote them.', corpus: script, sources: [{ type: 'script', title: 'Your script' }] };
     applyPlan(made, { brief: script, go: false });
@@ -1082,40 +1105,44 @@
   // 'review', one cheap call plus code checks). Fixed text comes back as a
   // plan; scenes whose picture does not match get their media re-picked.
   async function runReview() {
-    const SRC = window.ReelSourcing;
-    if (!SRC || typeof SRC.review !== 'function' || !state.plan) { state.review = null; return { skipped: true, note: 'Code checks ran' }; }
+    const SRC_ = window.ReelSourcing;
+    if (!SRC_ || typeof SRC_.review !== 'function' || !state.plan) { state.review = null; return { skipped: true, note: 'Code checks ran' }; }
     const plan = state.plan;
     try {
-      const out = (await SRC.review(plan, { style: curStyle(), timeline: state.timeline, picks: mediaPicks() })) || {};
+      const picks = typeof SRC_.picksFor === 'function' ? SRC_.picksFor(plan) : undefined;
+      const out = (await SRC_.review(plan, { picks, corpus: [state.corpus, els.extraSource.value].filter(Boolean).join('\n'), style: curStyle() })) || {};
       if (state.plan !== plan) return { skipped: true, note: '' };
+      // The review could not run (AI off, over a cap, offline): the code checks stand on their own.
+      if (out.ok === false) { state.review = null; return { skipped: true, note: 'AI review unavailable; the code checks ran' }; }
       state.spent.review = (Number(state.spent.review) || 0) + (Number(out.cost) || 0);
-      const issues = Array.isArray(out.issues) ? out.issues.filter(i => i && typeof i === 'object') : [];
+      const issues = (Array.isArray(out.issues) ? out.issues : []).filter(i => i && typeof i === 'object').map(i => ({ ...i, message: i.problem || i.message || '' }));
+      // The fixed plan (text shortened, unsourced numbers dropped, colours, order): beats keep their ids, media and voice.
       let fixed = 0;
       if (out.plan && Array.isArray(out.plan.beats) && out.plan.beats.length) {
         const byId = new Map(plan.beats.map(b => [b.id, b]));
-        if (out.plan.beats.every(b => b && byId.has(b.id))) {
-          out.plan.beats.forEach(b => { const old = byId.get(b.id); if (JSON.stringify({ ...old, ...b }) !== JSON.stringify(old)) { Object.assign(old, b); fixed += 1; } });
-          if (out.plan.sourceLine) plan.sourceLine = out.plan.sourceLine;
-        }
+        const next = out.plan.beats.filter(b => b && byId.has(b.id)).map(b => {
+          const old = byId.get(b.id);
+          const merged = { ...old, ...b };
+          if (JSON.stringify(merged) !== JSON.stringify(old)) fixed += 1;
+          return Object.assign(old, b);
+        });
+        if (next.length >= 2) plan.beats = next;
+        if (out.plan.sourceLine) plan.sourceLine = out.plan.sourceLine;
       }
-      const media = [...new Set(issues.filter(i => i.kind === 'media' && i.beatId && plan.beats.some(b => b.id === i.beatId)).map(i => i.beatId))];
-      if (media.length) { await fillVisuals({ only: media, force: true }).catch(() => {}); fixed += media.length; }
-      state.review = { ok: out.ok !== false, issues, fixed, at: Date.now() };
+      // Scenes whose picture failed: ReelSourcing's next verified candidate (or the infographic).
+      const repicks = Object.entries(out.repicks || {});
+      for (const [beatId, pick] of repicks) {
+        const beat = plan.beats.find(b => b.id === beatId);
+        if (beat) { await applyPick(beat, pick, state.cands[beatId]?.subject); fixed += 1; }
+      }
+      state.review = { ok: out.ok !== false, ready: out.ready !== false, issues, fixed, at: Date.now() };
       rebuild();
-      const open = issues.filter(i => !i.fixed).length - media.length;
-      return { note: fixed ? `${fixed} scene${fixed > 1 ? 's' : ''} fixed${open > 0 ? ` · ${open} to look at` : ''}` : (open > 0 ? `${open} to look at` : 'Every scene checks out') };
+      const open = issues.filter(i => !i.fixed).length;
+      return { note: fixed ? `${fixed} fix${fixed > 1 ? 'es' : ''} made${open ? ` · ${open} to look at` : ''}` : (open ? `${open} to look at` : 'Every scene checks out') };
     } catch (error) {
       state.review = null;
       return { failed: true, note: 'The AI review is unavailable; the code checks ran.' };
     }
-  }
-  // What each scene shows, for the review: kind, the source post or photo, and why it was picked.
-  function mediaPicks() {
-    return (state.plan ? state.plan.beats : []).map(b => {
-      const id = (state.photos[b.id] || [])[0];
-      const a = id ? state.assets[id] : null;
-      return { beatId: b.id, kind: a ? (a.kind === 'clip' ? 'clip' : 'photo') : 'none', ref: a ? (a.post || a.src || id) : '', label: a ? a.label : '', verified: Boolean(a && a.verified), subject: a && a.subject ? a.subject : null };
-    });
   }
 
   function teamFor(plan) {
@@ -1137,6 +1164,8 @@
     state.notice = data.notice || (data.source === 'draft' ? 'This is a draft built from your words. Edit the beats, or write again when AI is available.' : '');
     state.corpus = data.corpus || [brief, trend?.title].filter(Boolean).join('\n');
     state.sources = data.sources || [];
+    // A code plan (free mode, a draft, your script) has no source line: it comes from the sources it used.
+    if (!plan.sourceLine) { const line = sourceLineFrom([...(trend && trend.source ? [{ source: trend.source }] : []), ...state.sources], [brief, trend && trend.title].filter(Boolean).join(' ')); if (line) plan.sourceLine = line; }
     state.brief = brief;
     state.trendRef = trend ? { id: trend.id, title: trend.title, sport: trend.sport, url: trend.url } : null;
     state.photos = {};
@@ -1153,6 +1182,17 @@
     emit('plan', { source: state.planSource }); // ── Reels 2.0: D (interface) ──
     if (go) { goStep('edit', { focus: false }); fillVisuals().then(() => rebuild()); }
     if (data.issues?.length) els.writeStatus.textContent = '';
+  }
+  // "Source: ESPN" from a trend's outlet, a link's site or a "Source: …" line in the words. '' when none.
+  function sourceLineFrom(sources = [], words = '') {
+    const said = String(words || '').match(/(?:^|\n|\.\s)\s*(?:source|sources|via|per)\s*:\s*([^\n.]{2,80})/i);
+    if (said) return `Source: ${said[1].trim()}`;
+    const names = [];
+    const host = url => { try { return new URL(url).hostname.replace(/^www\./, '').split('.').slice(-2, -1)[0]; } catch { return ''; } };
+    (sources || []).forEach(s => { const n = s.source || s.outlet || (s.url ? host(s.url) : ''); if (n && !names.includes(n)) names.push(n); });
+    (String(words || '').match(/https?:\/\/[^\s]+/g) || []).forEach(u => { const n = host(u); if (n && !names.includes(n)) names.push(n); });
+    const pretty = n => (n.length <= 4 ? n.toUpperCase() : n[0].toUpperCase() + n.slice(1));
+    return names.length ? `Source: ${names.slice(0, 3).map(pretty).join(', ')}` : '';
   }
   async function loadTeamLogo() {
     delete state.images['logo:team'];
@@ -1344,48 +1384,6 @@
   // when AI is on (capped per reel, cached per clip URL), then each beat gets
   // its best free clip and the best segment of it for the beat's length.
   const CLIPS = window.ReelClips || null;
-  let judgeCache = null;
-  async function pickClips(pool, beats, plan, used) {
-    if (!CLIPS || !pool.length || !beats.length) return {};
-    const cands = CLIPS.preselect(pool, beats, plan, CLIPS.JUDGE.maxClips);
-    const samples = {};
-    const judgeTimes = {};
-    const frames = {};
-    const loaded = [];
-    for (let i = 0; i < cands.length; i += 3) {
-      await Promise.all(cands.slice(i, i + 3).map(async clip => {
-        const id = await loadClip(clip).catch(() => '');
-        if (!id || !state.videos[id]) return;
-        loaded.push(clip);
-        const sm = await CLIPS.sampleClip(state.videos[id]).catch(() => null);
-        if (!sm) return;
-        samples[clip.url] = sm.samples;
-        judgeTimes[clip.url] = sm.times;
-        frames[clip.url] = sm.frames;
-      }));
-    }
-    const subjects = [...new Map(beats.map(b => CLIPS.subjectFor(b, plan)).map(sub => [sub.key, { key: sub.key, label: sub.players[0] || sub.team || sub.key }])).values()];
-    const judgements = {};
-    try { judgeCache = judgeCache || CLIPS.makeCache(window.localStorage); } catch { judgeCache = CLIPS.makeCache(null); }
-    loaded.forEach(c => { const j = judgeCache.get(c.url); if (j && subjects.every(sub => sub.key in j.relevance)) judgements[c.url] = j; });
-    const ai = state.config.ai && !state.config.offline && state.config.clipJudge?.ready !== false;
-    const todo = loaded.filter(c => !judgements[c.url] && frames[c.url]?.length);
-    state.spent.clipJudge = Number(state.spent.clipJudge) || 0;
-    for (let i = 0; ai && i < todo.length; i += CLIPS.JUDGE.perCall) {
-      const left = CLIPS.JUDGE.maxUsdPerReel - state.spent.clipJudge;
-      if (left <= 0) break;
-      const batch = todo.slice(i, i + CLIPS.JUDGE.perCall);
-      try {
-        const data = await api({ mode: 'clip-judge', budgetUsd: left, subjects, clips: batch.map(c => ({ url: c.url, text: c.text, handle: c.handle, frames: frames[c.url], times: judgeTimes[c.url] })) });
-        state.spent.clipJudge += Number(data.cost) || 0;
-        Object.entries(data.judgements || {}).forEach(([url, raw]) => { const j = CLIPS.validateJudgement(raw); if (j) { judgements[url] = j; judgeCache.set(url, j); } });
-        if (data.capped) break;
-      } catch { break; } // AI off, over a cap or failing: the free ranking decides
-    }
-    state.clipPicks = CLIPS.assign(loaded, beats, plan, { judgements, samples, judgeTimes, used });
-    return state.clipPicks;
-  }
-
   // Stills.
   async function teamTile(beatId, team, { key = '' } = {}) {
     if (!team || !team.name) return '';
@@ -1416,29 +1414,6 @@
       setVisual(beat.id, [id], 'scene');
       return id;
     } catch { return ''; }
-  }
-  async function stillChain(beat, used) {
-    const plan = state.plan;
-    // Game Swing: a play beat shows the team that made the play (beat.photo
-    // names it), never the winner's photo or tile by default.
-    const game = plan.format === 'gameswing' ? state.data.game : null;
-    const own = game && beat.kind === 'play' ? [game.teams.home, game.teams.away].find(t => t.name === beat.photo) : null;
-    const team = own ? { name: own.name, colors: own.colors || [] } : plan.team;
-    if (beat.visual === 'logo-tile' && team && await teamTile(beat.id, team)) return 'tile';
-    if (beat.visual === 'scene' && await aiScene(beat)) return 'scene';
-    const queries = own ? [beat.photo] : [beat.photo, team?.name, [F.SPORTS.find(x => x.id === plan.sport)?.label, team?.short || ''].join(' ').trim()].filter(Boolean);
-    for (const q of [...new Set(queries)]) {
-      const list = await searchPhotos(q);
-      const pick = list.find(p => !used.has(p.id) && (!p.width || p.width >= 600)) || list.find(p => !used.has(p.id));
-      if (pick) { used.add(pick.id); await usePhoto(beat.id, pick, { quiet: true }); state.visualSrc[beat.id] = beat.visual === 'headshot' ? 'headshot' : 'photo'; return 'photo'; }
-    }
-    // ES Reels: with no photo the scene sits on ES paper (on brand); no
-    // gradient team tile or designed background is filled in for it.
-    if (esOn()) { if (beat.visual === 'scene' && await aiScene(beat)) return 'scene'; setVisual(beat.id, [], 'paper'); return 'paper'; }
-    if (team && await teamTile(beat.id, team)) return 'tile';
-    if (beat.visual === 'scene' && await aiScene(beat)) return 'scene';
-    setVisual(beat.id, [designAsset()], 'design');
-    return 'design';
   }
   // Component pictures: versus headshots and tile logos.
   async function componentVisuals(beat) {
@@ -1511,7 +1486,6 @@
   const SRC = () => window.ReelSourcing || null;
   const srcOn = () => { const s = SRC(); return Boolean(s && typeof s.mediaFor === 'function'); };
   state.cands = {};
-  const mediaRows = out => (Array.isArray(out) ? out : (out && (out.beats || out.scenes || out.media)) || []).filter(r => r && r.beatId);
   function photoFrom(p, subject) {
     const url = typeof p === 'string' ? p : (p.proxyUrl || p.url || p.src || '');
     return { id: `img:${p.id || url}`, src: url, title: p.title || subject?.name || 'ES photo', credit: p.credit || '', width: p.width, height: p.height, source: p.source || '', focus: p.focus || null, head: p.head || null, verified: p.verified === true };
@@ -1528,63 +1502,64 @@
     markAsset(beatId, { verified: photo.verified, focus: photo.focus, head: photo.head, subject: subject || null });
     return true;
   }
-  async function useSourcedClip(beatId, clip, subject) {
-    if (!clip || !(clip.variants || []).length) return false;
-    if (!await useXClip(beatId, clip, clip.segment || null)) return false;
-    markAsset(beatId, { verified: clip.judged === true || clip.verified === true, relevance: clip.relevance ?? null, subject: subject || null, focus: clip.focus || null });
-    return true;
-  }
-  async function applyPick(beat, row, usedClips) {
-    const pick = row.pick || {};
-    const clips = (row.clips || []).filter(c => c && c.url);
-    const photos = (row.photos || []).filter(p => p && p.verified !== false);
-    const refOf = (list, ref, key) => (ref && typeof ref === 'object' ? ref : list.find(x => x[key] === ref || x.url === ref));
-    if (pick.kind === 'clip' && state.useClips) {
-      const clip = refOf(clips, pick.ref, 'url') || clips[0];
-      if (clip && !usedClips.has(clip.url) && await useSourcedClip(beat.id, clip, row.subject)) { usedClips.add(clip.url); state.visualSrc[beat.id] = 'x-clip'; return 'clip'; }
+  // One pick from ReelSourcing: { kind:'clip', clip, segment, relevance, gate } |
+  // { kind:'photo', photo:{ url, sourceUrl, focus, head, … } } | { kind:'none', fallback:<block> }.
+  async function applyPick(beat, pick, subject, usedClips = new Set()) {
+    if (pick && pick.kind === 'clip' && pick.clip && state.useClips && !usedClips.has(pick.clip.url)) {
+      if (await useXClip(beat.id, pick.clip, pick.segment || null)) {
+        usedClips.add(pick.clip.url);
+        state.visualSrc[beat.id] = 'x-clip';
+        markAsset(beat.id, { verified: pick.gate === 'judge' || pick.gate === 'text' || pick.clip.judged === true, gate: pick.gate || '', relevance: pick.relevance ?? null, subject: subject || null });
+        return 'clip';
+      }
     }
-    if (pick.kind === 'photo' || pick.kind === 'clip') {
-      const photo = pick.kind === 'photo' ? (refOf(photos, pick.ref, 'url') || photos[0]) : photos[0];
-      if (photo && await useSourcedPhoto(beat.id, photo, row.subject)) { state.visualSrc[beat.id] = 'photo'; return 'photo'; }
+    if (pick && pick.kind === 'photo' && pick.photo && await useSourcedPhoto(beat.id, { ...pick.photo, id: pick.photo.sourceUrl || pick.photo.url, verified: pick.photo.verified !== false }, subject)) { state.visualSrc[beat.id] = 'photo'; return 'photo'; }
+    // Nothing relevant: the scene becomes the infographic block the sourcing lane proposes.
+    if (pick && pick.kind === 'none' && pick.fallback && typeof pick.fallback === 'object' && pick.fallback.type) {
+      beat.block = { ...pick.fallback };
+      if (ES && ES.BLOCKS[pick.fallback.type]) { try { Object.assign(beat, ES.legacyFields(ES.cleanBlock({ ...pick.fallback }))); } catch { /* the engine draws it */ } }
     }
     setVisual(beat.id, [], 'paper');
     return 'none';
   }
+  // The clip loader ReelSourcing uses to sample clips for the judge (shares this page's cache).
+  async function sourcingVideo(clip) { const id = await loadClip(clip).catch(() => ''); return id ? state.videos[id] || null : null; }
   async function fillFromSourcing(plan, beats, { force = false } = {}) {
     for (const beat of beats) { if (state.plan !== plan) return { note: '' }; await componentVisuals(beat).catch(() => {}); }
     const todo = beats.filter(b => b.kind !== 'cta' && (force || !state.photos[b.id]?.length));
-    let out = null;
-    if (todo.length) {
-      try { out = await SRC().mediaFor(plan, curStyle(), { beats: todo.map(b => b.id), useClips: state.useClips, aspect: state.aspect }); } catch (error) { out = null; }
-    }
+    if (!todo.length) return { note: 'Nothing new needed' };
+    const durations = {};
+    (state.timeline ? state.timeline.beats : []).forEach(b => { durations[b.id] = b.outMs - b.inMs; });
+    const usedList = plan.beats.filter(b => !todo.includes(b)).flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean);
+    const out = await SRC().mediaFor(plan, curStyle(), { loadVideo: sourcingVideo, durations, usedClips: usedList, ai: aiOn(), onProgress: text => { if (text && els.makingLive) els.makingLive.textContent = text; } }).catch(() => null);
     if (state.plan !== plan) return { note: '' };
     if (out && Number(out.cost)) state.spent.clips += Number(out.cost);
-    const rows = mediaRows(out);
-    const usedClips = new Set(plan.beats.filter(b => !todo.includes(b)).flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean));
+    const rows = (out && out.beats) || {};
+    const usedClips = new Set(usedList);
     const n = { clip: 0, photo: 0, none: 0 };
     for (const [i, beat] of todo.entries()) {
       if (state.plan !== plan) return { note: '' };
-      const row = rows.find(r => r.beatId === beat.id);
-      if (row) state.cands[beat.id] = { clips: row.clips || [], photos: (row.photos || []).filter(p => p && p.verified !== false), subject: row.subject || null };
-      const kind = row ? await applyPick(beat, row, usedClips) : (setVisual(beat.id, [], 'paper'), 'none');
-      n[kind] += 1;
+      const row = rows[beat.id];
+      if (row) state.cands[beat.id] = { subject: row.subject || null };
+      n[await applyPick(beat, row ? row.pick : null, row && row.subject, usedClips)] += 1;
       if (i % 2 === 1) { rebuild(); renderBeats(); }
     }
     rebuild();
     renderBeats();
-    const share = clipShare();
+    if (out && (out.notes || []).length) state.sourcingNotes = out.notes.slice(0, 3);
     const bits = [n.clip ? `${n.clip} clip${n.clip > 1 ? 's' : ''}` : '', n.photo ? `${n.photo} photo${n.photo > 1 ? 's' : ''}` : '', n.none ? `${n.none} infographic${n.none > 1 ? 's' : ''}` : ''].filter(Boolean);
-    return { note: bits.length ? `${bits.join(' · ')}, all checked` : 'Nothing new needed', share: share.share };
+    return { note: bits.length ? `${bits.join(' · ')}, all checked` : 'Nothing new needed', share: clipShare().share };
   }
 
   // Swap: the other verified picks for a scene (clips and photos).
+  // Candidates in one shape: { kind, key, thumb, label, by, verified, data } (data = what ReelSourcing.choose takes).
   function candList(out) {
-    const rows = Array.isArray(out) ? out : [...((out && out.clips) || []).map(c => ({ kind: 'clip', ...c })), ...((out && out.photos) || []).map(p => ({ kind: 'photo', ...p }))];
+    const rows = Array.isArray(out) ? out : [...((out && out.clips) || []).map(c => ({ kind: 'clip', clip: c })), ...((out && out.photos) || []).map(p => ({ kind: 'photo', photo: p }))];
     return rows.filter(Boolean).map(c => {
-      const clip = c.kind === 'clip' || (c.variants && c.variants.length);
-      if (clip) return { kind: 'clip', key: c.url, thumb: c.thumb || c.thumbnail || '', label: c.text || (c.handle ? `@${c.handle}` : 'Official clip'), by: c.handle ? `@${c.handle}` : '', verified: c.judged === true || c.verified === true, relevance: c.relevance ?? null, data: c };
-      const url = c.proxyUrl || c.url || c.src || '';
-      return { kind: 'photo', key: url, thumb: url, label: c.title || 'ES photo', by: c.credit || '', verified: c.verified === true, data: c };
+      if (c.kind === 'clip' && c.clip) { const k = c.clip; return { kind: 'clip', key: k.url, thumb: k.thumb || k.thumbnail || '', label: k.text || (k.handle ? `@${k.handle}` : 'Official clip'), by: k.handle ? `@${k.handle}` : '', verified: c.gate === 'judge' || c.gate === 'text' || k.judged === true, data: c }; }
+      const ph = c.photo || c;
+      const url = ph.proxyUrl || ph.url || ph.src || '';
+      return { kind: 'photo', key: url, thumb: url, label: ph.title || 'ES photo', by: ph.credit || '', verified: ph.verified === true, data: { kind: 'photo', photo: ph } };
     }).filter(c => c.key && (c.kind === 'photo' ? c.verified || !srcOn() : true));
   }
   async function swapCandidates(beatId) {
@@ -1593,9 +1568,8 @@
     let list = [];
     const src = SRC();
     if (src && typeof src.candidates === 'function') {
-      try { list = candList(await src.candidates(beatId, { plan: state.plan, style: curStyle() })); } catch { list = []; }
+      try { list = candList(await src.candidates(beatId)); } catch { list = []; }
     }
-    if (!list.length && state.cands[beatId]) list = candList(state.cands[beatId]);
     if (!list.length && !srcOn()) list = await legacyCandidates(beat);
     return list.slice(0, 12);
   }
@@ -1606,7 +1580,7 @@
     const subject = CLIPS ? CLIPS.subjectFor(beat, state.plan) : null;
     const clips = CLIPS && subject ? pool.map(c => ({ c, s: CLIPS.heuristicScore(c, subject).score })).filter(x => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 6).map(x => x.c) : [];
     const photos = await searchPhotos(beat.photo || state.plan.team?.name || '').catch(() => []);
-    return [...candList({ clips }), ...photos.slice(0, 6).map(p => ({ kind: 'photo', key: p.src, thumb: p.src, label: p.title, by: p.credit, verified: false, data: { ...p, url: p.src } }))];
+    return [...candList({ clips }), ...photos.slice(0, 6).map(p => ({ kind: 'photo', key: p.src, thumb: p.src, label: p.title, by: p.credit, verified: false, data: { kind: 'photo', photo: { ...p, url: p.src } } }))];
   }
   // The key of what a scene shows now (marks the picked candidate).
   function mediaKey(beatId) {
@@ -1620,7 +1594,10 @@
     let ok = false;
     try {
       const subject = state.cands[beatId]?.subject || null;
-      if (cand.kind === 'clip') { ok = await useSourcedClip(beatId, cand.data, subject); if (ok) state.visualSrc[beatId] = 'x-clip'; } else { ok = await useSourcedPhoto(beatId, { ...cand.data, url: cand.key, verified: cand.verified }, subject); if (ok) state.visualSrc[beatId] = 'photo'; }
+      const beat = state.plan.beats.find(x => x.id === beatId);
+      const pick = cand.kind === 'clip' ? { kind: 'clip', clip: cand.data.clip, segment: cand.data.segment || null, relevance: cand.data.relevance, gate: cand.data.gate || (cand.verified ? 'judge' : '') } : { kind: 'photo', photo: { ...cand.data.photo, verified: cand.verified } };
+      ok = Boolean(beat) && (await applyPick(beat, pick, subject)) !== 'none';
+      if (ok) SRC()?.choose?.(beatId, cand.data);
       if (!ok) toast(cand.kind === 'clip' ? 'That clip did not load. Try another.' : 'That photo did not load. Try another.', { tone: 'error' });
     } finally {
       delete state.visualNote[beatId];
@@ -1650,19 +1627,13 @@
     if (srcOn() && !(F.isDataFormat && F.isDataFormat(plan.format))) return fillFromSourcing(plan, beats, { force });
     return legacyFill(plan, beats, { force });
   }
-  // The Reels 2.0 chain (data formats, and news reels until ReelSourcing is merged).
+  // Data formats (Game Swing plays keep their matched clip) and the page
+  // without ReelSourcing: verified-sourcing first for every other scene,
+  // the ES image pool / team graphic chain only when the module is missing.
   async function legacyFill(plan, beats, { force = false } = {}) {
-    const pool = await clipPool(plan);
-    const aiLeft = state.aiClips && state.config.aiClips?.ready ? Math.max(0, state.config.aiClips.max - state.aiClipsUsed) : 0;
-    const durs = plan.beats.map(b => { const t = state.timeline.beats.find(x => x.id === b.id); return { id: b.id, kind: b.kind, visual: b.visual, durMs: t ? t.outMs - t.inMs : 2000 }; });
-    const mix = F.planVisualMix(durs, { target: 0.8, clipsAvailable: state.useClips ? pool.length + aiLeft : 0 });
-    // Clips already on a beat of THIS reel (not every clip this tab has seen).
     const usedClips = new Set(plan.beats.flatMap(b => state.photos[b.id] || []).map(id => state.assets[id]?.post).filter(Boolean));
-    const usedPhotos = new Set(Object.values(state.photos).flat());
-    // Game Swing plays show only the clip matched to that play (sure matches), else a photo.
     const swingPlay = b => plan.format === 'gameswing' && b.kind === 'play';
-    const clipBeats = beats.filter(b => b.kind !== 'cta' && !swingPlay(b) && mix.mode[b.id] === 'clip' && (force || !state.photos[b.id]?.length)).map(b => ({ ...b, durMs: (durs.find(d => d.id === b.id) || {}).durMs || 2500 }));
-    const picks = state.useClips && pool.length ? await pickClips(pool, clipBeats, plan, usedClips).catch(() => ({})) : {};
+    const rest = [];
     let n = 0;
     for (const beat of beats) {
       if (state.plan !== plan) return { note: '' };
@@ -1673,15 +1644,15 @@
       if (swingPlay(beat)) {
         const m = state.useClips && beat.clip?.url ? state.clipMatches.find(c => c.url === beat.clip.url) : null;
         if (m && !usedClips.has(m.url)) { usedClips.add(m.url); done = await useXClip(beat.id, m); }
-      } else if (mix.mode[beat.id] === 'clip') {
-        const pick = picks[beat.id];
-        if (pick) { usedClips.add(pick.clip.url); done = await useXClip(beat.id, pick.clip, pick.segment); }
-        if (!done && beat.visual === 'scene' && state.aiClips && state.config.aiClips?.ready && state.aiClipsUsed < state.config.aiClips.max) done = await aiClip(beat);
       }
-      if (!done) await stillChain(beat, usedPhotos);
+      if (done) continue;
+      if (srcOn()) { rest.push(beat); continue; }
+      // No sourcing module: the scene stays an infographic (never an unchecked photo).
+      setVisual(beat.id, [], 'paper');
       n += 1;
       if (n % 2 === 0) { rebuild(); renderBeats(); }
     }
+    if (rest.length) await fillFromSourcing(plan, rest, { force: true });
     rebuild();
     renderBeats();
     const share = clipShare();
@@ -1947,24 +1918,26 @@
     const list = [...lint.issues].sort((a, b) => order[a.severity] - order[b.severity]);
     const tl = state.timeline;
     const rv = state.review;
-    const rvOpen = rv ? (rv.issues || []).filter(i => !i.fixed && !(i.kind === 'media' && rv.fixed)) : [];
-    const warnings = lint.warnings + rvOpen.length;
-    const tone = lint.critical ? 'bad' : (warnings ? 'warn' : 'good');
+    const rvOpen = rv ? (rv.issues || []).filter(i => !i.fixed) : [];
+    const rvCritical = rvOpen.filter(i => i.severity === 'critical').length;
+    const critical = lint.critical + rvCritical;
+    const warnings = lint.warnings + rvOpen.length - rvCritical;
+    const tone = critical ? 'bad' : (warnings ? 'warn' : 'good');
     els.ready.dataset.tone = tone;
-    els.readyText.textContent = lint.critical ? `${lint.critical} to fix before posting` : (warnings ? `Ready to post · ${warnings} to review` : 'Ready to post');
+    els.readyText.textContent = critical ? `${critical} to fix before posting` : (warnings ? `Ready to post · ${warnings} to review` : 'Ready to post');
     // ES: the kit's "Check" result, "Safe frame ✓" when every word is inside it.
     const safeOk = esOn() && !lint.issues.some(i => i.id === 'safe-frame' || i.id === 'safe-zone');
     els.statuslineText.textContent = FLOW.statusLine({ critical: lint.critical, warnings: lint.warnings, seconds: tl ? tl.durationMs / 1000 : 0, usd: totalSpent(), money: isAdmin() ? F.money : (() => '') }).replace(/\s*·\s*$/, '') + (esOn() ? (safeOk ? ' · Safe frame ✓' : ' · Safe frame ✗') : '') + (state.voiceError && state.voiceOn ? ' · voice failed, captions only' : '');
     const row = (ok, label, severity = 'warning', n = 0) => `<li class="rm-check-row${ok ? ' is-ok' : ` is-${severity}`}"><span class="rm-check-row__mark" aria-hidden="true">${ok ? ICON.check : (severity === 'critical' ? ICON.alert : ICON.warn)}</span><span>${esc(label)}${!ok && n > 1 ? ` (${n})` : ''}</span><span class="es-sr-only">${ok ? ', passes' : ', needs a look'}</span></li>`;
     const rows = esOn() ? ES.checklist(lint.issues).map(r => row(r.ok, r.label, r.severity, r.n)) : [];
-    rows.push(rv ? row(!rvOpen.length, rvOpen.length ? 'AI review: some scenes need a look' : `AI review: every scene’s picture matches its words${rv.fixed ? ` (${rv.fixed} fixed for you)` : ''}`, 'warning', rvOpen.length)
-      : row(true, window.ReelSourcing ? 'AI review runs when the reel is made' : 'Code checks: words, safe frame, captions, rights'));
+    rows.push(rv ? row(!rvOpen.length, rvOpen.length ? 'AI review: some scenes need a look' : `AI review: pictures match their words, facts are sourced${rv.fixed ? ` (${rv.fixed} fixed for you)` : ''}`, rvCritical ? 'critical' : 'warning', rvOpen.length)
+      : row(true, window.ReelSourcing ? 'AI review did not run (AI is off or capped); the code checks above did' : 'Code checks: words, safe frame, captions, rights'));
     els.checklist.innerHTML = rows.join('');
     const beatN = id => (state.plan ? state.plan.beats.findIndex(b => b.id === id) : -1);
     const go = (id, n) => (n >= 0 ? `<button class="es-btn es-btn--tertiary es-btn--sm" type="button" data-goto="${esc(id)}">Scene ${n + 1}</button>` : '');
     const items = [
       ...list.map(issue => `<li class="rm-issue is-${issue.severity}">${sevIcon[issue.severity]}<div><p>${esc(issue.message)}</p>${issue.fix ? `<span>${esc(issue.fix)}</span>` : ''}</div>${go(issue.beat, beatN(issue.beat))}</li>`),
-      ...rvOpen.map(i => `<li class="rm-issue is-warning">${ICON.warn}<div><p>${esc(REVIEW_KIND[i.kind] || 'Review')}: ${esc(i.message || i.fix || 'needs a look')}</p>${i.message && i.fix ? `<span>${esc(i.fix)}</span>` : ''}</div>${go(i.beatId, beatN(i.beatId))}</li>`),
+      ...rvOpen.map(i => `<li class="rm-issue is-${i.severity === 'critical' ? 'critical' : 'warning'}">${i.severity === 'critical' ? ICON.alert : ICON.warn}<div><p>${esc(REVIEW_KIND[i.kind] || 'Review')}: ${esc(i.message || 'needs a look')}</p></div>${go(i.beatId, beatN(i.beatId))}</li>`),
     ];
     els.issues.innerHTML = items.length ? items.join('') : `<li class="rm-issue is-good">${ICON.check}<div><p>Hook, safe frame, captions, sources and rights all check out.</p></div></li>`;
     // Flags on the scene cards.
@@ -2801,7 +2774,7 @@
     const lint = state.lint;
     const critical = lint.issues.filter(i => i.severity === 'critical');
     els.gate.innerHTML = critical.length
-      ? `<div class="rm-gate__bad">${ICON.alert}<div><p><b>${critical.length} ${critical.length > 1 ? 'things block' : 'thing blocks'} the export</b></p><ul>${critical.map(i => `<li>${esc(i.message)}</li>`).join('')}</ul><button class="es-btn es-btn--sm" type="button" id="rm-fix">Fix in Edit</button></div></div>`
+      ? `<div class="rm-gate__bad">${ICON.alert}<div><p><b>${critical.length} ${critical.length > 1 ? 'things block' : 'thing blocks'} the export</b></p><ul>${critical.map(i => `<li>${esc(i.message)}</li>`).join('')}</ul><button class="es-btn es-btn--sm" type="button" id="rm-fix">Fix in Review</button></div></div>`
       : `<div class="rm-gate__ok">${ICON.check}<p><b>Ready to export.</b> ${lint.warnings ? `${lint.warnings} suggestion${lint.warnings > 1 ? 's' : ''} in Quality checks.` : 'Every check passes.'}</p></div>`;
     $('rm-fix')?.addEventListener('click', () => { goStep('edit'); els.lint.hidden = false; els.ready.setAttribute('aria-expanded', 'true'); els.lint.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); });
     renderSpend();
@@ -4619,7 +4592,19 @@
   pageCtx.on('module', ({ name }) => {
     const m = pageCtx.modules[name];
     if (name === 'tray') m.mount($('ri-tray'));
-    if (name === 'voiceInput') m.mount($('ri-voice-panel'));
+    if (name === 'voiceInput') {
+      m.mount($('ri-voice-panel'));
+      // "Record or upload your voiceover" on the prompt card (scenes and captions follow your words).
+      if (!$('ri-script-voice')) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.id = 'ri-script-voice';
+        btn.className = 'es-btn es-btn--sm es-btn--tertiary ri-script-voice';
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg><span>Record your voiceover</span>`;
+        btn.addEventListener('click', () => m.open());
+        $('rm-prompt-tools')?.append(btn);
+      }
+    }
     if (name === 'captions') m.mount($('rm-captions-host'));
     // Lane B's panels: their temporary buttons under the trend list give way to the Inspiration tile and "Brainstorm angles".
     if (name === 'ideas' || name === 'radar') { queueMicrotask(() => document.getElementById('rb-entry')?.remove()); syncStart(); if (els.ideasDialog.open) mountInspo(); }

@@ -95,7 +95,8 @@
       const beatOf = id => beats().find(b => b.id === id);
       const cardOf = id => list.querySelector(`[data-beat="${CSS.escape(id)}"]`);
       const fid = (field, id) => `rm-${field.replace(/\./g, '-')}-${id}`;
-      const takes = beat => (es() ? ES.takesMedia(beat) : beat.kind !== 'cta');
+      // Receipts is motion only: no media, no Swap (unless the person added some).
+      const takes = beat => (es() ? ES.takesMedia(beat) && (!(ui.curStyle && ui.curStyle() === 'receipts') || Boolean((state.photos[beat.id] || []).length)) : beat.kind !== 'cta');
       // The cards show the ES safe frame (y 290 to 1650), where every word sits.
       const CROP = { y: 290, h: 1360 };
       const thumbSize = () => { const s = (state.timeline && state.timeline.size) || [1080, 1920]; return s[1] === 1350 ? [240, 300] : [240, Math.round(240 * CROP.h / 1080)]; };
