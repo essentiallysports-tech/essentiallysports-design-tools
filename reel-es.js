@@ -28,15 +28,18 @@
 // golden copy of every draw call).
 (function (root, factory) {
   const node = typeof module === 'object' && module.exports;
-  const api = factory(node ? require('./reel-es-themes.js') : root.ReelESThemes);
+  const api = factory(node ? require('./reel-es-themes.js') : root.ReelESThemes, node ? require('./frameup-rules.js') : root.FrameUpRules);
   if (node) module.exports = api;
   else root.ReelES = api;
-}(typeof self !== 'undefined' ? self : this, TH => {
+}(typeof self !== 'undefined' ? self : this, (TH, RULES) => {
   'use strict';
   if (!TH) throw new Error('reel-es.js needs reel-es-themes.js loaded first.');
 
   // ─── Brand tokens (references/brand.md) ─────────────────────────────────
   const TOKENS = { blue: '#0A7DFA', ink: '#121212', paper: '#F1EFEA', green: '#1BC47D', red: '#E8322B', yellow: '#FFC52F', white: '#FFFFFF' };
+  // v3: the neutral grey of the dot grid's "didn't" group and a tie square
+  // (never a ground, never text; ink reads on it at 10:1).
+  const GREY = '#C9C5BC';
   // Signal colours mean something (win / loss / emphasis). At most 2 per beat.
   const SIGNALS = ['green', 'red', 'yellow'];
   const COLOR_NAMES = ['ink', 'blue', 'red', 'green', 'yellow', 'white'];
@@ -98,24 +101,91 @@
       mark: { size: 80, x: w - 60 - 80, y: r(330), clear: 40 },
       logotype: { h: 96 },
       top: { hook: r(480), statement: r(440), block: r(440) },
-      contentBottom: r(1100), // blocks stay above the caption line
+      // Blocks stay above the caption line, 64 px clear of its bar (v3).
+      contentBottom: r(1072),
       lowerTop: r(1268), // below the caption line (dots note)
       sourceY: r(1590),
+      // v3 slots (the one grid): every block's parts start on these.
+      //   kicker  the series / label pill, level with the top of the ES mark
+      //   head    the headline (hook pills, titles, statement lines)
+      //   lower   the second element, below the caption line (tiles, legend, label pills)
+      //   centre  where a scene's group of words and data is centred when it
+      //           has no picture (the optical centre of the word zone)
+      slots: { kicker: r(330), head: r(480), centre: r(880), lower: r(1288), cardBottom: r(1240), cardBottomSolo: r(1400) },
+      unit: 8,
     };
   }
   const GEO = geometry([1080, 1920]);
+
+  // ─── v3: one type scale (Reels Studio v3) ───────────────────────────────
+  // Every word on screen is one of these sizes (9:16 px; the 4:5 frame
+  // multiplies them all by its type factor, 0.82). Nothing auto-shrinks to an
+  // in-between size: text that does not fit moves down one step, and at the
+  // smallest step a block allows it is shortened at a word (the lint says so).
+  // Working values until Vinay's ES Reels design system file is reconciled.
+  const TYPE_SCALE = Object.freeze({ statXL: 300, stat: 220, display: 168, h1: 128, h2: 96, caption: 64, label: 44, body: 34 });
+  const STEP_NAMES = Object.freeze(['statXL', 'stat', 'display', 'h1', 'h2', 'caption', 'label', 'body']);
+  const SCALE_STEPS = Object.freeze(STEP_NAMES.map(n => TYPE_SCALE[n]));
+  const stepIndex = name => (STEP_NAMES.includes(name) ? STEP_NAMES.indexOf(name) : STEP_NAMES.indexOf('h1'));
+  // The biggest step at or under a pixel size.
+  const snapStep = px => SCALE_STEPS.find(v => v <= (Number(px) || 0) + 0.01) || SCALE_STEPS[SCALE_STEPS.length - 1];
+  const stepName = px => STEP_NAMES[SCALE_STEPS.indexOf(snapStep(px))];
+  const onScale = (size, T = 1) => SCALE_STEPS.some(v => Math.abs(v * T - Number(size)) < 0.6);
+  const stepsFrom = (max, min) => STEP_NAMES.slice(stepIndex(max), Math.max(stepIndex(max), stepIndex(min)) + 1);
+  // The first step from max down to min where ok(size) holds; else min, flagged.
+  function pickStep(max, min, T, ok) {
+    const names = stepsFrom(max, min);
+    for (const n of names) { const size = TYPE_SCALE[n] * T; if (ok(size)) return { step: n, size, fits: true }; }
+    const n = names[names.length - 1];
+    return { step: n, size: TYPE_SCALE[n] * T, fits: false };
+  }
+  // The 8-pt spacing scale: every gap between parts is one of these.
+  const SPACE = Object.freeze({ xs: 8, s: 16, m: 24, l: 40, xl: 56, xxl: 64, gap: 48 });
+  // One grid: the ES frame (column x 60 / width 960, words y 300-1640, 40 px
+  // sides, captions at y 1172) and its slots. reel-render's retired styles
+  // read it too (there is no second grid).
+  const GRID = Object.freeze({ unit: 8, left: 60, right: 1020, width: 960, side: 40, top: 300, bottom: 1640, captionY: 1172, slots: GEO.slots });
+
+  // ─── v3: one box language, the FrameUp ES pill ──────────────────────────
+  // Every label, tag and boxed word is the ES pill from frameup-rules.js
+  // (PILL / pillMetrics): sharp box, 0.94em tall, its side padding, rows
+  // that touch. Three sizes, all on the type scale.
+  const PILL_SIZES = Object.freeze({ L: 'h1', M: 'caption', S: 'label' });
+  // Characters a pill of each size holds before it reads as a sentence.
+  const PILL_CHARS = Object.freeze({ L: 16, M: 24, S: 28, XL: 12 });
+  function pillMetricsAt(size) {
+    if (RULES && RULES.pillMetrics) return RULES.pillMetrics(size, TYPE.cap * size);
+    const h = size * (122 / 130);
+    const topPad = Math.max(0, Math.round((h - TYPE.cap * size) * 0.5));
+    return { size, h, padLeft: size * (18.4 / 130), padRight: size * (21.88 / 130), topPad, baseline: Math.min(topPad + TYPE.cap * size, h - 2), step: Math.max(Math.round(h * 0.55), h - topPad + 1) + 1, cap: TYPE.cap * size };
+  }
+  const pillPad = size => { const pm = pillMetricsAt(size); return pm.padLeft + pm.padRight; };
+  const pillClass = (size, T = 1) => { const n = stepName(size / T); return n === 'h1' ? 'L' : n === 'caption' ? 'M' : n === 'label' || n === 'body' ? 'S' : n === 'h2' ? 'M' : 'XL'; };
+  // Element limits per frame: a headline, one picture, one data block, two pills.
+  const ELEMENT_LIMITS = Object.freeze({ headline: 1, media: 1, data: 1, pills: 2 });
+  // One inner inset for everything drawn inside a box (tiles, the photo card):
+  // the gap from its edge to the words and pills in it.
+  const TILE_INSET = 32;
 
   // ─── Blocks (references/blocks.md; the only building blocks) ───────────
   // kind: the Reels Studio beat kind each block rides on, so formats, the
   // director, number provenance and the lint keep working unchanged.
   const BLOCKS = {
-    hook: { kind: 'hook', fields: ['media', 'pills', 'stamp'], label: 'Hook', media: true },
+    hook: { kind: 'hook', fields: ['media', 'pills', 'stamp', 'kicker'], label: 'Hook', media: true },
     statement: { kind: 'point', fields: ['lines', 'media', 'top'], label: 'Statement', media: true },
     number: { kind: 'stat', fields: ['value', 'prefix', 'suffix', 'label', 'kicker', 'color'], label: 'Number' },
     dots: { kind: 'dotrank', fields: ['count', 'highlight', 'label', 'note'], label: 'Dots' },
     compare: { kind: 'bars', fields: ['items', 'kicker'], label: 'Compare' },
     quote: { kind: 'quote', fields: ['text', 'who'], label: 'Quote' },
     endcard: { kind: 'cta', fields: ['cta'], label: 'End card' },
+    // v3 blocks (Reels Studio v3): the team's reference frames, on the one grid.
+    photoCard: { kind: 'point', fields: ['photo', 'label', 'focus', 'scan', 'title', 'kicker', 'tag', 'tiles'], label: 'Photo card', media: true, v3: true },
+    statTiles: { kind: 'stat', fields: ['tiles', 'title', 'kicker', 'tag'], label: 'Stat tiles', v3: true },
+    dotGrid: { kind: 'dotrank', fields: ['total', 'groups', 'title', 'kicker'], label: 'Dot grid', v3: true },
+    streak: { kind: 'chips', fields: ['items', 'label', 'title', 'kicker'], label: 'Streak', v3: true },
+    rankTile: { kind: 'rank', fields: ['kicker', 'rank', 'pos', 'chip', 'items', 'title', 'label', 'tag'], label: 'Rank tile', v3: true },
+    tagPill: { kind: 'point', fields: ['text', 'tone', 'title', 'kicker', 'media'], label: 'Tag', media: true, v3: true },
+    clipLabel: { kind: 'point', fields: ['text', 'sub', 'kicker', 'tone', 'media', 'focus'], label: 'Clip label', media: true, v3: true },
   };
   const BLOCK_TYPES = Object.keys(BLOCKS);
   const KIND_FOR = Object.fromEntries(BLOCK_TYPES.map(t => [t, BLOCKS[t].kind]));
@@ -135,7 +205,7 @@
   }
   const PAPER = TH.resolve('paper');
   // A colour name ('ink', 'blue', 'team'…) as a colour, in the look.
-  const colorOf = (name, theme) => (theme ? theme.colors[name] : TOKENS[name]) || name || TOKENS.ink;
+  const colorOf = (name, theme) => (name === 'grey' ? GREY : (theme ? theme.colors[name] : TOKENS[name]) || name || TOKENS.ink);
   const numOf = v => { const m = String(v == null ? '' : v).replace(/[$,]/g, '').match(/-?\d+(?:\.\d+)?/); return m ? Number(m[0]) : NaN; };
   const words = text => String(text || '').trim().split(/\s+/).filter(Boolean);
 
@@ -171,6 +241,7 @@
         ['x', 'y', 'size'].forEach(k => { if (Number.isFinite(Number(s[k])) && s[k] !== '' && s[k] != null) out.stamp[k] = Number(s[k]); });
       }
       if (b.media) out.media = str(b.media, 200);
+      if (str(b.kicker, 28)) out.kicker = str(b.kicker, 28);
     } else if (type === 'statement') {
       out.lines = (Array.isArray(b.lines) ? b.lines : []).slice(0, 4).map(l => (typeof l === 'string' ? { text: str(l, 40), color: 'ink' } : { text: str(l && l.text, 40), color: colorName(l && l.color) })).filter(l => l.text);
       if (Number.isFinite(Number(b.top)) && b.top !== '' && b.top != null) out.top = Math.max(300, Math.min(1100, Number(b.top)));
@@ -201,8 +272,102 @@
     } else if (type === 'endcard') {
       const cta = Array.isArray(b.cta) ? b.cta.map(c => str(c, 30)).filter(Boolean).slice(0, 2) : [];
       out.cta = cta.length ? cta : DEFAULT_CTA.slice();
-    }
+    } else cleanV3(type, b, out);
     return out;
+  }
+  // ─── v3 block shapes ────────────────────────────────────────────────────
+  const toneOf = (v, allowed, d) => (allowed.includes(String(v || '').toLowerCase()) ? String(v).toLowerCase() : d);
+  // A focus box { x, y, w, h } (0-1 of the picture, photo-verify's focus or
+  // head box), or null. Arrays [x, y, w, h] are accepted.
+  function focusBox(f) {
+    if (!f) return null;
+    const a = Array.isArray(f) ? { x: f[0], y: f[1], w: f[2], h: f[3] } : f;
+    const n = v => Number(v);
+    if (![a.x, a.y].every(v => Number.isFinite(n(v)))) return null;
+    const w = Number.isFinite(n(a.w)) && n(a.w) > 0 ? n(a.w) : 0.3;
+    const h = Number.isFinite(n(a.h)) && n(a.h) > 0 ? n(a.h) : 0.3;
+    // A bare point (head centre) becomes a box round it.
+    const x = Number.isFinite(n(a.w)) ? n(a.x) : n(a.x) - w / 2;
+    const y = Number.isFinite(n(a.h)) ? n(a.y) : n(a.y) - h / 2;
+    const c = v => Math.max(0, Math.min(1, v));
+    const out = { x: c(x), y: c(y), w: Math.min(1 - c(x), w), h: Math.min(1 - c(y), h) };
+    return out.w > 0.01 && out.h > 0.01 ? out : null;
+  }
+  const tagOf = t => { if (!t) return null; const o = typeof t === 'string' ? { text: t } : t; const text = str(o.text, 28); return text ? { text, tone: toneOf(o.tone, ['red', 'blue', 'ink'], 'red') } : null; };
+  const tilesOf = (list, n) => (Array.isArray(list) ? list : []).slice(0, n).map((t, i) => {
+    const o = t && typeof t === 'object' ? t : { value: t };
+    const out = { value: str(o.value, 12), label: str(o.label, 28), tone: toneOf(o.tone, ['blue', 'ink'], i === 0 ? 'blue' : 'ink') };
+    if (str(o.chip, 20)) out.chip = str(o.chip, 20);
+    if (str(o.kicker, 16)) out.kicker = str(o.kicker, 16);
+    return out;
+  }).filter(t => t.value);
+  const STREAK = { W: 'W', L: 'L', T: 'T', D: 'T' };
+  function cleanV3(type, b, out) {
+    const head = () => {
+      if (str(b.title, 60)) out.title = str(b.title, 60);
+      if (str(b.kicker, 28) && type !== 'rankTile') out.kicker = str(b.kicker, 28);
+    };
+    if (type === 'photoCard') {
+      head();
+      if (b.photo) out.photo = str(b.photo, 200);
+      out.label = str(b.label, 28);
+      const f = focusBox(b.focus);
+      if (f) out.focus = f;
+      out.scan = Boolean(b.scan);
+      const tag = tagOf(b.tag);
+      if (tag) out.tag = tag;
+      out.tiles = tilesOf(b.tiles, 3);
+    } else if (type === 'statTiles') {
+      head();
+      out.tiles = tilesOf(b.tiles, 3);
+      const tag = tagOf(b.tag);
+      if (tag) out.tag = tag;
+    } else if (type === 'dotGrid') {
+      head();
+      out.total = Math.max(1, Math.min(LIMITS.dotsMax, Math.round(numOf(b.total)) || 1));
+      let left = out.total;
+      out.groups = (Array.isArray(b.groups) ? b.groups : []).slice(0, 3).map((g, i) => {
+        const n = Math.max(0, Math.min(left, Math.round(numOf(g && g.n)) || 0));
+        left -= n;
+        return { n, tone: toneOf(g && g.tone, ['blue', 'ink', 'grey'], ['blue', 'ink', 'grey'][i]), label: str(g && g.label, 24) };
+      }).filter(g => g.n > 0 || g.label);
+    } else if (type === 'streak') {
+      head();
+      const raw = Array.isArray(b.items) ? b.items.map(x => (x && typeof x === 'object' ? x.r : x)) : String(b.items || '').split('');
+      out.items = raw.map(x => STREAK[String(x || '').trim().toUpperCase()]).filter(Boolean).slice(0, 20);
+      out.label = str(b.label, 20);
+    } else if (type === 'rankTile') {
+      head();
+      if (str(b.label, 28)) out.label = str(b.label, 28);
+      const list = Array.isArray(b.items) && b.items.length ? b.items : [b];
+      out.items = list.slice(0, 2).map((it, i) => {
+        const r = str(it && it.rank, 6).replace(/^#?/, '#');
+        return { kicker: str(it && it.kicker, 16), rank: r === '#' ? '' : r, pos: str(it && it.pos, 20), chip: str(it && it.chip, 20), tone: toneOf(it && it.tone, ['ink', 'blue'], i === 0 ? 'ink' : 'ink') };
+      }).filter(it => it.rank || it.pos);
+      const tag = tagOf(b.tag);
+      if (tag) out.tag = tag;
+    } else if (type === 'tagPill') {
+      head();
+      out.text = str(b.text, 28);
+      out.tone = toneOf(b.tone, ['red', 'blue', 'ink'], 'red');
+      if (b.media) out.media = str(b.media, 200);
+    } else if (type === 'clipLabel') {
+      if (str(b.kicker, 28)) out.kicker = str(b.kicker, 28);
+      out.text = str(b.text, 24);
+      if (str(b.sub, 28)) out.sub = str(b.sub, 28);
+      out.tone = toneOf(b.tone, ['blue', 'ink'], 'blue');
+      const f = focusBox(b.focus);
+      if (f) out.focus = f;
+      if (b.media) out.media = str(b.media, 200);
+    }
+  }
+  // A tile's on-screen value split for the count-up ("$692M" -> $ 692 M), or
+  // null when it is not one number ("15-1", "#1 TE" stay as they are).
+  function tileNumber(value) {
+    const v = String(value || '').trim();
+    const m = v.match(/^([$#]?)(\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)(%|[KMB]|\+)?$/i);
+    if (!m) return null;
+    return { value: Number(m[2].replace(/,/g, '')), prefix: m[1], suffix: (m[3] || '').toUpperCase(), display: v };
   }
 
   // A beat's block: its own (an ES plan, or edited in Review), else made
@@ -221,8 +386,11 @@
     }
     if (type === 'statement') {
       const src = b.kind === 'rank' && b.name ? `#${b.rank || ''} ${b.name}` : text;
-      const lines = headlineLines(src.replace(/[!?]+$/, ''), LIMITS.lineChars, LIMITS.lines);
-      return { type, lines: lines.map((t, i) => ({ text: t, color: i === lines.length - 1 && lines.length > 1 ? 'blue' : 'ink' })) };
+      const lines = headlineLines(plainVo(src).replace(/[!?]+$/, ''), LIMITS.lineChars, LIMITS.lines);
+      // v3: the blue word is the one chosen by meaning (the beat's highlight
+      // word, or *word* in its text or voiceover), never forced onto the last line.
+      const marks = marksIn(b.emphasis ? `*${b.emphasis}*` : '', src, b.vo);
+      return { type, lines: markLines(lines, marks).map(t => ({ text: t, color: 'ink' })) };
     }
     if (type === 'number') {
       const raw = str(b.stat && b.stat.value, 16);
@@ -264,6 +432,15 @@
     if (b.type === 'compare') return [b.kicker, ...(b.items || []).flatMap(it => [it.label, it.display])].filter(Boolean);
     if (b.type === 'quote') return [b.text, b.who].filter(Boolean);
     if (b.type === 'endcard') return (b.cta || []).filter(Boolean);
+    const strip = list => list.filter(Boolean).map(t => plainVo(t));
+    const tiles = list => (list || []).flatMap(t => [t.kicker, t.value, t.label, t.chip]);
+    if (b.type === 'photoCard') return strip([b.kicker, b.title, b.label, b.tag && b.tag.text, ...tiles(b.tiles)]);
+    if (b.type === 'statTiles') return strip([b.kicker, b.title, b.tag && b.tag.text, ...tiles(b.tiles)]);
+    if (b.type === 'dotGrid') return strip([b.kicker, b.title, ...(b.groups || []).map(g => g.label)]);
+    if (b.type === 'streak') return strip([b.kicker, b.title, b.label]);
+    if (b.type === 'rankTile') return strip([b.label, b.title, b.tag && b.tag.text, ...(b.items || []).flatMap(it => [it.kicker, `${it.rank} ${it.pos}`.trim(), it.chip])]);
+    if (b.type === 'tagPill') return strip([b.kicker, b.title, b.text]);
+    if (b.type === 'clipLabel') return strip([b.kicker, b.text, b.sub]);
     return [];
   }
   const blockText = block => {
@@ -273,7 +450,8 @@
     if (b.type === 'number') return b.kicker || b.label || numberDisplay(b);
     if (b.type === 'dots' || b.type === 'compare') return b.label || b.kicker || '';
     if (b.type === 'quote') return b.text;
-    return (b.cta || []).join(' ');
+    if (b.type === 'endcard') return (b.cta || []).join(' ');
+    return plainVo(b.title || b.text || blockStrings(b)[0] || '');
   };
   // The legacy fields a block implies (kind, text, stat, bars, dotrank,
   // quote), so the rest of Reels Studio sees a normal beat.
@@ -284,6 +462,9 @@
     if (b.type === 'compare') out.bars = (b.items || []).map(it => ({ label: it.label, value: it.display || String(it.value) }));
     if (b.type === 'dots') out.dotrank = { total: String(b.count), rank: String(b.highlight), label: b.note };
     if (b.type === 'quote') out.quote = { text: b.text, by: b.who };
+    if ((b.type === 'statTiles' || b.type === 'photoCard') && b.tiles && b.tiles[0]) out.stat = { value: b.tiles[0].value, label: b.tiles[0].label };
+    if (b.type === 'dotGrid') out.dotrank = { total: String(b.total), rank: String((b.groups[0] || {}).n || 0), label: (b.groups[0] || {}).label || '' };
+    if (b.type === 'rankTile' && b.items[0]) { out.rank = Number(String(b.items[0].rank).replace('#', '')) || 1; out.name = `${b.items[0].pos}`; }
     return out;
   }
   // Signal colours a block uses (green and red; yellow too, though only
@@ -297,7 +478,10 @@
     (b.lines || []).forEach(l => add(l.color));
     if (b.type === 'number') add(b.color);
     if (b.type === 'dots' && b.highlight > 0) add('green');
-    (b.items || []).forEach(it => add(it.color));
+    if (b.type === 'compare') (b.items || []).forEach(it => add(it.color));
+    if (b.type === 'streak' && (b.items || []).includes('W')) add('green');
+    if (b.type === 'tagPill') add(b.tone);
+    if (b.tag) add(b.tag.tone);
     if (parseEmphasis(vo).flags.some(Boolean)) add('yellow');
     return [...used];
   }
@@ -339,10 +523,16 @@
   }
   // Pills for a hook: up to 3 at 14 characters; longer lines drop to size 110
   // (the kit's rule) and take about 18.
-  function hookPills(text) {
+  function hookPills(text0) {
+    const marks = marksIn(text0);
+    const text = plainVo(text0);
     const at14 = splitLines(text, LIMITS.pillChars);
     const fit = at14.length <= LIMITS.pills ? { lines: at14, size: 0 } : { lines: headlineLines(text, 18, LIMITS.pills), size: 110 };
-    return fit.lines.map((t, i) => ({ text: t, color: i === fit.lines.length - 1 && fit.lines.length > 1 ? 'blue' : 'ink', ...(fit.size && t.length > LIMITS.pillChars ? { size: fit.size } : {}) }));
+    // The pill holding the marked word is blue; with none marked, the last pill
+    // (the kit's ink-then-blue stack).
+    const hit = fit.lines.findIndex(t => words(t).some(w => marks.has(bareWord(w))));
+    const blue = hit >= 0 ? hit : (fit.lines.length > 1 ? fit.lines.length - 1 : -1);
+    return fit.lines.map((t, i) => ({ text: t, color: i === blue ? 'blue' : 'ink', ...(fit.size && t.length > LIMITS.pillChars ? { size: fit.size } : {}) }));
   }
   // Sentences, keeping every character: joined back with single spaces they
   // equal the script (whitespace normalised).
@@ -403,7 +593,19 @@
       return { type: 'number', value: Number(big[2].replace(/,/g, '')), prefix: big[1], suffix: unit.length <= 2 ? unit.toUpperCase() : '', label: labelAfter(plain, big.index + big[0].length, 3), kicker: words(kicker).length >= 2 ? kicker : '', color: 'blue', display: `${big[1]}${big[2]}${unit.length <= 2 ? unit.toUpperCase() : ''}` };
     }
     const lines = headlineLines(headline(plain, 8), LIMITS.lineChars, LIMITS.lines);
-    return { type: 'statement', lines: lines.map((t, i) => ({ text: t, color: i === lines.length - 1 && lines.length > 1 ? 'blue' : 'ink' })) };
+    return { type: 'statement', lines: markLines(lines, marksIn(line)).map(t => ({ text: t, color: 'ink' })) };
+  }
+  // The words a text marks with *asterisks* (lower case, bare).
+  const bareWord = w => String(w || '').toLowerCase().replace(/[^a-z0-9%$#'’.-]/g, '').replace(/[.]+$/, '');
+  function marksIn(...texts) {
+    const out = new Set();
+    texts.forEach(t => { const e = parseEmphasis(t); e.words.forEach((w, i) => { if (e.flags[i] && bareWord(w)) out.add(bareWord(w)); }); });
+    return out;
+  }
+  // Lines with the marked words wrapped in *asterisks* (the layout draws them blue).
+  function markLines(lines, marks) {
+    if (!marks || !marks.size) return lines.slice();
+    return lines.map(l => words(l).map(w => (marks.has(bareWord(w)) ? `*${w}*` : w)).join(' '));
   }
   // opts: { title, sport, voLengthSec, sourceLine, format }
   function scriptToPlan(script, opts = {}) {
@@ -448,41 +650,122 @@
     return { x: x - pad, y: y - TYPE.cap * size - pad, w: w + 2 * pad, h: TYPE.cap * size + 2 * pad };
   }
   // The text colour (a name) for a boxed word's fill, in the look.
-  const inkOn = (name, theme) => TH.inkOn(name, theme ? theme.colors : null);
-  // Biggest size in [min, max] at which every line fits `width` (boxed: with its padding).
-  function fitSize(measure, lines, { max, min, width, boxed = false }) {
-    let size = max;
-    const ok = s => lines.every(t => tracked(measure, t, s) + (boxed ? 2 * TYPE.pad * s : 0) <= width + 0.01);
-    while (size > min && !ok(size)) size = Math.max(min, size * 0.96);
-    return size;
-  }
-  function boxedText(measure, text, x, top, size, fill, extra = {}, theme = null) {
-    const t = String(text).toUpperCase();
-    const w = tracked(measure, t, size);
-    const pad = TYPE.pad * size;
-    const y = top + pad + TYPE.cap * size;
-    return { type: 'text', text: t, font: displayFont(size), size, x: x + pad, y, w, color: inkOn(fill, theme), fill, track: TYPE.tracking * size, ...extra };
-  }
+  const inkOn = (name, theme) => (name === 'grey' ? 'ink' : TH.inkOn(name, theme ? theme.colors : null));
   // A word whose colour would not read on the scene's ground (a red line on
   // ES blue) sits on the surface's plate: an ink hug box, kept in the column.
   function plateOps(ops, S, theme, geo) {
     if (!S.plate) return;
     const ground = theme.hex(S.ground);
     ops.forEach(op => {
-      if ((op.type !== 'text' && op.type !== 'count') || op.fill || op.noCheck || op.small || op.onPanel) return;
+      if ((op.type !== 'text' && op.type !== 'count') || op.fill || op.noCheck || op.small || op.onPanel || op.on) return;
       if (TH.contrast(theme.hex(op.color), ground) >= TH.ACCENT_MIN) return;
-      const need = op.w + 2 * TYPE.pad * op.size;
-      if (need > geo.col.w) {
-        const k = geo.col.w / need;
-        op.size *= k; op.w *= k; op.track = TYPE.tracking * op.size; op.font = displayFont(op.size);
+      // The plate is the ES pill round the word; too wide for the column, the
+      // word moves down one step of the type scale (never an in-between size).
+      let need = op.w + pillPad(op.size);
+      while (need > geo.col.w && snapStep(op.size / geo.type - 1) < op.size / geo.type) {
+        const next = snapStep(op.size / geo.type - 1) * geo.type;
+        const k = next / op.size;
+        op.size = next; op.w *= k; op.track = TYPE.tracking * op.size; op.font = displayFont(op.size);
+        need = op.w + pillPad(op.size);
       }
+      const pm = pillMetricsAt(op.size);
       op.fill = S.plate;
       op.plated = true;
-      op.x = Math.max(op.x, geo.col.x + TYPE.pad * op.size);
+      op.x = Math.max(op.x, geo.col.x + pm.padLeft);
+      op.box = { x: op.x - pm.padLeft, y: op.y - pm.baseline, w: need, h: pm.h };
+      op.pill = true;
     });
   }
-  const opBox = op => (op.fill ? hugBox(op.x, op.y, op.w, op.size) : { x: op.x, y: op.y - TYPE.cap * op.size, w: op.w, h: TYPE.cap * op.size });
+  const opBox = op => (op.box ? { ...op.box } : op.fill ? hugBox(op.x, op.y, op.w, op.size) : { x: op.x, y: op.y - TYPE.cap * op.size, w: op.w, h: TYPE.cap * op.size });
+  // The ES mark: on the hook, the end card and whatever scene opens the reel.
+  function showsMark(graphic) {
+    const g = graphic || {};
+    const type = (g.data && g.data.block && g.data.block.type) || '';
+    return MARK_BLOCKS.has(type) || g.inMs === 0;
+  }
 
+  // ─── v3 layout helpers ─────────────────────────────────────────────────
+  // Word tokens with their *emphasis* flag, upper-cased.
+  function emTokens(text) {
+    const e = parseEmphasis(text);
+    return e.words.map((w, i) => ({ w: w.toUpperCase(), em: Boolean(e.flags[i]) }));
+  }
+  const tokText = toks => toks.map(t => t.w).join(' ');
+  // Greedy wrap of tokens at a measured width.
+  function wrapTokens(measure, toks, size, width) {
+    const out = [];
+    let line = [];
+    toks.forEach(t => {
+      const next = line.concat(t);
+      if (line.length && tracked(measure, tokText(next), size) > width) { out.push(line); line = [t]; } else line = next;
+    });
+    if (line.length) out.push(line);
+    return out;
+  }
+  // Drop words from the end (and a dangling stop word) until the line fits.
+  function cutToFit(measure, toks, size, width, extra = 0) {
+    let list = toks.slice();
+    while (list.length > 1 && tracked(measure, tokText(list), size) + extra > width) list = list.slice(0, -1);
+    while (list.length > 1 && TRAIL_STOP.test(` ${list[list.length - 1].w.toLowerCase()}`)) list = list.slice(0, -1);
+    return list;
+  }
+  // One line of tokens as text ops: a run of emphasised words is its own op in
+  // the emphasis colour, on the same baseline.
+  function lineOps(measure, toks, x, y, size, color, emColor, extra = {}) {
+    const ops = [];
+    const font = displayFont(size);
+    const space = measure(' ', font) + TYPE.tracking * size;
+    let cx = x;
+    let i = 0;
+    while (i < toks.length) {
+      let j = i;
+      while (j + 1 < toks.length && toks[j + 1].em === toks[i].em) j += 1;
+      const text = tokText(toks.slice(i, j + 1));
+      const w = tracked(measure, text, size);
+      // Alignment marks belong to the line's first run only.
+      const own = ops.length ? { ...extra, align: '', slot: undefined } : extra;
+      ops.push({ type: 'text', text, font, size, x: cx, y, w, color: toks[i].em ? emColor : color, track: TYPE.tracking * size, ...own });
+      cx += w + space;
+      i = j + 1;
+    }
+    return ops;
+  }
+  // A pill: the FrameUp ES pill (pillMetrics) round upper-case display type.
+  // op.box is the pill; op.x / op.y are the text's start and baseline.
+  function pillOp(measure, text, x, top, size, fill, extra = {}, theme = null) {
+    const t = String(text).toUpperCase();
+    const pm = pillMetricsAt(size);
+    const w = tracked(measure, t, size);
+    return { type: 'text', text: t, font: displayFont(size), size, x: x + pm.padLeft, y: top + pm.baseline, w, color: inkOn(fill, theme), fill, track: TYPE.tracking * size, box: { x, y: top, w: pm.padLeft + w + pm.padRight, h: pm.h }, pill: true, ...extra };
+  }
+
+  // v3 vertical balance: a scene with no picture and nothing in the lower
+  // slot is one group, centred on the word zone's optical centre (y 880),
+  // never above the headline slot and always 64 px clear of the caption bar.
+  // Moves are 8-pt steps. A statement placed by hand (block.top) stays put.
+  const CENTRED = new Set(['hook', 'statement', 'number', 'quote', 'statTiles', 'rankTile', 'streak', 'tagPill', 'photoCard', 'compare', 'dots']);
+  function opTop(o) { return o.box ? o.box.y : (o.type === 'text' || o.type === 'count') ? o.y - TYPE.cap * o.size : o.y; }
+  function opBottom(o) { return o.box ? o.box.y + o.box.h : (o.type === 'text' || o.type === 'count') ? o.y : o.y + (o.h || 0); }
+  function centreGroup(ops, block, geo) {
+    if (!CENTRED.has(block.type) || block.top != null) return;
+    if (ops.some(o => o.type === 'media' || o.slot === 'lower' || (o.type === 'tile' && o.y >= geo.slots.lower - 0.5))) return;
+    const group = ops.filter(o => o.type !== 'rect' && o.type !== 'logotype' && o.y != null);
+    if (!group.length) return;
+    const top = Math.min(...group.map(opTop));
+    const bottom = Math.max(...group.map(opBottom));
+    const h = bottom - top;
+    const zoneTop = geo.slots.head;
+    const zoneBottom = geo.contentBottom;
+    if (h >= zoneBottom - zoneTop) return;
+    const want = Math.max(zoneTop, Math.min(geo.slots.centre - h / 2, zoneBottom - h));
+    const dy = Math.floor((want - top) / geo.unit) * geo.unit;
+    if (dy <= 0) return;
+    group.forEach(o => {
+      o.y += dy;
+      if (o.box) o.box = { ...o.box, y: o.box.y + dy };
+      if (o.slot) { delete o.slot; o.centred = true; }
+    });
+  }
   function layoutBlock(measure, graphic, timeline = {}) {
     const geo = geometry(timeline.size);
     const block = (graphic.data && graphic.data.block) || blockOf(graphic.data || {});
@@ -491,78 +774,255 @@
     const LY = theme.layout;
     const tx = name => S.text[name] || name; // a text colour name on this surface
     const fl = name => S.fill[name] || name; // a boxed word's fill on this surface
-    const boxed = (text, x, top, size, fill, extra) => boxedText(m, text, x, top, size, fl(fill), extra, theme);
     const T = geo.type;
     const X = geo.col.x;
     const CW = geo.col.w;
+    const K = geo.k;
     const st = theme.motion.staggerMs;
     const ops = [];
     const m = (t, f) => measure(String(t), f);
-    const boxStep = size => size * (TYPE.cap + 2 * TYPE.pad) + 12 * T;
+    const sz = name => TYPE_SCALE[name] * T;
+    const sp = v => v * T; // an 8-pt gap at this frame's type factor
+    const markHere = showsMark(graphic);
+    // The widest a top-row part can be beside the ES mark (and its clear space).
+    const besideMark = top => (markHere && top < geo.mark.y + geo.mark.size + geo.mark.clear ? geo.mark.x - geo.mark.clear - X : CW);
+    const pill = (text, x, top, size, fill, extra) => pillOp(m, text, x, top, size, fl(fill), extra, theme);
+    // A pill row with *emphasis*: only the marked words turn blue. The row is
+    // split at them into pills that touch (ink | blue | ink), never one pill
+    // all blue. Alignment marks stay on the row's first pill.
+    const pillRow = (toks, x, top, size, fill, extra = {}) => {
+      if (!toks.some(t => t.em) || toks.every(t => t.em)) return [pill(tokText(toks), x, top, size, toks.length && toks.every(t => t.em) ? (fill === 'blue' ? 'ink' : 'blue') : fill, extra)];
+      const out = [];
+      let cx = x;
+      let i = 0;
+      while (i < toks.length) {
+        let j = i;
+        while (j + 1 < toks.length && toks[j + 1].em === toks[i].em) j += 1;
+        const f = toks[i].em ? (fill === 'blue' ? 'ink' : 'blue') : fill;
+        const op = pill(tokText(toks.slice(i, j + 1)), cx, top, size, f, out.length ? { ...extra, align: 'row', slot: undefined, delay: (extra.delay || 0) + 60 * out.length } : extra);
+        out.push(op);
+        cx = op.box.x + op.box.w;
+        i = j + 1;
+      }
+      return out;
+    };
+    // Where the face is in a full-frame picture (frame px, top and bottom),
+    // from the block's focus box or the picture's verified head / focus box.
+    // Pictures fill the 9:16 frame by height, so a box's y maps straight across.
+    const faceBand = () => {
+      const shot = ((timeline.tracks && timeline.tracks.video) || []).find(v => v.beat === graphic.beat && v.asset);
+      const asset = shot && timeline.assets ? timeline.assets[shot.asset] : null;
+      let f = focusBox(block.focus);
+      if (!f && asset) {
+        const hd = Array.isArray(asset.head) ? { x: asset.head[0], y: asset.head[1] } : asset.head;
+        if (hd && Number.isFinite(Number(hd.y))) f = { x: Number(hd.x) - 0.1, y: Number(hd.y) - 0.07, w: 0.2, h: 0.14 };
+        else f = focusBox(asset.focus);
+      }
+      if (!f) return null;
+      const h = Math.min(f.h, 0.24);
+      return { top: f.y * geo.h, bottom: (f.y + h) * geo.h };
+    };
+    // Words over a full-frame picture never cover the face: the group stays at
+    // its slot when the face is clear of it, else moves below the face, else
+    // above it, else to the lower slot (8-pt steps).
+    const clearFace = group => {
+      const band = faceBand();
+      if (!band || !group.length) return;
+      const top = Math.min(...group.map(opTop));
+      const bottom = Math.max(...group.map(opBottom));
+      const h = bottom - top;
+      const gap = sp(SPACE.xxl);
+      if (bottom <= band.top - gap || top >= band.bottom + gap) return;
+      const snap = v => Math.ceil(v / geo.unit) * geo.unit;
+      const options = [snap(band.bottom + gap), Math.floor((band.top - gap - h) / geo.unit) * geo.unit, geo.slots.lower];
+      const to = options.find((t, i) => (i === 0 ? t + h <= geo.contentBottom : i === 1 ? t >= geo.slots.head : t + h <= geo.safe.bottom));
+      if (to == null) return;
+      const dy = to - top;
+      group.forEach(o => { o.y += dy; if (o.box) o.box = { ...o.box, y: o.box.y + dy }; if (o.slot) { delete o.slot; o.clearsFace = true; } });
+    };
+    // A pill whose words fit `width`: the size steps down (never in between),
+    // and at the smallest step the words are cut at a word (flagged).
+    const fitPill = (text, x, top, maxStep, minStep, fill, width, extra = {}) => {
+      const toks = emTokens(text);
+      const ok = s => tracked(m, tokText(toks), s) + pillPad(s) <= width + 0.01;
+      const pk = pickStep(maxStep, minStep, T, ok);
+      const list = pk.fits ? toks : cutToFit(m, toks, pk.size, width, pillPad(pk.size));
+      const op = pill(tokText(list), x, top, pk.size, fill, { pillSize: pillClass(pk.size, T), ...extra });
+      if (!pk.fits) op.shortened = true;
+      return op;
+    };
+    const pillStep = size => pillMetricsAt(size).step;
     // A photo under the words: the whole frame, or the part below them.
     const mediaFull = () => ({ type: 'media', role: 'media', x: 0, y: 0, w: geo.w, h: geo.h });
     const mediaBelow = bottom => {
-      const y0 = Math.max(bottom + 64 * geo.k, 720 * geo.k);
-      return geo.h - y0 > 360 * geo.k ? { type: 'media', role: 'media', x: 0, y: Math.round(y0), w: geo.w, h: geo.h - Math.round(y0) } : null;
+      const y0 = Math.max(bottom + 64 * K, 720 * K);
+      return geo.h - y0 > 360 * K ? { type: 'media', role: 'media', x: 0, y: Math.round(y0), w: geo.w, h: geo.h - Math.round(y0) } : null;
     };
+    // The kicker pill (series / label), level with the top of the ES mark.
+    const kickerOp = (text, fill = 'ink') => {
+      if (!text) return null;
+      const top = geo.slots.kicker;
+      const op = fitPill(text, X, top, PILL_SIZES.S, PILL_SIZES.S, fill, besideMark(top), { role: 'kicker', enter: 'left', delay: 0, align: 'col', slot: 'kicker' });
+      ops.push(op);
+      return op;
+    };
+    // A headline with *emphasis* (blue), wrapped on the column: the biggest
+    // step from maxStep that fits in maxLines, else the smallest, cut at a word.
+    const titleOps = (text, top, { maxStep = 'h1', minStep = 'h2', maxLines = 2, color = 'ink', em = 'blue', role = 'title', delay = 0, width = CW } = {}) => {
+      const toks = emTokens(text);
+      if (!toks.length) return { bottom: top, lines: 0 };
+      let lines = null;
+      const pk = pickStep(maxStep, minStep, T, s => { const l = wrapTokens(m, toks, s, width); if (l.length <= maxLines && l.every(x => tracked(m, tokText(x), s) <= width + 0.01)) { lines = l; return true; } return false; });
+      let shortened = false;
+      if (!pk.fits) {
+        lines = wrapTokens(m, toks, pk.size, width).slice(0, maxLines).map(l => cutToFit(m, l, pk.size, width));
+        shortened = true;
+      }
+      const size = pk.size;
+      let y = top + TYPE.cap * size;
+      lines.forEach((l, i) => {
+        lineOps(m, l, X, y, size, tx(color), tx(em), { role, enter: 'up', delay: delay + i * st, align: i === 0 ? 'col' : '', ...(i === 0 ? { slot: 'head' } : {}), ...(shortened ? { shortened: true } : {}) }).forEach(o => ops.push(o));
+        y += TYPE.lineHeight * size;
+      });
+      return { bottom: y - TYPE.lineHeight * size, lines: lines.length, size };
+    };
+    // Up to n pills in priority order (element limit: two pills a frame).
+    let pillsLeft = ELEMENT_LIMITS.pills;
+    const allow = () => { if (pillsLeft <= 0) return false; pillsLeft -= 1; return true; };
+
+    // Tiles: one component for stat and rank tiles. Flat fill, radius 0, the
+    // same padding, one value step for every tile in the row.
+    const tilesOps = (tiles, top, { maxValue = 'stat', delay0 = st } = {}) => {
+      const n = tiles.length;
+      if (!n) return top;
+      const gap = sp(SPACE.m);
+      let tw = (CW - gap * (n - 1)) / n;
+      const pad = sp(TILE_INSET);
+      let inner = tw - 2 * pad;
+      const values = tiles.map(t => String(t.value).toUpperCase());
+      const vk = pickStep(n === 1 ? 'statXL' : maxValue, 'h2', T, s => values.every(v => tracked(m, v, s) <= inner + 0.01));
+      const labels = tiles.map(t => String(t.label || '').toUpperCase());
+      const lk = pickStep(n === 1 ? 'h2' : 'caption', 'label', T, s => labels.every(v => tracked(m, v, s) <= inner + 0.01));
+      const kickers = tiles.map(t => String(t.kicker || '').toUpperCase());
+      const hasK = kickers.some(Boolean);
+      const hasL = labels.some(Boolean);
+      const hasChip = tiles.some(t => t.chip);
+      const ks = sz('label');
+      const cs = sz(PILL_SIZES.S);
+      const chipH = pillMetricsAt(cs).h;
+      const vs = vk.size;
+      const ls = lk.size;
+      // One tile hugs its words (at least half the column), never a full-width slab.
+      if (n === 1) {
+        const need = Math.max(tracked(m, values[0], vs), labels[0] ? tracked(m, labels[0], ls) : 0, kickers[0] ? tracked(m, kickers[0], ks) : 0, tiles[0].chip ? tracked(m, String(tiles[0].chip).toUpperCase(), cs) + pillPad(cs) : 0);
+        tw = Math.min(CW, Math.max(CW / 2, Math.ceil((need + 2 * pad) / 8) * 8));
+        inner = tw - 2 * pad;
+      }
+      const h = pad + (hasK ? TYPE.cap * ks + sp(SPACE.m) : 0) + TYPE.cap * vs + (hasL ? sp(SPACE.m) + TYPE.cap * ls : 0) + (hasChip ? sp(SPACE.m) + chipH : 0) + pad;
+      tiles.forEach((t, i) => {
+        const x = X + i * (tw + gap);
+        const fill = fl(t.tone === 'blue' ? 'blue' : 'ink');
+        const on = inkOn(fill, theme);
+        const d = delay0 + i * st;
+        ops.push({ type: 'tile', role: 'tile', x, y: top, w: tw, h, fill, enter: 'up', delay: d, align: i === 0 ? 'col' : 'row' });
+        let y = top + pad;
+        if (hasK && kickers[i]) {
+          const kt = kickers[i];
+          ops.push({ type: 'text', role: 'tile-kicker', text: kt, font: displayFont(ks), size: ks, x: x + pad, y: y + TYPE.cap * ks, w: tracked(m, kt, ks), color: on, on: fill, alpha: 0.78, track: TYPE.tracking * ks, enter: 'up', delay: d + 60 });
+        }
+        if (hasK) y += TYPE.cap * ks + sp(SPACE.m);
+        const v = values[i];
+        const num = tileNumber(t.value);
+        const vop = { type: num ? 'count' : 'text', role: 'tile-value', text: v, font: displayFont(vs), size: vs, x: x + pad, y: y + TYPE.cap * vs, w: tracked(m, v, vs), color: on, on: fill, track: TYPE.tracking * vs, enter: 'up', delay: d + 60 };
+        if (num) vop.block = { value: num.value, prefix: num.prefix, suffix: num.suffix, display: num.display };
+        if (!vk.fits) vop.shortened = true;
+        ops.push(vop);
+        y += TYPE.cap * vs;
+        if (hasL && labels[i]) {
+          const lt = labels[i];
+          ops.push({ type: 'text', role: 'tile-label', text: lt, font: displayFont(ls), size: ls, x: x + pad, y: y + sp(SPACE.m) + TYPE.cap * ls, w: tracked(m, lt, ls), color: on, on: fill, track: TYPE.tracking * ls, enter: 'up', delay: d + 120, ...(lk.fits ? {} : { shortened: true }) });
+        }
+        if (hasL) y += sp(SPACE.m) + TYPE.cap * ls;
+        if (t.chip) ops.push(pillOp(m, t.chip, x + pad, y + sp(SPACE.m), cs, fill === fl('blue') ? fl('ink') : fl('blue'), { role: 'chip', pillSize: 'S', enter: 'left', delay: d + 240, inTile: true }, theme));
+      });
+      return top + h;
+    };
+
     if (block.type === 'hook') {
       const full = LY.media.hook === 'full';
       if (graphic.media && full) ops.push(mediaFull());
-      let top = geo.top.hook;
+      if (block.kicker) kickerOp(block.kicker);
+      let top = geo.slots.head;
       let bottom = top;
-      (block.pills || []).forEach((p, i) => {
-        const text = String(p.text).toUpperCase();
-        // Bigger pills (Bold) still leave the caption line clear: the stack ends 110 px above it.
-        const room = LY.pillScale > 1 ? ((geo.captionY - 110 * geo.k - geo.top.hook) / Math.max(1, (block.pills || []).length) - 12 * T) / (TYPE.cap + 2 * TYPE.pad) : Infinity;
-        const max = Math.min(160 * T, (p.size || 128) * LY.pillScale * T, room);
-        // Bigger pills (Bold) stop short of the ES mark's clear space when they sit beside it.
-        const beside = LY.pillScale > 1 && top < geo.mark.y + geo.mark.size + geo.mark.clear;
+      const list = block.pills || [];
+      // One step for the whole stack (the biggest the longest pill allows),
+      // and the stack ends 110 px above the caption line.
+      const texts = list.map(p => String(plainVo(p.text)).toUpperCase());
+      const maxStep = LY.pillStep || PILL_SIZES.L;
+      const room = geo.captionY - 110 * K - top;
+      const pk = pickStep(maxStep, PILL_SIZES.M, T, s => texts.every(t => tracked(m, t, s) + pillPad(s) <= CW + 0.01) && (list.length - 1) * pillStep(s) + pillMetricsAt(s).h <= room);
+      list.forEach((p, i) => {
+        const text = texts[i];
         if (LY.pillBoxed) {
-          const size = fitSize(m, [text], { max, min: 64 * T, width: beside ? geo.mark.x - geo.mark.clear - X : CW, boxed: true });
-          ops.push(boxed(text, X, top, size, p.color || 'ink', { role: 'pill', enter: 'left', delay: i * st }));
-          bottom = top + size * (TYPE.cap + 2 * TYPE.pad);
-          top += boxStep(size);
+          const toks = emTokens(text);
+          const fitToks = pk.fits ? toks : cutToFit(m, toks, pk.size, CW, pillPad(pk.size));
+          const marked = emTokens(String(p.text).toUpperCase());
+          const rowToks = marked.length === fitToks.length ? marked : fitToks;
+          const color = p.color || 'ink';
+          const row = pillRow(rowToks, X, top, pk.size, color, { role: 'pill', pillSize: pillClass(pk.size, T), enter: 'left', delay: i * st, align: 'col', ...(i === 0 ? { slot: 'head' } : {}), ...(pk.fits ? {} : { shortened: true }) });
+          row.forEach(o => ops.push(o));
+          bottom = top + row[0].box.h;
+          top += pillStep(pk.size);
         } else {
           // Plain pills (Minimal): the same words as display type, no box.
-          const size = fitSize(m, [text], { max, min: 64 * T, width: CW });
           const c = p.color === 'yellow' || p.color === 'white' ? 'ink' : (p.color || 'ink');
-          ops.push({ type: 'text', role: 'pill', text, font: displayFont(size), size, x: X, y: top + TYPE.cap * size, w: tracked(m, text, size), color: tx(c), track: TYPE.tracking * size, enter: 'left', delay: i * st });
-          bottom = top + TYPE.cap * size;
-          top += TYPE.lineHeight * size + 12 * T;
+          ops.push({ type: 'text', role: 'pill', text, font: displayFont(pk.size), size: pk.size, x: X, y: top + TYPE.cap * pk.size, w: tracked(m, text, pk.size), color: tx(c), track: TYPE.tracking * pk.size, enter: 'left', delay: i * st, align: 'col', ...(i === 0 ? { slot: 'head' } : {}) });
+          bottom = top + TYPE.cap * pk.size;
+          top += TYPE.lineHeight * pk.size + sp(SPACE.s);
         }
       });
       if (graphic.media && !full) { const md = mediaBelow(bottom); if (md) ops.unshift(md); }
       if (block.stamp && block.stamp.text) {
-        // Bigger pills (Bold) push the stamp down, and it shrinks to stay above the caption line.
-        const below = bottom + 64 * T;
-        const fitH = LY.pillScale > 1 && block.stamp.y == null ? (geo.captionY - 84 * geo.k - below) / (TYPE.cap + 2 * TYPE.pad) / 1.25 : Infinity;
-        const size = Math.max(88 * T, Math.min((block.stamp.size || 170) * T, fitH));
+        // The stamp: one word, Display step, a red pill tilted -9°.
+        const size = sz('display');
         const text = block.stamp.text.toUpperCase();
+        const below = bottom + sp(SPACE.xxl);
+        const sy = block.stamp.y != null ? block.stamp.y * K : Math.max(below, Math.min(860 * K, geo.captionY - 84 * K - pillMetricsAt(size).h * 1.2));
         const sx = block.stamp.x != null ? block.stamp.x : 300;
-        const sy = block.stamp.y != null ? block.stamp.y * geo.k : (LY.pillScale > 1 ? Math.max(Math.min(860 * geo.k, geo.captionY - 84 * geo.k - size * (TYPE.cap + 2 * TYPE.pad) * 1.2), below) : 860 * geo.k);
-        const op = boxed(text, sx, sy, size, 'red', { role: 'stamp', enter: 'stamp', at: graphic.stampAt != null ? graphic.stampAt : 1200, rot: MOTION.stampRotDeg });
+        const op = pill(text, sx, sy, size, 'red', { role: 'stamp', pillSize: 'XL', enter: 'stamp', at: graphic.stampAt != null ? graphic.stampAt : 1200, rot: MOTION.stampRotDeg });
         // Keep the tilted stamp inside the column.
         const b = rotatedBox(op);
         const shift = Math.min(0, geo.col.x + geo.col.w - (b.x + b.w)) + Math.max(0, geo.col.x - b.x);
         op.x += shift;
+        op.box.x += shift;
         ops.push(op);
       }
+      if (graphic.media && full) clearFace(ops.filter(o => o.role === 'pill' || o.role === 'stamp'));
     } else if (block.type === 'statement') {
-      const lines = (block.lines || []).map(l => ({ ...l, text: String(l.text).toUpperCase() }));
+      const lines = (block.lines || []).map(l => ({ ...l, toks: emTokens(l.text) }));
       const lineColor = l => (l.color === 'yellow' || l.color === 'white' ? 'ink' : l.color);
-      const top0 = block.top != null ? block.top * geo.k : geo.top.statement;
+      const top0 = block.top != null ? block.top * K : geo.slots.head;
       let bottom;
+      const maxStep = LY.statementStep || 'h1';
       if (LY.statementBoxed) {
-        // Boxed lines (Photo-led, Bold): every line a hug box, like the hook's pills.
-        const size = fitSize(m, lines.map(l => l.text), { max: LY.statementMax * T, min: 72 * T, width: CW, boxed: true });
-        // Over a full-frame photo the lines sit low, just above the caption
-        // line, so the face stays clear (photos are framed on the upper third).
-        const stack = lines.length * boxStep(size) - 12 * T;
-        let top = graphic.media && LY.media.statement === 'full' && block.top == null ? Math.max(top0, geo.contentBottom - 40 * geo.k - stack) : top0;
-        lines.forEach((l, i) => { ops.push(boxed(l.text, X, top, size, lineColor(l) || 'ink', { role: 'line', enter: 'up', delay: i * st })); top += boxStep(size); });
-        bottom = top - 12 * T;
+        // Boxed lines (Game Tape, Photo-led, Hype Cut): every line a pill; a
+        // line holding the *emphasis* word is the blue pill.
+        const pk = pickStep(maxStep, 'h2', T, s => lines.every(l => tracked(m, tokText(l.toks), s) + pillPad(s) <= CW + 0.01));
+        const stack = lines.length ? (lines.length - 1) * pillStep(pk.size) + pillMetricsAt(pk.size).h : 0;
+        // Over a full-frame picture the lines sit low, just above the caption
+        // line, so the face stays clear (faces are framed on the upper third).
+        let top = graphic.media && LY.media.statement === 'full' && block.top == null ? Math.max(top0, geo.contentBottom - 40 * K - stack) : top0;
+        lines.forEach((l, i) => {
+          const toks = pk.fits ? l.toks : cutToFit(m, l.toks, pk.size, CW, pillPad(pk.size));
+          const fill = lineColor(l) || 'ink';
+          pillRow(toks, X, top, pk.size, fill, { role: 'line', pillSize: pillClass(pk.size, T), enter: theme.motion.id === 'punchy' ? 'left' : 'up', delay: i * st, align: 'col', ...(i === 0 && block.top == null && top === top0 ? { slot: 'head' } : {}), ...(pk.fits ? {} : { shortened: true }) }).forEach(o => ops.push(o));
+          top += pillStep(pk.size);
+        });
+        bottom = top - pillStep(pk.size) + pillMetricsAt(pk.size).h;
+        if (graphic.media && LY.media.statement === 'full' && block.top == null) clearFace(ops.filter(o => o.role === 'line'));
       } else {
-        const size = fitSize(m, lines.map(l => l.text), { max: LY.statementMax * T, min: 88 * T, width: CW });
+        const pk = pickStep(maxStep, 'h2', T, s => lines.every(l => tracked(m, tokText(l.toks), s) <= CW + 0.01));
+        const size = pk.size;
         let y = top0 + TYPE.cap * size;
         // A line that will sit on a plate (plateOps) gets the plate's padding
         // above and below, so it never covers its neighbours.
@@ -570,7 +1030,8 @@
         lines.forEach((l, i) => {
           const gap = plated(l) ? TYPE.pad * size * 1.25 : 0;
           if (i > 0) y += gap;
-          ops.push({ type: 'text', role: 'line', text: l.text, font: displayFont(size), size, x: X, y, w: tracked(m, l.text, size), color: tx(lineColor(l)), track: TYPE.tracking * size, enter: 'up', delay: i * st });
+          const toks = pk.fits ? l.toks : cutToFit(m, l.toks, size, CW);
+          lineOps(m, toks, X, y, size, tx(lineColor(l)), tx('blue'), { role: 'line', enter: 'up', delay: i * st, align: 'col', ...(i === 0 && block.top == null ? { slot: 'head' } : {}), ...(pk.fits ? {} : { shortened: true }) }).forEach(o => ops.push(o));
           y += TYPE.lineHeight * size + gap;
         });
         bottom = y - TYPE.lineHeight * size;
@@ -580,125 +1041,290 @@
         if (md) ops.unshift(md);
       }
     } else if (block.type === 'number') {
-      let top = geo.top.block;
+      let top = geo.slots.head;
       if (block.kicker) {
-        const ks = fitSize(m, [block.kicker.toUpperCase()], { max: 64 * T, min: 40 * T, width: CW, boxed: LY.kickerBoxed });
         if (LY.kickerBoxed) {
-          ops.push(boxed(block.kicker, X, top, ks, LY.kickerFill, { role: 'kicker', enter: 'left', delay: 0 }));
-          top += ks * (TYPE.cap + 2 * TYPE.pad) + 56 * T;
+          const op = fitPill(block.kicker, X, top, PILL_SIZES.M, PILL_SIZES.S, LY.kickerFill, CW, { role: 'kicker', enter: 'left', delay: 0, align: 'col', slot: 'head' });
+          ops.push(op);
+          top += op.box.h + sp(SPACE.xl);
         } else {
           const kt = block.kicker.toUpperCase();
-          ops.push({ type: 'text', role: 'kicker', text: kt, font: displayFont(ks), size: ks, x: X, y: top + TYPE.cap * ks, w: tracked(m, kt, ks), color: tx('ink'), track: TYPE.tracking * ks, enter: 'left', delay: 0 });
-          top += ks * TYPE.cap + 64 * T;
+          const ks = sz('caption');
+          ops.push({ type: 'text', role: 'kicker', text: kt, font: displayFont(ks), size: ks, x: X, y: top + TYPE.cap * ks, w: tracked(m, kt, ks), color: tx('ink'), track: TYPE.tracking * ks, enter: 'left', delay: 0, align: 'col', slot: 'head' });
+          top += ks * TYPE.cap + sp(SPACE.xxl);
         }
       }
       const full = numberDisplay(block);
-      const size = fitSize(m, [full], { max: LY.numberMax * T, min: 150 * T, width: CW });
+      const pk = pickStep(LY.numberStep || 'statXL', 'h1', T, s => tracked(m, full, s) <= CW + 0.01);
+      const size = pk.size;
       const y = top + TYPE.cap * size;
-      ops.push({ type: 'count', role: 'number', text: full, block, font: displayFont(size), size, x: X, y, w: tracked(m, full, size), color: tx(block.color || 'blue'), track: TYPE.tracking * size, enter: 'up', delay: st });
+      ops.push({ type: 'count', role: 'number', text: full, block, font: displayFont(size), size, x: X, y, w: tracked(m, full, size), color: tx(block.color || 'blue'), track: TYPE.tracking * size, enter: 'up', delay: st, align: 'col', ...(block.kicker ? {} : { slot: 'head' }) });
       if (block.label) {
-        const label = block.label.toUpperCase();
-        const ls = fitSize(m, [label], { max: 96 * T, min: 56 * T, width: CW });
-        ops.push({ type: 'text', role: 'label', text: label, font: displayFont(ls), size: ls, x: X, y: y + 44 * T + TYPE.cap * ls, w: tracked(m, label, ls), color: tx('ink'), track: TYPE.tracking * ls, enter: 'up', delay: 2 * st });
+        const toks = emTokens(block.label);
+        const lk = pickStep('h2', 'caption', T, s => tracked(m, tokText(toks), s) <= CW + 0.01);
+        const list = lk.fits ? toks : cutToFit(m, toks, lk.size, CW);
+        lineOps(m, list, X, y + sp(SPACE.l) + TYPE.cap * lk.size, lk.size, tx('ink'), tx('blue'), { role: 'label', enter: 'up', delay: 2 * st, align: 'col', ...(lk.fits ? {} : { shortened: true }) }).forEach(o => ops.push(o));
       }
     } else if (block.type === 'dots') {
-      let top = geo.top.block;
+      let top = geo.slots.head;
       if (block.label) {
-        const lines = fitLines(block.label.toUpperCase(), 22, 2);
-        const ls = fitSize(m, lines, { max: 96 * T, min: 56 * T, width: CW });
-        let y = top + TYPE.cap * ls;
-        lines.forEach((t, i) => { ops.push({ type: 'text', role: 'label', text: t, font: displayFont(ls), size: ls, x: X, y, w: tracked(m, t, ls), color: tx('ink'), track: TYPE.tracking * ls, enter: 'up', delay: i * st }); y += TYPE.lineHeight * ls; });
-        top = y - TYPE.lineHeight * ls + 48 * T;
+        const t = titleOps(block.label, top, { maxStep: 'h2', minStep: 'caption', maxLines: 2, role: 'label' });
+        top = t.bottom + sp(SPACE.gap);
       }
       const n = Math.max(1, Math.min(LIMITS.dotsMax, block.count));
       const hi = Math.min(n, block.highlight || 0);
-      const note = block.note ? block.note.toUpperCase() : '';
-      const ns = note ? fitSize(m, [note], { max: 88 * T, min: 52 * T, width: CW, boxed: true }) : 0;
-      const noteH = note ? ns * (TYPE.cap + 2 * TYPE.pad) + 40 * T : 0;
-      const region = { x: X, y: top, w: CW, h: Math.max(160 * geo.k, geo.contentBottom - noteH - top) };
+      const ns = sz(PILL_SIZES.M);
+      const noteH = block.note ? pillMetricsAt(ns).h + sp(SPACE.l) : 0;
+      const region = { x: X, y: top, w: CW, h: Math.max(160 * K, geo.contentBottom - noteH - top) };
       let cell = Math.floor(Math.sqrt((region.w * region.h) / n));
       cell = Math.max(6, Math.min(140, cell));
       let cols = Math.max(1, Math.floor(region.w / cell));
       let rows = Math.ceil(n / cols);
       while (rows * cell > region.h && cell > 6) { cell -= 1; cols = Math.max(1, Math.floor(region.w / cell)); rows = Math.ceil(n / cols); }
-      ops.push({ type: 'dots', role: 'dots', x: X, y: region.y, w: cols * cell, h: rows * cell, n, hi, cell, cols, base: S.dot, enter: 'none', delay: st });
-      if (note) ops.push(boxed(note, X, region.y + rows * cell + 40 * T, ns, hi ? 'green' : 'ink', { role: 'note', enter: 'left', delay: 1500 }));
+      ops.push({ type: 'dots', role: 'dots', x: X, y: region.y, w: cols * cell, h: rows * cell, n, hi, cell, cols, base: S.dot, enter: 'none', delay: st, align: 'col' });
+      if (block.note) ops.push(fitPill(block.note, X, region.y + rows * cell + sp(SPACE.l), PILL_SIZES.M, PILL_SIZES.S, hi ? 'green' : 'ink', CW, { role: 'note', enter: 'left', delay: 1500, align: 'col' }));
     } else if (block.type === 'compare') {
-      let top = geo.top.block;
+      let top = geo.slots.head;
       if (block.kicker) {
-        const ks = fitSize(m, [block.kicker.toUpperCase()], { max: 64 * T, min: 40 * T, width: CW, boxed: LY.kickerBoxed });
         if (LY.kickerBoxed) {
-          ops.push(boxed(block.kicker, X, top, ks, LY.kickerFill, { role: 'kicker', enter: 'left', delay: 0 }));
-          top += ks * (TYPE.cap + 2 * TYPE.pad) + 56 * T;
+          const op = fitPill(block.kicker, X, top, PILL_SIZES.M, PILL_SIZES.S, LY.kickerFill, CW, { role: 'kicker', enter: 'left', delay: 0, align: 'col', slot: 'head' });
+          ops.push(op);
+          top += op.box.h + sp(SPACE.xl);
         } else {
           const kt = block.kicker.toUpperCase();
-          ops.push({ type: 'text', role: 'kicker', text: kt, font: displayFont(ks), size: ks, x: X, y: top + TYPE.cap * ks, w: tracked(m, kt, ks), color: tx('ink'), track: TYPE.tracking * ks, enter: 'left', delay: 0 });
-          top += ks * TYPE.cap + 64 * T;
+          const ks = sz('caption');
+          ops.push({ type: 'text', role: 'kicker', text: kt, font: displayFont(ks), size: ks, x: X, y: top + TYPE.cap * ks, w: tracked(m, kt, ks), color: tx('ink'), track: TYPE.tracking * ks, enter: 'left', delay: 0, align: 'col', slot: 'head' });
+          top += ks * TYPE.cap + sp(SPACE.xxl);
         }
       }
       const items = (block.items || []).slice(0, LIMITS.compareMax);
       const max = Math.max(0, ...items.map(it => it.value)) || 1;
       const unit = (geo.contentBottom - top) / Math.max(2, items.length);
-      const barH = Math.round(Math.min(128 * T * LY.barScale, unit * 0.44));
-      const ls = Math.round(Math.min(76 * T, unit * 0.26));
-      const valueSize = Math.round(barH * 0.92);
-      const reserve = Math.max(...items.map(it => tracked(m, String(it.display || it.value).toUpperCase(), valueSize)), 0) + 24;
+      // Labels: Caption step (Label when four rows are tight); values one step
+      // under the bar's height; bars are 8-pt multiples.
+      const ls = unit >= 200 * T ? sz('caption') : sz('label');
+      const barH = Math.round(Math.min(128 * T, unit * 0.44) / 8) * 8;
+      const valueSize = snapStep(barH * 0.92 / T) * T;
+      const reserve = Math.max(...items.map(it => tracked(m, String(it.display || it.value).toUpperCase(), valueSize)), 0) + sp(SPACE.m);
       const barMax = Math.max(160, CW - reserve);
       items.forEach((it, i) => {
         const y0 = top + i * unit;
-        const label = it.label.toUpperCase();
-        const lsz = fitSize(m, [label], { max: ls, min: 32 * T, width: CW });
-        ops.push({ type: 'text', role: 'item-label', text: label, font: displayFont(lsz), size: lsz, x: X, y: y0 + TYPE.cap * lsz, w: tracked(m, label, lsz), color: tx('ink'), track: TYPE.tracking * lsz, enter: 'left', delay: i * st });
-        const by = y0 + TYPE.cap * lsz + 16 * T;
+        const toks = emTokens(it.label);
+        const list = cutToFit(m, toks, ls, CW);
+        const label = tokText(list);
+        ops.push({ type: 'text', role: 'item-label', text: label, font: displayFont(ls), size: ls, x: X, y: y0 + TYPE.cap * ls, w: tracked(m, label, ls), color: tx('ink'), track: TYPE.tracking * ls, enter: 'left', delay: i * st, align: 'col', ...(list.length < toks.length ? { shortened: true } : {}) });
+        const by = y0 + TYPE.cap * ls + sp(SPACE.s);
         // A tiny value still reads as a bar, never as a thin stripe.
         const w = Math.max(Math.ceil(barH * 0.4), Math.round((barMax * it.value) / max));
         const color = it.color || (i === 0 ? 'blue' : 'ink');
-        ops.push({ type: 'bar', role: 'bar', x: X, y: by, w, h: barH, fill: fl(color), enter: 'grow', delay: i * st + 120 });
+        ops.push({ type: 'bar', role: 'bar', x: X, y: by, w, h: barH, fill: fl(color), enter: 'grow', delay: i * st + 120, align: 'col' });
         const disp = String(it.display || it.value).toUpperCase();
-        ops.push({ type: 'text', role: 'item-value', text: disp, font: displayFont(valueSize), size: valueSize, x: X + w + 20, y: by + barH / 2 + (TYPE.cap * valueSize) / 2, w: tracked(m, disp, valueSize), color: tx('ink'), track: TYPE.tracking * valueSize, enter: 'left', delay: i * st + 360 });
+        ops.push({ type: 'text', role: 'item-value', text: disp, font: displayFont(valueSize), size: valueSize, x: X + w + sp(SPACE.m), y: by + barH / 2 + (TYPE.cap * valueSize) / 2, w: tracked(m, disp, valueSize), color: tx('ink'), track: TYPE.tracking * valueSize, enter: 'left', delay: i * st + 360 });
       });
     } else if (block.type === 'quote') {
       const text = `${block.text}`.toUpperCase();
       // Balanced: no one-word last line when a narrower measure avoids it.
       const lines0 = s => { for (const k of [1, 0.86, 0.74]) { const l = wrapWidth(m, text, s, CW * k); if (l.length === 1 || words(l[l.length - 1]).length > 1) return l; } return wrapWidth(m, text, s, CW); };
-      let size = 128 * T;
-      while (size > 72 * T && (lines0(size).length > 5 || lines0(size).length * TYPE.lineHeight * size > 560 * geo.k)) size *= 0.95;
+      const pk = pickStep('h1', 'caption', T, s => lines0(s).length <= 5 && lines0(s).length * TYPE.lineHeight * s <= 560 * K);
+      const size = pk.size;
       const lines = lines0(size);
       const qm = 360 * T;
-      ops.push({ type: 'text', role: 'quote-mark', text: '“', font: displayFont(qm), size: qm * 0.5, x: X - 8, y: geo.top.block + qm * 0.62, w: qm * 0.42, color: tx('blue'), noCheck: true, enter: 'up', delay: 0 });
-      let y = geo.top.block + qm * 0.62 + 24 * T + TYPE.cap * size;
-      lines.forEach((t, i) => { ops.push({ type: 'text', role: 'quote', text: t, font: displayFont(size), size, x: X, y, w: tracked(m, t, size), color: tx('ink'), track: TYPE.tracking * size, enter: 'up', delay: (i + 1) * st }); y += TYPE.lineHeight * size; });
+      ops.push({ type: 'text', role: 'quote-mark', text: '“', font: displayFont(qm), size: qm * 0.5, x: X - 8, y: geo.slots.head + qm * 0.5, w: qm * 0.42, color: tx('blue'), noCheck: true, enter: 'up', delay: 0 });
+      let y = geo.slots.head + qm * 0.5 + sp(SPACE.m) + TYPE.cap * size;
+      lines.forEach((t, i) => { ops.push({ type: 'text', role: 'quote', text: t, font: displayFont(size), size, x: X, y, w: tracked(m, t, size), color: tx('ink'), track: TYPE.tracking * size, enter: 'up', delay: (i + 1) * st, align: 'col' }); y += TYPE.lineHeight * size; });
       if (block.who) {
-        const ws = fitSize(m, [block.who.toUpperCase()], { max: 68 * T, min: 40 * T, width: CW, boxed: LY.whoBoxed });
-        const wtop = y - TYPE.lineHeight * size + 64 * T;
-        if (LY.whoBoxed) ops.push(boxed(block.who, X, wtop, ws, 'blue', { role: 'who', enter: 'left', delay: (lines.length + 1) * st }));
-        else { const wt = block.who.toUpperCase(); ops.push({ type: 'text', role: 'who', text: wt, font: displayFont(ws), size: ws, x: X, y: wtop + TYPE.cap * ws, w: tracked(m, wt, ws), color: tx('blue'), track: TYPE.tracking * ws, enter: 'left', delay: (lines.length + 1) * st }); }
+        const wtop = y - TYPE.lineHeight * size + sp(SPACE.xxl);
+        if (LY.whoBoxed) ops.push(fitPill(block.who, X, wtop, PILL_SIZES.M, PILL_SIZES.S, 'blue', CW, { role: 'who', enter: 'left', delay: (lines.length + 1) * st, align: 'col' }));
+        else { const ws = sz('caption'); const wt = block.who.toUpperCase(); ops.push({ type: 'text', role: 'who', text: wt, font: displayFont(ws), size: ws, x: X, y: wtop + TYPE.cap * ws, w: tracked(m, wt, ws), color: tx('blue'), track: TYPE.tracking * ws, enter: 'left', delay: (lines.length + 1) * st, align: 'col' }); }
       }
     } else if (block.type === 'endcard') {
       const cta = (block.cta || DEFAULT_CTA).map(c => String(c).toUpperCase());
-      const size = fitSize(m, cta, { max: 150 * T, min: 80 * T, width: CW, boxed: true });
+      const pk = pickStep('h1', 'h2', T, s => cta.every(t => tracked(m, t, s) + 2 * TYPE.pad * s <= CW + 0.01));
+      const size = pk.size;
       const pad = TYPE.pad * size;
       const lh = TYPE.lineHeight * size;
       const widest = Math.max(...cta.map(t => tracked(m, t, size)));
-      const top = geo.top.hook;
-      const panel = { type: 'panel', role: 'cta-panel', x: X, y: top, w: widest + 2 * pad, h: TYPE.cap * size + (cta.length - 1) * lh + 2 * pad, fill: S.cta, enter: 'left', delay: 0 };
+      const top = geo.slots.head;
+      const panel = { type: 'panel', role: 'cta-panel', x: X, y: top, w: widest + 2 * pad, h: TYPE.cap * size + (cta.length - 1) * lh + 2 * pad, fill: S.cta, enter: 'left', delay: 0, align: 'col' };
       if (LY.ctaPanel) ops.push(panel);
       // Minimal: the same words without the panel, the last line in the accent.
-      cta.forEach((t, i) => ops.push({ type: 'text', role: 'cta', text: t, font: displayFont(size), size, x: X + (LY.ctaPanel ? pad : 0), y: top + pad + TYPE.cap * size + i * lh, w: tracked(m, t, size), color: LY.ctaPanel ? inkOn(S.cta, theme) : tx(i === cta.length - 1 && cta.length > 1 ? 'blue' : 'ink'), track: TYPE.tracking * size, ...(LY.ctaPanel ? { onPanel: true } : {}), enter: 'left', delay: 0 }));
+      cta.forEach((t, i) => ops.push({ type: 'text', role: 'cta', text: t, font: displayFont(size), size, x: X + (LY.ctaPanel ? pad : 0), y: top + pad + TYPE.cap * size + i * lh, w: tracked(m, t, size), color: LY.ctaPanel ? inkOn(S.cta, theme) : tx(i === cta.length - 1 && cta.length > 1 ? 'blue' : 'ink'), track: TYPE.tracking * size, ...(LY.ctaPanel ? { onPanel: true, on: S.cta } : {}), enter: 'left', delay: 0, ...(pk.fits ? {} : { shortened: true }) }));
       const lw = Math.round((258 * geo.logotype.h) / 30.6864);
       // INFERRED: the message on top, the logotype as the signature above the source line.
-      ops.push({ type: 'logotype', role: 'logotype', x: X, y: Math.round(Math.max(panel.y + panel.h + 96 * geo.k, geo.sourceY - 92 * geo.k - geo.logotype.h - 34)), w: lw, h: geo.logotype.h, variant: S.logo, enter: 'up', delay: st });
+      ops.push({ type: 'logotype', role: 'logotype', x: X, y: Math.round(Math.max(panel.y + panel.h + 96 * K, geo.sourceY - 92 * K - geo.logotype.h - 34)), w: lw, h: geo.logotype.h, variant: S.logo, enter: 'up', delay: st });
       const src = String(timeline.sourceLine || '').trim();
       if (src) {
-        const s = 34 * T;
-        const text = src.toUpperCase();
+        // Body step; a source line too long for the column is cut at a word.
+        const s = sz('body');
         const f = smallFont(s);
-        let w = measure(text, f);
-        const size2 = w > CW ? s * (CW / w) : s;
-        w = Math.min(w, CW);
-        ops.push({ type: 'text', role: 'source', text, font: smallFont(size2), size: size2, x: X, y: geo.sourceY, w, color: tx('ink'), alpha: S.small, enter: 'up', delay: 2 * st, small: true });
+        let text = src.toUpperCase();
+        let cut = false;
+        while (measure(text, f) > CW && text.includes(' ')) { text = `${text.slice(0, text.lastIndexOf(' ')).replace(/[,;:·-]+$/, '')}…`.replace(/…(?=.*…)/, ''); cut = true; }
+        ops.push({ type: 'text', role: 'source', text, font: f, size: s, x: X, y: geo.sourceY, w: Math.min(CW, measure(text, f)), color: tx('ink'), alpha: S.small, enter: 'up', delay: 2 * st, small: true, ...(cut ? { shortened: true } : {}) });
+      }
+    } else layoutV3(block);
+
+    function layoutV3(b) {
+      // A v3 block: kicker pill (top slot), headline, its one element, pills.
+      const pillsWanted = [];
+      if (b.kicker) pillsWanted.push('kicker');
+      if (b.type === 'photoCard' && b.label) pillsWanted.unshift('label');
+      if (b.tag) pillsWanted.splice(b.type === 'photoCard' ? 1 : 0, 0, 'tag');
+      if (b.type === 'clipLabel') { if (b.sub) pillsWanted.unshift('sub'); if (b.text) pillsWanted.unshift('text'); }
+      if (b.type === 'tagPill' && b.text) pillsWanted.unshift('text');
+      if (b.type === 'rankTile' && b.label) pillsWanted.unshift('label');
+      const drawn = new Set(pillsWanted.filter(() => allow()));
+      if (b.kicker && drawn.has('kicker')) kickerOp(b.kicker, 'ink');
+      if (b.type === 'rankTile' && b.label && drawn.has('label')) kickerOp(b.label, 'ink');
+      const head = geo.slots.head;
+      const bare = b.type === 'tagPill' && !graphic.media;
+      // A tag with no picture grows: a Display headline (up to three lines) over the tag, centred.
+      const titleMax = theme.motion.id === 'punchy' || bare ? 'display' : 'h1';
+      const t = b.title ? titleOps(b.title, head, { maxStep: titleMax, minStep: 'h2', maxLines: bare ? 3 : 2 }) : null;
+      let y = t ? t.bottom + sp(SPACE.gap) : head;
+      // A tag below the headline (photo cards carry theirs on the card).
+      const tagBelow = () => {
+        if (!b.tag || !drawn.has('tag')) return;
+        const op = fitPill(b.tag.text, X, y, PILL_SIZES.M, PILL_SIZES.S, b.tag.tone, CW, { role: 'tag', enter: 'left', delay: st, align: 'col' });
+        ops.push(op);
+        y += op.box.h + sp(SPACE.l);
+      };
+      if (b.type === 'photoCard') {
+        const tiles = (b.tiles || []).slice(0, 3);
+        if (!graphic.media) {
+          // No verified photo: no empty card. The tiles carry the scene.
+          tagBelow();
+          tilesOps(tiles, Math.max(y, head), {});
+          return;
+        }
+        // The card ends 64 px above the caption bar (captions never sit on it).
+        const y1 = geo.contentBottom;
+        const card = { type: 'media', role: 'card', fit: 'focus', x: X, y, w: CW, h: Math.max(320 * K, y1 - y), focus: b.focus || null, scan: Boolean(b.scan), bracket: true, enter: 'up', delay: 0, align: 'col' };
+        ops.push(card);
+        let py = card.y + sp(TILE_INSET);
+        const inset = X + sp(TILE_INSET);
+        if (b.label && drawn.has('label')) {
+          // Pills on the card ride in with it (same direction, a beat later).
+          const op = fitPill(b.label, inset, py, PILL_SIZES.S, PILL_SIZES.S, 'blue', CW - 2 * sp(TILE_INSET), { role: 'label', enter: 'up', delay: st, inCard: true });
+          ops.push(op);
+          py += op.box.h + sp(SPACE.xs);
+        }
+        if (b.tag && drawn.has('tag')) ops.push(fitPill(b.tag.text, inset, py, PILL_SIZES.S, PILL_SIZES.S, b.tag.tone, CW - 2 * sp(TILE_INSET), { role: 'tag', enter: 'up', delay: 2 * st, inCard: true }));
+        if (tiles.length) tilesOps(tiles, geo.slots.lower, { maxValue: 'display', delay0: 3 * st });
+      } else if (b.type === 'statTiles') {
+        tagBelow();
+        tilesOps((b.tiles || []).slice(0, 3), y, {});
+      } else if (b.type === 'rankTile') {
+        tagBelow();
+        // The rank is the tile's value; the position is its own label line
+        // ("#1" over "PASSER RATING"), so a long position is never cut.
+        tilesOps((b.items || []).map(it => ({ kicker: it.kicker, value: it.rank || it.pos, label: it.rank ? it.pos : '', chip: it.chip, tone: it.tone })), y, {});
+      } else if (b.type === 'dotGrid') {
+        // The grid fills the column: the biggest cell that fits the space
+        // between the headline and the caption line; the legend sits below it.
+        const groups = b.groups || [];
+        const n = Math.max(1, b.total);
+        // The legend is part of the data block: directly under the grid, above
+        // the caption bar. One row of M pills when they fit, else one row of S
+        // pills, else M pills stacked 8 px apart, left on the grid.
+        const labelled = groups.filter(g => g.label);
+        const rowW = size => labelled.reduce((a, g, i) => a + tracked(m, g.label.toUpperCase(), size) + pillPad(size) + (i ? sp(SPACE.s) : 0), 0);
+        const row = [sz(PILL_SIZES.M), sz(PILL_SIZES.S)].find(size => rowW(size) <= CW + 0.01);
+        const ls = row || sz(PILL_SIZES.M);
+        const lh = Math.ceil(pillMetricsAt(ls).h / 8) * 8;
+        const legendH = labelled.length ? (row ? lh : labelled.length * lh + (labelled.length - 1) * sp(SPACE.xs)) + sp(SPACE.m) : 0;
+        const region = { y, h: Math.max(200 * K, geo.contentBottom - y - legendH) };
+        let cols = 1;
+        let cell = CW;
+        for (let c = 1; c <= n; c += 1) {
+          const cl = Math.min(120 * T, CW / c);
+          if (Math.ceil(n / c) * cl <= region.h) { cols = c; cell = cl; break; }
+          cols = c; cell = cl;
+        }
+        const rows = Math.ceil(n / cols);
+        ops.push({ type: 'dotgrid', role: 'dotgrid', x: X, y: region.y, w: cols * cell, h: rows * cell, n, cols, cell, groups: groups.map(g => ({ n: g.n, tone: fl(g.tone === 'grey' ? 'grey' : g.tone) })), rest: 'grey', enter: 'none', delay: st, align: 'col' });
+        let lx = X;
+        let ly = Math.ceil((region.y + rows * cell + sp(SPACE.m)) / 8) * 8;
+        labelled.forEach((g, i) => {
+          const op = pill(g.label, lx, ly, ls, g.tone, { role: 'legend', pillSize: pillClass(ls, T), enter: 'left', delay: 1400 + i * st, legend: true, align: row && i > 0 ? 'row' : 'col' });
+          ops.push(op);
+          if (row) lx = op.box.x + op.box.w + sp(SPACE.s);
+          else ly += lh + sp(SPACE.xs);
+        });
+      } else if (b.type === 'streak') {
+        const items = b.items || [];
+        const n = items.length;
+        if (n) {
+          const perRow = n <= 10 ? n : Math.ceil(n / 2);
+          const gap = sp(SPACE.s);
+          const sq = Math.min(128 * T, Math.floor((CW - gap * (perRow - 1)) / perRow));
+          const letter = snapStep((sq * 0.62) / T) * T;
+          const FILL = { W: 'green', L: 'ink', T: 'grey' };
+          items.forEach((r, i) => {
+            const x = X + (i % perRow) * (sq + gap);
+            const yy = y + Math.floor(i / perRow) * (sq + gap);
+            const fill = fl(FILL[r]);
+            const d = st + i * 50;
+            ops.push({ type: 'square', role: 'streak', x, y: yy, w: sq, h: sq, fill, enter: 'up', delay: d, align: i % perRow === 0 ? 'col' : 'row' });
+            const w = tracked(m, r, letter);
+            ops.push({ type: 'text', role: 'streak-letter', text: r, font: displayFont(letter), size: letter, x: x + (sq - w) / 2, y: yy + (sq + TYPE.cap * letter) / 2, w, color: inkOn(fill, theme), on: fill, track: TYPE.tracking * letter, enter: 'up', delay: d });
+          });
+          y += Math.ceil(n / perRow) * (sq + gap) - gap;
+          if (b.label) {
+            const ls = pickStep('display', 'h2', T, s => tracked(m, b.label.toUpperCase(), s) <= CW).size;
+            const lt = b.label.toUpperCase();
+            ops.push({ type: 'text', role: 'streak-label', text: lt, font: displayFont(ls), size: ls, x: X, y: y + sp(SPACE.gap) + TYPE.cap * ls, w: tracked(m, lt, ls), color: tx('ink'), track: TYPE.tracking * ls, enter: 'up', delay: st + n * 50 + 120, align: 'col' });
+          }
+        }
+      } else if (b.type === 'tagPill' && graphic.media) {
+        // Over a clip or photo (Game Tape, Hype Cut): the picture fills the
+        // frame, the headline is boxed, the tag is a lower-third pill.
+        ops.unshift({ ...mediaFull(), fit: 'focus', focus: b.focus || null, full: true });
+        ops.splice(0, ops.length, ...ops.filter(o => o.role !== 'title'));
+        if (b.title) {
+          const toks = emTokens(b.title);
+          const pk = pickStep('h1', 'h2', T, s => wrapTokens(m, toks, s, CW - pillPad(s)).length <= 2);
+          let ty = head;
+          wrapTokens(m, toks, pk.size, CW - pillPad(pk.size)).slice(0, 2).forEach((l, i) => {
+            const op = pill(tokText(l), X, ty, pk.size, l.some(x => x.em) ? 'blue' : 'ink', { role: 'title', pillSize: pillClass(pk.size, T), enter: 'left', delay: i * st, align: 'col', ...(i === 0 ? { slot: 'head' } : {}) });
+            ops.push(op);
+            ty += pillStep(pk.size);
+          });
+        }
+        if (b.text && drawn.has('text')) ops.push(fitPill(b.text, X, geo.slots.lower, PILL_SIZES.M, PILL_SIZES.S, b.tone, CW, { role: 'tag', enter: 'left', delay: 2 * st, align: 'col', slot: 'lower' }));
+      } else if (b.type === 'tagPill' && !t && b.text && drawn.has('text')) {
+        // A tag alone (no picture, no headline) is the headline: its parts
+        // ("TORE ACHILLES · JAN. 11") stack as H1 pills, the first in the tag's
+        // colour, the rest ink, centred as one group.
+        const parts = b.text.split(/\s+·\s+/).map(x => x.trim()).filter(Boolean);
+        const rows = parts.length > 1 ? parts : [b.text];
+        const pk = pickStep('h1', 'caption', T, s => rows.every(r => tracked(m, r.toUpperCase(), s) + pillPad(s) <= CW + 0.01));
+        let ty = y;
+        rows.forEach((r, i) => {
+          const op = pill(r, X, ty, pk.size, i === 0 ? b.tone : 'ink', { role: 'tag', pillSize: pillClass(pk.size, T), enter: 'left', delay: st + i * st, align: 'col' });
+          ops.push(op);
+          ty += pillStep(pk.size);
+        });
+      } else if (b.type === 'tagPill') {
+        if (b.text && drawn.has('text')) {
+          const op = fitPill(b.text, X, y, PILL_SIZES.M, PILL_SIZES.S, b.tone, CW, { role: 'tag', enter: 'left', delay: st, align: 'col', ...(t ? {} : { slot: 'head' }) });
+          ops.push(op);
+          y += op.box.h;
+        }
+        if (graphic.media) { const md = mediaBelow(y); if (md) ops.unshift({ ...md, fit: 'focus', focus: b.focus || null }); }
+      } else if (b.type === 'clipLabel') {
+        // The clip fills the frame; the label is a lower-third pill under the caption line.
+        if (graphic.media) ops.unshift({ ...mediaFull(), fit: 'focus', focus: b.focus || null, full: true });
+        let ly = geo.slots.lower;
+        if (b.text && drawn.has('text')) {
+          const op = fitPill(b.text, X, ly, PILL_SIZES.M, PILL_SIZES.S, b.tone || 'blue', CW, { role: 'label', enter: 'left', delay: st, align: 'col', slot: 'lower' });
+          ops.push(op);
+          ly += op.box.h + sp(SPACE.xs);
+        }
+        if (b.sub && drawn.has('sub')) ops.push(fitPill(b.sub, X, ly, PILL_SIZES.S, PILL_SIZES.S, 'ink', CW, { role: 'sub', enter: 'left', delay: 2 * st, align: 'col' }));
       }
     }
+    centreGroup(ops, block, geo);
     plateOps(ops, S, theme, geo);
     // A scene that leaves the look's ground (the kit's quote on ink) paints its own first.
     if (S.ground !== theme.base.ground) ops.unshift({ type: 'rect', role: 'ground', x: 0, y: 0, w: geo.w, h: geo.h, fill: S.ground, noBox: true, enter: 'none' });
@@ -716,7 +1342,7 @@
   }
   // Axis-aligned box of a tilted (stamp) op.
   function rotatedBox(op) {
-    const b = hugBox(op.x, op.y, op.w, op.size);
+    const b = op.box ? { ...op.box } : hugBox(op.x, op.y, op.w, op.size);
     if (!op.rot) return b;
     const a = (op.rot * Math.PI) / 180;
     const cx = b.x + b.w / 2;
@@ -733,10 +1359,12 @@
     const geo = geometry(timeline.size);
     const list = card.words.map(i => ({ i, text: String(timeline.tracks.captions.words[i].w).replace(/^[“"]|[”"]$/g, '').toUpperCase(), em: Boolean(timeline.tracks.captions.words[i].em) }));
     const line = list.map(w => w.text).join(' ');
-    const size = fitSize((t, f) => measure(t, f), [line], { max: 84 * geo.type, min: 48 * geo.type, width: geo.col.w, boxed: true });
+    // Caption step (64), Label (44) when the words need it; never in between.
+    const size = pickStep('caption', 'label', geo.type, s => tracked(measure, line, s) + 2 * TYPE.pad * s <= geo.col.w + 0.01).size;
     const w = tracked(measure, line, size);
     const box = hugBox(0, 0, w, size);
-    const x0 = (geo.w - w) / 2;
+    // v3: the caption bar sits on the column (x 60), like every other part.
+    const x0 = geo.col.x + TYPE.pad * size;
     const y = geo.captionY - box.h / 2 + TYPE.pad * size + TYPE.cap * size;
     const space = measure(' ', displayFont(size)) + TYPE.tracking * size;
     let x = x0;
@@ -758,7 +1386,7 @@
       if ((op.type === 'text' || op.type === 'count') && !op.noCheck) {
         const b = op.rot ? rotatedBox(op) : opBox(op);
         out.push({ beat: g.beat, role: op.role, text: op.text, ...b });
-      } else if (op.type === 'panel') out.push({ beat: g.beat, role: op.role, text: '', x: op.x, y: op.y, w: op.w, h: op.h });
+      } else if (op.type === 'panel' || op.type === 'tile' || op.type === 'square') out.push({ beat: g.beat, role: op.role, text: '', x: op.x, y: op.y, w: op.w, h: op.h });
     }));
     timeline.tracks.captions.cards.forEach(card => {
       const cap = layoutCaption(measure, card, timeline);
@@ -787,7 +1415,7 @@
   }
   function setTrack(ctx, px) { if ('letterSpacing' in ctx) ctx.letterSpacing = `${px || 0}px`; }
   function fillHug(ctx, op, color, theme) {
-    const b = hugBox(op.x, op.y, op.w, op.size);
+    const b = op.box || hugBox(op.x, op.y, op.w, op.size);
     ctx.fillStyle = colorOf(color, theme);
     ctx.fillRect(b.x, b.y, b.w, b.h);
   }
@@ -836,6 +1464,149 @@
       for (let j = 0; j < op.hi; j += 1) { const [cx, cy] = centre(j); ctx.beginPath(); ctx.arc(cx, cy, rr + 12, 0, Math.PI * 2); ctx.stroke(); }
     }
   }
+  // ─── v3 drawing: dot grid, focus-framed media, viewfinder, scan line ───
+  // The dot grid: the groups in order (blue, ink, grey), then the rest grey;
+  // dots land one after another over 1.4 s.
+  function drawDotGrid(ctx, op, local, theme = null) {
+    const t = local - (op.delay || 0);
+    const shown = Math.floor(op.n * ease.expoOut(t / 1400));
+    if (shown <= 0) return;
+    const r = op.cell * 0.36;
+    const runs = [];
+    let i = 0;
+    (op.groups || []).forEach(g => { runs.push({ from: i, to: i + g.n, tone: g.tone }); i += g.n; });
+    if (i < op.n) runs.push({ from: i, to: op.n, tone: op.rest || 'grey' });
+    runs.forEach(run => {
+      ctx.fillStyle = colorOf(run.tone, theme);
+      ctx.beginPath();
+      for (let k = run.from; k < Math.min(run.to, shown); k += 1) {
+        const cx = op.x + (k % op.cols) * op.cell + op.cell / 2;
+        const cy = op.y + Math.floor(k / op.cols) * op.cell + op.cell / 2;
+        ctx.moveTo(cx + r, cy);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    });
+  }
+  const mediaSize = media => {
+    if (!media) return null;
+    const w = media.videoWidth || media.naturalWidth || media.width;
+    const h = media.videoHeight || media.naturalHeight || media.height;
+    return w > 0 && h > 0 ? [w, h] : null;
+  };
+  // Where the face is, in source pixels: the block's focus box, else the
+  // picture's verified head point (photo-verify) sized from its focus box,
+  // else its focus box. null = unknown (no bracket is drawn).
+  function faceBox(size, blockFocus, asset) {
+    const [sw, sh] = size;
+    const px = f => ({ x: f.x * sw, y: f.y * sh, w: f.w * sw, h: f.h * sh });
+    if (blockFocus) return px(blockFocus);
+    const a = asset || {};
+    const focus = focusBox(a.focus);
+    const hd = Array.isArray(a.head) ? { x: a.head[0], y: a.head[1] } : a.head;
+    if (hd && Number.isFinite(Number(hd.x)) && Number.isFinite(Number(hd.y))) {
+      const side = Math.max(0.12 * Math.min(sw, sh), (focus ? focus.w * sw * 0.62 : 0.24 * sw));
+      return { x: hd.x * sw - side / 2, y: hd.y * sh - side * 0.55, w: side, h: side * 1.1 };
+    }
+    return focus ? px(focus) : null;
+  }
+  // The crop that keeps the face in frame: the face about half the frame's
+  // height (never below a cover fit), its centre a little above the middle,
+  // drifting in by up to 6% over the scene.
+  // share: how much of the frame's height the face takes (a card frames the
+  // face close; a full-frame clip keeps the player in shot).
+  function focusCrop(size, rect, face, zoom = 1, share = 0.46) {
+    const [sw, sh] = size;
+    const cover = Math.max(rect.w / sw, rect.h / sh);
+    const want = face ? (rect.h * share) / face.h : cover;
+    const scale = Math.max(cover, Math.min(want, cover * 2.4)) * zoom;
+    const cw = rect.w / scale;
+    const ch = rect.h / scale;
+    const fx = face ? face.x + face.w / 2 : sw / 2;
+    const fy = face ? face.y + face.h / 2 : sh * 0.34;
+    const cx = Math.max(0, Math.min(sw - cw, fx - cw / 2));
+    const cy = Math.max(0, Math.min(sh - ch, fy - ch * 0.44));
+    return { sx: cx, sy: cy, sw: cw, sh: ch, scale, map: (x, y) => [rect.x + (x - cx) * scale, rect.y + (y - cy) * scale] };
+  }
+  function drawFocusMedia(ctx, op, shot, p, timeline, env, helpers, frame, local, theme) {
+    const asset = timeline.assets ? timeline.assets[shot.asset] : null;
+    const vid = asset && asset.kind === 'clip' && env.videos ? env.videos[shot.asset] : null;
+    const media = vid && (vid.readyState || 0) >= 2 ? vid : (env.images ? env.images[shot.asset] : null);
+    const size = mediaSize(media);
+    const stt = op.full ? { a: 1, dx: 0, dy: 0 } : enterState(op, local, theme.motion);
+    if (stt.a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= stt.a;
+    ctx.translate(stt.dx, stt.dy);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(op.x, op.y, op.w, op.h); ctx.clip();
+    if (!size) {
+      helpers.drawVisual(ctx, shot.asset, op, timeline, env, { p, motion: shot.motion, tMs: frame.t });
+      ctx.restore(); ctx.restore();
+      return;
+    }
+    const face = faceBox(size, op.focus, asset);
+    const zoom = MOTION.driftFrom + (1.06 - MOTION.driftFrom) * ease.inOutSine(p);
+    const c = focusCrop(size, op, face, zoom, op.full ? 0.16 : 0.46);
+    ctx.drawImage(media, c.sx, c.sy, c.sw, c.sh, op.x, op.y, op.w, op.h);
+    ctx.restore();
+    if (face && (op.bracket || op.scan)) {
+      const [x0, y0] = c.map(face.x, face.y);
+      const [x1, y1] = c.map(face.x + face.w, face.y + face.h);
+      const padX = (x1 - x0) * 0.16;
+      const padY = (y1 - y0) * 0.12;
+      const box = { x: Math.max(op.x + 16, x0 - padX), y: Math.max(op.y + 16, y0 - padY), w: 0, h: 0 };
+      box.w = Math.min(op.x + op.w - 16, x1 + padX) - box.x;
+      box.h = Math.min(op.y + op.h - 16, y1 + padY) - box.y;
+      if (box.w > 40 && box.h > 40) {
+        const t = local - (op.delay || 0) - 250;
+        if (op.bracket) drawBracket(ctx, box, t, theme);
+        if (op.scan) drawScanLine(ctx, box, t, theme);
+      }
+    }
+    ctx.restore();
+  }
+  // The viewfinder: four blue corner brackets that close in on the face.
+  function drawBracket(ctx, box, t, theme) {
+    if (t <= 0) return;
+    const p = ease.expoOut(t / 450);
+    const k = 1 + 0.22 * (1 - p);
+    const cx = box.x + box.w / 2;
+    const cy = box.y + box.h / 2;
+    const w = box.w * k;
+    const h = box.h * k;
+    const x = cx - w / 2;
+    const y = cy - h / 2;
+    const arm = Math.max(24, Math.min(w, h) * 0.22);
+    ctx.save();
+    ctx.globalAlpha *= Math.min(1, t / 180);
+    ctx.strokeStyle = colorOf('blue', theme);
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'butt';
+    ctx.lineJoin = 'miter';
+    ctx.beginPath();
+    [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]].forEach(([px, py, sx, sy]) => {
+      ctx.moveTo(px, py + sy * arm); ctx.lineTo(px, py); ctx.lineTo(px + sx * arm, py);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+  // The scan line: a thin blue line sweeping the viewfinder, down and back.
+  function drawScanLine(ctx, box, t, theme) {
+    if (t <= 300) return;
+    const period = 2200;
+    const q = ((t - 300) % period) / period;
+    const pos = ease.inOutSine(q < 0.5 ? q * 2 : 2 - q * 2);
+    const y = box.y + 12 + (box.h - 24) * pos;
+    ctx.save();
+    ctx.fillStyle = colorOf('blue', theme);
+    ctx.globalAlpha *= 0.16;
+    const down = q < 0.5;
+    ctx.fillRect(box.x + 12, down ? y - 40 : y, box.w - 24, 40);
+    ctx.globalAlpha /= 0.16;
+    ctx.fillRect(box.x + 12, y - 2, box.w - 24, 4);
+    ctx.restore();
+  }
   // The ES mark: the official artwork scaled uniformly to 80 px wide, its
   // blue box extended to an 80 px square (INFERRED: the kit's own mark file
   // was not available; the letters are the official vectors, never retyped).
@@ -857,7 +1628,7 @@
     if (t < 0) return;
     const p = clamp01(t / MOTION.stampMs);
     const k = MOTION.stampFrom - (MOTION.stampFrom - 1) * ease.power4In(p);
-    const b = hugBox(op.x, op.y, op.w, op.size);
+    const b = op.box || hugBox(op.x, op.y, op.w, op.size);
     ctx.save();
     ctx.globalAlpha *= Math.min(1, 0.4 + p);
     ctx.translate(b.x + b.w / 2, b.y + b.h / 2);
@@ -886,6 +1657,7 @@
         const shot = frame.shot && frame.shot.beat === graphic.beat ? frame.shot : (timeline.tracks.video.find(s => s.beat === graphic.beat) || null);
         if (!shot || !shot.asset) return;
         const p = clamp01((frame.t - shot.inMs) / Math.max(1, shot.outMs - shot.inMs));
+        if (op.fit === 'focus') { drawFocusMedia(ctx, op, shot, p, timeline, env, helpers, frame, local, theme); return; }
         ctx.save();
         ctx.beginPath(); ctx.rect(op.x, op.y, op.w, op.h); ctx.clip();
         helpers.drawVisual(ctx, shot.asset, op, timeline, env, { p, motion: shot.motion, tMs: frame.t });
@@ -907,6 +1679,8 @@
         ctx.fillStyle = colorOf(op.fill, theme);
         ctx.fillRect(op.x, op.y, Math.max(0, op.w * ease.expoOut(st.l / 600)), op.h);
       } else if (op.type === 'dots') drawDots(ctx, op, local, theme);
+      else if (op.type === 'dotgrid') drawDotGrid(ctx, op, local, theme);
+      else if (op.type === 'tile' || op.type === 'square') { ctx.fillStyle = colorOf(op.fill, theme); ctx.fillRect(op.x, op.y, op.w, op.h); }
       else if (op.type === 'logotype') { if (helpers.drawBrand) helpers.drawBrand(ctx, 'wordmark', op.x, op.y, op.w, op.h, op.variant === 'black' ? 'black' : 'blue', env); }
       ctx.restore();
     });
@@ -974,7 +1748,7 @@
     drawOps(ctx, ops, graphic, timeline, frame, env, helpers, times, theme);
     ctx.restore();
     // The marks: the hook and the end card only, same place and size in every look.
-    if (MARK_BLOCKS.has(block.type)) { const mk = markRect(timeline.size); drawMark(ctx, mk.x, mk.y, mk.w, helpers, env, markVariantFor(theme, block.type, ops, mk)); }
+    if (showsMark(graphic)) { const mk = markRect(timeline.size); drawMark(ctx, mk.x, mk.y, mk.w, helpers, env, markVariantFor(theme, block.type, ops, mk)); }
   }
   // The mark's colourway in a scene: the surface's (black on ES blue), or blue
   // when a photo is under it.
@@ -989,14 +1763,16 @@
     const layout = env.captionCache ? env.captionCache(card) : layoutCaption(env.measure, card, timeline);
     if (!layout.ops.length) return;
     const theme = themeOf(timeline);
-    const cap = theme.caption;
+    // A reel made in a v3 style (timeline.esStyle): caption emphasis is ES
+    // blue on the ink bar (4.6:1), not yellow; older reels keep the kit's yellow.
+    const cap = TH.isStyle && TH.isStyle(timeline.esStyle) ? { ...theme.caption, em: 'blue', mode: 'text' } : theme.caption;
     ctx.save();
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = colorOf(cap.fill, theme);
     ctx.fillRect(layout.box.x, layout.box.y, layout.box.w, layout.box.h);
     layout.ops.forEach(op => {
       ctx.font = op.font;
-      // Emphasis is always yellow: yellow words on a dark box, or (a light
+      // Emphasis (yellow in the kit looks, blue in v3): words on a dark box, or (a light
       // box) the word in ink on a yellow highlight the height of the box.
       if (op.em && cap.mode === 'highlight') {
         ctx.fillStyle = colorOf(cap.em, theme);
@@ -1083,9 +1859,9 @@
         ops.forEach(op => {
           if ((op.type !== 'text' && op.type !== 'count') || op.noCheck) return;
           const box = opBox(op);
-          const onPhoto = !op.fill && media.some(mo => box.y + box.h > mo.y && box.y < mo.y + mo.h && box.x + box.w > mo.x && box.x < mo.x + mo.w);
+          const onPhoto = !op.fill && !op.on && media.some(mo => box.y + box.h > mo.y && box.y < mo.y + mo.h && box.x + box.w > mo.x && box.x < mo.x + mo.w);
           if (onPhoto) { if (!seen.has('photo')) out.push(issue('look', 'critical', `Beat ${i + 1}: “${String(op.text).slice(0, 24)}” sits on the photo without a box.`, 'Use boxed words over a photo.', g.beat)); seen.add('photo'); return; }
-          const under = op.fill || (op.role === 'cta' && panel ? panel.fill : S.ground);
+          const under = op.fill || op.on || (op.role === 'cta' && panel ? panel.fill : S.ground);
           const kit = !S.plate && ['paper', 'white'].includes(S.ground) && !op.fill && SIGNALS.includes(op.color);
           if (kit) return;
           const accent = SIGNALS.includes(op.color) || (!op.fill && op.color === (S.text.blue || 'blue') && op.color !== (S.text.ink || 'ink')) || (['blue', 'red', 'team'].includes(under) && !op.small); // boxed display words (64 px and up) on a colour
@@ -1098,6 +1874,60 @@
           if (c < min && !seen.has(key)) { seen.add(key); out.push(issue('look', c < 2 ? 'critical' : 'warning', `Beat ${i + 1}: “${String(op.text).slice(0, 24)}” is ${op.color} on ${under} (${c.toFixed(1)}:1; it needs ${min}:1).`, 'Change the colour of the words, or pick another look.', g.beat)); }
         });
       });
+    }
+    return out;
+  }
+  // ─── v3 checks: one scale, one box language, one grid, element limits ───
+  // What a frame holds: headline, picture, data block and pills (kicker,
+  // label, tag, stamp, clip label). The data block's own legend and chips
+  // are part of it.
+  function elementsOf(block, graphic = {}) {
+    const b = block || {};
+    const e = { headline: 0, media: 0, data: 0, pills: 0 };
+    const media = graphic && graphic.media ? 1 : 0;
+    const t = b.type;
+    if (b.kicker && t !== 'rankTile') e.pills += 1;
+    if (t === 'hook') { e.headline = (b.pills || []).length ? 1 : 0; e.media = media; if (b.stamp) e.pills += 1; } else if (t === 'statement') { e.headline = 1; e.media = media; } else if (t === 'number' || t === 'compare') { e.data = 1; } else if (t === 'dots') { e.data = 1; if (b.note) e.pills += 1; } else if (t === 'quote') { e.headline = 1; if (b.who) e.pills += 1; } else if (t === 'photoCard') { e.headline = b.title ? 1 : 0; e.media = media; e.data = (b.tiles || []).length ? 1 : 0; if (b.label) e.pills += 1; if (b.tag) e.pills += 1; } else if (t === 'statTiles' || t === 'dotGrid' || t === 'streak') { e.headline = b.title ? 1 : 0; e.data = 1; if (b.tag) e.pills += 1; } else if (t === 'rankTile') { e.headline = b.title ? 1 : 0; e.data = 1; if (b.label) e.pills += 1; if (b.tag) e.pills += 1; } else if (t === 'tagPill') { e.headline = b.title ? 1 : 0; e.media = media; if (b.text) e.pills += 1; } else if (t === 'clipLabel') { e.media = media; if (b.text) e.pills += 1; if (b.sub) e.pills += 1; }
+    return e;
+  }
+  // The op types the engine draws. Anything else (or a plain rectangle that
+  // is not a scene's ground, a panel that is not the end card's) is a stray box.
+  const KNOWN_OPS = new Set(['text', 'count', 'media', 'rect', 'panel', 'dots', 'dotgrid', 'bar', 'tile', 'square', 'logotype']);
+  function v3Checks(timeline, { measure = null, layout = layoutBlock } = {}) {
+    const out = [];
+    const graphics = (timeline.tracks && timeline.tracks.graphics) || [];
+    const geo = geometry(timeline.size);
+    const style = TH.isStyle && TH.isStyle(timeline.reelStyle) ? TH.STYLES[timeline.reelStyle] : null;
+    graphics.forEach((g, i) => {
+      const b = g.data && g.data.block;
+      if (!b) return;
+      const label = `Beat ${i + 1}`;
+      if (style && !style.blocks.includes(b.type)) out.push(issue('style', 'warning', `${label}: ${BLOCKS[b.type] ? BLOCKS[b.type].label : b.type} is not a ${style.label} block.`, `Use one of: ${style.blocks.map(t => BLOCKS[t].label).join(', ')}.`, g.beat));
+      const el = elementsOf(b, g);
+      Object.keys(ELEMENT_LIMITS).forEach(k => { if (el[k] > ELEMENT_LIMITS[k]) out.push(issue('elements', 'warning', `${label} has ${el[k]} ${k === 'pills' ? 'pills' : k === 'media' ? 'pictures' : `${k} elements`}. A frame holds a headline, one picture, one data block and two pills at most${k === 'pills' ? ', so the extra one is not drawn' : ''}.`, 'Drop one, or make it two scenes.', g.beat)); });
+      if (!measure) return;
+      const seen = new Set();
+      const once = (key, make) => { if (!seen.has(key)) { seen.add(key); out.push(make()); } };
+      layout(measure, g, timeline).forEach(op => {
+        if (!KNOWN_OPS.has(op.type) || (op.type === 'rect' && op.role !== 'ground') || (op.type === 'panel' && op.role !== 'cta-panel')) once(`box:${op.type}:${op.role}`, () => issue('boxes', 'critical', `${label} draws a box the ES system does not have (${op.type}${op.role ? ` “${op.role}”` : ''}).`, 'Only ES pills, tiles, the photo card and the caption bar are boxes. Remove it.', g.beat));
+        const isText = (op.type === 'text' || op.type === 'count') && !op.noCheck;
+        if (isText && !onScale(op.size, geo.type)) once(`scale:${op.role}`, () => issue('scale', 'critical', `${label}: “${String(op.text).slice(0, 24)}” is ${Math.round(op.size)} px, off the type scale.`, `Use a step of the scale (${SCALE_STEPS.join(', ')}).`, g.beat));
+        if (isText && op.shortened) once(`short:${op.role}`, () => issue('scale', 'warning', `${label}: “${String(op.text).slice(0, 24)}” was cut to fit at the smallest size.`, 'Shorten the words so they fit.', g.beat));
+        if (isText && op.pill && op.role !== 'pill' && op.role !== 'line' && PILL_CHARS[op.pillSize] && plainVo(op.text).length > PILL_CHARS[op.pillSize]) once(`pill:${op.role}`, () => issue('pills', 'warning', `${label}: the pill “${String(op.text).slice(0, 24)}” is ${plainVo(op.text).length} characters. A size ${op.pillSize} pill holds about ${PILL_CHARS[op.pillSize]}.`, 'Shorten it.', g.beat));
+        if (op.align === 'col') {
+          const bx = op.box ? op.box.x : op.x;
+          if (Math.abs(bx - geo.col.x) > 0.5) once(`col:${op.role}`, () => issue('slots', 'warning', `${label}: “${String(op.text || op.role).slice(0, 24)}” is off the column (x ${Math.round(bx)}, not ${geo.col.x}).`, 'Keep every part on the ES column.', g.beat));
+        }
+        if (op.slot && geo.slots[op.slot] != null) {
+          const top = op.box ? op.box.y : (op.type === 'text' || op.type === 'count' ? op.y - TYPE.cap * op.size : op.y);
+          if (Math.abs(top - geo.slots[op.slot]) > 0.5) once(`slot:${op.role}`, () => issue('slots', 'warning', `${label}: “${String(op.text || op.role).slice(0, 24)}” is not on its slot (y ${Math.round(top)}, not ${geo.slots[op.slot]}).`, 'Let the block place it.', g.beat));
+        }
+      });
+    });
+    if (style && style.media && style.media.clipsMin > 0) {
+      const scenes = graphics.filter(g => g.data && g.data.block && g.data.block.type !== 'endcard');
+      const clips = scenes.filter(g => (timeline.tracks.video || []).some(v => v.beat === g.beat && v.asset && timeline.assets && timeline.assets[v.asset] && timeline.assets[v.asset].kind === 'clip')).length;
+      if (scenes.length && clips / scenes.length < style.media.clipsMin) out.push(issue('style', 'info', `${style.label} works best with clips on most scenes (${clips} of ${scenes.length} have one).`, 'Add verified clips, or pick Receipts or Stat Card.'));
     }
     return out;
   }
@@ -1130,7 +1960,7 @@
       if (b.type === 'statement') {
         if (!(b.lines || []).length) out.push(issue('copy', 'critical', `${label(i)}: the statement has no lines.`, 'Add one to three short lines.', g.beat));
         if ((b.lines || []).length > LIMITS.lines) out.push(issue('copy', 'warning', `${label(i)}: ${b.lines.length} lines. A statement has 1 to 3.`, 'Cut a line, or make it two scenes.', g.beat));
-        (b.lines || []).forEach(l => { if (l.text.length > LIMITS.lineChars) out.push(issue('copy', 'warning', `${label(i)}: the line “${l.text.slice(0, 24)}” is ${l.text.length} characters. Keep lines under ${LIMITS.lineChars}.`, 'Shorten it or split it.', g.beat)); });
+        (b.lines || []).forEach(l => { if (plainVo(l.text).length > LIMITS.lineChars) out.push(issue('copy', 'warning', `${label(i)}: the line “${l.text.slice(0, 24)}” is ${l.text.length} characters. Keep lines under ${LIMITS.lineChars}.`, 'Shorten it or split it.', g.beat)); });
       }
       if (b.type === 'quote') {
         if (b.text.length > LIMITS.quoteChars) out.push(issue('copy', 'warning', `${label(i)}: the quote is ${b.text.length} characters. Keep it under ${LIMITS.quoteChars}.`, 'Use the strongest part of what they said, word for word.', g.beat));
@@ -1145,6 +1975,8 @@
         const shown = blockStrings(b).flatMap(numberTokens);
         shown.forEach(n => {
           if (!said.length) return;
+          // A year on screen ("2011 · GB") is a label, not a figure to speak.
+          if (/^(?:19|20)\d\d$/.test(n.raw)) return;
           const same = said.find(s => Math.abs(s.value - n.value) < 1e-9);
           if (!same) out.push(issue('as-spoken', 'warning', `${label(i)} shows ${n.raw}, but the voiceover doesn't say it.`, 'Show numbers exactly as the voiceover says them.', g.beat));
           else if (same.form.replace(/,/g, '') !== n.form.replace(/,/g, '') || (/,/.test(same.raw) !== /,/.test(n.raw) && n.value >= 10000)) out.push(issue('as-spoken', 'warning', `${label(i)} shows ${n.raw}; the voiceover says ${same.raw}.`, `Show it as “${same.raw}”.`, g.beat));
@@ -1178,6 +2010,8 @@
     }
     // The look: on brand and readable.
     out.push(...lookChecks(timeline, { measure, layout }));
+    // v3: the type scale, boxes, grid, element limits and the style's blocks.
+    out.push(...v3Checks(timeline, { measure, layout }));
     return out;
   }
   // The system's checklist, one row per rule, for the Quality checks panel.
@@ -1191,6 +2025,12 @@
     { id: 'source', ok: 'Source on the end card', bad: 'Source missing' },
     { id: 'banned', ok: 'No emoji, stripes or glow', bad: 'Banned item' },
     { id: 'look', ok: 'Look on brand and readable', bad: 'Look' },
+    { id: 'scale', ok: 'Every size on the type scale', bad: 'Type scale' },
+    { id: 'boxes', ok: 'No stray boxes', bad: 'Stray box' },
+    { id: 'slots', ok: 'Everything on the grid', bad: 'Off the grid' },
+    { id: 'elements', ok: 'One idea a frame', bad: 'Too much in a frame' },
+    { id: 'pills', ok: 'Pills short', bad: 'Pill length' },
+    { id: 'style', ok: 'Blocks fit the style', bad: 'Style' },
   ];
   function checklist(issues) {
     return CHECKLIST.map(row => {
@@ -1220,5 +2060,9 @@
     parseEmphasis, plainVo, headline, scriptSentences, splitLong, blockForLine, scriptToPlan, voMatchesScript,
     hugBox, rotatedBox, layoutBlock, layoutCaption, textBoxes, outsideSafe, markRect, numberTokens,
     enterState, sceneTimes, slabs, drawSlab, drawMark, drawCaption, drawFrame, drawScene, checks, checklist,
+    // Reels Studio v3
+    TYPE_SCALE, STEP_NAMES, SCALE_STEPS, SPACE, GRID, PILL_SIZES, PILL_CHARS, ELEMENT_LIMITS, GREY, KNOWN_OPS,
+    STYLES: TH.STYLES, STYLE_IDS: TH.STYLE_IDS, DEFAULT_STYLE: TH.DEFAULT_STYLE, styleOf: TH.styleOf, legacyStyle: TH.legacyStyle, isStyle: TH.isStyle, getStyle: TH.getStyle, hasClips: TH.hasClips,
+    snapStep, stepName, onScale, pickStep, pillMetricsAt, pillClass, focusBox, faceBox, focusCrop, tileNumber, elementsOf, v3Checks, showsMark, marksIn, markLines, emTokens,
   };
 }));
