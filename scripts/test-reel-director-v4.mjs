@@ -715,6 +715,32 @@ await test('plan v4: needs a script; free mode lays it out by code ($0) with the
   assert.equal((await T.planV4({ v: 4, script: 'word '.repeat(800) }, track, {}, noLessons)).reason, 'too-long');
 });
 
+await test('plan v4 forceCode: the $0 code plan even with AI on and a cached AI plan; no model call, no lessons read', async () => {
+  maker._test.PLAN_CACHE.clear();
+  const calls = mockAi([goodReply()]);
+  let lessonReads = 0;
+  const lessons = { loadLessons: async () => { lessonReads += 1; return []; } };
+  const body = { v: 4, script: SCRIPT, topic: TOPIC, esStyle: 'breakdown', length: 'full' };
+  const ai = await T.planV4(body, track, {}, lessons);
+  assert.equal(ai.source, 'director');
+  assert.equal(calls.length, 1);
+  const reads = lessonReads;
+  const code = await T.planV4({ ...body, forceCode: true, factCheck: true }, track, {}, lessons);
+  restore();
+  assert.equal(calls.length, 1, 'no model call (and no fact check)');
+  assert.equal(lessonReads, reads, 'no lessons read');
+  assert.equal(code.source, 'code');
+  assert.equal(code.reason, 'code');
+  assert.equal(code.cost, 0);
+  assert.deepEqual(code.costs, { director: 0, factCheck: 0 });
+  assert.ok(!code.cached, 'never the cached AI plan');
+  assert.equal(code.notice, '');
+  assert.equal(code.plan.v, 4);
+  assert.equal(allVo(code.plan), SCRIPT);
+  const r4 = D.readV4({ script: SCRIPT, topic: TOPIC });
+  assert.deepEqual(code.plan.chapters, D.scriptToV4(SCRIPT, { esStyle: 'breakdown', length: 'full', read: r4, team: r4.team, sport: r4.sport }).chapters, 'exactly scriptToV4');
+});
+
 await test('plan v4: the director with the house lessons, cached; Haiku cost reported', async () => {
   maker._test.PLAN_CACHE.clear();
   const calls = mockAi([goodReply()]);

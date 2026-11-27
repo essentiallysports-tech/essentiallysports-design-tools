@@ -338,10 +338,12 @@ async function planV4(body, track, gates, { loadLessons = lessonsApi.loadLessons
   const tier = body.tier === 'economy' ? 'economy' : 'standard';
   const sport = REEL_SPORTS.includes(body.sport) ? body.sport : '';
   const steer = clean(body.steer, 300);
-  const blocked = gates.free ? 'free' : gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : ''));
+  // forceCode: the page asks for the $0 code plan directly (scriptToV4): no
+  // model, no fact check, no lessons read, no cache; source 'code', reason 'code'.
+  const blocked = body.forceCode === true ? 'code' : gates.free ? 'free' : gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : ''));
   const lessons = blocked ? [] : await loadLessons({ style: esStyle, token: track && track.token }).catch(() => []);
   const key = planKey(['v4', rawScript, speakSources, trend?.id || trend?.title || '', topic, links, esStyle, length, tier, steer, sport, Boolean(body.factCheck), lessons.map(l => l.lesson)]);
-  const hit = PLAN_CACHE.get(key);
+  const hit = blocked ? null : PLAN_CACHE.get(key);
   if (hit && Date.now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: 0, costs: { director: 0, factCheck: 0 } };
   let facts = null;
   let factCost = 0;
