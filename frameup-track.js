@@ -9,6 +9,26 @@
 //   action    short slug: png, jpg, zip, mp4, srt, link, headline, html...
 //   label     short title (design headline or file name), 160 characters max
 //   meta      small extras (template, size, count, format...)
+//   thumb     optional small preview: a data:image JPEG/WebP/PNG URL (20,000
+//             characters max) or an https image URL. Stored in its own column
+//             (20261129120000_frameup_usage_thumbs.sql); dropped automatically
+//             while that migration has not run.
+//
+// Anything that LEAVES FrameUp (a file downloaded, a finished asset copied to
+// the clipboard, a link handed out, a product published) goes through:
+//
+//   FrameUpTrack.exported({ tool, format, label, dest, width, height, bytes,
+//                           count, seconds, template, meta, thumb })
+//
+//   dest      download | clipboard | link | publish (DESTS)
+//   format    png, jpg, mp4, webm, zip, srt, html, product...
+//   thumb     a canvas, <img>, <video>, ImageBitmap, image Blob, data URL or
+//             https URL; a 160 px JPEG is made from it after the export, off
+//             the click.
+//
+// It logs one row with meta.out = true and meta.dest, which Dashboard ->
+// Exports lists for every tool (category export, or copy / share for the
+// clipboard and link destinations).
 //
 // Never blocks or breaks the action it records: track() returns at once, never
 // throws, and sends rows in batches (1.5 s after the last call, or 20 at once)
@@ -60,8 +80,28 @@
     requests: 'Design Requests',
     home: 'Home',
     'design-system': 'UI Library',
+    merch: 'Merch Designs',
     other: 'Other',
   });
+
+  // Where an export went (exported()).
+  const DESTS = Object.freeze({
+    download: 'Downloaded',
+    clipboard: 'Copied',
+    link: 'Link shared',
+    publish: 'Published',
+  });
+  const DEST_CATEGORY = { download: 'export', clipboard: 'copy', link: 'share', publish: 'export' };
+
+  const THUMB_MAX = 20000;
+  // A small preview: an image data URL, or an https image URL.
+  function cleanThumb(value) {
+    const text = typeof value === 'string' ? value.trim() : '';
+    if (!text) return '';
+    if (/^data:image\/(jpeg|webp|png);base64,[A-Za-z0-9+/=]+$/.test(text)) return text.length <= THUMB_MAX ? text : '';
+    if (/^https:\/\/[^\s"'<>]+$/i.test(text) && text.length <= 600) return text;
+    return '';
+  }
 
   // Editor workspace labels (recordDesignExport) to tools.
   const WORKSPACE_TOOLS = {
@@ -117,6 +157,44 @@
 
   // One row, or null when the category is not in the taxonomy.
   function normalize(category, details = {}, context = {}) {
+    const row = normalizeRow(category, details, context);
+    if (row && !context.noThumb) {
+      const thumb = cleanThumb(details && details.thumb);
+      if (thumb) row.thumb = thumb;
+    }
+    return row;
+  }
+
+  // exported(details) -> the track() arguments: [category, details].
+  function exportDetails(details = {}) {
+    const d = details && typeof details === 'object' ? details : {};
+    const dest = Object.prototype.hasOwnProperty.call(DESTS, d.dest) ? d.dest : 'download';
+    const num = value => { const n = Number(value); return Number.isFinite(n) && n > 0 ? n : 0; };
+    const w = Math.round(num(d.width));
+    const h = Math.round(num(d.height));
+    const meta = {
+      ...(d.meta && typeof d.meta === 'object' ? d.meta : {}),
+      out: true,
+      dest,
+    };
+    if (w && h) meta.size = `${w}x${h}`;
+    if (num(d.bytes)) meta.kb = Math.max(1, Math.round(num(d.bytes) / 1024));
+    if (num(d.count)) meta.count = Math.round(num(d.count));
+    if (num(d.seconds)) meta.sec = Math.round(num(d.seconds) * 10) / 10;
+    if (d.template) meta.template = d.template;
+    // out / dest first so cleanMeta's 12-key cap never drops them.
+    const ordered = { out: true, dest };
+    Object.keys(meta).forEach(key => { if (!(key in ordered)) ordered[key] = meta[key]; });
+    return [DEST_CATEGORY[dest], {
+      tool: d.tool,
+      action: d.format || d.action || dest,
+      label: d.label,
+      meta: ordered,
+      thumb: typeof d.thumb === 'string' ? d.thumb : '',
+    }];
+  }
+
+  function normalizeRow(category, details = {}, context = {}) {
     const cat = String(category || '').trim().toLowerCase();
     if (!Object.prototype.hasOwnProperty.call(CATEGORIES, cat)) return null;
     const d = details && typeof details === 'object' ? details : {};
@@ -137,6 +215,8 @@
     };
   }
 
+  // PostgREST / Postgres: the thumb column is not there yet.
+  const isThumbMissing = error => /thumb/i.test(String(error?.message || '')) && /PGRST204|42703|column|schema cache/i.test(`${error?.code || ''} ${error?.message || ''}`);
   const isMissing = error => /does not exist|could not find|schema cache|PGRST20[25]|42P01|42883/i.test(`${error?.code || ''} ${error?.message || ''}`);
   // A row the database refuses (check / type error): retrying cannot help.
   const isRejected = error => /^(23|22)\d{3}$/.test(String(error?.code || '')) || /violates check constraint|invalid input/i.test(String(error?.message || ''));
@@ -159,7 +239,7 @@
       warn = () => {},
     } = options;
 
-    const status = { table: 'unknown', sent: 0, dropped: 0, lastError: '' };
+    const status = { table: 'unknown', thumbs: 'unknown', sent: 0, dropped: 0, lastError: '' };
     let queue = [];
     let timer = null;
     let inFlight = null;
@@ -178,7 +258,9 @@
     function save() {
       if (!storage) return;
       try {
-        if (queue.length) storage.setItem(QUEUE_KEY, JSON.stringify(queue));
+        // Thumbnails are kept on the device only for the newest few rows (size).
+        const keep = queue.length - 10;
+        if (queue.length) storage.setItem(QUEUE_KEY, JSON.stringify(queue.map((row, i) => (i < keep && row.thumb ? { ...row, thumb: undefined } : row))));
         else storage.removeItem(QUEUE_KEY);
       } catch (error) { /* full or private mode: keep in memory */ }
     }
@@ -204,7 +286,7 @@
     function track(category, details = {}) {
       try {
         if (!enabled) return null;
-        const row = normalize(category, details, { now, page, device, sessionId });
+        const row = normalize(category, details, { now, page, device, sessionId, noThumb: status.thumbs === 'missing' });
         if (!row) {
           const key = String(category);
           if (!warned.has(key)) { warned.add(key); warn(`[track] unknown category "${key}"; use one of ${Object.keys(CATEGORIES).join(', ')}`); }
@@ -241,6 +323,13 @@
         }
         if (error) {
           status.lastError = String(error.message || error.code || error).slice(0, 200);
+          // Before the thumbnails migration: send the rows without them.
+          if (isThumbMissing(error) && status.thumbs !== 'missing') {
+            status.thumbs = 'missing';
+            queue = queue.map(row => { if (!row.thumb) return row; const { thumb, ...rest } = row; return rest; });
+            save();
+            continue;
+          }
           if (isMissing(error)) { status.table = 'missing'; break; }
           if (isRejected(error)) {
             const ids = new Set(batch.map(row => row.id));
@@ -253,6 +342,7 @@
           break;
         }
         status.table = 'ready';
+        if (batch.some(row => row.thumb)) status.thumbs = 'ready';
         const ids = new Set(batch.map(row => row.id));
         queue = queue.filter(row => !ids.has(row.id));
         sent += batch.length;
@@ -273,10 +363,35 @@
       return inFlight;
     }
 
+    // Adds a thumbnail to a row that is still waiting to be sent.
+    function attachThumb(id, thumb) {
+      try {
+        const clean = status.thumbs === 'missing' ? '' : cleanThumb(thumb);
+        const row = clean && queue.find(item => item.id === id);
+        if (!row) return false;
+        row.thumb = clean;
+        save();
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function exported(details = {}) {
+      try {
+        const [category, args] = exportDetails(details);
+        return track(category, args);
+      } catch (error) {
+        return null;
+      }
+    }
+
     load();
 
     return {
       track,
+      exported,
+      attachThumb,
       flush,
       pending: () => queue.slice(),
       status: () => ({ ...status, queued: queue.length }),
@@ -321,6 +436,57 @@
       warn: message => { try { win.console?.warn?.(message); } catch (error) { /* ignore */ } },
     });
 
+    // A 160 px JPEG of whatever was exported, made after the export (never on
+    // the click), or '' when the source cannot be drawn (tainted, video not
+    // ready, not an image). Never throws.
+    async function makeThumb(source) {
+      try {
+        if (!source) return '';
+        if (typeof source === 'string') {
+          if (/^https:/i.test(source)) return source;
+          if (!/^data:image\//.test(source)) return '';
+          if (source.length <= THUMB_MAX && !/^data:image\/png/.test(source)) return source;
+          source = await new Promise((resolve, reject) => { const img = new win.Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = source; });
+        } else if (typeof win.Blob === 'function' && source instanceof win.Blob) {
+          if (!/^image\//.test(source.type) || typeof win.createImageBitmap !== 'function') return '';
+          source = await win.createImageBitmap(source);
+        }
+        const w = source.videoWidth || source.naturalWidth || source.width || 0;
+        const h = source.videoHeight || source.naturalHeight || source.height || 0;
+        if (!w || !h) return '';
+        for (const [side, quality] of [[160, 0.72], [120, 0.6], [96, 0.5]]) {
+          const scale = Math.min(1, side / Math.max(w, h));
+          const canvas = win.document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(w * scale));
+          canvas.height = Math.max(1, Math.round(h * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+          const url = canvas.toDataURL('image/jpeg', quality);
+          if (url.length <= THUMB_MAX) return url;
+        }
+      } catch (error) { /* a thumbnail is optional */ }
+      return '';
+    }
+
+    function exported(details = {}) {
+      try {
+        if (!isTop) return null;
+        const d = details && typeof details === 'object' ? details : {};
+        const source = d.thumb;
+        const ready = typeof source === 'string' && cleanThumb(source) && !/^data:image\/png/.test(source);
+        const row = tracker.exported({ ...d, thumb: ready ? source : '' });
+        if (row && source && !ready) {
+          // Draw the thumbnail after the export has finished with the click.
+          setTimeout(() => { makeThumb(source).then(thumb => { if (thumb) tracker.attachThumb(row.id, thumb); }).catch(() => {}); }, 0);
+        }
+        return row;
+      } catch (error) {
+        return null;
+      }
+    }
+
     if (isTop) {
       win.addEventListener?.('es:auth-ready', () => { tracker.flush(); }, { once: true });
       setTimeout(() => { tracker.flush(); }, 4000);
@@ -330,13 +496,16 @@
     return Object.freeze({
       CATEGORIES,
       TOOLS,
+      DESTS,
       toolForWorkspace,
       track: tracker.track,
+      exported,
+      makeThumb,
       flush: tracker.flush,
       pending: tracker.pending,
       status: tracker.status,
     });
   }
 
-  return { CATEGORIES, TOOLS, TABLE, QUEUE_KEY, toolForWorkspace, normalize, cleanMeta, cleanText, createTracker, install };
+  return { CATEGORIES, TOOLS, DESTS, TABLE, QUEUE_KEY, THUMB_MAX, toolForWorkspace, normalize, exportDetails, cleanThumb, cleanMeta, cleanText, createTracker, install };
 }));

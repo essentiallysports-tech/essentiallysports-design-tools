@@ -10,7 +10,7 @@
   <script src="frameup-errors.js?v=20261121-rel2"></script>
   <script src="es-auth-config.js?v=20260707-auth4"></script>
   <script src="es-auth.js?v=20261121-rel2"></script>
-  <script src="frameup-track.js?v=20261125-tracking"></script>
+  <script src="frameup-track.js?v=20261129-exports"></script>
   <script>
     window.ESAuth?.requireAuth(`image-pool.html${window.location.search}${window.location.hash}`);
   </script>
@@ -380,7 +380,7 @@
       async function copyLink(result, button) {
         try {
           await navigator.clipboard.writeText(shareUrlFor(result));
-          window.FrameUpTrack?.track?.('share', { tool: 'image-pool', action: 'photo-link', label: result.title || result.caption || '', meta: { credit: result.credit || '' } });
+          window.FrameUpTrack?.exported?.({ tool: 'image-pool', format: 'photo-link', dest: 'link', label: result.title || result.caption || '', thumb: /^https:/i.test(result.thumbUrl || '') ? result.thumbUrl : '', meta: { credit: result.credit || '' } });
           toast('Link copied');
           if (button) {
             button.classList.add('is-done');
@@ -698,7 +698,7 @@
       // Dashboard → Usage: every photo saved from the pool (grid or viewer).
       function trackPhotoDownload(result, index) {
         if (!result) return;
-        window.FrameUpTrack?.track?.('download', { tool: 'image-pool', action: 'photo', label: filenameFor(result, index), meta: { credit: result.credit || '' } });
+        window.FrameUpTrack?.exported?.({ tool: 'image-pool', format: 'photo', dest: 'download', label: filenameFor(result, index), thumb: /^https:/i.test(result.thumbUrl || '') ? result.thumbUrl : '', meta: { credit: result.credit || '' } });
       }
       els.viewerDownload.addEventListener('click', () => trackPhotoDownload(state.items[state.viewerIndex], state.viewerIndex));
 

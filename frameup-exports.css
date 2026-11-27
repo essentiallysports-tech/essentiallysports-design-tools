@@ -1,0 +1,88 @@
+/* Dashboard → Exports, every tool (frameup-exports-view.js). Builds on the
+   overview's .dov cards / KPIs and the Usage view's toolbar and tool table
+   (frameup-usage.css); only the per-tool bar, format chips, destination
+   badges and the recent list live here. 8-pt grid via the es-ui space
+   tokens; colours from the dashboard tokens, so light and dark both work. */
+body.dashboard-page .exports-view { display: grid; gap: var(--es-space-6); }
+body.dashboard-page .exports-view[hidden] { display: none; }
+body.dashboard-page .exports-view + .export-review-shell { margin-top: var(--es-space-6); }
+
+/* Per-tool table: a slim bar under the tool name, format chips. */
+body.dashboard-page .xv-tools { min-width: 720px; }
+body.dashboard-page .xv-tools :is(th, td):first-child { width: 24%; }
+body.dashboard-page .xv-tools :is(th, td):nth-child(2) { width: 34%; }
+body.dashboard-page .xv-tools :is(th, td):last-child { width: 128px; white-space: nowrap; }
+body.dashboard-page .xv-bar {
+  display: block;
+  height: 4px;
+  margin-top: var(--es-space-2);
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--dov-soft);
+}
+body.dashboard-page .xv-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--dov-brand); }
+body.dashboard-page .xv-chips { display: flex; flex-wrap: wrap; gap: var(--es-space-1) var(--es-space-2); }
+body.dashboard-page .xv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--es-space-1);
+  padding: 2px var(--es-space-2);
+  border: 1px solid var(--dov-line);
+  border-radius: 999px;
+  color: var(--dov-ink-2);
+  font: 500 var(--es-type-meta-size)/1.4 var(--es-font-ui);
+  white-space: nowrap;
+}
+body.dashboard-page .xv-chip b { color: var(--dov-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Recent list: thumb · title · tool + format · where · who · when */
+body.dashboard-page .xv-list { margin: 0; padding: 0; list-style: none; }
+body.dashboard-page .xv-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 2.2fr) minmax(0, 1.6fr) 112px minmax(0, 1fr) 88px;
+  align-items: center;
+  gap: var(--es-space-4);
+  padding: var(--es-space-3) var(--es-space-6);
+  border-top: 1px solid var(--dov-line);
+}
+body.dashboard-page .xv-row:first-child { border-top: 0; }
+body.dashboard-page .xv-row:hover { background: var(--dov-soft); }
+body.dashboard-page :is(.xv-main, .xv-tool, .xv-who) { display: grid; gap: 2px; min-width: 0; }
+body.dashboard-page :is(.xv-main, .xv-tool) > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.dashboard-page .xv-when { text-align: right; white-space: nowrap; }
+body.dashboard-page .xv-person { overflow: hidden; max-width: 100%; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+
+body.dashboard-page .xv-thumb.is-static { display: grid; place-items: center; cursor: default; color: var(--dov-muted); }
+body.dashboard-page .xv-thumb.is-static.has-img { display: block; }
+body.dashboard-page .xv-thumb__icon { display: grid; place-items: center; }
+
+body.dashboard-page .xv-dest {
+  justify-self: start;
+  padding: 2px var(--es-space-2);
+  border-radius: 999px;
+  background: var(--dov-soft);
+  color: var(--dov-ink-2);
+  font: 500 var(--es-type-meta-size)/1.4 var(--es-font-ui);
+  white-space: nowrap;
+}
+body.dashboard-page .xv-dest[data-dest="download"] { background: color-mix(in srgb, var(--usage-c-export) 14%, var(--dov-surface)); color: var(--dov-ink); }
+body.dashboard-page .xv-dest[data-dest="clipboard"] { background: color-mix(in srgb, var(--usage-c-copy) 16%, var(--dov-surface)); color: var(--dov-ink); }
+body.dashboard-page .xv-dest[data-dest="link"] { background: color-mix(in srgb, var(--usage-c-share) 18%, var(--dov-surface)); color: var(--dov-ink); }
+body.dashboard-page .xv-dest[data-dest="publish"] { background: color-mix(in srgb, var(--usage-c-generate) 16%, var(--dov-surface)); color: var(--dov-ink); }
+
+body.dashboard-page .xv-more { display: flex; justify-content: center; padding: var(--es-space-4) var(--es-space-6) var(--es-space-6); border-top: 1px solid var(--dov-line); }
+
+@media (max-width: 900px) {
+  body.dashboard-page .xv-row {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    grid-template-areas: "thumb main when" "thumb tool dest" "thumb who who";
+    gap: var(--es-space-1) var(--es-space-3);
+    padding: var(--es-space-3) var(--es-space-4);
+  }
+  body.dashboard-page .xv-row > .xv-thumb { grid-area: thumb; align-self: start; }
+  body.dashboard-page .xv-main { grid-area: main; }
+  body.dashboard-page .xv-tool { grid-area: tool; }
+  body.dashboard-page .xv-dest { grid-area: dest; justify-self: end; }
+  body.dashboard-page .xv-who { grid-area: who; }
+  body.dashboard-page .xv-when { grid-area: when; }
+}

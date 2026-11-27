@@ -3693,6 +3693,7 @@
       document.body.append(a);
       a.click();
       setTimeout(() => a.remove(), 1000);
+      window.FrameUpTrack?.exported?.({ tool: 'video-ads', format: ext, dest: 'download', label: plain(state.headline).slice(0, 120) || fileName, width: t.s.width, height: t.s.height, bytes: blob.size, seconds: span, template: t.style, thumb: els.canvas, meta: { file: fileName, angle: t.angle, brand: brand().id, ai: Boolean(state.aiCopy), batch: targets.length } });
       return { style: t.style, angle: t.angle, sizeId: t.id, fileName, href, mb: blob.size / 1048576 };
     });
     els.files.hidden = false;
@@ -3710,7 +3711,6 @@
       const sizes = targets.map(t => `${t.s.width}x${t.s.height}`);
       const adNames = rows.map(r => r.fileName.replace(/\.[a-z0-9]+$/i, ''));
       const styles = [...new Set(rows.map(r => r.style))];
-      window.FrameUpTrack?.track?.('export', { tool: 'video-ads', action: ext, label: plain(state.headline).slice(0, 120), meta: { count: rows.length, sizes, styles, brand: brand().id, ai: Boolean(state.aiCopy) } });
       window.FrameUpPosted?.exported?.({ source: 'video-ads', title: plain(state.headline).slice(0, 120), template: styles.join(','), style: styles.join(','), angle: items && items.length ? items.map(x => x.angle).join(',') : angle(), brand: brand().id, sizes, adNames, aiMade: state.aiCopy ? 'video-ads' : '', count: rows.length });
     } catch (error) { /* never block an export */ }
     return rows;

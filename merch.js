@@ -2754,7 +2754,8 @@
         state.product = { id: data.productId, forId: c.id, name: data.title || body.title, description: data.description || body.description, url: data.productUrl || '', state: data.state || 'HIDDEN', price: data.price?.retail ?? body.retail, margin: data.price?.margin, images: data.images || [], color: body.color, colors: made, blank: kind(), collectionIds: [] };
         if (body.colors && body.colors.length > 1 && made.length < body.colors.length) collNote = `Fourthwall made it in ${made.join(', ') || body.color} only.`;
         if (data.caps && state.status) state.status.caps = data.caps;
-        window.FrameUpTrack?.track?.('export', { tool: 'merch', action: 'fourthwall-create' });
+        // Published to the shop (hidden): Dashboard -> Exports, with the product photo.
+        window.FrameUpTrack?.exported?.({ tool: 'merch', format: 'product', dest: 'publish', label: state.product.name || c.title || '', template: kind(), thumb: (state.product.images || []).map(im => (typeof im === 'string' ? im : im?.url || im?.src || '')).find(u => /^https:/i.test(u)) || '', meta: { blank: kind(), colors: made.slice(0, 6), price: state.product.price, state: state.product.state, product: state.product.id } });
         // Shop collections: Fourthwall replaces a collection's whole list, so the server reads first and appends.
         if (state.pick.setup.length) {
           progress(95, 'Adding it to the shop collections…');
@@ -3046,7 +3047,7 @@
     async function openAd(from) {
       const c = selectedConcept();
       if (!c) return;
-      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261127-m7b');
+      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261129-exports');
       if (!window.MerchAds) return;
       const p = liveShown() ? state.product : null;
       const { line, source } = adLineFor(c);
@@ -3063,7 +3064,7 @@
     }
     // An ad for a product in Your merch: its Fourthwall mockups and link (no design to redraw).
     async function openRowAd(row, btn) {
-      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261127-m7b');
+      if (!window.MerchAds) await loadScript('merch-ads.js?v=20261129-exports');
       if (!window.MerchAds) return;
       btn?.setAttribute('aria-busy', 'true');
       if (!row.imagesLoaded) { try { const data = await api({ mode: 'product', productId: row.productId }); row.images = data.product?.images || []; row.imagesLoaded = true; } catch { /* the thumb is enough */ } }

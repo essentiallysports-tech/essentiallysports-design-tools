@@ -1239,20 +1239,31 @@
       const tracker = window.FrameUpTrack;
       if (!tracker?.track) return;
       const mime = String(record.metadata?.mimeType || '').toLowerCase();
-      tracker.track('export', {
-        tool: tracker.toolForWorkspace(record.workspace),
-        action: mime.includes('png') ? 'png' : mime.includes('jpeg') || mime.includes('jpg') ? 'jpg' : 'image',
-        label: record.title,
-        meta: {
+      const format = mime.includes('png') ? 'png' : mime.includes('jpeg') || mime.includes('jpg') ? 'jpg' : 'image';
+      const meta = {
+        // Dashboard -> Exports loads this export's preview from its task.
+        task: `task-design-${record.id}`,
+        from: record.metadata?.generated ? 'generate' : '',
+        // Newsletter exports: asset id and newsletter brand.
+        asset: record.metadata?.newsletterAsset || '',
+        brand: record.metadata?.newsletterBrand || '',
+        brandLabel: record.metadata?.newsletterBrandLabel || '',
+      };
+      const size = String(record.metadata?.outputSize || '').replace(/\s*×\s*/, 'x').replace(/px$/, '');
+      if (tracker.exported) {
+        tracker.exported({
+          tool: tracker.toolForWorkspace(record.workspace),
+          format,
+          label: record.title,
+          dest: 'download',
+          width: record.metadata?.imageWidth,
+          height: record.metadata?.imageHeight,
           template: record.workspaceVariant,
-          size: String(record.metadata?.outputSize || '').replace(/\s*×\s*/, 'x').replace(/px$/, ''),
-          from: record.metadata?.generated ? 'generate' : '',
-          // Newsletter exports: asset id and newsletter brand.
-          asset: record.metadata?.newsletterAsset || '',
-          brand: record.metadata?.newsletterBrand || '',
-          brandLabel: record.metadata?.newsletterBrandLabel || '',
-        },
-      });
+          meta: { ...meta, ...(record.metadata?.imageWidth ? {} : { size }), file: record.filename },
+        });
+      } else {
+        tracker.track('export', { tool: tracker.toolForWorkspace(record.workspace), action: format, label: record.title, meta: { template: record.workspaceVariant, size, ...meta } });
+      }
     } catch (error) {
       // Tracking never blocks an export.
     }

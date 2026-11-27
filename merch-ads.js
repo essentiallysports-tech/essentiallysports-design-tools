@@ -435,10 +435,14 @@
     await C().render(scene, cv, { scale: 1 });
     return new Promise((resolve, reject) => { try { cv.toBlob(b => (b ? resolve(b) : reject(new Error('empty'))), 'image/png'); } catch (error) { reject(error); } });
   }
-  function save(blob, name) {
+  function save(blob, name, info = {}) {
     MerchAds.last = { name, type: blob.type, size: blob.size, blob };
-    // A downloaded ad is a take: count it like every other export.
-    try { root.FrameUpTrack?.track?.('export', { tool: 'merch', action: 'ad', format: st?.format || '', kind: /\.zip$/i.test(name) ? 'zip' : 'png' }); } catch { /* tracking never blocks a download */ }
+    // A downloaded ad is an export: Dashboard -> Exports, like every other tool.
+    try {
+      const zip = /\.zip$/i.test(name);
+      const f = FORMATS[st?.format] || null;
+      root.FrameUpTrack?.exported?.({ tool: 'merch', format: zip ? 'zip' : 'png', dest: 'download', label: st?.title || st?.name || name, bytes: blob.size, count: info.count || 1, width: zip ? 0 : f?.w, height: zip ? 0 : f?.h, template: `Ad · ${info.all ? 'all sizes' : (f?.label || st?.format || '')}`, thumb: info.thumb || (zip ? '' : blob), meta: { file: name, kind: 'ad', format: info.all ? 'all' : st?.format || '' } });
+    } catch { /* tracking never blocks a download */ }
     if (root.__mxAdSave) { root.__mxAdSave(blob, name); return; }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -471,7 +475,7 @@
           const list = scenes({ ...st, format: f });
           for (const [i, sc] of list.entries()) files.push({ name: f === 'carousel' ? `${base}-carousel-${i + 1}-of-${list.length}.png` : `${base}-${f}-${FORMATS[f].w}x${FORMATS[f].h}.png`, blob: await toBlob(sc) });
         }
-        save(await zipOf(files), `${base}-${all ? 'ads' : 'carousel'}.zip`);
+        save(await zipOf(files), `${base}-${all ? 'ads' : 'carousel'}.zip`, { count: files.length, all, thumb: files[0]?.blob });
         status(`Saved ${files.length} PNG${files.length === 1 ? '' : 's'} in a .zip.`);
       }
       st.track?.({ action: 'ad-download', format: all ? 'all' : st.format, line: st.line === st.suggested ? st.lineSource : 'edited', price: st.priceOn, link: st.link, qr: st.qr });
