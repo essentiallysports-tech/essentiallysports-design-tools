@@ -179,7 +179,39 @@
         shape: '{"question": "20-160 chars", "options": ["1-40 chars", 4 answers], "answer": "1-4, which option is right"}',
       },
     },
-    youtube: {},
+    youtube: {
+      'variation-1': {
+        label: 'One image',
+        photo: true,
+        layouts: ['stagger', 'aligned'],
+        use: 'A YouTube thumbnail: one big photo with one or two headline pills. The default.',
+        shape: '{"pills": ["2-20 chars", "... 1 to 2 lines"]}',
+      },
+      'variation-2': {
+        label: 'Player + background',
+        photo: true,
+        needs: 'cutout',
+        layouts: ['stagger', 'aligned'],
+        use: 'A YouTube thumbnail: the player cut out over a background photo, with one or two headline pills. When the story is about one player.',
+        shape: '{"pills": ["2-20 chars", "... 1 to 2 lines"]}',
+      },
+      'variation-3': {
+        label: 'Two players + background',
+        photo: true,
+        needs: 'cutouts',
+        layouts: ['stagger', 'aligned'],
+        use: 'A YouTube thumbnail: two players cut out over a background photo, with one or two headline pills. For a rivalry or a matchup.',
+        shape: '{"pills": ["2-20 chars", "... 1 to 2 lines"]}',
+      },
+      quote: {
+        label: 'Quote thumbnail',
+        photo: true,
+        quote: true,
+        layouts: ['default'],
+        use: 'A YouTube quote thumbnail: the person\'s exact words over 1-3 short lines, on their photo. Only for words they actually said.',
+        shape: '{"lines": ["max 18 chars", "... 1 to 3 lines"]}',
+      },
+    },
   };
 
   const templatesFor = workspace => TEMPLATES[workspace] || {};
@@ -278,6 +310,19 @@
         default: return { error: `unsupported template "${template}"` };
       }
     }
+    if (workspace === 'youtube') {
+      if (template === 'quote') {
+        const lines = (Array.isArray(f.lines) ? f.lines : []).map(line => within(String(line || '').replace(/^["“]|["”]$/g, ''), 1, 18));
+        if (!lines.length || lines.length > 3 || lines.some(line => !line)) return { error: 'quote thumbnail needs 1-3 lines of max 18 chars' };
+        return { fields: { lines }, lines };
+      }
+      if (/^variation-[123]$/.test(template)) {
+        const pills = (Array.isArray(f.pills) ? f.pills : []).map(pill => within(pill, 2, 20));
+        if (!pills.length || pills.length > 2 || pills.some(pill => !pill)) return { error: 'YouTube thumbnail needs 1-2 pills of 2-20 chars' };
+        return { fields: { pills }, lines: pills };
+      }
+      return { error: `unsupported template "${template}"` };
+    }
     return { error: `unsupported template "${template}"` };
   }
 
@@ -331,12 +376,12 @@
   }
 
   // -> [{ value, label, score, why }] best first (limit 5).
-  function shortlist(text, workspace = 'instagram', { tweets = 0, articles = 0, stats = null, limit = 5, available = null } = {}) {
+  function shortlist(text, workspace = 'instagram', { tweets = 0, articles = 0, cutouts = 0, stats = null, limit = 5, available = null } = {}) {
     const raw = withoutLinks(text);
     const known = templatesFor(workspace);
     let list = [];
     if (workspace === 'instagram') list = socialRules(raw, { tweets });
-    else if (typeof shortlist.rules?.[workspace] === 'function') list = shortlist.rules[workspace](raw, { tweets, articles });
+    else if (typeof shortlist.rules?.[workspace] === 'function') list = shortlist.rules[workspace](raw, { tweets, articles, cutouts });
     return list
       .filter(item => known[item.value] && (!available || available.includes(item.value)))
       .map(item => {
@@ -469,6 +514,30 @@
       }
       default: return null;
     }
+  };
+
+  // ─── YouTube rules ────────────────────────────────────────────────────────
+  // One image by default; a player cut-out over a background when the ES
+  // photo pool has one for the person (cutouts >= 1), two for a matchup
+  // (cutouts >= 2); a quote thumbnail for someone's words.
+  shortlist.rules.youtube = (text, { cutouts = 0 } = {}) => {
+    const t = String(text || '').toLowerCase();
+    const out = [{ value: 'variation-1', score: 2, why: 'One big photo with a headline' }];
+    if (/["“”]|\b(?:said|says|told|admits?|quote|fires back|slams)\b/.test(t)) out.push({ value: 'quote', score: 3, why: 'Someone is quoted' });
+    const matchup = /\b(?:vs\.?|versus|against|rivalry|head[- ]to[- ]head|or)\b/.test(t);
+    if (cutouts >= 2 && matchup) out.push({ value: 'variation-3', score: 3, why: 'Two players, side by side' });
+    if (cutouts >= 1) out.push({ value: 'variation-2', score: matchup ? 2.2 : 2.5, why: 'The player cut out over the scene' });
+    return out;
+  };
+  rulesFill.more.youtube = (template, brief) => {
+    if (template === 'quote') {
+      const quote = (String(brief || '').match(/[“"]([^”"]{4,60})[”"]/) || [])[1];
+      const lines = quote ? chunkWords(quote, 18, 3) : [];
+      return lines.length ? { lines } : null;
+    }
+    const clause = withoutLinks(brief).split(/[,.;:!?"“—\n]/)[0] || '';
+    const pills = chunkWords(clause, 20, 2);
+    return pills.length ? { pills } : null;
   };
 
   // ─── The prompt's template list ──────────────────────────────────────────

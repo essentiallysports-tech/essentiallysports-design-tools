@@ -54,7 +54,7 @@ const runs = text => { const e = E.parseEmphasis(text); let n = 0; e.flags.forEa
 const hasFigure = vo => E.figuresIn(vo).length > 0;
 
 Object.entries(BRIEFS).forEach(([id, script]) => {
-  E.STYLE_IDS.forEach(styleId => {
+  E.V3_STYLE_IDS.forEach(styleId => {
     test(`${id} / ${styleId}: whole phrases, one emphasis, figures as data, voiceover untouched`, () => {
       const plan0 = E.scriptToPlan(script, { sourceLine: 'Source: ES desk' });
       const { plan } = RR.applyStyle(plan0, styleId);
@@ -65,7 +65,7 @@ Object.entries(BRIEFS).forEach(([id, script]) => {
         const b = beat.block;
         if (!beat.vo || b.type === 'endcard') return;
         const where = `${id}/${styleId} scene ${i + 1} (${b.type})`;
-        assert.ok(E.STYLES[styleId].blocks.includes(b.type), `${where}: a ${E.STYLES[styleId].label} block`);
+        assert.ok(E.V3_STYLES[styleId].blocks.includes(b.type), `${where}: a ${E.V3_STYLES[styleId].label} block`);
         // Stat Card's kicker (the reel's subject) is an excerpt of the script.
         if (b.kicker) assert.ok(contiguous(b.kicker, script), `${where}: kicker “${b.kicker}” is in the script`);
         phrases(b).forEach(p => {
@@ -82,6 +82,25 @@ Object.entries(BRIEFS).forEach(([id, script]) => {
       const tl = R.buildTimeline(plan, { style: 'es', esStyle: styleId, corpus: script });
       const res = L.lintTimeline(tl, { boxes: R.textBoxes(measure, tl), measure });
       assert.deepEqual(res.issues.filter(x => x.severity === 'critical' && x.id !== 'rights').map(x => x.message), []);
+    });
+  });
+});
+
+// v4: a script reshaped in a v4 style builds on the Breakdown engine, words
+// untouched; with no media yet the lint asks for motion and clips (owner rule).
+Object.entries(BRIEFS).forEach(([id, script]) => {
+  test(`${id} / v4 styles: toV4 keeps every word; no media yet -> flagged for clips and motion only`, () => {
+    E.STYLE_IDS.forEach(styleId => {
+      const { plan } = RR.applyStyle(E.scriptToPlan(script, { sourceLine: 'Source: ES desk' }), styleId);
+      assert.equal(plan.esStyle, styleId);
+      const v4 = E.toV4(plan);
+      assert.equal(v4.esStyle, styleId);
+      assert.deepEqual(v4.chapters.flatMap(c => c.beats.map(b => b.vo)), plan.beats.filter(b => b.vo).map(b => b.vo), 'no voiceover line changed');
+      const tl = R.buildTimeline(plan, { style: 'es', esStyle: styleId, corpus: script });
+      assert.equal(tl.v, 4);
+      const crit = new Set(L.lintTimeline(tl, { measure }).issues.filter(x => x.severity === 'critical').map(x => x.id));
+      [...crit].forEach(c => assert.ok(['static-beat', 'needs-clips'].includes(c), `${id}/${styleId}: ${c}`));
+      assert.ok(crit.has('needs-clips'));
     });
   });
 });

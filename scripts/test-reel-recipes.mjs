@@ -209,10 +209,11 @@ t('the page loads the recipes after the ES engine and before the page script', a
 });
 
 // Reels Studio v3: recipes are retired; each opens in a style, and a style is a preset.
-t('v3: every retired recipe names its style; applyStyle reshapes by code and keeps every word', () => {
-  assert.deepEqual(Object.fromEntries(RC.RECIPE_IDS.map(id => [id, RC.RECIPES[id].style])), { 'stat-drop': 'receipts', 'quote-reaction': 'receipts', explainer: 'receipts', countdown: 'hypecut', versus: 'receipts', 'fan-pulse': 'receipts', verdict: 'receipts', 'money-story': 'receipts' });
+t('v4: every retired recipe names its v4 style; applyStyle reshapes by code and keeps every word', () => {
+  assert.deepEqual(Object.fromEntries(RC.RECIPE_IDS.map(id => [id, RC.RECIPES[id].style])), { 'stat-drop': 'breakdown', 'quote-reaction': 'breakdown', explainer: 'breakdown', countdown: 'breakdown', versus: 'breakdown', 'fan-pulse': 'breakdown', verdict: 'breakdown', 'money-story': 'breakdown' });
   assert.ok(RC.RECIPE_IDS.every(id => RC.RECIPES[id].retired));
-  assert.equal(RC.styleFor('explainer', { beats: [{ clip: 'c' }] }), 'gametape');
+  assert.equal(RC.styleFor('explainer', { beats: [{ clip: 'c' }] }), 'breakdown');
+  assert.equal(RC.styleFor('stat-drop', { beats: [{ block: { type: 'dotGrid', total: 9 } }] }), 'outlier');
   const plan = ES.scriptToPlan(SCRIPT);
   ES.STYLE_IDS.forEach(id => {
     const { plan: out } = RC.applyStyle(plan, id);

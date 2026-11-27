@@ -1,4 +1,4 @@
-// Reels Studio inputs (2.0 lane C, updated for the v3 Create step): a real-browser check of the media tray,
+// Reels Studio inputs (2.0 lane C, updated for the v3 Create step and v4 chapter plans): a real-browser check of the media tray,
 // your own voiceover (upload, in-browser recording, fallbacks, nudge) and the
 // caption files. Real headless Chrome over CDP with a FAKE microphone
 // (--use-fake-device-for-media-stream), Node's built-in WebSocket, no npm deps.
@@ -141,6 +141,8 @@ const typeInto = (sel, text) => evaluate(`(() => { const e = document.querySelec
 const HELPERS = `(() => {
   window.qa = {
     ctx: () => window.ReelMakerCtx,
+    // v4 plans hold beats in chapters; a v3 plan is flat.
+    beats: () => { const p = window.ReelMakerCtx.state.plan || {}; return Array.isArray(p.chapters) ? p.chapters.flatMap(c => c.beats || []) : (p.beats || []); },
     png(name, color = '#0A7DFA') { return new Promise(r => { const c = document.createElement('canvas'); c.width = 320; c.height = 480; const g = c.getContext('2d'); g.fillStyle = color; g.fillRect(0, 0, 320, 480); c.toBlob(b => r(new File([b], name, { type: 'image/png' })), 'image/png'); }); },
     async webm(name) { const b = await (await fetch('/design-request-banner.webm')).blob(); return new File([b], name, { type: 'video/webm' }); },
     wav(name, seconds, rate = 44100) {
@@ -221,7 +223,7 @@ try {
       const files = [await qa.png('stadium.png', '#1BC47D'), await qa.webm('highlight.webm'), await qa.png('notes.png', '#E8322B')];
       const bad = new File([new Uint8Array(10)], 'brief.pdf', { type: 'application/pdf' });
       const r = await qa.ctx().modules.tray.addFiles([...files, bad], { via: 'picker' });
-      const hook = s.plan.beats[0].id;
+      const hook = qa.beats()[0].id;
       return { added: r.added.length, skipped: r.skipped, hook: qa.used()[hook], toasts: qa.toasts(), items: qa.ctx().modules.tray.items() };
     })()`);
     expect(out.added === 3, `added ${out.added}`);
@@ -251,7 +253,7 @@ try {
   });
   await step('drop on a scene chip puts the file on that scene; the overlay shows and hides', async () => {
     const r = await evaluate(`(async () => {
-      const s = qa.ctx().state; const target = s.plan.beats[0].id;
+      const s = qa.ctx().state; const target = qa.beats()[0].id;
       const dt = new DataTransfer(); dt.items.add(await qa.png('dropped.png', '#FFC52F'));
       const chip = document.querySelector('#rm-beats [data-ri-beat="' + target + '"]');
       chip.dispatchEvent(new DragEvent('dragenter', { bubbles: true, cancelable: true, dataTransfer: dt }));
@@ -268,7 +270,7 @@ try {
   });
   await step('the per-beat Upload button is one caller of the tray', async () => {
     const r = await evaluate(`(async () => {
-      const s = qa.ctx().state; const target = s.plan.beats[0].id;
+      const s = qa.ctx().state; const target = qa.beats()[0].id;
       qa.ctx().selectBeat(target);
       await qa.ctx().visualAction(target, 'upload').catch(() => {});
       const input = document.querySelector('#rm-visual-file'); const dt = new DataTransfer(); dt.items.add(await qa.png('per-beat.png', '#121212'));
@@ -330,7 +332,7 @@ try {
       const ctx = qa.ctx(); const s = ctx.state; qa.clearToasts();
       const out = await ctx.modules.voiceInput.useFile(qa.wav('my-voiceover.wav', 9));
       await new Promise(r => setTimeout(r, 300));
-      const spoken = s.plan.beats.filter(b => (b.vo || '').trim());
+      const spoken = qa.beats().filter(b => (b.vo || '').trim());
       const vo = s.timeline.tracks.audio.filter(a => a.kind === 'vo');
       const mix = await ctx.renderMix();
       let peak = 0; if (mix) { const d = mix.getChannelData(0); for (let i = 0; i < d.length; i += 97) peak = Math.max(peak, Math.abs(d[i])); }
@@ -359,7 +361,7 @@ try {
   await step('nudge start: one scene moves by 0.1 s, focus stays on the button', async () => {
     await evaluate(`(() => { const d = document.querySelector('#rm-voice'); d.open = true; const n = document.querySelector('#ri-voice-panel .ri-nudge'); n.open = true; return 1; })()`);
     const r = await evaluate(`(async () => {
-      const s = qa.ctx().state; const id = s.plan.beats[1].id; const before = s.voice[id].durationMs; const w0 = s.voice[id].words[0].s;
+      const s = qa.ctx().state; const id = qa.beats()[1].id; const before = s.voice[id].durationMs; const w0 = s.voice[id].words[0].s;
       const btn = document.querySelector('#ri-voice-panel [data-ri-nudge="' + id + '"][data-d="1"]'); btn.focus(); btn.click();
       await new Promise(r => setTimeout(r, 200));
       const a = document.activeElement;
@@ -375,7 +377,7 @@ try {
   });
 
   await step('persistence: reopening the reel brings back the uploads and the voiceover from this browser', async () => {
-    await evaluate(`(async () => { const c = qa.ctx(); const s = c.state; const clip = c.modules.tray.items().find(i => i.kind === 'video'); const img = c.modules.tray.items().find(i => i.kind === 'image'); const free = s.plan.beats.filter((b, i) => i > 0 && c.ES.takesMedia(b)); if (clip && free[0]) c.modules.tray.moveTo(clip.id, free[0].id); if (img && free[1]) c.modules.tray.moveTo(img.id, free[1].id); await new Promise(r => setTimeout(r, 300)); return 1; })()`);
+    await evaluate(`(async () => { const c = qa.ctx(); const s = c.state; const clip = c.modules.tray.items().find(i => i.kind === 'video'); const img = c.modules.tray.items().find(i => i.kind === 'image'); const free = qa.beats().filter((b, i) => i > 0 && c.ES.takesMedia(b)); if (clip && free[0]) c.modules.tray.moveTo(clip.id, free[0].id); if (img && free[1]) c.modules.tray.moveTo(img.id, free[1].id); await new Promise(r => setTimeout(r, 300)); return 1; })()`);
     const before = await evaluate(`(async () => { const s = qa.ctx().state; await new Promise(r => setTimeout(r, 1200)); return { id: s.projectId, local: Object.values(qa.used()).flat().filter(a => a.local).map(a => a.id).sort(), store: (await qa.ctx().modules.tray.store.projects()).map(p => [p.projectId, p.keys.length]) }; })()`);
     expect(before.local.length >= 2, `nothing to persist: ${JSON.stringify(before)}`);
     await load({ keep: true });
@@ -383,7 +385,7 @@ try {
     await click('#rm-recent-list [data-project]');
     await waitFor(`Boolean(window.ReelMakerCtx.state.timeline) && window.ReelMakerCtx.modules.voiceInput.active()`, 15000, 'restored reel with its voiceover');
     await sleep(800);
-    const after = await evaluate(`(() => { const s = qa.ctx().state; const local = Object.values(qa.used()).flat().filter(a => a.local).map(a => a.id).sort(); return { id: s.projectId, local, drawn: local.every(id => s.images[id] || s.videos[id]), items: qa.ctx().modules.tray.items().length, own: s.plan.beats.filter(b => s.voice[b.id]?.own).length, nudge: Object.values(s.voiceOwn.windows).map(w => w.nudgeMs || 0).join(','), missing: qa.ctx().modules.tray.missing().length, vo: s.timeline.tracks.audio.filter(a => a.kind === 'vo').length }; })()`);
+    const after = await evaluate(`(() => { const s = qa.ctx().state; const local = Object.values(qa.used()).flat().filter(a => a.local).map(a => a.id).sort(); return { id: s.projectId, local, drawn: local.every(id => s.images[id] || s.videos[id]), items: qa.ctx().modules.tray.items().length, own: qa.beats().filter(b => s.voice[b.id]?.own).length, nudge: Object.values(s.voiceOwn.windows).map(w => w.nudgeMs || 0).join(','), missing: qa.ctx().modules.tray.missing().length, vo: s.timeline.tracks.audio.filter(a => a.kind === 'vo').length }; })()`);
     expect(after.id === before.id && JSON.stringify(after.local) === JSON.stringify(before.local), `uploads: ${JSON.stringify(before.local)} -> ${JSON.stringify(after.local)}`);
     expect(after.drawn && after.missing === 0, `not rehydrated: ${JSON.stringify(after)}`);
     expect(await evaluate(`Object.values(qa.used()).flat().some(a => a.local && a.kind === 'clip' && Boolean(qa.ctx().state.videos[a.id]))`), 'the uploaded clip did not come back as a video');
@@ -450,7 +452,7 @@ try {
     await audit('1440-voice-review', ['#rm-toasts']); // the audit adds every open dialog itself
     await click('#ri-voice [data-ri-use]');
     await waitFor(`!document.querySelector('#ri-voice').open && window.ReelMakerCtx.modules.voiceInput.active()`, 30000, 'take applied');
-    const r = await evaluate(`(() => { const s = qa.ctx().state; return { via: s.voiceOwn.via, seconds: s.voiceOwn.seconds, own: s.plan.beats.filter(b => s.voice[b.id]?.own).length, tracks: 0 }; })()`);
+    const r = await evaluate(`(() => { const s = qa.ctx().state; return { via: s.voiceOwn.via, seconds: s.voiceOwn.seconds, own: qa.beats().filter(b => s.voice[b.id]?.own).length, tracks: 0 }; })()`);
     expect(r.via === 'record' && r.seconds > 1.5 && r.seconds < 5 && r.own >= 3, `take: ${JSON.stringify(r)}`);
     expect(scenario.seen.some(s => /^event:voice_upload:.*"via":"record"/.test(s)), 'the recording was not logged');
     notes.push(`recording (fake microphone): ${r.seconds}s take, MediaRecorder -> decode -> 16 kHz WAV -> align -> ${r.own} scenes`);
@@ -493,7 +495,7 @@ try {
     scenario.align = 'free';
     const r = await evaluate(`(async () => {
       const Real = window.Worker; const s = qa.ctx().state;
-      const said = s.plan.beats.filter(b => (b.vo || '').trim()).map(b => b.vo.replace(/\\*/g, '')).join(' ').split(/\\s+/);
+      const said = qa.beats().filter(b => (b.vo || '').trim()).map(b => b.vo.replace(/\\*/g, '')).join(' ').split(/\\s+/);
       window.Worker = class { constructor(url, opts) { this.url = String(url); this.opts = opts; this.l = {}; window.__w = this; } addEventListener(t, f) { this.l[t] = f; } removeEventListener() {} terminate() {}
         postMessage(m) { this.got = { rate16k: m.samples instanceof Float32Array, n: m.samples.length }; setTimeout(() => { this.l.message({ data: { type: 'progress', progress: 50 } }); this.l.message({ data: { id: m.id, type: 'result', text: said.join(' '), chunks: said.map((w, i) => ({ text: ' ' + w.replace(/[,.]/g, ''), timestamp: [0.1 + i * 0.25, 0.3 + i * 0.25] })) } }); }, 30); } };
       const out = await qa.ctx().modules.voiceInput.useFile(qa.wav('device.wav', 8));
@@ -511,7 +513,7 @@ try {
   for (const [align, why] of [['free', 'free mode'], ['fail', 'the call fails']]) {
     await step(`fallback when ${why}: on-device recogniser unavailable -> even split, clearly marked estimated`, async () => {
       scenario.align = align;
-      const r = await evaluate(`(async () => { qa.clearToasts(); const out = await qa.ctx().modules.voiceInput.useFile(qa.wav('fallback.wav', 8)); const s = qa.ctx().state; await new Promise(r => setTimeout(r, 200)); const spoken = s.plan.beats.filter(b => (b.vo || '').trim()); return { out, own: spoken.filter(b => s.voice[b.id]?.own && s.voice[b.id]?.estimated).length, spoken: spoken.length, total: spoken.reduce((a, b) => a + s.buffers['vo:' + b.id].duration, 0), badge: document.querySelector('#rm-voice-badge').textContent, panel: document.querySelector('#ri-voice-panel').textContent.replace(/\\s+/g, ' '), nudgeOpen: document.querySelector('#ri-voice-panel .ri-nudge').open, toast: qa.toasts().join(' | '), words: s.timeline.tracks.captions.words.map(w => w.w).join(' ') }; })()`);
+      const r = await evaluate(`(async () => { qa.clearToasts(); const out = await qa.ctx().modules.voiceInput.useFile(qa.wav('fallback.wav', 8)); const s = qa.ctx().state; await new Promise(r => setTimeout(r, 200)); const spoken = qa.beats().filter(b => (b.vo || '').trim()); return { out, own: spoken.filter(b => s.voice[b.id]?.own && s.voice[b.id]?.estimated).length, spoken: spoken.length, total: spoken.reduce((a, b) => a + s.buffers['vo:' + b.id].duration, 0), badge: document.querySelector('#rm-voice-badge').textContent, panel: document.querySelector('#ri-voice-panel').textContent.replace(/\\s+/g, ' '), nudgeOpen: document.querySelector('#ri-voice-panel .ri-nudge').open, toast: qa.toasts().join(' | '), words: s.timeline.tracks.captions.words.map(w => w.w).join(' ') }; })()`);
       scenario.align = 'ok';
       expect(r.out.ok && r.out.timing === 'estimated' && r.own === r.spoken, `result: ${JSON.stringify(r.out)} own ${r.own}/${r.spoken}`);
       expect(Math.abs(r.total - 8) < 0.05, `the even split should use the whole take, used ${r.total}s`);
@@ -554,7 +556,7 @@ try {
     await waitFor(`document.querySelector('#ri-voice').open`, 2000, 'dialog from the Script source');
     expect(await evaluate(`document.querySelectorAll('#ri-voice .ri-prompter li').length`) >= 3, 'the prompter does not show the pasted script');
     await click('#ri-voice [data-ri-close]');
-    const r = await evaluate(`(async () => { const c = qa.ctx(); const out = await c.modules.voiceInput.useFile(qa.wav('read.wav', 10)); await new Promise(r => setTimeout(r, 500)); const s = c.state; return { out, vo: s.plan.beats.map(b => b.vo).filter(Boolean).join(' '), matches: c.ES.voMatchesScript(s.plan) }; })()`);
+    const r = await evaluate(`(async () => { const c = qa.ctx(); const out = await c.modules.voiceInput.useFile(qa.wav('read.wav', 10)); await new Promise(r => setTimeout(r, 500)); const s = c.state; return { out, vo: qa.beats().map(b => b.vo).filter(Boolean).join(' '), matches: c.ES.voMatchesScript(s.plan) }; })()`);
     expect(r.out.ok && r.out.timing === 'ai' && r.vo === SCRIPT && r.matches, JSON.stringify(r));
   });
 

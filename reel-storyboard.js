@@ -98,6 +98,137 @@
     });
     return groups.filter(g => g.beats.length);
   }
+  // ── Plan v4 on a page built for flat beats ──
+  // A v4 plan keeps its scenes in chapters[].beats. linkV4 gives it a
+  // plan.beats accessor (the flat list, in order) so every part of the page
+  // that reads beats keeps working; assigning plan.beats puts the scenes back
+  // into their chapters (relink). JSON keeps both fields, so a server that only
+  // knows flat beats still reads the plan, and linkV4 takes the flat list's
+  // content (by id) when a reply carries both.
+  function relink(plan, next) {
+    const chapters = plan.chapters;
+    const orig = new Map();
+    chapters.forEach((c, ci) => (c.beats || []).forEach(b => orig.set(b && b.id, ci)));
+    const list = (Array.isArray(next) ? next : []).filter(Boolean);
+    const ci = list.map((b, i) => (orig.has(b.id) ? orig.get(b.id) : -1));
+    // A new scene joins the chapter of the scene before it (the first chapter at the start).
+    ci.forEach((c, i) => { if (c < 0) ci[i] = i ? ci[i - 1] : 0; });
+    // A scene moved across a boundary takes the chapter of the scene now before it.
+    ci.forEach((c, i) => {
+      const prev = i ? ci[i - 1] : null;
+      const nxt = i < ci.length - 1 ? ci[i + 1] : null;
+      if (prev != null && c < prev) ci[i] = prev;
+      else if (prev != null && nxt != null && c > prev && c > nxt) ci[i] = prev;
+      else if (prev == null && nxt != null && c > nxt) ci[i] = nxt;
+    });
+    for (let i = 1; i < ci.length; i += 1) if (ci[i] < ci[i - 1]) ci[i] = ci[i - 1];
+    chapters.forEach(c => { c.beats = []; });
+    list.forEach((b, i) => { const c = chapters[Math.min(chapters.length - 1, Math.max(0, ci[i]))]; c.beats.push(b); });
+    return plan;
+  }
+  function linkV4(plan) {
+    if (!plan || typeof plan !== 'object' || !Array.isArray(plan.chapters) || !plan.chapters.length) return plan;
+    plan.chapters.forEach((c, i) => { if (!c.id) c.id = `c${i + 1}`; if (!Array.isArray(c.beats)) c.beats = []; });
+    const own = Object.getOwnPropertyDescriptor(plan, 'beats');
+    const flat = own && 'value' in own && Array.isArray(own.value) ? own.value : null;
+    if (own && !('value' in own)) return plan; // already linked
+    delete plan.beats;
+    Object.defineProperty(plan, 'beats', {
+      configurable: true, enumerable: true,
+      get() { return plan.chapters.flatMap(c => c.beats || []); },
+      set(next) { relink(plan, next); },
+    });
+    if (flat && flat.length) {
+      const inCh = new Map(plan.chapters.flatMap(c => c.beats).map(b => [b && b.id, b]));
+      relink(plan, flat.map(b => (b && inCh.has(b.id) ? Object.assign(inCh.get(b.id), b) : b)));
+    }
+    return plan;
+  }
+  // v4 plans: the flat accessor; v3 plans through ReelES.toV4 when the engine has it (else as they are).
+  function ensureV4(plan, ES) {
+    if (!plan || typeof plan !== 'object') return plan;
+    if (Array.isArray(plan.chapters) && plan.chapters.length) return linkV4(plan);
+    if (ES && typeof ES.toV4 === 'function' && Array.isArray(plan.beats) && plan.beats.length) {
+      let out = null;
+      try { out = ES.toV4(plan); } catch { out = null; }
+      if (out && Array.isArray(out.chapters) && out.chapters.length) {
+        const keep = Object.fromEntries(Object.entries(out).filter(([k]) => k !== 'beats'));
+        delete plan.beats;
+        Object.assign(plan, keep);
+        return linkV4(plan);
+      }
+    }
+    return plan;
+  }
+  const isV4 = plan => Boolean(plan && Array.isArray(plan.chapters) && plan.chapters.length);
+  // The words people say, compared loosely (case, punctuation, *emphasis* and spacing ignored).
+  const looseWords = text => String(text || '').toLowerCase().replace(/[*]/g, '').replace(/[’‘]/g, "'").replace(/[^a-z0-9'%$.\s-]/g, ' ').replace(/[.\-]+(\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
+  // Does the plan say the script word for word? (The AI never rewrites it.)
+  // Credits and links are not spoken (the server keeps them as sources): "Source: …", "Sources: …", "Via …", "Per …", URLs.
+  const unspoken = text => String(text || '').replace(/https?:\/\/\S+/gi, ' ').replace(/(^|[.!?\n]\s*)(?:sources?|via|per|credit)\s*:[^\n]*?(?=$|\n)/gi, '$1').replace(/(^|[.!?\n]\s*)(?:sources?|via|per|credit)\s*:[^.!?\n]*[.!?]?/gi, '$1');
+  function keepsScript(plan, script) {
+    const said = looseWords((plan && Array.isArray(plan.beats) ? plan.beats : []).map(b => b && b.vo).filter(Boolean).join(' '));
+    if (!looseWords(script) || !said) return false;
+    return said === looseWords(script) || said === looseWords(unspoken(script));
+  }
+  // A beat that shows nothing that moves: no media (or media 'none') and no module.
+  const bareBeat = b => Boolean(b) && !(b.module && b.module.type) && !(b.media && b.media.kind && b.media.kind !== 'none') && !(b.block && b.block.type && b.block.type !== 'statement' && b.block.type !== 'hook');
+  // ── The page's own builder (server unreachable): never a scene that shows nothing ──
+  // The figures a line says, with the word(s) after each: "45 touchdowns, 6 interceptions,
+  // a 122.5 passer rating" -> [{ value: '45', label: 'TOUCHDOWNS' }, …]. Years are dates, not figures.
+  function figuresOf(vo) {
+    const text = String(vo || '').replace(/[*]/g, '');
+    const out = [];
+    const re = /(\d[\d,]*(?:\.\d+)?(?:-\d+)?%?)\s+((?:[A-Za-z][A-Za-z'’-]*)(?:\s+(?!and\b|or\b|a\b|an\b|the\b|in\b|on\b|of\b)[A-Za-z][A-Za-z'’-]*)?)/g;
+    let m;
+    while ((m = re.exec(text)) && out.length < 3) {
+      const value = m[1];
+      if (/^(19|20)\d\d$/.test(value)) continue;
+      out.push({ value, label: m[2].toUpperCase().slice(0, 18) });
+    }
+    return out;
+  }
+  // The headline a chapter opens on: the first clause of its first line (up to ~9 words),
+  // in capitals, with its last word marked.
+  function headlineOf(vo) {
+    const first = String(vo || '').replace(/[*]/g, '').split(/[:;.!?]/)[0].trim();
+    const words = first.split(/\s+/).filter(Boolean).slice(0, 9);
+    if (words.length < 2) return '';
+    const last = words.pop();
+    return `${words.join(' ')} *${last}*`.toUpperCase();
+  }
+  // Fills the gaps of a page-built v4 plan: a hook headline from the first line, and a
+  // module on every scene that has neither a module nor media of its own (the figures it
+  // says as stat tiles or a reveal; a line with no figures as a one-row checklist that
+  // ticks in). Words are never changed.
+  function shoreUp(plan) {
+    if (!isV4(plan)) return plan;
+    const first = plan.chapters[0];
+    const firstBeat = first && first.beats[0];
+    const hook = firstBeat ? headlineOf(firstBeat.vo) : '';
+    if (hook) first.headline = hook;
+    plan.chapters.forEach(c => (c.beats || []).forEach(b => {
+      if (b.module && b.module.type) return;
+      const hasMedia = b.media && b.media.kind && !['none', 'auto'].includes(b.media.kind);
+      if (hasMedia) return;
+      const figs = figuresOf(b.vo);
+      if (figs.length >= 2) b.module = { type: 'statTiles', tiles: figs.map((f, i) => ({ ...f, tone: i === 0 ? 'blue' : 'ink' })) };
+      else if (figs.length === 1) b.module = { type: 'reveal', from: '?', to: figs[0].value, label: figs[0].label };
+      else {
+        const clause = String(b.vo || '').replace(/[*]/g, '').split(/[.!?]/)[0].trim().split(/\s+/).slice(0, 6).join(' ');
+        if (clause) b.module = { type: 'checklist', rows: [{ text: clause.toUpperCase(), checked: true }] };
+      }
+    }));
+    return plan;
+  }
+  const bareBeats = plan => (isV4(plan) ? plan.chapters.flatMap(c => c.beats || []).filter(b => !(b.module && b.module.type) && !(b.media && b.media.kind && !['none', 'auto'].includes(b.media.kind))) : []);
+  // Words, seconds and the length target for the script meter (2.6 words a second).
+  function scriptMeter(text, target = { min: 80, max: 100 }, wps = 2.6) {
+    const words = String(text || '').replace(/[*]/g, '').trim().split(/\s+/).filter(Boolean).length;
+    const sec = Math.round(words / wps);
+    const state = !words ? 'empty' : sec < target.min ? 'short' : sec > target.max ? 'long' : 'ok';
+    return { words, sec, state, need: { min: Math.ceil(target.min * wps), max: Math.floor(target.max * wps) } };
+  }
   // Data blocks animate on their own (counts, bars, dots); hook / statement /
   // quote type over plain paper does not.
   const MOTION_BLOCKS = ['number', 'dots', 'compare', 'statTiles', 'dotGrid', 'streak', 'rankTile'];
@@ -167,7 +298,7 @@
       const cardOf = id => list.querySelector(`[data-beat="${CSS.escape(id)}"]`);
       const fid = (field, id) => `rm-${field.replace(/\./g, '-')}-${id}`;
       // Receipts is motion only: no media, no Swap (unless the person added some).
-      const takes = beat => (es() ? ES.takesMedia(beat) && (!(ui.curStyle && ui.curStyle() === 'receipts') || Boolean((state.photos[beat.id] || []).length)) : beat.kind !== 'cta');
+      const takes = beat => (ui.takesMedia ? ui.takesMedia(beat) : (es() ? ES.takesMedia(beat) : beat.kind !== 'cta'));
       // The cards show the ES safe frame (y 290 to 1650), where every word sits.
       // Review v4: evenly sized thumbnails of the whole frame (9:16, or 4:5 for the feed size), drawn at 2x.
       const thumbSize = () => { const s = (state.timeline && state.timeline.size) || [1080, 1920]; return s[1] === 1350 ? [160, 200] : [160, 284]; };
@@ -197,8 +328,14 @@
           ${rows.length < def.max ? `<button class="rm-addrow" type="button" data-sb-add="${key}">${ICON.plus}<span>Add a ${def.noun}</span></button>` : ''}
         </div>`;
       }
+      // Your script is read-only here unless you choose Edit script: the words are yours, the visuals follow them.
+      state.voEdit = state.voEdit || {};
       function voHtml(beat) {
         const id = beat.id;
+        if (ui.scriptLocked() && !state.voEdit[id]) {
+          return `<div class="rm-bf rm-voread"><div class="rm-bf__row"><span class="rm-bf__label" id="rm-vo-${esc(id)}-label">Your words</span><button class="rm-link rm-voread__edit" type="button" data-sb-editvo aria-describedby="rm-vo-${esc(id)}-label">Edit script</button></div>
+            <p class="rm-voread__text" id="rm-vo-${esc(id)}">${esc(String(beat.vo || '').replace(/\*/g, '')) || '<span class="rm-meta">No words on this scene.</span>'}</p></div>`;
+        }
         return `<div class="rm-bf"><div class="rm-bf__row"><label class="rm-bf__label" for="rm-vo-${esc(id)}">${ui.scriptLocked() ? 'Voiceover (your words)' : 'Voiceover'}</label>${ui.count(beat.vo, F.PACE.voMaxWords)}</div>
           <textarea class="es-input rm-bf__input" id="rm-vo-${esc(id)}" data-field="vo" rows="2" maxlength="300" title="Wrap the key word in *asterisks* to make it yellow in the captions.">${esc(beat.vo || '')}</textarea></div>`;
       }
@@ -260,14 +397,14 @@
       }
 
       // ── What a scene shows ──
-      const SOURCE = { 'x-clip': 'Official clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', paper: 'Infographic', none: 'Infographic' };
+      const SOURCE = { 'x-clip': 'Official clip', upload: 'Your upload', 'upload-clip': 'Your clip', photo: 'ES photo', headshot: 'ES photo', tile: 'Team graphic', scene: 'AI scene', 'ai-clip': 'AI b-roll clip', design: 'Designed background', paper: 'No clip or photo', none: 'No clip or photo' };
       function mediaOf(beat) {
         const ids = state.photos[beat.id] || [];
         const asset = ids[0] ? state.assets[ids[0]] : null;
         const src = state.visualSrc[beat.id] || (asset ? (asset.kind === 'clip' ? 'x-clip' : 'photo') : 'none');
         return { asset, src, img: ids[0] && state.images[ids[0]], clip: Boolean(asset && asset.kind === 'clip'), verified: Boolean(asset && asset.verified) };
       }
-      const mediaBadge = m => (m.asset ? `${m.clip ? 'Clip' : 'Photo'}${m.verified ? ' ✓' : ''}` : 'Infographic');
+      const mediaBadge = m => (m.asset ? `${m.clip ? 'Clip' : 'Photo'}${m.verified ? ' ✓' : ''}` : 'No clip or photo');
       // Allowed blocks for the scene: the style's list when the engine gives one.
       function blockOptions(beat, i) {
         const type = ES.blockOf(beat).type;
@@ -293,17 +430,17 @@
         const time = b ? `${ui.fmtTime(b.inMs)}–${ui.fmtTime(b.outMs)}` : '';
         const [tw, th] = thumbSize();
         const m = mediaOf(beat);
-        const words = es() && ES.blockText ? ES.blockText(ES.blockOf(beat)) : (beat.text || '');
+        const words = ui.v4Beat && ui.v4Beat(beat) ? (beat.vo || '') : (es() && ES.blockText ? ES.blockText(ES.blockOf(beat)) : (beat.text || ''));
         const media = takes(beat) && !end;
         const mv = ui.motionOf ? ui.motionOf(beat) : null;
         const still = Boolean(mv && !mv.ok && !end);
         return `<li class="rm-card${on ? ' is-on' : ''}${end ? ' is-end' : ''}${still ? ' is-still' : ''}" data-beat="${esc(id)}" data-ri-beat="${esc(id)}" data-kind="${esc(beat.kind)}">
-          <button class="rm-card__face" type="button" data-sb-face draggable="${end ? 'false' : 'true'}" aria-pressed="${on}" aria-label="Scene ${i + 1} of ${n}, ${esc(name)}${media ? `, ${esc(mediaBadge(m))}` : ''}${still ? ', no motion yet' : ''}${time ? `, ${time}` : ''}. ${end ? 'Always last.' : 'Alt and an arrow key moves it.'}" title="${esc(`${name}: ${words || ''}`)}">
+          <button class="rm-card__face" type="button" data-sb-face data-beat-select draggable="${end ? 'false' : 'true'}" aria-pressed="${on}" aria-label="Scene ${i + 1} of ${n}, ${esc(name)}${words ? `: ${esc(String(words).replace(/[*]/g, '').slice(0, 80))}` : ''}${media ? `, ${esc(mediaBadge(m))}` : ''}${still ? ', no motion yet' : ''}${time ? `, ${time}` : ''}. ${end ? 'Always last.' : 'Alt and an arrow key moves it.'}" title="${esc(`${name}: ${words || ''}`)}">
             <span class="rm-card__media"><canvas class="rm-card__thumb" width="${tw}" height="${th}" data-sb-thumb aria-hidden="true"></canvas>
               <span class="rm-card__n" aria-hidden="true">${i + 1}</span>
               ${media ? `<span class="rm-card__badge${m.asset ? (m.clip ? ' is-clip' : (m.verified ? ' is-verified' : '')) : ' is-none'}" aria-hidden="true">${m.asset ? (m.clip ? ICON.film : ICON.image) : ICON.stat}</span>` : ''}
               ${still ? '<span class="rm-card__still" aria-hidden="true">Static</span>' : ''}</span>
-            <span class="rm-card__label" aria-hidden="true"><b>${esc(name)}</b><span class="rm-card__words">${words && shortTitle(words, 13 - name.length - 3) ? ` · ${esc(shortTitle(words, 13 - name.length - 3))}` : ''}</span></span>
+            <span class="rm-card__label" aria-hidden="true"><b class="rm-card__type">${esc(name)}</b><span class="rm-card__words">${esc(String(words || '').replace(/[*]/g, '').replace(/\s+/g, ' ').trim() || '—')}</span></span>
           </button>
           ${media ? `<button class="rm-card__swap" type="button" data-visual="swap" aria-label="Swap the media for scene ${i + 1}" title="Swap media">${ICON.refresh}<span class="es-sr-only">Swap</span></button>` : ''}
           <p class="rm-beat__flag" aria-live="polite"></p>
@@ -344,7 +481,7 @@
           drawThumb(card);
           const beat = beatOf(card.dataset.beat);
           const w = card.querySelector('.rm-card__words');
-          if (beat && w && es() && ES.blockText) { const nm = ui.beatName(beat); const t = shortTitle(ES.blockText(ES.blockOf(beat)), 13 - nm.length - 3); w.textContent = t ? ` · ${t}` : ''; }
+          if (beat && w) { const said = ui.v4Beat && ui.v4Beat(beat) ? (beat.vo || '') : (es() && ES.blockText ? ES.blockText(ES.blockOf(beat)) : (beat.text || '')); w.textContent = String(said || '').replace(/[*]/g, '').replace(/\s+/g, ' ').trim() || '—'; }
         });
         drawEditorThumb();
         seen = Object.keys(state.images).length;
@@ -426,7 +563,11 @@
         const note = state.visualNote && state.visualNote[beat.id];
         const open = state.swapOpen === beat.id;
         const credit = m.asset && m.asset.rights && m.asset.rights.credit ? ` · ${m.asset.rights.credit}` : '';
-        const status = m.asset ? (m.verified ? `<span class="rm-verified">${ICON.check}<span>Checked: ${m.clip ? 'right subject and moment' : 'shows the right person'}</span></span>` : (ui.sourcingOn && ui.sourcingOn() ? '' : '<span class="rm-meta">Not checked yet</span>')) : '<span class="rm-meta">No clip or photo matched this scene, so it is an infographic.</span>';
+        // A photo says "shows the right person" only when vision checked it; an agency caption says so.
+        const by = m.asset && m.asset.checkedBy;
+        const what = m.clip ? 'Checked: right subject and moment' : (by === 'caption' ? 'From an agency caption' : (by && by !== 'vision' ? 'Checked by its source' : 'Checked: shows the right person'));
+        const shortNote = m.clip && m.asset.short ? '<span class="rm-meta">The clip is shorter than the scene, so it loops.</span>' : '';
+        const status = m.asset ? (m.verified ? `<span class="rm-verified${by === 'caption' && !m.clip ? ' is-caption' : ''}">${by === 'caption' && !m.clip ? '' : ICON.check}<span>${what}</span></span>${shortNote}` : (ui.sourcingOn && ui.sourcingOn() ? '' : '<span class="rm-meta">Not checked yet</span>')) : (beat.module && beat.module.type ? `<span class="rm-meta">No clip or photo: the ${esc((ui.moduleLabel && ui.moduleLabel[beat.module.type]) || beat.module.type)} carries this scene.</span>` : (ES && !(ui.v4Beat && ui.v4Beat(beat)) && ['number', 'dots', 'compare', 'statTiles', 'dotGrid', 'streak', 'rankTile'].includes(ES.blockOf(beat).type) ? '<span class="rm-meta">No clip or photo: the data block carries this scene.</span>' : '<span class="rm-meta">Nothing moves here yet: find a clip, add a photo, or pick a module.</span>'));
         return `<div class="rm-scene__media">
           <div class="rm-scene__mediarow">
             <span class="rm-scene__thumb${m.img ? '' : ' is-empty'}" aria-hidden="true">${m.img ? (m.img.tagName === 'CANVAS' ? '<span data-sb-poster></span>' : `<img src="${esc(m.img.src)}" alt="">`) : ICON.image}</span>
@@ -438,7 +579,7 @@
             <div class="rm-swap__more" role="group" aria-label="More ways">
               <button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-visual="photo">${ICON.image}<span>Search ES photos</span></button>
               <button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-visual="upload">${ICON.upload}<span>Upload</span></button>
-              ${m.asset ? `<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sb-nomedia>${ICON.stat}<span>Use an infographic</span></button>` : ''}
+              ${m.asset ? `<button class="es-btn es-btn--sm es-btn--tertiary" type="button" data-sb-nomedia>${ICON.stat}<span>No picture: data only</span></button>` : ''}
             </div>
           </div>
         </div>`;
@@ -460,6 +601,35 @@
           : `<li class="rm-swap__empty"><p>${ui.sourcingOn && ui.sourcingOn() ? 'No other clip or photo passed the check for this scene.' : 'No other media found for this scene.'}</p></li>`;
       }
       const swapCache = new Map();
+      // ── Plan v4 scenes: media kind, module, stamp, tag, the chapter headline ──
+      const MEDIA_NAME = { clip: 'Game clip', presser: 'Press clip', photo: 'Photo', cards: 'Name cards', cutout: 'Cut-out', none: 'None' };
+      const MODULES = ['scoreboard', 'bars', 'numberLine', 'dotGrid', 'scatter', 'wl', 'rankList', 'statTiles', 'reveal', 'compare', 'tally', 'calendar', 'timeline', 'playDiagram', 'flow', 'checklist', 'quote', 'lineChart'];
+      function moduleSelect(beat) {
+        const id = beat.id;
+        const cur = beat.module && beat.module.type ? beat.module.type : '';
+        const label = ui.moduleLabel || {};
+        return `<div class="rm-bf rm-scene__block rm-scene__block--stack"><label class="rm-bf__label" for="rm-module-${esc(id)}">Module</label><select class="es-select es-select--sm rm-bf__input" id="rm-module-${esc(id)}" data-sb-module>
+          <option value=""${cur ? '' : ' selected'}>None (media only)</option>${MODULES.map(t => `<option value="${t}"${t === cur ? ' selected' : ''}>${esc(label[t] || nice(t))}</option>`).join('')}</select></div>`;
+      }
+      function chapterOf(beat) { return (state.plan.chapters || []).find(c => (c.beats || []).some(b => b.id === beat.id)) || null; }
+      function v4Body(beat) {
+        const id = beat.id;
+        const parts = [];
+        const ch = chapterOf(beat);
+        if (ch && ch.beats[0] && ch.beats[0].id === id) parts.push(field(id, 'chap.headline', 'Chapter headline', ch.headline || '', { max: 60, ph: 'DALLAS BLEW A *21-POINT LEAD*' }), '<p class="rm-hint">Holds for the whole chapter. Wrap one word in *asterisks* to colour it.</p>');
+        if (beat.media && beat.media.kind !== 'none') parts.push(field(id, 'v4.media.label', 'Media label', (beat.media && beat.media.label) || '', { max: 24, ph: 'EAGLES BALL' }));
+        parts.push(`<div class="rm-bf-pair">${field(id, 'v4.stamp.text', 'Stamp', (beat.stamp && beat.stamp.text) || '', { max: 24, ph: 'BAD CALL' })}${field(id, 'v4.tag.text', 'Tag', (beat.tag && beat.tag.text) || '', { max: 28, ph: '0:02 LEFT' })}</div>`);
+        if (beat.module && beat.module.type) parts.push(`<div class="rm-modfields">${genericBody(id, beat.module).replace(/data-field="es\./g, 'data-field="v4.module.').replace(/(id|for)="rm-es-/g, '$1="rm-v4m-')}</div><p class="rm-hint">Numbers must come from a source.</p>`);
+        parts.push(voHtml(beat));
+        return parts.join('');
+      }
+      // Ask AI about this one scene: the visuals change, your words do not.
+      function askHtml(beat, i) {
+        if (!ui.reviseBeat || !state.config.ai || state.config.offline) return '';
+        return `<form class="rm-askbeat" data-sb-ask><label class="rm-bf__label" for="rm-askbeat-${esc(beat.id)}">Ask AI about scene ${i + 1}</label>
+          <div class="rm-askbeat__row"><input class="es-input" id="rm-askbeat-${esc(beat.id)}" type="text" maxlength="200" placeholder="Show the clip from the 4th down"><button class="es-btn" type="submit">${ICON.sparkles || ''}<span>Ask</span></button></div>
+          <p class="rm-hint">Changes the media, module or on-screen words. Your script stays as written.</p></form>`;
+      }
       function renderEditor() {
         if (!editorEl) return;
         const i = beats().findIndex(b => b.id === state.selected);
@@ -475,11 +645,14 @@
         const voiced = state.voice[id] && state.voice[id].text === beat.vo;
         let side = '';
         let body = '';
-        if (es()) {
+        if (ui.v4Beat && ui.v4Beat(beat)) {
+          side = moduleSelect(beat);
+          body = `${takes(beat) ? `<h4 class="rm-insp__h">Media · ${esc(MEDIA_NAME[beat.media.kind] || beat.media.kind)}</h4>${mediaSection(beat, i)}` : ''}<h4 class="rm-insp__h">On screen</h4><div class="rm-beat__fields">${v4Body(beat)}</div>${askHtml(beat, i)}`;
+        } else if (es()) {
           const type = ES.blockOf(beat).type;
           side = end ? '<span class="rm-meta">The end card is always last.</span>'
-            : `<div class="rm-bf rm-scene__block"><label class="rm-bf__label" for="rm-estype-${esc(id)}">Block</label><select class="es-select es-select--sm rm-bf__input" id="rm-estype-${esc(id)}" data-field="es.type">${blockOptions(beat, i).map(t => `<option value="${t}"${t === type ? ' selected' : ''}>${esc(ES.BLOCKS[t].label)}</option>`).join('')}</select></div>`;
-          body = `${!end && takes(beat) ? `<h4 class="rm-insp__h">Media</h4>${mediaSection(beat, i)}` : ''}<h4 class="rm-insp__h">${end ? 'End card' : 'On screen'}</h4><div class="rm-beat__fields">${esBody(beat)}</div>`;
+            : `<div class="rm-bf rm-scene__block rm-scene__block--stack"><label class="rm-bf__label" for="rm-estype-${esc(id)}">Block</label><select class="es-select es-select--sm rm-bf__input" id="rm-estype-${esc(id)}" data-field="es.type">${blockOptions(beat, i).map(t => `<option value="${t}"${t === type ? ' selected' : ''}>${esc(ES.BLOCKS[t].label)}</option>`).join('')}</select></div>`;
+          body = `${!end && takes(beat) ? `<h4 class="rm-insp__h">Media</h4>${mediaSection(beat, i)}` : ''}<h4 class="rm-insp__h">${end ? 'End card' : 'On screen'}</h4><div class="rm-beat__fields">${esBody(beat)}</div>${end ? '' : askHtml(beat, i)}`;
         } else {
           body = `${beat.kind === 'cta' ? '' : ctx.visualCard(beat)}<div class="rm-beat__fields">${ctx.beatFields(beat, i)}</div>`;
         }
@@ -569,7 +742,25 @@
           if (line) line.textContent = `${dotsLine(editorEl.querySelector('[data-field="es.count"]').value, editorEl.querySelector('[data-field="es.highlight"]').value)} Up to 2,600.`;
         }
       });
+      editorEl.addEventListener('submit', event => {
+        const form = event.target.closest('[data-sb-ask]');
+        if (!form) return;
+        event.preventDefault();
+        const input = form.querySelector('input');
+        const v = input.value.trim();
+        if (v.length < 3) { input.focus(); return; }
+        ui.reviseBeat(editorEl.dataset.beat, v, form);
+      });
       editorEl.addEventListener('change', event => {
+        const mod = event.target.closest('[data-sb-module]');
+        if (mod) {
+          const beat = beatOf(editorEl.dataset.beat);
+          if (!beat) return;
+          ui.setModule(beat, mod.value);
+          rerender(beat.id);
+          document.getElementById(`rm-module-${beat.id}`)?.focus({ preventScroll: true });
+          return;
+        }
         const box = event.target.closest('[data-sb-stamp]');
         if (!box) return;
         const beat = beatOf(editorEl.dataset.beat);
@@ -590,6 +781,13 @@
           keepFocus(renderEditor);
           editorEl.querySelector('[data-sb-swap]')?.focus({ preventScroll: true });
           if (state.swapOpen) ctx.logEvent('visuals', { action: 'swap-open' });
+          return;
+        }
+        if (t.closest('[data-sb-editvo]')) {
+          state.voEdit[id] = true;
+          keepFocus(renderEditor);
+          const ta = document.getElementById(`rm-vo-${id}`);
+          if (ta && ta.tagName === 'TEXTAREA') { ta.focus({ preventScroll: true }); ui.voBefore?.(id); }
           return;
         }
         const go = t.closest('[data-sb-go]');
@@ -638,7 +836,8 @@
         const card = t.closest('[data-beat]');
         if (!card) return;
         const id = card.dataset.beat;
-        if (t.closest('[data-sb-face]')) { ctx.selectBeat(id, { seek: true }); }
+        // The face, or anywhere on the card but its Swap: pick the scene.
+        if (t.closest('[data-sb-face]') || !t.closest('button, a, input, select, textarea')) { ctx.selectBeat(id, { seek: true }); }
       });
       list.addEventListener('focusin', event => {
         const face = event.target.closest('[data-sb-face]');
@@ -711,5 +910,5 @@
     else document.addEventListener('reelmaker:ready', event => start((event.detail && event.detail.ctx) || window.ReelMakerCtx), { once: true });
   }
 
-  return { COLORS, ROWS, endIndex, canMove, move, dropIndex, stampWord, dotsLine, markerText, chaptersOf, motionOf, readiness, MOTION_BLOCKS, attach };
+  return { COLORS, ROWS, endIndex, canMove, move, dropIndex, stampWord, dotsLine, markerText, chaptersOf, motionOf, readiness, MOTION_BLOCKS, relink, linkV4, ensureV4, isV4, keepsScript, looseWords, unspoken, bareBeat, bareBeats, figuresOf, headlineOf, shoreUp, scriptMeter, attach };
 }));

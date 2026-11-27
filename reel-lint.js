@@ -68,6 +68,8 @@
     if (!timeline || !Array.isArray(timeline.beats) || !timeline.beats.length) {
       return { issues: [issue('empty', 'critical', 'The reel has no beats yet.', 'Write the reel first.')], critical: 1, warnings: 0, ok: false };
     }
+    // Reels Studio v4 (the Breakdown engine): its own checks.
+    if (timeline.v === 4) return lintV4(timeline, { target, extraSources, measure });
     const fmt = F.FORMATS[timeline.format] || F.FORMATS.explainer;
     const es = Boolean(ES && R.isEs && R.isEs(timeline));
     const seconds = timeline.durationMs / 1000;
@@ -267,6 +269,59 @@
   // The data block as facts, so a v2 reel lints on its own: the digest's
   // facts (ReelTimeline.digestFacts), the athlete's season years and career
   // totals, and the cited archive moments (the server drops uncited ones).
+  // ─── v4: the Breakdown engine ───────────────────────────────────────────
+  // Length (80-100 s is the target, 8-120 s allowed), the voiceover's start,
+  // banned words, numbers from the sources, rights, captions, plus ReelES4.checks:
+  // the motion system (durations on the scale, named curves, no jumps), every
+  // beat moving, empty media slots, clipCount 0 (needs clips), module data
+  // shapes, and the brand checks (palette, type scale, safe frame, mark, one
+  // coloured word, 1-3 word captions, no emoji).
+  const getE4 = () => (typeof module === 'object' && module.exports ? require('./reel-es4.js') : (typeof self !== 'undefined' ? self.ReelES4 : null));
+  function lintV4(timeline, { target = 'organic', extraSources = '', measure = null } = {}) {
+    const E4 = getE4();
+    const issues = [];
+    const seconds = timeline.durationMs / 1000;
+    if (seconds < LIMITS.minSeconds || seconds > 120) issues.push(issue('length', 'critical', `The reel runs ${seconds.toFixed(1)} s. Keep it between ${LIMITS.minSeconds} and 120 s.`, seconds > 120 ? 'Cut a chapter.' : 'Add a chapter.'));
+    else if (seconds < 30) issues.push(issue('length', 'info', `${seconds.toFixed(0)} s: a short breakdown. The full ones run 80-100 s.`));
+    else if (seconds > 100) issues.push(issue('length', 'warning', `${seconds.toFixed(0)} s is long. Aim for 80-100 s.`, 'Trim a beat.'));
+    const vo1 = timeline.tracks.audio.find(a => a.kind === 'vo');
+    if (vo1 && vo1.inMs > LIMITS.voStartMs) issues.push(issue('hook-vo', 'warning', `The voiceover starts at ${(vo1.inMs / 1000).toFixed(1)} s. Start it in the first 0.2 s.`, 'Give the first beat a voiceover line.', vo1.beat));
+    timeline.beats.forEach((beat, index) => {
+      const v = F.wordCount(beat.vo);
+      if (v > LIMITS.voWords) issues.push(issue('vo-length', 'warning', `Beat ${index + 1}: ${v} voiceover words is one idea too many.`, 'Split it into two beats.', beat.id));
+      (RULES && RULES.BANNED ? RULES.BANNED : []).forEach(rule => { if (rule.re.test(`${beat.text} ${beat.vo}`.replace(/#\d+\b/g, ''))) issues.push(issue('style', 'warning', `Beat ${index + 1}: ${rule.why}.`, 'Rewrite the line in the ES voice.', beat.id)); });
+    });
+    // Numbers on screen come from the sources (or the voiceover spells them).
+    const sourceSet = F.numberSet(`${timeline.corpus || ''} ${extraSources || ''}`);
+    if (ES && ES.spelledNumbers) ES.spelledNumbers(`${timeline.corpus || ''} ${extraSources || ''} ${timeline.beats.map(b => b.vo || '').join(' ')}`).forEach(n => sourceSet.add(n));
+    F.numbersIn(timeline.beats.map(b => b.vo || '').join(' ')).forEach(n => sourceSet.add(n));
+    // Spoken amounts back their figures: "one in a hundred" -> 100, "under half" -> 50(%).
+    const SPOKEN = { hundred: '100', thousand: '1000', half: '50', dozen: '12', million: '1000000' };
+    timeline.beats.forEach(b => String(b.vo || '').toLowerCase().split(/[^a-z]+/).forEach(w => { if (SPOKEN[w]) sourceSet.add(SPOKEN[w]); }));
+    timeline.beats.forEach((beat, index) => {
+      // Numbers inside team names (49ERS, 76ERS) are names, not figures.
+      const bad = F.numbersIn(String(beat.text || '').replace(/\b\d+(?:ERS|NERS)\b/gi, '')).filter((n, i, a) => a.indexOf(n) === i && !sourceSet.has(n) && !(E4 && E4.STRUCTURAL.has(n)));
+      if (bad.length) issues.push(issue('numbers', 'critical', `Beat ${index + 1}: ${bad.join(', ')} ${bad.length > 1 ? 'are' : 'is'} not in the sources.`, 'Fix the number, or add where it comes from under Sources.', beat.id));
+    });
+    // Rights, and missing assets.
+    timeline.tracks.video.forEach(shot => { if (shot.asset && !timeline.assets[shot.asset]) issues.push(issue('visual', 'critical', 'A beat points at a clip or picture that is gone.', 'Pick another.', shot.beat)); });
+    usedAssets(timeline).forEach(id => {
+      const asset = timeline.assets[id];
+      const rights = asset && asset.rights;
+      if (!rights || !rights.source || !rights.licence) issues.push(issue('rights', 'critical', `${asset?.label || id} has no ${rights && rights.source ? 'licence recorded' : 'rights record'}.`, 'Add where it comes from and its licence, or swap it.'));
+      else if (target === 'paid' && rights.paid !== true) issues.push(issue('rights', 'critical', `${asset.label || id} is not cleared for paid ads.`, 'Export as organic, or swap it.'));
+      else if (rights.organic !== true) issues.push(issue('rights', 'critical', `${asset.label || id} is not cleared for social posts.`, 'Swap it.'));
+    });
+    if (!timeline.tracks.captions.words.length) issues.push(issue('captions', 'warning', 'No captions: most people watch with the sound off.', 'Add voiceover lines to the beats.'));
+    if (timeline.voice.mode === 'off') issues.push(issue('voice', 'info', 'Captions only, no voiceover. Voiceover is what makes a reel count as original on Instagram and Facebook.'));
+    if (timeline.timing && timeline.timing.estimate) issues.push(issue('timing', 'info', 'Beat times are estimates (2.6 words a second) until the voiceover is recorded.', 'Record or load the voiceover to lock the beats to it.'));
+    if (timeline.plan && timeline.plan.closeRaw) issues.push(issue('close', 'warning', `"${timeline.plan.closeRaw.kind}" is not a close; it ends on the end card.`, `Use one of: ${(E4 ? E4.CLOSE_KINDS : []).join(', ')}.`));
+    if (E4) issues.push(...E4.checks(timeline, { measure: typeof measure === 'function' ? measure : null }));
+    const critical = issues.filter(i => i.severity === 'critical').length;
+    const warnings = issues.filter(i => i.severity === 'warning').length;
+    return { issues, critical, warnings, ok: critical === 0, needsClips: Boolean(timeline.needsClips), ...(timeline.needsClips ? { actions: [{ id: 'find-clips', label: 'Find clips' }] } : {}) };
+  }
+
   function dataFacts(timeline) {
     const T = typeof self !== 'undefined' && self.ReelTimeline ? self.ReelTimeline : (typeof require === 'function' ? require('./reel-timeline.js') : null);
     const d = timeline.data || {};
@@ -425,5 +480,5 @@
     });
   }
 
-  return { LIMITS, lintTimeline, lintSlides, dataIssues, rightsSummary, usedAssets };
+  return { LIMITS, lintTimeline, lintV4, lintSlides, dataIssues, rightsSummary, usedAssets };
 }));

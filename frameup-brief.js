@@ -501,7 +501,7 @@
     const photos = [...(ownPhoto ? [ownPhoto] : []), ...(data.photos || []).map(p => ({ url: p.url, title: p.title, sourceUrl: p.sourceUrl || '' }))];
     session = {
       ws, brief, options, photos, photoIndex: 0, current: -1, thumbs: [], startedAt: started,
-      tweets: data.tweets || [], subject: data.subject || '', article: data.article || null,
+      tweets: data.tweets || [], cutouts: data.cutouts || [], subject: data.subject || '', article: data.article || null,
       engine: data.mode === 'free' ? 'free' : (data.engine || 'ai'), notice: data.mode === 'free' ? (data.notice || 'AI is in free mode, so this was designed from your words.') : '',
       notes: data.notes || [], fixed: [], left: [], serverMs: data.ms || 0, costUsd: data.costUsd || 0,
     };
@@ -530,6 +530,7 @@
       brief: session.brief,
       subject: session.subject,
       tweets: session.tweets,
+      cutouts: session.cutouts,
       photo: photo ? { url: photo.url, title: photo.title, sourceUrl: photo.sourceUrl || '' } : null,
       palette: paletteFor(session.options, index),
       factsText: session.article?.title || '',
@@ -540,6 +541,20 @@
     const A = Apply();
     const option = session.options[index];
     let ctx = ctxFor(index);
+    let fromVariation = '';
+    try { fromVariation = session.ws === 'youtube' ? activeYoutubeVariation : ''; } catch (error) { fromVariation = ''; }
+    // A YouTube layout keeps its own design and history: give the layout the
+    // brief opens in a starting point, so Undo is there and returns to it.
+    try {
+      const target = session.ws === 'youtube' && option.template !== 'quote' ? option.template : '';
+      if (target && target !== fromVariation && youtubeVariationStates[target]) {
+        const history = getDesignHistory(youtubeVariationStates[target]);
+        if (history && !history.current) {
+          const snapshot = cloneDesignValue(youtubeVariationStates[target]);
+          history.current = { snapshot, signature: designSignature(snapshot) };
+        }
+      }
+    } catch (error) { /* history is optional */ }
     // Undo covers canvas designs, not the HTML widget forms: keep what was
     // there so Restore can put it back.
     if (A.isHtml(session.ws, option.template) && !session.restore?.[option.template]) {
@@ -565,6 +580,7 @@
     applied = {
       ws: session.ws, place: A.placeKey(), template: opened.template, label: opened.label, rank: index,
       baseline: A.currentText(), at: Date.now(), brief: session.brief, engine: session.engine,
+      fromVariation, variation: (() => { try { return session.ws === 'youtube' ? activeYoutubeVariation : ''; } catch (error) { return ''; } })(),
       viaSpec: session.ws === 'instagram' && Boolean(window.FrameUpSpec?.SUPPORTED?.includes(opened.template)),
     };
     track('brief-design', { from: 'brief', ws: session.ws, template: opened.template, rank: index, engine: session.engine, reason, photo: session.photos[session.photoIndex]?.own ? 'own' : (session.photos.length ? 'es' : 'none'), fixed: session.fixed.length, left: session.left.length, ms: Math.round(performance.now() - (reason === 'open' ? session.startedAt : performance.now())) }, opened.label);
@@ -770,6 +786,37 @@
   // under the new asset's canvas. After Undo / Redo of a brief design, the
   // asset follows the restored state. (Only while a Newsletter brief design is
   // in play; the general fix belongs in index.html applyDesignHistoryEntry.)
+  // YouTube: each layout (variation) keeps its own design and history, so a
+  // brief design that moved to another layout is undone by moving back.
+  function followYoutube(redo) {
+    try {
+      if (applied?.ws !== 'youtube' || activeWorkspace !== 'youtube' || !applied.fromVariation || applied.fromVariation === applied.variation) return false;
+      if (redo) return false; // Redo stays in the layout you are on.
+      const history = getDesignHistory();
+      const [from, to] = [applied.variation, applied.fromVariation];
+      // Only the Undo that takes the brief design off this layout moves back.
+      if (activeYoutubeVariation !== from || (history?.past?.length || 0) !== 1) return false;
+      setTimeout(() => {
+        const select = document.getElementById('youtube-variation-select');
+        if (select) select.value = to;
+        switchYoutubeVariation(to);
+        syncAllCustomSelects();
+      }, 0);
+      return true;
+    } catch (error) { return false; }
+  }
+  function historyIntent(event) {
+    if (event.type === 'click') return event.target.closest?.('[data-history]')?.dataset.history || '';
+    if (!(event.metaKey || event.ctrlKey) || event.altKey || event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return '';
+    const key = (event.key || '').toLowerCase();
+    return key === 'y' || (key === 'z' && event.shiftKey) ? 'redo' : key === 'z' ? 'undo' : '';
+  }
+  // Capture phase: decide before the editor's own Undo / Redo runs.
+  ['click', 'keydown'].forEach(type => document.addEventListener(type, event => {
+    const intent = historyIntent(event);
+    if (intent) followYoutube(intent === 'redo');
+  }, true));
+
   function followHistory() {
     if (applied?.ws !== 'newsletter') return;
     setTimeout(() => {

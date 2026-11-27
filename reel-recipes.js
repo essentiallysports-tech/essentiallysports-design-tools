@@ -250,7 +250,8 @@
   // the style's max), never a changed word.
   function applyStyle(plan, styleId, { reshape = null } = {}) {
     if (!ES || !ES.getStyle || !plan || !Array.isArray(plan.beats)) return { plan, notes: [], changed: [] };
-    const style = ES.getStyle(styleId);
+    // A v3 id (an old reel) keeps its v3 block set; v4 ids use theirs (reel-es-themes.js).
+    const style = ES.isV3Style && ES.isV3Style(styleId) ? ES.getV3Style(styleId) : ES.getStyle(styleId);
     const out = clone(plan);
     const notes = [];
     const changed = [];

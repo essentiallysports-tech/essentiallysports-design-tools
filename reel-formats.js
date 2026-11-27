@@ -430,7 +430,8 @@
   const STILL_FIRST = { quote: 3, versus: 3, rank: 1 };
   // Reels Studio v3: each style's clip share (ReelES.STYLES[id].media.clips).
   // Stat Card and Receipts draw no clips: their scenes are photos or graphics.
-  const STYLE_CLIP_SHARE = { gametape: 0.9, statcard: 0, receipts: 0, hypecut: 0.6 };
+  // v4 (reel-es-themes.js STYLES): every breakdown carries clips (>= 1 confirmed).
+  const STYLE_CLIP_SHARE = { gametape: 0.9, statcard: 0, receipts: 0, hypecut: 0.6, breakdown: 0.6, casefile: 0.4, outlier: 0.3, hotseat: 0.7 };
   const visualMixFor = styleId => (Object.prototype.hasOwnProperty.call(STYLE_CLIP_SHARE, styleId) ? STYLE_CLIP_SHARE[styleId] : 0.8);
   function planVisualMix(beats, { target: target0 = 0.8, clipsAvailable = Infinity, style = '' } = {}) {
     const target = style ? visualMixFor(style) : target0;

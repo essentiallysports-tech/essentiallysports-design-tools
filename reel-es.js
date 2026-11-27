@@ -783,7 +783,7 @@
     return r.map(i => lw[i].replace(/[^\w'’.-]/g, '').replace(/[.]+$/, '')).join(' ').toUpperCase().slice(0, 28);
   }
   function blockForStyle(line, styleId, { first = false, room = {}, subject = '' } = {}) {
-    const st = TH.getStyle(styleId);
+    const st = TH.isV3Style && TH.isV3Style(styleId) ? TH.getV3Style(styleId) : TH.getStyle(styleId);
     const plain = plainVo(line);
     if (first) {
       const q = plain.match(/[“"]([^”"]{4,})[”"]/);
@@ -1963,7 +1963,7 @@
     const theme = themeOf(timeline);
     // A reel made in a v3 style (timeline.esStyle): caption emphasis is ES
     // blue on the ink bar (4.6:1), not yellow; older reels keep the kit's yellow.
-    const cap = TH.isStyle && TH.isStyle(timeline.esStyle) ? { ...theme.caption, em: 'blue', mode: 'text' } : theme.caption;
+    const cap = (TH.isStyle && TH.isStyle(timeline.esStyle)) || (TH.isV3Style && TH.isV3Style(timeline.esStyle)) ? { ...theme.caption, em: 'blue', mode: 'text' } : theme.caption;
     ctx.save();
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = colorOf(cap.fill, theme);
@@ -2095,7 +2095,7 @@
     const out = [];
     const graphics = (timeline.tracks && timeline.tracks.graphics) || [];
     const geo = geometry(timeline.size);
-    const style = TH.isStyle && TH.isStyle(timeline.reelStyle) ? TH.STYLES[timeline.reelStyle] : null;
+    const style = TH.isV3Style && TH.isV3Style(timeline.reelStyle) ? TH.V3_STYLES[timeline.reelStyle] : null;
     graphics.forEach((g, i) => {
       const b = g.data && g.data.block;
       if (!b) return;
@@ -2250,6 +2250,13 @@
     { title: 'Before you post', items: ['Numbers on screen exactly as the voiceover says them. Every claim has a source on the end card.', 'Export the MP4 here: it renders in your browser at 1080x1920, 30 fps, with your voiceover.'] },
   ];
 
+  // v4 lives in reel-es4.js (it reads this file); looked up when first used.
+  function v4() {
+    const g = typeof self !== 'undefined' ? self : (typeof globalThis !== 'undefined' ? globalThis : {});
+    if (g.ReelES4) return g.ReelES4;
+    if (typeof module === 'object' && module.exports && typeof require === 'function') return require('./reel-es4.js');
+    throw new Error('reel-es4.js is not loaded.');
+  }
   return {
     TOKENS, SIGNALS, COLOR_NAMES, TYPE, MOTION, LIMITS, DEFAULT_CTA, GEO, BLOCKS, BLOCK_TYPES, KIND_FOR, BLOCK_FOR_KIND, TEMPLATES, MARK_BLOCKS, GUIDELINES, CHECKLIST,
     // Looks (reel-es-themes.js)
@@ -2262,6 +2269,10 @@
     // Reels Studio v3
     TYPE_SCALE, STEP_NAMES, SCALE_STEPS, SPACE, GRID, PILL_SIZES, PILL_CHARS, ELEMENT_LIMITS, GREY, KNOWN_OPS,
     STYLES: TH.STYLES, STYLE_IDS: TH.STYLE_IDS, DEFAULT_STYLE: TH.DEFAULT_STYLE, styleOf: TH.styleOf, legacyStyle: TH.legacyStyle, isStyle: TH.isStyle, getStyle: TH.getStyle, hasClips: TH.hasClips,
+    // Reels Studio v4 (reel-es4.js): the four breakdown styles; v3's kept as data.
+    SKINS: TH.SKINS, skinOf: TH.skinOf, hasDots: TH.hasDots, V3_STYLES: TH.V3_STYLES, V3_STYLE_IDS: TH.V3_STYLE_IDS, isV3Style: TH.isV3Style, getV3Style: TH.getV3Style,
+    toV4: (...a) => v4().toV4(...a), normalizeV4: (...a) => v4().normalize(...a), isV4: (...a) => v4().isV4(...a), cleanModule: (...a) => v4().cleanModule(...a), moduleProblems: (...a) => v4().moduleProblems(...a),
+    get MOTION4() { return v4().MOTION4; }, get MODULE_TYPES() { return v4().MODULE_TYPES; },
     phraseFor, phraseLines, subjectOf, balancedLines, figuresIn, statTilesFor, blockForStyle, spelledNumber, spelledNumbers, emphasisIn, DANGLE,
     snapStep, stepName, onScale, pickStep, pillMetricsAt, pillClass, focusBox, faceBox, focusCrop, tileNumber, elementsOf, v3Checks, showsMark, marksIn, markLines, emTokens,
   };

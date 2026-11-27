@@ -60,10 +60,12 @@
     // loaded them still renders every news reel as before.
     node ? require('./reel-timeline.js') : root.ReelTimeline, node ? require('./reel-replay.js') : root.ReelReplay,
     node ? require('./reel-es.js') : root.ReelES,
+    // Reels Studio v4: the Breakdown engine (chapters -> beats -> zones).
+    node ? require('./reel-es4.js') : root.ReelES4,
   );
   if (node) module.exports = api;
   else root.ReelRender = api;
-}(typeof self !== 'undefined' ? self : this, (VA, F, S, T0, RP0, ES0) => {
+}(typeof self !== 'undefined' ? self : this, (VA, F, S, T0, RP0, ES0, ES40) => {
   'use strict';
 
   const W = 1080;
@@ -110,9 +112,20 @@
   const ES_MARK = { w: 80, h: 80, x: W - 60 - 80, y: 330, clear: 40 };
   const WORDMARK = { w: Math.round((96 * 258) / 30.6864), h: 96 };
   const getES = () => ES0 || (typeof self !== 'undefined' && self.ReelES) || null;
+  const getES4 = () => ES40 || (typeof self !== 'undefined' && self.ReelES4) || null;
+  // v4: a plan v4, or a v4 style named (a v3 style id converts too: the four
+  // v3 styles are retired). opts.engine === 'v3' keeps the v3 path (tests, old exports).
+  function v4Wanted(plan, opts) {
+    const E4 = getES4();
+    const TH = getES() && getES().themes;
+    if (!E4 || !TH || opts.engine === 'v3') return false;
+    if (E4.isV4(plan)) return true;
+    return [opts.esStyle, opts.reelStyle, opts.style, plan && plan.esStyle, plan && plan.reelStyle].some(id => TH.isStyle(id) || (TH.isV3Style && TH.isV3Style(id) && opts.engine === 'v4'));
+  }
+  const v4Helpers = () => ({ F, estimateWordTimes, captionCards, duckPoints, MUSIC, sourceLineFrom, parseVoEmphasis });
   // An ES house-style reel (v1 news timelines; data formats in the ES style
   // keep their data layouts and get the ES palette, captions and wipe).
-  const isEs = timeline => Boolean(timeline && timeline.v !== 2 && S.get(timeline.style).engine === 'es' && getES());
+  const isEs = timeline => Boolean(timeline && timeline.v !== 2 && timeline.v !== 4 && S.get(timeline.style).engine === 'es' && getES());
   // The style a timeline draws in: the ES style wears the reel's look (the
   // data formats' palette and overlay tokens come from it; Paper is as before).
   const styleOf = timeline => (S.withLook ? S.withLook(S.get(timeline.style), timeline.look, timeline.team && Array.isArray(timeline.team.colors) ? timeline.team.colors[0] : '') : S.get(timeline.style));
@@ -429,15 +442,19 @@
     return [0.5, 0.32];
   }
   function buildTimeline(plan, opts = {}) {
+    if (v4Wanted(plan, opts)) return getES4().buildTimeline(plan, opts, v4Helpers());
     const fmt = F.FORMATS[plan && plan.format] ? plan.format : 'explainer';
     const style = S.get(opts.style || (plan && plan.style));
     // Reels Studio v3: the reel's style (Game Tape, Stat Card, Receipts, Hype
     // Cut). Passed as opts.style / opts.reelStyle, or read from the plan (an
     // old plan opens in the closest style).
     const E0 = style.engine === 'es' ? getES() : null;
-    const v3Id = [opts.esStyle, opts.reelStyle, opts.style, plan && plan.esStyle, plan && plan.reelStyle, plan && plan.style].find(id => E0 && E0.isStyle && E0.isStyle(id)) || '';
-    const reelStyle = E0 && E0.styleOf ? (v3Id || E0.styleOf(plan || {})) : '';
-    const pacing = reelStyle && v3Id ? E0.getStyle(reelStyle).pacing : null;
+    // v3 path: a v3 style id (Game Tape, Stat Card, Receipts, Hype Cut), kept
+    // for old reels and the v3 tests (opts.engine 'v3').
+    const isV3 = id => Boolean(E0 && E0.themes && E0.themes.isV3Style && E0.themes.isV3Style(id));
+    const v3Id = [opts.esStyle, opts.reelStyle, opts.style, plan && plan.esStyle, plan && plan.reelStyle, plan && plan.style].find(isV3) || '';
+    const reelStyle = E0 && E0.themes ? (v3Id || E0.themes.v3StyleOf((plan || {}).look, (plan || {}).recipe, plan || {})) : '';
+    const pacing = reelStyle && v3Id ? E0.themes.getV3Style(reelStyle).pacing : null;
     // Data formats (Game Swing, Moment Replay, Archive) build a v2 timeline:
     // the data block, beat refs and the data beat kinds. News formats take
     // the v1 path below unchanged (byte-identical output, contract §8).
@@ -645,6 +662,7 @@
     return t >= (list[list.length - 1] || {}).outMs ? list.length - 1 : 0;
   }
   function frameAt(timeline, tMs) {
+    if (timeline && timeline.v === 4 && getES4()) return getES4().frameAt(timeline, tMs);
     const t = Math.max(0, Math.min(timeline.durationMs - 1, tMs));
     const shots = timeline.tracks.video;
     const si = findIndex(shots, t);
@@ -1001,6 +1019,7 @@
   // Which clips must show which source time at t (the page seeks or syncs
   // its <video> elements to these before drawing; export awaits each seek).
   function clipTimes(timeline, tMs) {
+    if (timeline && timeline.v === 4 && getES4()) return getES4().clipTimes(timeline, tMs);
     const f = frameAt(timeline, tMs);
     const out = [];
     [f.shot, f.prev].forEach(shot => { if (shot && shot.clip && shot.asset) out.push({ asset: shot.asset, time: clipTime(shot, shot.local) }); });
@@ -3111,6 +3130,8 @@
   function drawFrame(ctx, timeline, tMs, env = {}) {
     // A 4:5 carousel slide (canvas 1080x1350) draws as a slide.
     if (timeline && timeline.canvas && Number(timeline.canvas.h) === 1350) return drawSlideFrame(ctx, timeline, tMs, env);
+    // v4: the Breakdown engine draws itself (zones, wipes, captions, the mark).
+    if (timeline && timeline.v === 4 && getES4()) return getES4().drawFrame(ctx, timeline, tMs, env, { drawBrand, BRAND, drawVisual });
     const frame = frameAt(timeline, tMs);
     // ES house style: paper, blocks, slab wipes, one-line captions and its
     // own marks (no vignette or finish pass: flat 2D).
@@ -3146,7 +3167,7 @@
     buildTimeline, frameAt, wrap, fitText, layoutGraphic, layoutCaption, layoutChrome, textBoxes, drawFrame,
     clipTimes, clipTime, drawVisual, allBoxes, CHART_LAYOUTS,
     BRAND, ES_MARK, WORDMARK, CAPTION_W, LOGO_CLEAR, markVariant, drawBrand, logoPlacements, wordmarkFor, drawFinish,
-    isEs, styleOf, styleRetired: timeline => Boolean(timeline && S.isLegacy && S.isLegacy(timeline.style)), showsMark, drawSquareMark, ES_TEMPLATES, sourceLineFrom, parseVoEmphasis,
+    isEs, isV4: timeline => Boolean(timeline && timeline.v === 4), v4Wanted, styleOf, styleRetired: timeline => Boolean(timeline && S.isLegacy && S.isLegacy(timeline.style)), showsMark, drawSquareMark, ES_TEMPLATES, sourceLineFrom, parseVoEmphasis,
     // Data formats (Phase 1)
     DATA_TEMPLATES, SLIDE_TEMPLATES, SLIDE_MARK, SLIDE_SAFE, DATA_MIN_MS, canvasOf, scoreState, swingFor, momentInfo, periodLabel, teamColours, bestInk,
     provenanceNumbers, unbackedNumbers, wpOnScreen, drawSlideFrame,

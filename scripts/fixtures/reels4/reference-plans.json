@@ -1,0 +1,2102 @@
+{
+  "about": "Reels Studio v4 reference reels (QA lane): the 6 essentiallysportsmedia IG reels the owner shared, rebuilt as plan v4 JSON from the decoded frame sheets in the v4 contract. Used by the director as STRUCTURE-ONLY few-shot examples (chapters, markers, module per claim, media kinds, stamps, close) and by scripts/check-reels4-brand.mjs / check-reels4-motion.mjs as render fixtures. Numbers named in the contract (44/47 pass rate, 40:40 vs 19:20, 35 second-half runs, 59-yd FG 0:02, 47%->57%, -9 yards, 67 tears 26/26/15, #1 TE 92.6/90.4, 9-1, 82-38 since 2019, November 1960) come from the reference frames; the rest (scatter positions, line chart, week-by-week bars, play diagram coordinates, ranks shown as TEAM #2) are layout stand-ins, NOT facts, and must never be copied into a real reel. *word* marks the one coloured / highlighted word. voWords is the spoken word count (80-100 s at 150-170 wpm is about 200-280 words).",
+  "version": 4,
+  "plans": [
+    {
+      "id": "rams-1-in-100",
+      "ref": 1,
+      "label": "Rams/McVay \"1 in 100 teams do this\"",
+      "plan": {
+        "v": 4,
+        "esStyle": "breakdown",
+        "skin": "clean",
+        "length": "full",
+        "script": "Plot every NFL team by how often they throw and how often they win. One dot sits all *alone*. That dot is the Rams. And they got there without Davante Adams and Puka Nacua, both out. So Sean McVay did something nobody expected from him. He stopped throwing. Against Arizona, only 44 percent of his plays were passes. Against Green Bay it was 47 percent. Run the ball, run it again, and then run it one more time. In the second half alone they ran it 35 times. The most in the league. And here is the strange part. Under half of those runs were actually successful. On paper, it was not *working*. It did not matter, because the point was never the yards. The Rams held the ball for 40 minutes and 40 seconds. Green Bay had it for 19 minutes and 20 seconds. More than two to one. You cannot score if you never touch the ball. So this was a choice between two coaches. McVay kept running even when the runs were not working, because the clock was. Matt LaFleur never got the ball back long enough to answer. One plan won the clock. The other plan won *nothing*.",
+        "title": "1 in 100 teams do this",
+        "team": "Los Angeles Rams",
+        "sport": "nfl",
+        "sources": [
+          {
+            "title": "Rams game logs",
+            "source": "Pro Football Reference",
+            "claim": "only 1 in 100 teams called this many second-half runs with the lead; pass rate 44% vs ARI, 47% vs GB; time of possession 40:40 vs 19:20; 35 second-half runs"
+          }
+        ],
+        "sourceLine": "Source: Pro Football Reference",
+        "chapters": [
+          {
+            "id": "c1",
+            "headline": "1 IN 100 TEAMS *DO THIS*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c1b1",
+                "vo": "Plot every NFL team by how often they throw and how often they win. One dot sits all *alone*.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "scatter",
+                  "points": 1000,
+                  "highlight": {
+                    "label": "RAMS",
+                    "x": 0.44,
+                    "y": 0.78
+                  },
+                  "diagonal": true,
+                  "axes": {
+                    "x": "PASS RATE",
+                    "y": "WIN %"
+                  }
+                }
+              },
+              {
+                "id": "c1b2",
+                "vo": "That dot is the Rams. And they got there without Davante Adams and Puka Nacua, both out.",
+                "media": {
+                  "kind": "cards",
+                  "subject": {
+                    "type": "team",
+                    "name": "Los Angeles Rams",
+                    "team": "Los Angeles Rams"
+                  },
+                  "cards": [
+                    {
+                      "name": "DAVANTE ADAMS",
+                      "tag": "WR",
+                      "sticker": "OUT"
+                    },
+                    {
+                      "name": "PUKA NACUA",
+                      "tag": "WR",
+                      "sticker": "OUT"
+                    }
+                  ]
+                },
+                "module": {
+                  "type": "scatter",
+                  "points": 1000,
+                  "highlight": {
+                    "label": "RAMS",
+                    "x": 0.44,
+                    "y": 0.78
+                  },
+                  "diagonal": true,
+                  "axes": {
+                    "x": "PASS RATE",
+                    "y": "WIN %"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "marker": "1 · THE PLAN",
+            "headline": "MCVAY *STOPPED* THROWING",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c2b1",
+                "vo": "So Sean McVay did something nobody expected from him. He stopped throwing. Against Arizona, only 44 percent of his plays were passes.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Los Angeles Rams",
+                    "team": "Los Angeles Rams",
+                    "moment": "run play vs Arizona Cardinals"
+                  },
+                  "label": "RAMS BALL"
+                },
+                "module": {
+                  "type": "bars",
+                  "title": "PASS RATE",
+                  "unit": "%",
+                  "max": 100,
+                  "rows": [
+                    {
+                      "label": "VS ARI",
+                      "value": 44,
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c2b2",
+                "vo": "Against Green Bay it was 47 percent. Run the ball, run it again, and then run it one more time.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Los Angeles Rams",
+                    "team": "Los Angeles Rams",
+                    "moment": "run play vs Green Bay Packers"
+                  },
+                  "label": "RAMS BALL"
+                },
+                "module": {
+                  "type": "bars",
+                  "title": "PASS RATE",
+                  "unit": "%",
+                  "max": 100,
+                  "rows": [
+                    {
+                      "label": "VS ARI",
+                      "value": 44,
+                      "tone": "blue"
+                    },
+                    {
+                      "label": "VS GB",
+                      "value": 47,
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c2b3",
+                "vo": "In the second half alone they ran it 35 times. The most in the league.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Los Angeles Rams",
+                    "team": "Los Angeles Rams",
+                    "moment": "second-half run"
+                  },
+                  "label": "RAMS BALL"
+                },
+                "module": {
+                  "type": "reveal",
+                  "from": "?",
+                  "to": "35",
+                  "label": "MOST 2ND-HALF RUNS"
+                }
+              },
+              {
+                "id": "c2b4",
+                "vo": "And here is the strange part. Under half of those runs were actually successful. On paper, it was not *working*.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Los Angeles Rams",
+                    "team": "Los Angeles Rams",
+                    "moment": "stuffed run"
+                  },
+                  "label": "RAMS BALL"
+                },
+                "module": {
+                  "type": "reveal",
+                  "from": "?",
+                  "to": "35",
+                  "label": "MOST 2ND-HALF RUNS"
+                },
+                "tag": {
+                  "text": "UNDER 50% SUCCESSFUL",
+                  "tone": "red"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "marker": "2 · THE CLOCK",
+            "headline": "THEY *OWNED* THE BALL",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c3b1",
+                "vo": "It did not matter, because the point was never the yards. The Rams held the ball for 40 minutes and 40 seconds.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Los Angeles Rams",
+                    "team": "Los Angeles Rams",
+                    "moment": "clock running down"
+                  },
+                  "label": "RAMS BALL"
+                },
+                "module": {
+                  "type": "scoreboard",
+                  "rows": [
+                    {
+                      "team": "LAR",
+                      "logo": true,
+                      "value": "40:40"
+                    }
+                  ],
+                  "tag": {
+                    "text": "TIME OF POSSESSION",
+                    "tone": "blue"
+                  }
+                }
+              },
+              {
+                "id": "c3b2",
+                "vo": "Green Bay had it for 19 minutes and 20 seconds. More than two to one. You cannot score if you never touch the ball.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Green Bay Packers",
+                    "team": "Green Bay Packers",
+                    "moment": "offense on the sideline"
+                  },
+                  "label": "PACKERS BENCH"
+                },
+                "module": {
+                  "type": "scoreboard",
+                  "rows": [
+                    {
+                      "team": "LAR",
+                      "logo": true,
+                      "value": "40:40"
+                    },
+                    {
+                      "team": "GB",
+                      "logo": true,
+                      "value": "19:20"
+                    }
+                  ],
+                  "tag": {
+                    "text": "TIME OF POSSESSION",
+                    "tone": "blue"
+                  }
+                },
+                "stamp": {
+                  "text": "2 TO 1",
+                  "tone": "blue",
+                  "at": "module"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c4",
+            "marker": "3 · THE CHOICE",
+            "headline": "MCVAY VS *LAFLEUR*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c4b1",
+                "vo": "So this was a choice between two coaches. McVay kept running even when the runs were not working, because the clock was.",
+                "media": {
+                  "kind": "cards",
+                  "subject": {
+                    "type": "person",
+                    "name": "Sean McVay",
+                    "team": "Los Angeles Rams"
+                  },
+                  "cards": [
+                    {
+                      "name": "SEAN MCVAY",
+                      "tag": "RAMS"
+                    },
+                    {
+                      "name": "MATT LAFLEUR",
+                      "tag": "PACKERS"
+                    }
+                  ]
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "40:40",
+                      "label": "MCVAY · POSSESSION",
+                      "tone": "blue"
+                    },
+                    {
+                      "value": "19:20",
+                      "label": "LAFLEUR · POSSESSION",
+                      "tone": "ink"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c4b2",
+                "vo": "Matt LaFleur never got the ball back long enough to answer. One plan won the clock. The other plan won *nothing*.",
+                "media": {
+                  "kind": "cards",
+                  "subject": {
+                    "type": "person",
+                    "name": "Matt LaFleur",
+                    "team": "Green Bay Packers"
+                  },
+                  "cards": [
+                    {
+                      "name": "SEAN MCVAY",
+                      "tag": "RAMS"
+                    },
+                    {
+                      "name": "MATT LAFLEUR",
+                      "tag": "PACKERS",
+                      "sticker": "OUT"
+                    }
+                  ]
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "40:40",
+                      "label": "MCVAY · POSSESSION",
+                      "tone": "blue"
+                    },
+                    {
+                      "value": "19:20",
+                      "label": "LAFLEUR · POSSESSION",
+                      "tone": "ink"
+                    }
+                  ]
+                },
+                "stamp": {
+                  "text": "OUT-COACHED",
+                  "tone": "red",
+                  "at": "media"
+                }
+              }
+            ]
+          }
+        ],
+        "close": {
+          "kind": "yourCall",
+          "prompt": "RAMS FANS: YOUR CALL",
+          "options": [
+            {
+              "text": "GENIUS PLAN",
+              "tone": "blue"
+            },
+            {
+              "text": "GOT LUCKY",
+              "tone": "red"
+            }
+          ],
+          "comment": "COMMENT: GENIUS OR LUCKY?"
+        }
+      },
+      "voWords": 202
+    },
+    {
+      "id": "dallas-21-point-lead",
+      "ref": 2,
+      "label": "\"Dallas blew a 21-point lead\"",
+      "plan": {
+        "v": 4,
+        "esStyle": "breakdown",
+        "skin": "clean",
+        "length": "full",
+        "script": "Dallas was up by 21 points. They still lost, on a 59-yard field goal with two seconds left on the clock. Everyone is blaming one fourth down. But that fourth down is not why Dallas lost this game. Here is what actually happened. Chapter one, the run. While they were building the lead, the Dallas run game was ten points better than the league average. Then, with a big lead, they started throwing more. Their pass rate went from 47 percent to 57 percent. They took the ball out of the strongest hand. Chapter two, the throw. Fourth and one, short yardage, the game still in their hands. And they called a dropback. Sacked. Minus nine yards. The ball goes back to Philadelphia on a short field. Look at the pocket. Five rushers against five blockers, nobody open underneath, and nowhere for the quarterback to go. Chapter three, the choice. Philadelphia got the ball back and returned the favour. Touchdown. Touchdown. Then the field goal. Nobody forced Dallas to stop running the ball with a 21-point lead. Backing off was not bad luck. It was a *choice*.",
+        "title": "Dallas blew a 21-point lead",
+        "team": "Dallas Cowboys",
+        "sport": "nfl",
+        "sources": [
+          {
+            "title": "Cowboys vs Eagles play-by-play",
+            "source": "ESPN",
+            "claim": "21-point lead; 59-yard field goal with 0:02 left; 4th and 1 dropback sacked for -9; pass rate 47% -> 57%; run game +10 vs league average on a -20 to 20 scale"
+          }
+        ],
+        "sourceLine": "Source: ESPN play-by-play",
+        "chapters": [
+          {
+            "id": "c1",
+            "headline": "DALLAS BLEW A *21-POINT LEAD*",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c1b1",
+                "vo": "Dallas was up by 21 points. They still lost, on a 59-yard field goal with two seconds left on the clock.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Philadelphia Eagles",
+                    "team": "Philadelphia Eagles",
+                    "moment": "game-winning 59-yard field goal"
+                  },
+                  "label": "EAGLES BALL"
+                },
+                "module": {
+                  "type": "scoreboard",
+                  "rows": [
+                    {
+                      "team": "DAL",
+                      "logo": true,
+                      "value": "+21"
+                    },
+                    {
+                      "team": "PHI",
+                      "logo": true,
+                      "value": "W"
+                    }
+                  ],
+                  "tag": {
+                    "text": "59-YD FG · 0:02 LEFT",
+                    "tone": "red"
+                  }
+                }
+              },
+              {
+                "id": "c1b2",
+                "vo": "Everyone is blaming one fourth down. But that fourth down is not why Dallas lost this game. Here is what actually happened.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Dallas Cowboys",
+                    "team": "Dallas Cowboys",
+                    "moment": "fourth down attempt"
+                  },
+                  "label": "COWBOYS BALL"
+                },
+                "module": {
+                  "type": "scoreboard",
+                  "rows": [
+                    {
+                      "team": "DAL",
+                      "logo": true,
+                      "value": "+21"
+                    },
+                    {
+                      "team": "PHI",
+                      "logo": true,
+                      "value": "W"
+                    }
+                  ],
+                  "tag": {
+                    "text": "59-YD FG · 0:02 LEFT",
+                    "tone": "red"
+                  }
+                },
+                "stamp": {
+                  "text": "NOT THE 4TH DOWN",
+                  "tone": "red",
+                  "at": "module"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "marker": "1 · THE RUN",
+            "headline": "DALLAS *STOPPED* RUNNING",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c2b1",
+                "vo": "Chapter one, the run. While they were building the lead, the Dallas run game was ten points better than the league average.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Dallas Cowboys",
+                    "team": "Dallas Cowboys",
+                    "moment": "first-half run"
+                  },
+                  "label": "COWBOYS BALL"
+                },
+                "module": {
+                  "type": "numberLine",
+                  "min": -20,
+                  "max": 20,
+                  "marks": [
+                    {
+                      "label": "DALLAS",
+                      "value": 10,
+                      "tone": "red"
+                    }
+                  ],
+                  "caption": "RUN GAME VS LEAGUE AVERAGE"
+                }
+              },
+              {
+                "id": "c2b2",
+                "vo": "Then, with a big lead, they started throwing more. Their pass rate went from 47 percent to 57 percent. They took the ball out of the strongest hand.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Dallas Cowboys",
+                    "team": "Dallas Cowboys",
+                    "moment": "incomplete pass"
+                  },
+                  "label": "COWBOYS BALL"
+                },
+                "module": {
+                  "type": "compare",
+                  "from": {
+                    "value": "47%",
+                    "label": "PASS RATE · UP 21"
+                  },
+                  "to": {
+                    "value": "57%",
+                    "label": "PASS RATE · AFTER"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "marker": "2 · THE THROW",
+            "headline": "ONE THROW *TOO MANY*",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c3b1",
+                "vo": "Chapter two, the throw. Fourth and one, short yardage, the game still in their hands. And they called a dropback.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Dallas Cowboys",
+                    "team": "Dallas Cowboys",
+                    "moment": "4th and 1 dropback"
+                  },
+                  "label": "COWBOYS BALL"
+                },
+                "module": {
+                  "type": "reveal",
+                  "from": "?",
+                  "to": "−9",
+                  "label": "4TH & 1 · DROPBACK"
+                }
+              },
+              {
+                "id": "c3b2",
+                "vo": "Sacked. Minus nine yards. The ball goes back to Philadelphia on a short field.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Dallas Cowboys",
+                    "team": "Dallas Cowboys",
+                    "moment": "sack on 4th and 1"
+                  },
+                  "label": "COWBOYS BALL"
+                },
+                "module": {
+                  "type": "reveal",
+                  "from": "?",
+                  "to": "−9",
+                  "label": "SACKED −9 YARDS"
+                },
+                "stamp": {
+                  "text": "BAD CALL",
+                  "tone": "red",
+                  "at": "media"
+                }
+              },
+              {
+                "id": "c3b3",
+                "vo": "Look at the pocket. Five rushers against five blockers, nobody open underneath, and nowhere for the quarterback to go.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "playDiagram",
+                  "offense": [
+                    [
+                      0.3,
+                      0.6
+                    ],
+                    [
+                      0.4,
+                      0.6
+                    ],
+                    [
+                      0.5,
+                      0.6
+                    ],
+                    [
+                      0.6,
+                      0.6
+                    ],
+                    [
+                      0.7,
+                      0.6
+                    ],
+                    [
+                      0.5,
+                      0.75
+                    ]
+                  ],
+                  "defense": [
+                    [
+                      0.3,
+                      0.5
+                    ],
+                    [
+                      0.4,
+                      0.5
+                    ],
+                    [
+                      0.5,
+                      0.5
+                    ],
+                    [
+                      0.6,
+                      0.5
+                    ],
+                    [
+                      0.7,
+                      0.5
+                    ]
+                  ],
+                  "route": [
+                    [
+                      0.5,
+                      0.75
+                    ],
+                    [
+                      0.5,
+                      0.82
+                    ]
+                  ],
+                  "label": "THE POCKET"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c4",
+            "marker": "3 · THE CHOICE",
+            "headline": "BACKING OFF IS *A CHOICE*",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c4b1",
+                "vo": "Chapter three, the choice. Philadelphia got the ball back and returned the favour. Touchdown. Touchdown. Then the field goal.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Philadelphia Eagles",
+                    "team": "Philadelphia Eagles",
+                    "moment": "fourth-quarter touchdown"
+                  },
+                  "label": "EAGLES BALL"
+                },
+                "module": {
+                  "type": "rankList",
+                  "title": "FAVOUR RETURNED",
+                  "rows": [
+                    {
+                      "rank": 1,
+                      "label": "PHI DRIVE",
+                      "value": "TD"
+                    },
+                    {
+                      "rank": 2,
+                      "label": "PHI DRIVE",
+                      "value": "TD"
+                    },
+                    {
+                      "rank": 3,
+                      "label": "PHI DRIVE",
+                      "value": "FG"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c4b2",
+                "vo": "Nobody forced Dallas to stop running the ball with a 21-point lead. Backing off was not bad luck. It was a *choice*.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "Dallas Cowboys",
+                    "team": "Dallas Cowboys",
+                    "moment": "sideline after the loss"
+                  },
+                  "label": "COWBOYS SIDELINE"
+                },
+                "module": {
+                  "type": "rankList",
+                  "title": "FAVOUR RETURNED",
+                  "rows": [
+                    {
+                      "rank": 1,
+                      "label": "PHI DRIVE",
+                      "value": "TD"
+                    },
+                    {
+                      "rank": 2,
+                      "label": "PHI DRIVE",
+                      "value": "TD"
+                    },
+                    {
+                      "rank": 3,
+                      "label": "PHI DRIVE",
+                      "value": "FG"
+                    }
+                  ]
+                },
+                "stamp": {
+                  "text": "BACKING OFF = A CHOICE",
+                  "tone": "red",
+                  "at": "module"
+                }
+              }
+            ]
+          }
+        ],
+        "close": {
+          "kind": "yourCall",
+          "prompt": "COWBOYS FANS: YOUR CALL",
+          "options": [
+            {
+              "text": "FIRE THE PLAY-CALLER",
+              "tone": "red"
+            },
+            {
+              "text": "JUST BAD LUCK",
+              "tone": "blue"
+            }
+          ],
+          "comment": "COMMENT: WHO LOST THIS ONE?"
+        }
+      },
+      "voWords": 187
+    },
+    {
+      "id": "kittle-outlier",
+      "ref": 3,
+      "label": "Kittle \"shouldn't be this good again\"",
+      "plan": {
+        "v": 4,
+        "esStyle": "outlier",
+        "skin": "clean",
+        "length": "full",
+        "script": "The Achilles is the injury that ends tight ends. George Kittle *tore* his. We looked at 67 Achilles tears in the NFL. Only 26 of those players got back to 90 percent of their old level. Another 26 came back, but never the same. 15 never returned at all. And it gets worse with age. The older you are when it tears, the worse your odds of ever coming back. George Kittle tore his Achilles on January 11, already in his thirties. Before that, he was the number one graded tight end in football in 2024, with a grade of 92.6. And he was number one again in 2025, at 90.4. Back to back, the best at his position. Against his own old level, he is already past the line. Week by week this season, the catches kept coming, and so did the touchdowns. He is near the top in receiving yards for a tight end, again. And San Francisco is nine and one, with Kittle in the middle of all of it. So go back to those 67 tears. Nobody his age came back better than before. Nobody, except *one*. A dot that should not exist.",
+        "title": "Kittle shouldn't be this good again",
+        "team": "San Francisco 49ers",
+        "sport": "nfl",
+        "sources": [
+          {
+            "title": "Achilles return study",
+            "source": "ES research",
+            "claim": "67 Achilles tears: 26 back to 90%, 26 returned, 15 did not; Kittle at 98% of his old level; weeks 1-4 receiving yards 64, 82, 71, 95; Kittle tore his Achilles on Jan. 11; San Francisco 49ers 9-1"
+          },
+          {
+            "title": "TE grades",
+            "source": "PFF",
+            "claim": "2024 #1 TE grade 92.6, 2025 #1 TE grade 90.4"
+          }
+        ],
+        "sourceLine": "Source: ES research, PFF",
+        "chapters": [
+          {
+            "id": "c1",
+            "headline": "KITTLE *SHOULDN'T* BE THIS GOOD",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c1b1",
+                "vo": "The Achilles is the injury that ends tight ends. George Kittle *tore* his.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "player",
+                    "name": "George Kittle",
+                    "team": "San Francisco 49ers"
+                  },
+                  "label": "GEORGE KITTLE"
+                },
+                "module": {
+                  "type": "quote",
+                  "text": "THE ACHILLES IS THE INJURY THAT ENDS TIGHT ENDS.",
+                  "who": "ES RESEARCH"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "marker": "1 · THE ODDS",
+            "headline": "67 ACHILLES *TEARS*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c2b1",
+                "vo": "We looked at 67 Achilles tears in the NFL. Only 26 of those players got back to 90 percent of their old level.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "dotGrid",
+                  "total": 67,
+                  "groups": [
+                    {
+                      "n": 26,
+                      "tone": "blue",
+                      "label": "BACK TO 90%"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c2b2",
+                "vo": "Another 26 came back, but never the same. 15 never returned at all.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "dotGrid",
+                  "total": 67,
+                  "groups": [
+                    {
+                      "n": 26,
+                      "tone": "blue",
+                      "label": "BACK TO 90%"
+                    },
+                    {
+                      "n": 26,
+                      "tone": "ink",
+                      "label": "RETURNED"
+                    },
+                    {
+                      "n": 15,
+                      "tone": "grey",
+                      "label": "DIDN'T RETURN"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c2b3",
+                "vo": "And it gets worse with age. The older you are when it tears, the worse your odds of ever coming back.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "lineChart",
+                  "points": [
+                    [
+                      26,
+                      60
+                    ],
+                    [
+                      28,
+                      50
+                    ],
+                    [
+                      30,
+                      40
+                    ],
+                    [
+                      32,
+                      28
+                    ]
+                  ],
+                  "label": "THE WORSE YOUR ODDS",
+                  "stamp": "WORSE ODDS"
+                },
+                "stamp": {
+                  "text": "WORSE ODDS",
+                  "tone": "red",
+                  "at": "module"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "marker": "2 · THE PLAYER",
+            "headline": "THE *#1* TIGHT END",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c3b1",
+                "vo": "George Kittle tore his Achilles on January 11, already in his thirties.",
+                "media": {
+                  "kind": "photo",
+                  "subject": {
+                    "type": "player",
+                    "name": "George Kittle",
+                    "team": "San Francisco 49ers"
+                  },
+                  "label": "GEORGE KITTLE"
+                },
+                "tag": {
+                  "text": "TORE ACHILLES · JAN. 11",
+                  "tone": "red"
+                }
+              },
+              {
+                "id": "c3b2",
+                "vo": "Before that, he was the number one graded tight end in football in 2024, with a grade of 92.6.",
+                "media": {
+                  "kind": "photo",
+                  "subject": {
+                    "type": "player",
+                    "name": "George Kittle",
+                    "team": "San Francisco 49ers"
+                  },
+                  "label": "GEORGE KITTLE"
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "#1",
+                      "label": "2024 TE · 92.6",
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c3b3",
+                "vo": "And he was number one again in 2025, at 90.4. Back to back, the best at his position.",
+                "media": {
+                  "kind": "photo",
+                  "subject": {
+                    "type": "player",
+                    "name": "George Kittle",
+                    "team": "San Francisco 49ers"
+                  },
+                  "label": "GEORGE KITTLE"
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "#1",
+                      "label": "2024 TE · 92.6",
+                      "tone": "blue"
+                    },
+                    {
+                      "value": "#1",
+                      "label": "2025 TE · 90.4",
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c3b4",
+                "vo": "Against his own old level, he is already past the line.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "player",
+                    "name": "George Kittle",
+                    "team": "San Francisco 49ers"
+                  },
+                  "label": "GEORGE KITTLE"
+                },
+                "module": {
+                  "type": "bars",
+                  "title": "% OF OLD LEVEL",
+                  "unit": "%",
+                  "max": 110,
+                  "rows": [
+                    {
+                      "label": "LINE",
+                      "value": 90,
+                      "tone": "ink"
+                    },
+                    {
+                      "label": "KITTLE",
+                      "value": 98,
+                      "tone": "blue"
+                    }
+                  ]
+                },
+                "stamp": {
+                  "text": "PAST THE LINE",
+                  "tone": "blue",
+                  "at": "module"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c4",
+            "marker": "3 · THE SEASON",
+            "headline": "THE 49ERS ARE *9-1*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c4b1",
+                "vo": "Week by week this season, the catches kept coming, and so did the touchdowns.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "moment",
+                    "name": "George Kittle",
+                    "team": "San Francisco 49ers",
+                    "moment": "touchdown catch"
+                  },
+                  "label": "49ERS BALL"
+                },
+                "module": {
+                  "type": "bars",
+                  "title": "WEEK BY WEEK",
+                  "unit": "YDS",
+                  "rows": [
+                    {
+                      "label": "WK 1",
+                      "value": 64
+                    },
+                    {
+                      "label": "WK 2",
+                      "value": 82
+                    },
+                    {
+                      "label": "WK 3",
+                      "value": 71,
+                      "tone": "blue"
+                    },
+                    {
+                      "label": "WK 4",
+                      "value": 95,
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c4b2",
+                "vo": "He is near the top in receiving yards for a tight end, again.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "moment",
+                    "name": "George Kittle",
+                    "team": "San Francisco 49ers",
+                    "moment": "catch and run"
+                  },
+                  "label": "49ERS BALL"
+                },
+                "module": {
+                  "type": "rankList",
+                  "title": "TE RECEIVING YARDS",
+                  "rows": [
+                    {
+                      "rank": 1,
+                      "label": "KITTLE",
+                      "value": "",
+                      "chip": "SF"
+                    },
+                    {
+                      "rank": 2,
+                      "label": "TE #2",
+                      "value": ""
+                    },
+                    {
+                      "rank": 3,
+                      "label": "TE #3",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c4b3",
+                "vo": "And San Francisco is nine and one, with Kittle in the middle of all of it.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "team",
+                    "name": "San Francisco 49ers",
+                    "team": "San Francisco 49ers",
+                    "moment": "win celebration"
+                  },
+                  "label": "49ERS"
+                },
+                "module": {
+                  "type": "wl",
+                  "items": "WWWLWWWWWW",
+                  "title": "49ERS · 9-1"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c5",
+            "marker": "4 · THE OUTLIER",
+            "headline": "ONE DOT *SHOULDN'T EXIST*",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c5b1",
+                "vo": "So go back to those 67 tears. Nobody his age came back better than before. Nobody, except *one*. A dot that should not exist.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "dotGrid",
+                  "total": 67,
+                  "groups": [
+                    {
+                      "n": 26,
+                      "tone": "blue",
+                      "label": "BACK TO 90%"
+                    },
+                    {
+                      "n": 26,
+                      "tone": "ink",
+                      "label": "RETURNED"
+                    },
+                    {
+                      "n": 15,
+                      "tone": "grey",
+                      "label": "DIDN'T RETURN"
+                    }
+                  ],
+                  "avatar": "George Kittle"
+                },
+                "stamp": {
+                  "text": "SHOULDN'T EXIST",
+                  "tone": "red",
+                  "at": "module"
+                }
+              }
+            ]
+          }
+        ],
+        "close": {
+          "kind": "endcard"
+        }
+      },
+      "voWords": 197
+    },
+    {
+      "id": "rodgers-who-should-call",
+      "ref": 4,
+      "label": "Rodgers \"who should call\"",
+      "plan": {
+        "v": 4,
+        "esStyle": "casefile",
+        "skin": "scrapbook",
+        "length": "full",
+        "script": "Aaron Rodgers is on the market. Four MVP awards, a ring, and a phone that should be ringing right now. So who should *call*? Remember, this is the man who threw 45 touchdowns and only six interceptions in one season. And somehow he has ended up on the bench, waiting. So here are the three teams that should pick up the phone. Number three, the long shot. A team with a real defense and no real quarterback. Four MVPs would change that overnight. For them, every touchdown he throws is a bonus. He has thrown 45 in a single season before. Number two, the safe bet. A contender that is one injury away from panic. If the starter goes down, the waiver wire is not the answer. One phone call is. Number one, the perfect fit. A team built to win right now, with weapons outside and a line that can protect him. He went 15 and 1 the last time he had all of that. That is where four MVPs belong. So here is the checklist. Win now. A real line. Real weapons. Check, check, and check.",
+        "title": "Who should call Aaron Rodgers",
+        "team": "Aaron Rodgers",
+        "sport": "nfl",
+        "sources": [
+          {
+            "title": "Aaron Rodgers career",
+            "source": "Pro Football Reference",
+            "claim": "4x MVP; 2011: 45 TD passes, 6 INT, 15-1"
+          }
+        ],
+        "sourceLine": "Source: Pro Football Reference",
+        "chapters": [
+          {
+            "id": "c1",
+            "headline": "WHO SHOULD *CALL* RODGERS?",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c1b1",
+                "vo": "Aaron Rodgers is on the market. Four MVP awards, a ring, and a phone that should be ringing right now. So who should *call*?",
+                "media": {
+                  "kind": "cutout",
+                  "subject": {
+                    "type": "player",
+                    "name": "Aaron Rodgers",
+                    "team": "Green Bay Packers"
+                  }
+                },
+                "module": {
+                  "type": "quote",
+                  "text": "FOUR MVPS. STILL ON THE MARKET.",
+                  "who": "THE CASE"
+                }
+              },
+              {
+                "id": "c1b2",
+                "vo": "Remember, this is the man who threw 45 touchdowns and only six interceptions in one season.",
+                "media": {
+                  "kind": "cutout",
+                  "subject": {
+                    "type": "player",
+                    "name": "Aaron Rodgers",
+                    "team": "Green Bay Packers"
+                  }
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "45",
+                      "label": "TD · 2011",
+                      "tone": "blue"
+                    },
+                    {
+                      "value": "6",
+                      "label": "INT · 2011",
+                      "tone": "ink"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c1b3",
+                "vo": "And somehow he has ended up on the bench, waiting. So here are the three teams that should pick up the phone.",
+                "media": {
+                  "kind": "cards",
+                  "subject": {
+                    "type": "player",
+                    "name": "Aaron Rodgers",
+                    "team": "Green Bay Packers"
+                  },
+                  "cards": [
+                    {
+                      "name": "AARON RODGERS",
+                      "tag": "MVP"
+                    }
+                  ]
+                },
+                "stamp": {
+                  "text": "BENCHED",
+                  "tone": "red",
+                  "at": "media"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "marker": {
+              "kind": "countdown",
+              "n": 3,
+              "of": 3
+            },
+            "headline": "#3 · THE *LONG SHOT*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c2b1",
+                "vo": "Number three, the long shot. A team with a real defense and no real quarterback. Four MVPs would change that overnight.",
+                "media": {
+                  "kind": "photo",
+                  "subject": {
+                    "type": "player",
+                    "name": "Aaron Rodgers",
+                    "team": "Green Bay Packers"
+                  },
+                  "label": "POLAROID · 2011"
+                },
+                "module": {
+                  "type": "tally",
+                  "n": 4,
+                  "label": "MVP AWARDS"
+                }
+              },
+              {
+                "id": "c2b2",
+                "vo": "For them, every touchdown he throws is a bonus. He has thrown 45 in a single season before.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "moment",
+                    "name": "Aaron Rodgers",
+                    "team": "Green Bay Packers",
+                    "moment": "touchdown pass"
+                  },
+                  "label": "PACKERS BALL"
+                },
+                "module": {
+                  "type": "tally",
+                  "n": 45,
+                  "label": "TD PASSES · 2011"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "marker": {
+              "kind": "countdown",
+              "n": 2,
+              "of": 3
+            },
+            "headline": "#2 · THE *SAFE* BET",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c3b1",
+                "vo": "Number two, the safe bet. A contender that is one injury away from panic. If the starter goes down, the waiver wire is not the answer. One phone call is.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "moment",
+                    "name": "Aaron Rodgers",
+                    "team": "Green Bay Packers",
+                    "moment": "pre-snap read"
+                  },
+                  "label": "PACKERS BALL"
+                },
+                "module": {
+                  "type": "flow",
+                  "nodes": [
+                    {
+                      "id": "a",
+                      "text": "QB HURT",
+                      "tone": "red"
+                    },
+                    {
+                      "id": "b",
+                      "text": "WAIVERS",
+                      "tone": "ink"
+                    },
+                    {
+                      "id": "c",
+                      "text": "CALL RODGERS",
+                      "tone": "blue"
+                    }
+                  ],
+                  "edges": [
+                    [
+                      "a",
+                      "b"
+                    ],
+                    [
+                      "b",
+                      "c"
+                    ]
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "c4",
+            "marker": {
+              "kind": "countdown",
+              "n": 1,
+              "of": 3
+            },
+            "headline": "#1 · THE *PERFECT* FIT",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c4b1",
+                "vo": "Number one, the perfect fit. A team built to win right now, with weapons outside and a line that can protect him.",
+                "media": {
+                  "kind": "photo",
+                  "subject": {
+                    "type": "player",
+                    "name": "Aaron Rodgers",
+                    "team": "Green Bay Packers"
+                  },
+                  "label": "MVP · 2011"
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "15-1",
+                      "label": "RECORD · 2011",
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c4b2",
+                "vo": "He went 15 and 1 the last time he had all of that. That is where four MVPs belong.",
+                "media": {
+                  "kind": "cutout",
+                  "subject": {
+                    "type": "player",
+                    "name": "Aaron Rodgers",
+                    "team": "Green Bay Packers"
+                  }
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "15-1",
+                      "label": "RECORD · 2011",
+                      "tone": "blue"
+                    },
+                    {
+                      "value": "4",
+                      "label": "MVP AWARDS",
+                      "tone": "ink"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "c5",
+            "marker": "THE CASE",
+            "headline": "THE *CHECKLIST*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c5b1",
+                "vo": "So here is the checklist. Win now. A real line. Real weapons. Check, check, and check.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "checklist",
+                  "rows": [
+                    {
+                      "rank": 3,
+                      "text": "WIN NOW",
+                      "checked": true
+                    },
+                    {
+                      "rank": 2,
+                      "text": "A REAL LINE",
+                      "checked": true
+                    },
+                    {
+                      "rank": 1,
+                      "text": "WEAPONS",
+                      "checked": true
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "close": {
+          "kind": "yourCall",
+          "prompt": "NFL FANS: YOUR CALL",
+          "options": [
+            {
+              "text": "SIGN HIM",
+              "tone": "blue"
+            },
+            {
+              "text": "LET HIM RETIRE",
+              "tone": "red"
+            }
+          ],
+          "comment": "COMMENT: WHO SHOULD CALL?"
+        }
+      },
+      "voWords": 188
+    },
+    {
+      "id": "chiefs-shortest-throw",
+      "ref": 5,
+      "label": "Chiefs \"shortest throw in football\"",
+      "plan": {
+        "v": 4,
+        "esStyle": "casefile",
+        "skin": "scrapbook",
+        "length": "full",
+        "script": "The Kansas City Chiefs throw the shortest passes in football. Shorter than all 31 other teams. And they do it completely on *purpose*. Step one. Flood the flat. Put three receivers on one side of the field, so one of them is always open short. The defense has to pick who to cover, and it always picks wrong. Step two. Get it out. The ball is gone before the pass rush ever gets home, so the line only has to hold for a moment. No sacks, no drive-killing losses, no panic. Step three. Yards after the catch. Throw it short to Travis Kelce and let him do the rest with the ball in his hands. A two-yard throw turns into a first down, again and again. Step four. This is old school. The idea is older than the Super Bowl itself. This franchise has been playing since 1960, and short, safe throws were in the playbook back then too. Step five. Look at all 32 teams. Only one of them lives on the short throw, week after week. That team is the Chiefs. Flood the flat, get it out, yards after the catch. And somehow, it keeps working.",
+        "title": "The shortest throw in football",
+        "team": "Kansas City Chiefs",
+        "sport": "nfl",
+        "sources": [
+          {
+            "title": "Average depth of target by team",
+            "source": "Next Gen Stats",
+            "claim": "Chiefs rank 1st in shortest average throw; franchise founded 1960"
+          }
+        ],
+        "sourceLine": "Source: Next Gen Stats",
+        "chapters": [
+          {
+            "id": "c1",
+            "headline": "THE *SHORTEST* THROW IN FOOTBALL",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c1b1",
+                "vo": "The Kansas City Chiefs throw the shortest passes in football. Shorter than all 31 other teams. And they do it completely on *purpose*.",
+                "media": {
+                  "kind": "cutout",
+                  "subject": {
+                    "type": "player",
+                    "name": "Patrick Mahomes",
+                    "team": "Kansas City Chiefs"
+                  }
+                },
+                "module": {
+                  "type": "rankList",
+                  "title": "SHORTEST AVG THROW",
+                  "rows": [
+                    {
+                      "rank": 1,
+                      "label": "CHIEFS",
+                      "value": "",
+                      "chip": "KC"
+                    },
+                    {
+                      "rank": 2,
+                      "label": "TEAM #2",
+                      "value": ""
+                    },
+                    {
+                      "rank": 3,
+                      "label": "TEAM #3",
+                      "value": ""
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "marker": {
+              "kind": "progress",
+              "i": 1,
+              "of": 5
+            },
+            "headline": "STEP 1: *FLOOD* THE FLAT",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c2b1",
+                "vo": "Step one. Flood the flat. Put three receivers on one side of the field, so one of them is always open short. The defense has to pick who to cover, and it always picks wrong.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "playDiagram",
+                  "offense": [
+                    [
+                      0.2,
+                      0.6
+                    ],
+                    [
+                      0.3,
+                      0.6
+                    ],
+                    [
+                      0.4,
+                      0.6
+                    ],
+                    [
+                      0.5,
+                      0.7
+                    ]
+                  ],
+                  "defense": [
+                    [
+                      0.2,
+                      0.45
+                    ],
+                    [
+                      0.35,
+                      0.45
+                    ],
+                    [
+                      0.5,
+                      0.4
+                    ]
+                  ],
+                  "route": [
+                    [
+                      0.3,
+                      0.6
+                    ],
+                    [
+                      0.3,
+                      0.55
+                    ],
+                    [
+                      0.15,
+                      0.55
+                    ]
+                  ],
+                  "label": "TRIPS RIGHT"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "marker": {
+              "kind": "progress",
+              "i": 2,
+              "of": 5
+            },
+            "headline": "STEP 2: *GET IT OUT*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c3b1",
+                "vo": "Step two. Get it out. The ball is gone before the pass rush ever gets home, so the line only has to hold for a moment. No sacks, no drive-killing losses, no panic.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "moment",
+                    "name": "Patrick Mahomes",
+                    "team": "Kansas City Chiefs",
+                    "moment": "quick throw"
+                  },
+                  "label": "CHIEFS BALL"
+                },
+                "module": {
+                  "type": "reveal",
+                  "from": "?",
+                  "to": "#1",
+                  "label": "QUICKEST RELEASE"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c4",
+            "marker": {
+              "kind": "progress",
+              "i": 3,
+              "of": 5
+            },
+            "headline": "STEP 3: *YARDS AFTER*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c4b1",
+                "vo": "Step three. Yards after the catch. Throw it short to Travis Kelce and let him do the rest with the ball in his hands. A two-yard throw turns into a first down, again and again.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "moment",
+                    "name": "Travis Kelce",
+                    "team": "Kansas City Chiefs",
+                    "moment": "catch and run"
+                  },
+                  "label": "CHIEFS BALL"
+                },
+                "module": {
+                  "type": "playDiagram",
+                  "offense": [
+                    [
+                      0.5,
+                      0.6
+                    ]
+                  ],
+                  "defense": [
+                    [
+                      0.4,
+                      0.45
+                    ],
+                    [
+                      0.6,
+                      0.45
+                    ]
+                  ],
+                  "route": [
+                    [
+                      0.5,
+                      0.6
+                    ],
+                    [
+                      0.55,
+                      0.5
+                    ],
+                    [
+                      0.7,
+                      0.3
+                    ]
+                  ],
+                  "label": "YARDS AFTER CATCH"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c5",
+            "marker": {
+              "kind": "progress",
+              "i": 4,
+              "of": 5
+            },
+            "headline": "STEP 4: *OLD SCHOOL*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c5b1",
+                "vo": "Step four. This is old school. The idea is older than the Super Bowl itself. This franchise has been playing since 1960, and short, safe throws were in the playbook back then too.",
+                "media": {
+                  "kind": "photo",
+                  "subject": {
+                    "type": "player",
+                    "name": "Patrick Mahomes",
+                    "team": "Kansas City Chiefs"
+                  },
+                  "label": "POLAROID"
+                },
+                "module": {
+                  "type": "calendar",
+                  "month": "NOVEMBER",
+                  "year": 1960,
+                  "stamp": "SINCE 1960"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c6",
+            "marker": {
+              "kind": "progress",
+              "i": 5,
+              "of": 5
+            },
+            "headline": "STEP 5: *NOBODY ELSE*",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c6b1",
+                "vo": "Step five. Look at all 32 teams. Only one of them lives on the short throw, week after week.",
+                "media": {
+                  "kind": "none"
+                },
+                "module": {
+                  "type": "dotGrid",
+                  "total": 32,
+                  "groups": [
+                    {
+                      "n": 1,
+                      "tone": "blue",
+                      "label": "CHIEFS"
+                    },
+                    {
+                      "n": 31,
+                      "tone": "grey",
+                      "label": "EVERYONE ELSE"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c6b2",
+                "vo": "That team is the Chiefs. Flood the flat, get it out, yards after the catch. And somehow, it keeps working.",
+                "media": {
+                  "kind": "photo",
+                  "subject": {
+                    "type": "player",
+                    "name": "Patrick Mahomes",
+                    "team": "Kansas City Chiefs"
+                  },
+                  "label": "POLAROID"
+                },
+                "module": {
+                  "type": "checklist",
+                  "rows": [
+                    {
+                      "text": "FLOOD THE FLAT",
+                      "checked": true
+                    },
+                    {
+                      "text": "GET IT OUT",
+                      "checked": true
+                    },
+                    {
+                      "text": "YARDS AFTER",
+                      "checked": true
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "close": {
+          "kind": "yourCall",
+          "prompt": "CHIEFS FANS: YOUR CALL",
+          "options": [
+            {
+              "text": "GENIUS",
+              "tone": "blue"
+            },
+            {
+              "text": "BORING",
+              "tone": "red"
+            }
+          ],
+          "comment": "COMMENT: GENIUS OR BORING?"
+        }
+      },
+      "voWords": 198
+    },
+    {
+      "id": "ravens-perfect-cover",
+      "ref": 6,
+      "label": "Ravens/Lamar \"the perfect cover\"",
+      "plan": {
+        "v": 4,
+        "esStyle": "hotseat",
+        "skin": "clean",
+        "length": "full",
+        "script": "Lamar Jackson is the perfect cover for general manager Eric DeCosta. Every season, the quarterback hides the roster, and nobody looks at the man who built it. The Ravens are 82 and 38 since 2019. That record looks great. It also hides a lot. Chapter one, the line. Center Tyler Linderbaum was asked about the offensive line this week, and he did not have an easy answer for why it keeps breaking down. Maxx Crosby had already given the answer on the field. Pressure, all game long. This line cannot block. Chapter two, the moves. Look at the offseasons. Box after box, year after year, and the big moves never came. One move filled in a box. Then nothing again. Every plan to fix the roster got spiked, and the same holes stayed open for another season. Chapter three, the cover. And every single year, Lamar covers for it. 82 and 38 does not happen without him. He runs for it, throws for it, and wins anyway. So is this on the quarterback, or on the man who keeps building around him? Ravens fans, it is your call.",
+        "title": "The perfect cover",
+        "team": "Baltimore Ravens",
+        "sport": "nfl",
+        "sources": [
+          {
+            "title": "Ravens record since 2019",
+            "source": "Pro Football Reference",
+            "claim": "Ravens 82-38 since 2019; offseasons 2020, 2021, 2022, 2023, 2024"
+          },
+          {
+            "title": "Press conferences",
+            "source": "Baltimore Ravens YouTube",
+            "claim": "Eric DeCosta and Tyler Linderbaum press conferences"
+          }
+        ],
+        "sourceLine": "Source: Pro Football Reference, Ravens",
+        "chapters": [
+          {
+            "id": "c1",
+            "headline": "THE *PERFECT* COVER",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c1b1",
+                "vo": "Lamar Jackson is the perfect cover for general manager Eric DeCosta. Every season, the quarterback hides the roster, and nobody looks at the man who built it.",
+                "media": {
+                  "kind": "presser",
+                  "subject": {
+                    "type": "person",
+                    "name": "Eric DeCosta",
+                    "team": "Baltimore Ravens"
+                  },
+                  "label": "ERIC DECOSTA · GM"
+                }
+              },
+              {
+                "id": "c1b2",
+                "vo": "The Ravens are 82 and 38 since 2019. That record looks great. It also hides a lot.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "player",
+                    "name": "Lamar Jackson",
+                    "team": "Baltimore Ravens"
+                  },
+                  "label": "LAMAR JACKSON"
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "82-38",
+                      "label": "SINCE 2019",
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "marker": "1 · THE LINE",
+            "headline": "THE LINE *CAN'T BLOCK*",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c2b1",
+                "vo": "Chapter one, the line. Center Tyler Linderbaum was asked about the offensive line this week, and he did not have an easy answer for why it keeps breaking down.",
+                "media": {
+                  "kind": "presser",
+                  "subject": {
+                    "type": "person",
+                    "name": "Tyler Linderbaum",
+                    "team": "Baltimore Ravens"
+                  },
+                  "label": "TYLER LINDERBAUM · C"
+                }
+              },
+              {
+                "id": "c2b2",
+                "vo": "Maxx Crosby had already given the answer on the field. Pressure, all game long. This line cannot block.",
+                "media": {
+                  "kind": "presser",
+                  "subject": {
+                    "type": "person",
+                    "name": "Maxx Crosby",
+                    "team": "Las Vegas Raiders"
+                  },
+                  "label": "MAXX CROSBY · RAIDERS"
+                },
+                "stamp": {
+                  "text": "CAN'T BLOCK",
+                  "tone": "red",
+                  "at": "media"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "marker": "2 · THE MOVES",
+            "headline": "EVERY OFFSEASON *EMPTY*",
+            "tone": "red",
+            "beats": [
+              {
+                "id": "c3b1",
+                "vo": "Chapter two, the moves. Look at the offseasons. Box after box, year after year, and the big moves never came.",
+                "media": {
+                  "kind": "presser",
+                  "subject": {
+                    "type": "person",
+                    "name": "Eric DeCosta",
+                    "team": "Baltimore Ravens"
+                  },
+                  "label": "ERIC DECOSTA · GM"
+                },
+                "module": {
+                  "type": "timeline",
+                  "slots": [
+                    {
+                      "label": "2020",
+                      "filled": false
+                    },
+                    {
+                      "label": "2021",
+                      "filled": false
+                    },
+                    {
+                      "label": "2022",
+                      "filled": false
+                    },
+                    {
+                      "label": "2023",
+                      "filled": false
+                    },
+                    {
+                      "label": "2024",
+                      "filled": false
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c3b2",
+                "vo": "One move filled in a box. Then nothing again. Every plan to fix the roster got spiked, and the same holes stayed open for another season.",
+                "media": {
+                  "kind": "presser",
+                  "subject": {
+                    "type": "person",
+                    "name": "Eric DeCosta",
+                    "team": "Baltimore Ravens"
+                  },
+                  "label": "ERIC DECOSTA · GM"
+                },
+                "module": {
+                  "type": "timeline",
+                  "slots": [
+                    {
+                      "label": "2020",
+                      "filled": false
+                    },
+                    {
+                      "label": "2021",
+                      "filled": false
+                    },
+                    {
+                      "label": "2022",
+                      "filled": true
+                    },
+                    {
+                      "label": "2023",
+                      "filled": false
+                    },
+                    {
+                      "label": "2024",
+                      "filled": false
+                    }
+                  ]
+                },
+                "stamp": {
+                  "text": "SPIKED",
+                  "tone": "red",
+                  "at": "module"
+                }
+              }
+            ]
+          },
+          {
+            "id": "c4",
+            "marker": "3 · THE COVER",
+            "headline": "LAMAR *COVERS* IT",
+            "tone": "blue",
+            "beats": [
+              {
+                "id": "c4b1",
+                "vo": "Chapter three, the cover. And every single year, Lamar covers for it. 82 and 38 does not happen without him. He runs for it, throws for it, and wins anyway.",
+                "media": {
+                  "kind": "clip",
+                  "subject": {
+                    "type": "moment",
+                    "name": "Lamar Jackson",
+                    "team": "Baltimore Ravens",
+                    "moment": "scramble touchdown"
+                  },
+                  "label": "RAVENS BALL"
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "82-38",
+                      "label": "SINCE 2019",
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "c4b2",
+                "vo": "So is this on the quarterback, or on the man who keeps building around him? Ravens fans, it is your call.",
+                "media": {
+                  "kind": "presser",
+                  "subject": {
+                    "type": "person",
+                    "name": "Eric DeCosta",
+                    "team": "Baltimore Ravens"
+                  },
+                  "label": "ERIC DECOSTA · GM"
+                },
+                "module": {
+                  "type": "statTiles",
+                  "tiles": [
+                    {
+                      "value": "82-38",
+                      "label": "SINCE 2019",
+                      "tone": "blue"
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ],
+        "close": {
+          "kind": "yourCall",
+          "prompt": "RAVENS FANS: YOUR CALL",
+          "options": [
+            {
+              "text": "FIRE DECOSTA",
+              "tone": "red"
+            },
+            {
+              "text": "ONE MORE OFFSEASON",
+              "tone": "blue"
+            }
+          ],
+          "comment": "COMMENT: FIRE HIM OR ONE MORE YEAR?"
+        }
+      },
+      "voWords": 188
+    }
+  ]
+}

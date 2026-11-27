@@ -144,7 +144,7 @@
   function applyVariant(workspace, option, ctx) {
     const fx = LAYOUTS[workspace]?.[option.template]?.[option.layout];
     if (fx) fx();
-    if (workspace === 'instagram' && option.template === 'cover') call('renderPillPositionControls');
+    if ((workspace === 'instagram' && option.template === 'cover') || (workspace === 'youtube' && /^variation-/.test(option.template))) call('renderPillPositionControls');
     if (workspace === 'instagram' && option.template === 'quote') {
       const select = document.getElementById('quote-logo-placement');
       if (select) select.value = state.quoteLogoPlacement || 'bottom';
@@ -231,7 +231,7 @@
   function currentTemplate() {
     if (activeWorkspace === 'instagram') return state.postType || 'cover';
     if (activeWorkspace === 'newsletter') return activeNewsletterAsset;
-    if (activeWorkspace === 'youtube') return activeYoutubeVariation;
+    if (activeWorkspace === 'youtube') return state.youtubeQuote ? 'quote' : activeYoutubeVariation;
     return '';
   }
 
@@ -447,6 +447,52 @@
     const value = source?.();
     return value ? JSON.parse(JSON.stringify(value)) : null;
   }
+
+  // ─── YouTube ──────────────────────────────────────────────────────────────
+  // The three layouts are variations of one thumbnail: photo + up to two pills;
+  // 2 and 3 add the player cut-outs (from the ES cut-out store) in front.
+  // Quote thumbnails switch the variation into Quote Mode.
+  async function loadOrNull(url) {
+    if (!url) return null;
+    try { return await loadImageFromUrl(url); } catch (error) { return null; }
+  }
+  async function applyYoutube(option, ctx) {
+    await editorReady();
+    if (activeWorkspace !== 'youtube') activateWorkspace('youtube');
+    const variation = option.template === 'quote' ? (activeYoutubeVariation || 'variation-1') : option.template;
+    const select = document.getElementById('youtube-variation-select');
+    if (select) select.value = variation;
+    switchYoutubeVariation(variation);
+    const wantQuote = option.template === 'quote';
+    if (Boolean(state.youtubeQuote) !== wantQuote) call('toggleYoutubeQuoteMode');
+    window.FrameUpSpec?.brand?.({ sport: option.sport || '', team: option.team || '', brief: String(ctx.brief || '').slice(0, 600), hints: { person: ctx.subject || '', sport: option.sport || '' } });
+    const f = option.fields || {};
+    setLines(wantQuote ? (f.lines || []) : (f.pills || []));
+    await setPhoto(ctx.photo);
+    if (variation === 'variation-2' || variation === 'variation-3') {
+      const cutouts = Array.isArray(ctx.cutouts) ? ctx.cutouts : [];
+      const [one, two] = await Promise.all([loadOrNull(cutouts[0]?.url), variation === 'variation-3' ? loadOrNull(cutouts[1]?.url) : null]);
+      state.entityPhoto = one;
+      state.entityPhotoName = one ? (cutouts[0].person || 'Player') : '';
+      state.entityOffsetX = 0; state.entityOffsetY = 0; state.entityScale = 1;
+      if (variation === 'variation-3') {
+        state.entityPhoto2 = two;
+        state.entityPhoto2Name = two ? (cutouts[1].person || 'Player') : '';
+        state.entityOffsetX2 = 0; state.entityOffsetY2 = 0; state.entityScale2 = 1;
+      }
+      call('saveMediaContext');
+      call('syncEntityPhotoControls');
+      call('syncEntityPhotoControls2');
+    }
+    call('syncWorkspaceControls');
+    call('syncAllCustomSelects');
+  }
+  APPLIERS.youtube = applyYoutube;
+  LAYOUTS.youtube = {
+    'variation-1': LAYOUTS.instagram.cover,
+    'variation-2': LAYOUTS.instagram.cover,
+    'variation-3': LAYOUTS.instagram.cover,
+  };
 
   // Swap the photo on the design on screen, wherever its template keeps it.
   async function swapPhoto(workspace, option, photo) {
