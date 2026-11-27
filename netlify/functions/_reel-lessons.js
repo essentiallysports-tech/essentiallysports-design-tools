@@ -21,7 +21,10 @@ const gateway = () => require('./_ai-gateway.js');
 const FEEDBACK = 'frameup_reel_feedback';
 const LESSONS = 'frameup_reel_lessons';
 const FEATURE = 'reels-lessons';
-const EVENTS = ['swap_media', 'edit_text', 'change_module', 'regenerate', 'delete_beat', 'export', 'posted'];
+const EVENTS = ['swap_media', 'edit_text', 'change_module', 'regenerate', 'delete_beat', 'export', 'posted', 'find_clips'];
+// Events added after the first migration: the live check constraint may not
+// allow them until 20261130130000_frameup_reel_feedback_find_clips.sql runs.
+const LATE_EVENTS = ['find_clips'];
 const STYLES = ['breakdown', 'casefile', 'outlier', 'hotseat'];
 const LIMITS = { batch: 20, json: 2000, days: 30, rows: 5000, minRows: 15, perStyle: 6, lessonChars: 180 };
 const CRON_EMAIL = 'reel-lessons@essentiallysports.com';
@@ -65,16 +68,28 @@ function rest(token, { service = false } = {}) {
 
 // events: one or a list (<= 20). Fire-and-forget from the page.
 async function saveFeedback(events, { auth, token, fetchImpl = fetch } = {}) {
-  const rows = (Array.isArray(events) ? events : [events]).slice(0, LIMITS.batch).map(cleanFeedback).filter(Boolean);
-  if (!rows.length) return { ok: false, status: 400, error: 'No feedback to save.' };
+  const list = (Array.isArray(events) ? events : [events]).slice(0, LIMITS.batch);
+  const rows = list.map(cleanFeedback).filter(Boolean);
+  const ignored = list.length - rows.length;
+  // Unknown events are a no-op (fire-and-forget logging never errors).
+  if (!rows.length) return { ok: true, cloud: false, saved: 0, ignored };
   const api = rest(token);
+  const send = batch => fetchImpl(`${api.url}/${FEEDBACK}`, {
+    method: 'POST', headers: api.headers({ Prefer: 'return=minimal' }), signal: AbortSignal.timeout(4000),
+    body: JSON.stringify(batch.map(r => ({ ...r, user_email: auth.user.email }))),
+  });
   try {
-    const response = await fetchImpl(`${api.url}/${FEEDBACK}`, {
-      method: 'POST', headers: api.headers({ Prefer: 'return=minimal' }), signal: AbortSignal.timeout(4000),
-      body: JSON.stringify(rows.map(r => ({ ...r, user_email: auth.user.email }))),
-    });
-    return { ok: true, cloud: Boolean(response.ok), saved: response.ok ? rows.length : 0 };
-  } catch { return { ok: true, cloud: false, saved: 0 }; }
+    let response = await send(rows);
+    let saved = rows;
+    // Before the find_clips migration runs, the check constraint (23514)
+    // rejects the whole batch: save the rest without the late events.
+    if (!response.ok && rows.some(r => LATE_EVENTS.includes(r.event))) {
+      const rest2 = rows.filter(r => !LATE_EVENTS.includes(r.event));
+      saved = rest2;
+      response = rest2.length ? await send(rest2) : { ok: false };
+    }
+    return { ok: true, cloud: Boolean(response.ok), saved: response.ok ? saved.length : 0, ignored: ignored + (rows.length - saved.length) };
+  } catch { return { ok: true, cloud: false, saved: 0, ignored }; }
 }
 
 // ─── Summary (code, $0) ──────────────────────────────────────────────────
@@ -218,4 +233,4 @@ function topLessons(items, style, n = 6) {
   return (items || []).slice().sort((a, b) => (a.style === style ? 0 : 1) - (b.style === style ? 0 : 1) || b.evidence - a.evidence).slice(0, n);
 }
 
-module.exports = { FEEDBACK, LESSONS, FEATURE, EVENTS, STYLES, LIMITS, CRON_EMAIL, LESSONS_SYSTEM, cleanFeedback, saveFeedback, summarize, hashOf, cleanLessons, runLessonsJob, loadLessons, topLessons, CACHE };
+module.exports = { FEEDBACK, LESSONS, FEATURE, EVENTS, LATE_EVENTS, STYLES, LIMITS, CRON_EMAIL, LESSONS_SYSTEM, cleanFeedback, saveFeedback, summarize, hashOf, cleanLessons, runLessonsJob, loadLessons, topLessons, CACHE };

@@ -5,7 +5,7 @@
 // daily job turns them into the house lessons the director and critic read.
 //
 // evt = { event, reelId, chapterId?, beatId?, style?, field?, before?, after? }
-//   event: swap_media | edit_text | change_module | regenerate | delete_beat | export | posted
+//   event: swap_media | edit_text | change_module | regenerate | delete_beat | export | posted | find_clips
 //   before / after: small JSON, e.g. { kind: 'clip', url, reason } or { type: 'bars' }
 //   or the old and new text for edit_text (field: headline | stamp | tag | close | label).
 // For the clip library: swap_media with before.url (the clip swapped out) and
@@ -16,7 +16,7 @@
   if (root && typeof root === 'object') root.ReelFeedback = api;
 }(typeof window !== 'undefined' ? window : globalThis, root => {
   'use strict';
-  const EVENTS = ['swap_media', 'edit_text', 'change_module', 'regenerate', 'delete_beat', 'export', 'posted'];
+  const EVENTS = ['swap_media', 'edit_text', 'change_module', 'regenerate', 'delete_beat', 'export', 'posted', 'find_clips'];
   const BATCH = 20;
   const DELAY_MS = 3000;
   const MAX_QUEUE = 200;

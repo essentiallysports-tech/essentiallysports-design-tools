@@ -600,8 +600,32 @@ await test('saveFeedback: up to 20 rows with the person\'s email; before the mig
   assert.equal(body[0].user_email, 'editor@essentiallysports.com');
   state.table = false;
   out = await L.saveFeedback(evts.slice(0, 1), { auth, token: 't', fetchImpl: tableFetch(state) });
-  assert.deepEqual(out, { ok: true, cloud: false, saved: 0 });
-  assert.equal((await L.saveFeedback([{ event: 'bogus' }], { auth, token: 't' })).status, 400);
+  assert.deepEqual(out, { ok: true, cloud: false, saved: 0, ignored: 0 });
+  const noop = await L.saveFeedback([{ event: 'bogus' }], { auth, token: 't' });
+  assert.deepEqual(noop, { ok: true, cloud: false, saved: 0, ignored: 1 }, 'an unknown event is a no-op, not an error');
+});
+
+await test('find_clips: a known event; before its migration the check constraint rejects it and the rest of the batch still saves', async () => {
+  assert.ok(L.EVENTS.includes('find_clips'));
+  assert.ok(require('../reel-feedback.js').EVENTS.includes('find_clips'));
+  const auth = { user: { email: 'editor@essentiallysports.com' } };
+  const bodies = [];
+  const oldTable = async (url, opts = {}) => {
+    bodies.push(JSON.parse(opts.body));
+    return /find_clips/.test(opts.body) ? jsonResponse(400, { code: '23514', message: 'violates check constraint "frameup_reel_feedback_event_check"' }) : new Response('', { status: 201 });
+  };
+  const out = await L.saveFeedback([{ event: 'find_clips', reelId: 'r1', beatId: 'b2' }, { event: 'swap_media', reelId: 'r1', beatId: 'b2', before: { kind: 'photo' }, after: { kind: 'clip' } }], { auth, token: 't', fetchImpl: oldTable });
+  assert.deepEqual(out, { ok: true, cloud: true, saved: 1, ignored: 1 });
+  assert.equal(bodies.length, 2);
+  assert.deepEqual(bodies[1].map(r => r.event), ['swap_media']);
+  const only = await L.saveFeedback([{ event: 'find_clips', reelId: 'r1' }], { auth, token: 't', fetchImpl: oldTable });
+  assert.deepEqual(only, { ok: true, cloud: false, saved: 0, ignored: 1 });
+  const newTable = async () => new Response('', { status: 201 });
+  assert.equal((await L.saveFeedback([{ event: 'find_clips', reelId: 'r1' }], { auth, token: 't', fetchImpl: newTable })).saved, 1);
+  const fs = require('node:fs');
+  const sql = fs.readFileSync('supabase/migrations/20261130130000_frameup_reel_feedback_find_clips.sql', 'utf8');
+  assert.match(sql, /drop constraint if exists frameup_reel_feedback_event_check/);
+  assert.match(sql, /'find_clips'/);
 });
 
 await test('reel-feedback.js: log() never throws, batches up to 20, sends mode feedback, drops unknown events', async () => {
