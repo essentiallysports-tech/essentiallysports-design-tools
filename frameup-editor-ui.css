@@ -617,7 +617,8 @@ html[data-theme="dark"][data-studio-shell] body.is-mobile-workspace-active .mobi
 }
 @media (min-width: 901px) and (max-width: 1279px) {
   html.es-shell.es-editor .es-topbar .editor-save-chip { padding-inline: 12px; gap: 0; }
-  html.es-shell.es-editor .es-topbar .fu-canvas-bar { gap: 6px; }
-  html.es-shell.es-editor .es-topbar .fu-format-chip.is-compact { padding-inline: 10px; }
-  html.es-shell.es-editor .es-topbar .editor-save-chip__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+  html.es-shell.es-editor .es-topbar .fu-canvas-bar { gap: 4px; }
+  html.es-shell.es-editor .es-topbar .fu-format-chip.is-compact { padding-inline: 8px; }
+  /* The button's aria-label and tooltip still say "Saved …". */
+  html.es-shell.es-editor .es-topbar .editor-save-chip__label { display: none; }
 }

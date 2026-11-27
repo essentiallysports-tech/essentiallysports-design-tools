@@ -27,6 +27,11 @@ import os from 'node:os';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+// Mirrors app-shell.js FEATURES.requests: while requests are paused the
+// dashboard sends #board / #list to Overview.
+const REQUESTS_PAUSED = /FEATURES = Object\.freeze\(\{ requests: false \}\)/.test(fs.readFileSync(new URL('../app-shell.js', import.meta.url), 'utf8'));
+const dashView = view => (REQUESTS_PAUSED && (view === 'board' || view === 'list') ? 'overview' : view);
+
 // AUTH_UI_ROOT=<dir> sweeps another copy of the site (e.g. a base commit for before/after counts).
 const ROOT = path.resolve(process.env.AUTH_UI_ROOT || path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'));
 const CHROME = [
@@ -350,7 +355,9 @@ const STATES = [
   { id: 'auth-callback-no-code', url: '/auth-callback.html', expect: 'body' },
   { id: 'logout', url: '/ai-page/logout.html', session: true, expect: 'body' },
   { id: 'auth-problem-panel', url: '/ai-page/settings.html', session: false, session2: recentLogin, expect: '#es-auth-problem', slow: true },
-  ...['overview', 'impact', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity'].map(view => ({ id: `dash-${view}`, url: `/dashboard.html#${view}`, session: true, expect: '.dashboard-app', dash: view })),
+  // Design requests paused (app-shell.js FEATURES.requests false): #board and
+  // #list open Overview instead (owner decision R4, 2026-11-28).
+  ...['overview', 'impact', 'board', 'list', 'designs', 'feedback', 'people', 'access', 'activity'].map(view => ({ id: `dash-${view}`, url: `/dashboard.html#${view}`, session: true, expect: '.dashboard-app', dash: dashView(view) })),
   // Behaviour: the Errors card groups the reports; the role menu opens.
   { id: 'dash-errors-card', url: '/dashboard.html#overview', session: true, expect: '.dashboard-app', dash: 'overview',
     act: `(async () => { for (let i = 0; i < 40 && !document.querySelector('#dov-errors .dov-errors li'); i++) await new Promise(r => setTimeout(r, 100)); document.getElementById('dov-errors')?.scrollIntoView(); const d = document.querySelector('#dov-errors details'); if (d) d.open = true; return Boolean(d); })()`,
@@ -358,7 +365,7 @@ const STATES = [
   { id: 'dash-people-role-menu', url: '/dashboard.html#people', session: true, expect: '.dashboard-app', dash: 'people',
     act: `(async () => { for (let i = 0; i < 40 && !document.querySelector('[data-pv-role-open]'); i++) await new Promise(r => setTimeout(r, 100)); const t = document.querySelector('[data-pv-role-open]'); if (!t) return false; t.scrollIntoView({ block: 'center' }); t.click(); await new Promise(r => setTimeout(r, 300)); return t.getAttribute('aria-expanded') === 'true'; })()`,
     flow: `[...document.querySelectorAll('.pv-menu .pv-menu-item')].filter(o => o.getClientRects().length).length >= 3` },
-  ...['overview', 'board', 'people', 'access', 'feedback'].map(view => ({ id: `dash-empty-${view}`, url: `/dashboard.html#${view}`, session: true, supa: 'empty', expect: '.dashboard-app', dash: view })),
+  ...['overview', 'board', 'people', 'access', 'feedback'].map(view => ({ id: `dash-empty-${view}`, url: `/dashboard.html#${view}`, session: true, supa: 'empty', expect: '.dashboard-app', dash: dashView(view) })),
   ...['overview', 'people'].map(view => ({ id: `dash-error-${view}`, url: `/dashboard.html#${view}`, session: true, supa: 'error', expect: '.dashboard-app', dash: view, allowConsole: /stub failure|\[client errors\]|read failed|failed to load resource.*500|status of 500/i })),
   // The error log: every main page, signed in, once (1440, light). Only
   // what would reach /api/client-errors and uncaught exceptions count here;
