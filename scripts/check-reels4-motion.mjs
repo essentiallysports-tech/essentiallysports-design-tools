@@ -315,6 +315,8 @@ function run(entry, opts) {
   const isKB = m => /^I:/.test(m.key) && m.t1 - m.t0 > 900;
   // Ambient (Ken Burns on photos, a quote's read bar) is marked ambient by the engine: not on the scale.
   for (const m of moves) {
+    // A move under ~100 ms (a flip half cut by another tween, a stagger tail) is too short to judge from 16 ms samples.
+    if (m.t1 - m.t0 < 96) { notes.push(m.at + ' ' + m.key.slice(0, 40) + ' ' + m.ch + ' @' + m.t0 + ': ' + (m.t1 - m.t0) + ' ms move, too short to judge (best ' + (m.curve ? m.curve.k + ' ' + m.dur : '?') + ')'); continue; }
     const where = m.at + ' ' + m.key.slice(0, 40) + ' ' + m.ch + ' @' + m.t0 + '-' + m.t1 + ' ms';
     if (m.linear) fail('easing', where + ': linear (max deviation ' + m.linDev + ')' + (isKB(m) ? ' [Ken Burns]' : ''));
     else if (m.curve && m.curve.rms > 0.06 && !isKB(m)) notes.push(where + ': no curve x duration explains it well (best ' + m.curve.k + ' ' + m.dur + ' ms, rms ' + m.curve.rms.toFixed(3) + ')');
