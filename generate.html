@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
   <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
   <link rel="stylesheet" href="design-tokens.css?v=20261121-rel2">
-<link rel="stylesheet" href="es-ui.css?v=20261122-rel">
+<link rel="stylesheet" href="es-ui.css?v=20261128-ux2">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
   <link rel="stylesheet" href="trends.css?v=20261127-ux1">
@@ -50,12 +50,12 @@
   <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
   <script src="site-chrome.js?v=20261120-rel2"></script>
 <script src="frameup-ai-mode.js?v=20261121-rel"></script>
-<script src="app-shell.js?v=20261127-ux1"></script>
-<link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
+<script src="app-shell.js?v=20261128-ux2"></script>
+<link rel="stylesheet" href="frameup-tour.css?v=20261128-ux2">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261121-notes"></script>
 <script src="tours/tours.js?v=20261128-reels3"></script>
-<script src="tours/tour-launcher.js?v=20261120-rel2"></script>
+<script src="tours/tour-launcher.js?v=20261128-ux2"></script>
 <script src="league-logos.js?v=20261128-nba1"></script>
 <link rel="stylesheet" href="frameup-posted.css?v=20261127-ux1">
 <script src="frameup-impact.js?v=20261118-rel1"></script>
@@ -212,6 +212,8 @@
     .gen-live { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--es-space-3, 12px); }
     .gen-live:empty { display: none; }
     .gen-empty.is-offline .es-live-dot { display: none; }
+    /* No trends loaded: one line instead of a heading over nothing (UX audit P2). */
+    .gen-live-note { margin: 0; color: var(--es-ink-2); font-size: 14px; line-height: 20px; }
     .gen-trend { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: var(--es-space-3, 12px); min-width: 0; min-height: 72px; padding: var(--es-space-3, 12px) var(--es-space-4, 16px) var(--es-space-3, 12px) var(--es-space-3, 12px); border: 0; border-radius: var(--es-radius-container, 16px); background: var(--es-bg); box-shadow: inset 0 0 0 1px var(--es-line); color: var(--es-ink); font: 500 14px/1.35 var(--es-font-ui); text-align: left; cursor: pointer; transition: box-shadow var(--es-dur, .18s) var(--es-ease, ease), transform var(--es-dur, .18s) var(--es-ease, ease); }
     .gen-trend:hover { box-shadow: inset 0 0 0 1px var(--es-line-2); }
     .gen-trend:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
@@ -833,6 +835,7 @@
         <a class="gen-empty__link" href="generate.html?view=trends">All trends<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
       </div>
       <div class="gen-live" id="gen-live" aria-busy="true"></div>
+      <p class="gen-live-note" id="gen-live-note" hidden>No live trends to show right now. Write a brief above, or open All trends.</p>
     </section>
     <div class="gen-setbar" id="gen-setbar" role="group" aria-label="This set" hidden>
       <p class="gen-setbar__text" id="gen-setbar-text"></p>
@@ -1538,8 +1541,23 @@
           body: JSON.stringify(withTrend(path, body)),
         });
         const data = await response.json().catch(() => null);
-        if (!response.ok) throw Object.assign(new Error(data?.error || data?.detail || `Request failed (${response.status}).`), { reason: data?.reason || '' });
+        if (!response.ok) throw Object.assign(new Error(friendlyError(response.status, data)), { reason: data?.reason || '', status: response.status });
         return data;
+      }
+      // Server errors in plain words (like Video Ads' friendlyError): the
+      // server's own calm sentence for caps and paused features, never a raw
+      // "Internal error: TypeError…" (UX audit R6).
+      const RAW_ERROR = /\b(?:TypeError|ReferenceError|SyntaxError|RangeError|Error:|undefined|null|stack|ECONN\w*|ETIMEDOUT|fetch failed|Internal error|Unexpected token|at \S+ \()/i;
+      function friendlyError(status, data) {
+        const said = String(data?.error || data?.detail || '').trim();
+        if (['feature-off', 'weekly-limit', 'team-limit', 'user-limit', 'gateway-budget', 'limit-unknown'].includes(data?.reason) && said) return said;
+        if (status === 429 || data?.reason === 'limit') return 'You’ve hit this hour’s AI limit. Try again in a little while.';
+        if (data?.reason === 'budget') return 'The team’s AI budget is used up for now. Try again later.';
+        if (data?.reason === 'off') return 'The AI tools are switched off right now.';
+        if (status === 401) return 'Your sign-in expired. Refresh the page and try again.';
+        if (status === 504 || status === 408) return 'That took too long. Try again, or ask for fewer designs.';
+        if (status >= 500 || !said || said.length > 200 || RAW_ERROR.test(said)) return `Something went wrong on our side (${status}). Try again in a moment.`;
+        return said;
       }
 
       // Who wrote the copy and where the facts came from, as small badges.
@@ -2967,6 +2985,38 @@
         if (TL()?.briefFor) return TL().briefFor(item, { why, sportLabel: sport });
         return [item.team?.name && !item.title.includes(item.team.name.split(' ').pop()) ? `${item.team.name}: ${item.title}` : item.title, why ? `Why fans care: ${why}` : ''].filter(Boolean).join('\n');
       }
+      // The confirm for a live trend card: a native modal <dialog> (focus is
+      // trapped, Esc cancels), the brief stays filled either way, and Cancel
+      // / Esc put focus back on the card.
+      function confirmTrendRun(title, returnTo) {
+        return new Promise(resolve => {
+          const free = Boolean(window.FrameUpAI?.isFree);
+          const dialog = document.createElement('dialog');
+          dialog.className = 'es-dialog gen-trend-confirm';
+          dialog.setAttribute('aria-labelledby', 'gen-trend-confirm-title');
+          dialog.setAttribute('aria-describedby', 'gen-trend-confirm-text');
+          dialog.innerHTML = `<form method="dialog">
+            <h2 id="gen-trend-confirm-title">Generate designs for this trend?</h2>
+            <p id="gen-trend-confirm-text">The brief now reads “${esc(title)}”. ${free ? 'Free mode is on this week: this uses no AI budget.' : 'Uses AI budget: one Generate run.'} Cancel to edit the brief first.</p>
+            <div class="es-dialog-actions">
+              <button class="es-btn es-btn--secondary" type="submit" value="cancel">Cancel</button>
+              <button class="es-btn es-btn--primary" type="submit" value="confirm" data-trend-confirm>Generate designs</button>
+            </div>
+          </form>`;
+          dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close('cancel'); });
+          dialog.addEventListener('close', () => {
+            const ok = dialog.returnValue === 'confirm';
+            dialog.remove();
+            if (!ok && returnTo?.isConnected) returnTo.focus();
+            resolve(ok);
+          }, { once: true });
+          document.body.appendChild(dialog);
+          if (typeof dialog.showModal !== 'function') { dialog.remove(); resolve(window.confirm('Generate designs for this trend? Uses AI budget.')); return; }
+          dialog.showModal();
+          // Like the dashboard's confirms: focus starts on Cancel, so a stray Enter never spends.
+          dialog.querySelector('[value="cancel"]').focus();
+        });
+      }
       async function loadLiveTrends() {
         els.live.innerHTML = '<span class="gen-trend is-skeleton es-skeleton" aria-hidden="true"><span class="gen-trend__art"></span><span class="gen-trend__text"></span></span>'.repeat(3);
         try {
@@ -2994,12 +3044,13 @@
               tile.innerHTML = trendArt({ ...item, image: '' });
               photo.replaceWith(tile.querySelector('img') || document.createTextNode(''));
             }, { once: true });
-            // One click makes the posts: the trend becomes a labelled brief
-            // (the writer reads Story / Team / Sport), shown in the brief box.
-            button.addEventListener('click', () => {
-              if (busy) { setBrief(trendBrief(item, sport)); return; }
+            // A click fills the brief (the writer reads Story / Team / Sport)
+            // and asks before spending: Generate runs only on "Generate
+            // designs" (owner decision R5, 2026-11-28; one click used to spend).
+            button.addEventListener('click', async () => {
               setBrief(trendBrief(item, sport));
-              generate();
+              if (busy) return;
+              if (await confirmTrendRun(item.title, button)) generate();
             });
             return button;
           }));
@@ -3023,6 +3074,8 @@
           els.live.removeAttribute('aria-busy');
           // No trends: no "live" dot over an empty row; the link still opens Trends.
           els.empty.classList.toggle('is-offline', !els.live.children.length);
+          const liveNote = document.getElementById('gen-live-note');
+          if (liveNote) liveNote.hidden = Boolean(els.live.children.length);
         }
       }
 

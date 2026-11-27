@@ -300,6 +300,10 @@ try {
   // and Generate still sends the league to the server.
   stub.briefs = [];
   await evaluate(`document.querySelector('#gen-live .gen-trend:not(.is-skeleton)')?.click()`);
+  // Owner decision R5 (2026-11-28): the card asks first; nothing is sent until "Generate designs".
+  await waitFor(`document.querySelector('dialog.gen-trend-confirm[open]')`, 4000);
+  expect(!stub.briefs.length, 'hand-off: nothing is generated before the confirm');
+  await evaluate(`document.querySelector('dialog.gen-trend-confirm [data-trend-confirm]')?.click()`);
   await waitFor(`!window.FrameUpGenerate.isBusy() && document.querySelectorAll('#gen-grid .gen-cc:not(.is-skeleton)').length > 0`, 60000);
   const shown = await evaluate(`document.getElementById('gen-brief').value`);
   expect(!/^\s*(?:story|sport|team)\s*:/im.test(shown) && /Josh Allen/.test(shown), `hand-off: the brief box shows a real brief (got "${shown.slice(0, 80)}")`);

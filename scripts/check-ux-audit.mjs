@@ -292,6 +292,62 @@ const CHECKS = [
       return '';
     },
   },
+  {
+    // Owner decision R5: a live trend card fills the brief and asks first;
+    // nothing is generated (no AI spend) until "Generate designs".
+    id: 'generate-trend-confirm',
+    async run() {
+      const posts = [];
+      API = {
+        '/api/trend-design': { status: 200, body: { ok: true, categories: [{ id: 'nba', label: 'NBA' }], items: [{ title: 'LeBron James scores 40 in Lakers win', category: 'nba' }, { title: 'Chiefs clinch AFC West', category: 'nfl' }] } },
+        '/api/es-generate': req => { if (req.method === 'POST') posts.push(1); return { status: 500, body: { ok: false, error: 'stub' } }; },
+      };
+      if (!await open('/generate.html', { ready: "document.querySelector('#gen-live .gen-trend:not(.is-skeleton)')", ms: 15000 })) return 'no live trend cards';
+      await sleep(500);
+      await c.evaluate("(() => { const b = document.querySelector('#gen-live .gen-trend'); b.focus(); b.click(); return true; })()");
+      if (!await waitFor("document.querySelector('dialog.gen-trend-confirm[open]')", 3000)) return 'clicking a trend card did not ask first';
+      await sleep(400);
+      if (posts.length) return 'a generate request fired before the confirm';
+      const d = await c.evaluate("(() => { const d = document.querySelector('dialog.gen-trend-confirm'); return { text: d.innerText, label: document.getElementById(d.getAttribute('aria-labelledby'))?.textContent, focusIn: d.contains(document.activeElement), brief: document.querySelector('#gen-brief').value }; })()");
+      if (!/AI budget/.test(d.text)) return 'the confirm does not mention the AI budget: ' + d.text;
+      if (!/Generate designs for this trend/.test(d.label || '')) return 'the dialog has no accessible title';
+      if (!d.focusIn) return 'focus is not inside the confirm';
+      if (!/LeBron/.test(d.brief)) return 'the brief was not prefilled';
+      const back = await key('Escape');
+      if (await c.evaluate("Boolean(document.querySelector('dialog.gen-trend-confirm'))")) return 'Esc did not close the confirm';
+      if (!/gen-trend/.test(back.cls)) return `Esc left focus on ${back.tag}.${back.cls}, not the trend card`;
+      await sleep(400);
+      if (posts.length) return 'Esc still generated';
+      await c.evaluate("document.querySelector('#gen-live .gen-trend').click(); true");
+      await waitFor("document.querySelector('dialog.gen-trend-confirm [data-trend-confirm]')", 3000);
+      await c.evaluate("document.querySelector('dialog.gen-trend-confirm [data-trend-confirm]').click(); true");
+      if (!await waitFor('false', 1)) { /* settle */ }
+      for (let i = 0; i < 30 && !posts.length; i++) await sleep(150);
+      if (!posts.length) return '"Generate designs" did not generate';
+      errors.length = 0;
+      return '';
+    },
+  },
+  {
+    // R6: Generate showed the server's raw error text ("Internal error:
+    // TypeError: …"). Also: no live trends left a heading over nothing.
+    id: 'generate-friendly-error',
+    async run() {
+      API = {
+        '/api/trend-design': { status: 500, body: { ok: false } },
+        '/api/es-generate': req => req.method === 'POST' ? { status: 500, body: { error: 'Internal error: TypeError: cannot read properties of undefined (reading map)' } } : { status: 200, body: { ok: true } },
+      };
+      if (!await open('/generate.html', { ready: "document.querySelector('#gen-brief') && document.querySelector('#gen-submit') && window.ESAuth?.fetchWithAuth && !document.querySelector('#gen-live').hasAttribute('aria-busy')", ms: 15000 })) return 'Generate never loaded';
+      const note = await c.evaluate("(() => { const n = document.getElementById('gen-live-note'); return n && !n.hidden && n.getClientRects().length > 0; })()");
+      if (!note) return 'no line under "Start from a live trend" when there are no trends';
+      await c.evaluate("(() => { document.querySelector('[data-look=\"templates\"], [data-look=templates]')?.click(); const t = document.querySelector('#gen-brief'); t.value = 'Josh Allen runs for 3 TDs as the Bills beat the Chiefs 30-21'; t.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#gen-submit').click(); return true; })()");
+      if (!await waitFor("/Could not generate|went wrong/i.test(document.querySelector('#gen-notice')?.innerText || '')", 10000)) return 'no error notice';
+      const text = await c.evaluate("document.querySelector('#gen-notice').innerText");
+      if (/TypeError|Internal error|undefined/.test(text)) return 'raw server error shown: ' + text.replace(/\s+/g, ' ').slice(0, 160);
+      errors.length = 0;
+      return '';
+    },
+  },
 ];
 
 let failed = 0; let ran = 0;
