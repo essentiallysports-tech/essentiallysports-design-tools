@@ -106,6 +106,7 @@ const v4Style = body => body.esStyle || (STYLE_IDS.includes(body.style) ? body.s
 // (reel-clips gatedPicks) passes them without the judge, as the SOURCING lane's library does.
 function sceneMedia(body) {
   const style = v4Style(body);
+  if (scenario.clips === 'none-once') { scenario.clips = 'none'; scenario.flipNext = true; } else if (scenario.flipNext) { scenario.clips = 'ok'; scenario.flipNext = false; }
   const clipsOn = scenario.clips === 'ok';
   const beats = allBeats(body.plan || {}).filter(b => !(b.kind === 'cta' || b.block?.type === 'endcard'));
   let clipCount = 0;
@@ -665,11 +666,21 @@ for (const w of WIDTHS) {
     expect(r.target, 'no Organic / Paid toggle (#rm-target)');
     expect(r.rights, 'no rights summary');
   });
+  await step('Paid ad', async () => { await must('#rm-target [data-target="paid"]'); await waitFor(`document.querySelector('#rm-target [data-target="paid"]').getAttribute('aria-checked') === 'true'`, 2000, 'paid picked'); });
+  await audit('export-paid', w);
   if (first) {
+    // MP4 export on a short test reel (one beat + the close): headless Chrome encodes frame by frame.
+    await load();
+    Object.assign(scenario, { clips: 'ok', critic: 'pass', motion: 'ok' });
+    await step('Export: a one-sentence script makes a short reel', async () => {
+      await makeReel({ style: 'hotseat', length: 'short', text: 'Lamar Jackson is the perfect cover for Eric DeCosta.' });
+      await must('#rm-next');
+      await waitFor(`${SHOWN}(document.querySelector('#rm-pane-export'))`, 4000, 'Export step');
+    });
     await step('Export MP4 (and the export feedback event)', async () => {
-      // Headless Chrome encodes frame by frame: allow 6x the reel's length + 30 s.
+      // Headless Chrome encodes frame by frame: allow 10x the reel's length + 30 s.
       const reelMs = Number(await ctx('(c.state.timeline && c.state.timeline.durationMs) || 0')) || 90000;
-      const exportMs = Math.round(reelMs * 6 + 30000);
+      const exportMs = Math.round(reelMs * 10 + 30000);
       await must('#rm-export');
       await waitFor(`!document.querySelector('#rm-files')?.hidden || /fail|cancel|fix/i.test(document.querySelector('#rm-export-status')?.textContent || '')`, exportMs, `exported file row (${Math.round(exportMs / 1000)} s for a ${Math.round(reelMs / 1000)} s reel)`).catch(async e => { throw new Error(e.message + ' (status: "' + (await evaluate(`(document.querySelector('#rm-export-status')?.textContent || '') + '" gate: "' + (document.querySelector('#rm-gate')?.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 200)`)) + '")'); });
       const st = await evaluate(`document.querySelector('#rm-export-status').textContent`);
@@ -681,12 +692,10 @@ for (const w of WIDTHS) {
     await sleep(900);
     await audit('export-done', w);
   }
-  await step('Paid ad', async () => { await must('#rm-target [data-target="paid"]'); await waitFor(`document.querySelector('#rm-target [data-target="paid"]').getAttribute('aria-checked') === 'true'`, 2000, 'paid picked'); });
-  await audit('export-paid', w);
 
   // The Ready to post gate: no clip → not ready → "Find clips" → ready.
   await load();
-  Object.assign(scenario, { clips: 'none', critic: 'pass' });
+  Object.assign(scenario, { clips: 'none-once', critic: 'pass' }); // later sourcing calls (Find clips) find them
   await step('Ready gate: a reel with no confirmed clip is not Ready to post and offers Find clips', async () => {
     await makeReel({ style: 'hotseat' });
     await sleep(1500);
@@ -775,7 +784,7 @@ for (const w of WIDTHS) {
         expect(p.esStyle === id && p.v === 4, `plan ${JSON.stringify(p)}`);
         const pl = calls.find(c => c.mode === 'plan');
         expect(lengthOf(pl.body) === len, `the plan request length is "${lengthOf(pl.body)}" (picked ${len})`);
-        await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 8000, '"Ready to post"');
+        await waitFor(`/ready to post/i.test(document.querySelector('#rm-ready')?.textContent || '')`, 8000, '"Ready to post"').catch(async e => { throw new Error(`${e.message} (badge "${await readyText()}"; checklist: ${(await checklistText()).slice(0, 300)})`); });
         const sm = calls.find(c => c.mode === 'scene-media');
         expect(!sm || v4Style(sm.body) === id, `scene-media esStyle ${sm && sm.body.esStyle}`);
       });
