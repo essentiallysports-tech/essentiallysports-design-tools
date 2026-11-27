@@ -836,3 +836,8 @@ module.exports = {
   DATA_SYSTEM, runDataDirector, readDataInput, hasDataInput, codeDataPlan, dataFacts, validateDataCopy, planTimeline, DATA_CACHE,
   _test: { extractJson, clean, squash, beatBrief },
 };
+
+// Reels v4 (the ES breakdown reels): the script-first director, the critic
+// and the "Need a script?" helper live in _reel-director4.js; re-exported
+// here so callers keep one director module.
+Object.assign(module.exports, require('./_reel-director4.js'));

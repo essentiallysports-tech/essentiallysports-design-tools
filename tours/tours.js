@@ -146,10 +146,10 @@
     icon: I.film,
     steps: [
       { page: 'reel-maker.html', pageLabel: 'Reels Studio', navTarget: '.es-sidebar [data-shell-id="reel-maker"]', target: '#rm-steps', icon: I.steps, title: 'Create, Review, Export', text: 'Three steps, built on the ES video system.' },
-      { page: 'reel-maker.html', target: '#rm-prompt', placement: 'bottom', icon: I.trending, title: 'Say what it is about', text: 'A topic, a trend, a link or your own script.' },
-      { page: 'reel-maker.html', target: ['#rm-styles4', '#rm-make'], placement: 'top', icon: I.sparkles, title: 'Pick one of four styles', text: 'Game Tape, Stat Card, Receipts or Hype Cut. One button makes the reel.' },
-      { page: 'reel-maker.html', target: ['#rm-scenes', '#rm-steps'], placement: 'top', icon: I.grid, title: 'Review every scene', text: 'Swap a clip or photo, change words, or ask AI to revise.' },
-      { page: 'reel-maker.html', target: '.rm-step[data-step="export"]', icon: I.download, title: 'Ready to post, then export', text: 'Every scene is checked first. MP4 in 9:16 or 4:5, plus captions.' },
+      { page: 'reel-maker.html', target: '#rm-prompt', placement: 'bottom', icon: I.trending, title: 'Paste your script', text: 'Your words are the voiceover, word for word.' },
+      { page: 'reel-maker.html', target: ['#rm-styles4', '#rm-make'], placement: 'top', icon: I.sparkles, title: 'Pick a style and a length', text: 'Four ES styles, Full or Short. One button builds the reel.' },
+      { page: 'reel-maker.html', target: ['#rm-scenes', '#rm-steps'], placement: 'top', icon: I.grid, title: 'Review chapter by chapter', text: 'Swap media, change a module or ask AI. Your words stay yours.' },
+      { page: 'reel-maker.html', target: '.rm-step[data-step="export"]', icon: I.download, title: 'Ready to post, then export', text: 'Ready once every scene moves and a clip is confirmed. MP4 plus captions.' },
     ],
   });
 

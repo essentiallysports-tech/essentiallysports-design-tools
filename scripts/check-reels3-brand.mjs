@@ -21,6 +21,7 @@
 // lint gap. Alignment to the 60 px column is reported as a note (warn).
 // Frame sheets: REELS3_SHEETS=<dir> writes <topic>-<style>.png (one thumbnail per scene,
 // failing boxes outlined in red) and <topic>-<style>.json (the per-frame findings).
+// v4 (2026-11-27): the v3 four are retired to ReelES.V3_STYLES (still drawn on the v3 path); this check reads those.
 // Before the v3 engine lands (no ReelES.STYLES) the reels are drawn in today's ES style
 // with the new blocks mapped to old ones, and the run reports "engine v3 not present".
 // The style rides on plan.esStyle (as the director writes it); REELS3_REELSTYLE=1 also sets plan.reelStyle
@@ -410,7 +411,7 @@ async function renderReel(fix, topicId, styleId, opts2 = {}) {
   return { v3: V3, style: tl.style, reelStyle: tl.reelStyle || '', durationMs: tl.durationMs, frames, lint, sheet: opts2.sheet ? sheet.toDataURL('image/png') : '' };
 }
 
-window.QA3 = { V3, loadMedia, renderReel, scaleSteps, styles: () => (V3 ? Object.fromEntries(Object.entries(ES.STYLES).map(([k, v]) => [k, { id: v && v.id, label: v && v.label, blocks: v && v.blocks }])) : null), hasPillMetrics: Boolean(FR && FR.pillMetrics) };
+window.QA3 = { V3, loadMedia, renderReel, scaleSteps, styles: () => (V3 ? Object.fromEntries(Object.entries(ES.V3_STYLES || ES.STYLES).map(([k, v]) => [k, { id: v && v.id, label: v && v.label, blocks: v && v.blocks }])) : null), hasPillMetrics: Boolean(FR && FR.pillMetrics) };
 return true;
 })()`;
 
@@ -425,7 +426,7 @@ if (!v3) failures.push('engine v3 not present: ReelES.STYLES is missing (the ree
 else {
   const st = await page.evaluate('QA3.styles()');
   const ids = Object.keys(st || {});
-  if (ids.join() !== STYLE_IDS.join()) failures.push(`ReelES.STYLES ids are ${ids.join(',')} (want ${STYLE_IDS.join(',')})`);
+  if (ids.join() !== STYLE_IDS.join()) failures.push(`ReelES.V3_STYLES ids are ${ids.join(',')} (want ${STYLE_IDS.join(',')})`);
   for (const id of STYLE_IDS) if (st?.[id] && st[id].label !== STYLE_LABELS[id]) failures.push(`style ${id} label "${st[id].label}" (want "${STYLE_LABELS[id]}")`);
 }
 if (!(await page.evaluate('QA3.hasPillMetrics'))) failures.push('FrameUpRules.pillMetrics is not loaded on the reels page');

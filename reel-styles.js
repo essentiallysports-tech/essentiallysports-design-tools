@@ -190,7 +190,9 @@
   // Reels Studio v3: the four styles (Game Tape, Stat Card, Receipts, Hype
   // Cut, reel-es-themes.js STYLES) all draw on the ES engine.
   const V3_STYLES = ['gametape', 'statcard', 'receipts', 'hypecut'];
-  const get = id => STYLES[id] || (V3_STYLES.includes(id) ? STYLES.es : STYLES.classic);
+  // v4 (Breakdown, Case File, The Outlier, Hot Seat) draw on the ES engine too (reel-es4.js).
+  const V4_STYLES = ['breakdown', 'casefile', 'outlier', 'hotseat'];
+  const get = id => STYLES[id] || (V3_STYLES.includes(id) || V4_STYLES.includes(id) ? STYLES.es : STYLES.classic);
 
   // ─── Elements for the data formats (Phase 0 contract) ─────────────────────
   // project-docs/reels-formats-contract.md §4. The overlay and card pieces the
@@ -377,7 +379,7 @@
   }
 
   return {
-    STYLES, STYLE_IDS, LEGACY_STYLE_IDS, isLegacy, currentStyle, withLook, DEFAULT_STYLE, BRAND, ES_LAYOUTS, legacySuggestStyle, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, V3_STYLES, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
+    STYLES, STYLE_IDS, LEGACY_STYLE_IDS, isLegacy, currentStyle, withLook, DEFAULT_STYLE, BRAND, ES_LAYOUTS, legacySuggestStyle, STORY_KINDS, COMPONENT_KINDS, ALL_KINDS, LAYOUTS, DATA_LAYOUTS, V3_STYLES, V4_STYLES, FONTS, CONDENSED, LABEL, BODY, get, kindsFor, suggestStyle, validateStyle, isPurple,
     ELEMENTS, ELEMENT_IDS, ELEMENT_TOKENS, FORMAT_STYLES, elementTokens, elementBox, drawPlaceholder,
   };
 }));
