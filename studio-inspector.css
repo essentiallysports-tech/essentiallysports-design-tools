@@ -1216,3 +1216,600 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.studio
   overflow: clip !important;
   overflow-clip-margin: 6px;
 }
+
+/* ═══ Panel v2 (2026-11-27, feature/editor-panel-revamp) ═══════════════════
+   The right-hand panel on Social Media, YouTube and Newsletter, brought to
+   the level of the AI products (Reels Review inspector, Merch rail): one
+   control size, one label style, one section header, flat sections, cards
+   only for repeated items, light and dark.
+
+   System (8-pt grid):
+     controls   40px tall (44 on touch), 8px radius, 14px text, 12px inset
+     cards      12px radius, 1px line, no box inside a box
+     labels     12px / 16px, 500, ink-2, sentence case, 4px above the field
+     help       12px / 16px, 400, ink-3, 8px below the field
+     sections   13px / 600 title with a 16px icon, 48px header row, 16px
+                between fields, 24px under an open section, hairline between
+     header     Export · options · Copy link pinned at the top (owner's
+                Merch decision 2026-11-26: the key action sits on top)
+   Rules win on specificity (html…:root body .app[data-workspace] > .panel),
+   like the block above. Canvas, renderers and exports are not touched. */
+:root {
+  --fi-ctl-h: 40px;
+  --fi-ctl-radius: 8px;
+  --fi-card-radius: 12px;
+  --fi-stack: 16px;
+  --fi-label-gap: 4px;
+  --fi-head-h: 48px;
+  --fi-swatch: 32px;
+  --fi-hover-line: var(--es-ink-3, #565c67);
+}
+@media (pointer: coarse) { :root { --fi-ctl-h: 44px; --fi-swatch: 40px; } }
+
+/* ─── Every text field, the custom select, and the textarea: one control ─── */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(
+  input:is([type="text"], [type="url"], [type="number"], [type="email"], :not([type])),
+  textarea,
+  .select-dropdown-trigger
+):not(:where(.studio-ai-search *, .widget-paste-link-input, #stats-single-fields .stats-entry *, .image-context-precision *)) {
+  box-sizing: border-box !important;
+  width: 100%;
+  min-width: 0 !important;
+  min-height: var(--fi-ctl-h) !important;
+  height: var(--fi-ctl-h) !important;
+  padding: 0 12px !important;
+  border: 1px solid var(--fi-field-line) !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  background-color: var(--fi-bg) !important;
+  box-shadow: none !important;
+  color: var(--fi-ink) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  letter-spacing: 0 !important;
+  text-align: left;
+  transition: border-color var(--es-dur, .16s) var(--es-ease, ease), box-shadow var(--es-dur, .16s) var(--es-ease, ease);
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel textarea:not(.studio-ai-search *) {
+  height: auto !important;
+  min-height: 88px !important;
+  padding: 10px 12px !important;
+  resize: vertical;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(input, textarea)::placeholder {
+  color: var(--fi-ink-3) !important;
+  opacity: .85 !important;
+  font-weight: 400 !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(input:is([type="text"], [type="url"], [type="number"], :not([type])), textarea, .select-dropdown-trigger):not(:is(.studio-ai-search *, .widget-paste-link-input, :disabled, [readonly])):hover {
+  border-color: var(--fi-hover-line) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(input:is([type="text"], [type="url"], [type="number"], :not([type])), textarea, .select-dropdown-trigger):not(:is(.studio-ai-search *, .widget-paste-link-input)):focus-visible,
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(input:is([type="text"], [type="url"], [type="number"], :not([type])), textarea):not(:is(.studio-ai-search *, .widget-paste-link-input)):focus,
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .select-dropdown.is-open .select-dropdown-trigger {
+  border-color: var(--es-focus-color, #0a6fde) !important;
+  box-shadow: var(--es-focus-halo, 0 0 0 3px rgb(10 111 222 / .18)) !important;
+  outline: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(input, textarea):is(:disabled, [readonly]):not(.studio-ai-search *) {
+  background-color: var(--fi-well) !important;
+  color: var(--fi-ink-3) !important;
+}
+/* A field with a leading icon (the X / Twitter link) keeps room for it. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel input[type="url"].pill-entry { padding-left: 36px !important; }
+/* The custom select: name left, chevron right, a badge may sit between. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .select-dropdown-trigger {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding-right: 36px !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .select-dropdown-trigger .select-option-name {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* ─── Labels and help text: one style everywhere ─────────────────────────── */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(
+  .card-title:not(.has-browse):not(#youtube-variation-card > .card-title):not(.newsletter-control-row > .card:first-child > .card-title),
+  .widget-field-label, .tod-label, .section-label, .color-group-label, .stats-entry-grid-label,
+  .listicle-field-label, .listicle-asset-label, .stat-template-color, .ig-label, .ig-cell-label,
+  .slider-label-row, .brand-logo-custom-label
+):not(.studio-accordion-trigger *) {
+  color: var(--fi-ink-label) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  line-height: 16px !important;
+  text-transform: none !important;
+}
+/* Label above its field: 4px apart. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(label.listicle-field-label, label.widget-field-label, .stat-template-fields > .listicle-field-label, label.ig-label) {
+  display: grid !important;
+  gap: var(--fi-label-gap) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.card-title, .tod-label, .section-label, .color-group-label):not(.has-browse):not(.studio-accordion-trigger *) {
+  margin: 0 0 var(--fi-label-gap) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.field-hint, .listicle-note, .widget-field-hint, .studio-ai-helper, .pill-position-empty, .ig-hint):not(.mobile-editor-empty) {
+  margin: 8px 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: none !important;
+  color: var(--fi-ink-3) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 16px !important;
+}
+
+/* ─── Sections: a 48px title row, 13px sentence-case title, flat body ────── */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-trigger {
+  min-height: var(--fi-head-h) !important;
+  gap: 12px !important;
+  color: var(--fi-ink) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 20px !important;
+  text-transform: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.studio-accordion-trigger, .fi-section-title)::before { color: var(--fi-ink-3); opacity: 1 !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-trigger:hover::before { color: var(--fi-ink); }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-section:not(.is-open) > .studio-accordion-trigger { color: var(--fi-ink-label) !important; }
+/* Block titles outside the accordion (Template, Photo, ES Image Pool) read the same. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-primary-controls :is(#post-type-control .card-title, #youtube-variation-card > .card-title, .newsletter-control-row > .card:first-child > .card-title),
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-section > .studio-dock-title,
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .fi-section-title {
+  gap: 12px !important;
+  min-height: 24px !important;
+  margin: 0 0 8px !important;
+  color: var(--fi-ink) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  line-height: 20px !important;
+  text-transform: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-primary-controls :is(#post-type-control .card-title, #youtube-variation-card > .card-title, .newsletter-control-row > .card:first-child > .card-title)::before,
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-section > .studio-dock-title::before { color: var(--fi-ink-3); opacity: 1 !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .card-title.has-browse .template-browse-btn {
+  min-height: 24px !important;
+  height: 24px !important;
+  padding: 0 8px !important;
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .card-title.has-browse .template-browse-btn:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 1px !important; }
+@media (min-width: 901px) {
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-body { gap: var(--fi-stack) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-section.is-open .studio-accordion-body { padding-bottom: 24px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-list.is-single .studio-accordion-body { padding-top: 16px !important; }
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .app[data-workspace] > .panel .studio-control-dock > .studio-primary-controls { padding: 16px 0 !important; gap: var(--fi-stack) !important; }
+  html[data-studio-shell="on"]:root body[data-studio-inspector="all"] .app[data-workspace] > .panel .studio-control-dock > :is(.studio-dock-section, .studio-ai-section) { padding-top: 16px !important; padding-bottom: 24px !important; gap: 12px !important; }
+}
+
+/* ─── Choices: one segmented control (Layout, Logo position, stat count,
+   ticker direction, entity tabs). Grey track, raised chosen option. ─────── */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.select-chips, .stat-template-count, .image-asset-tabs, .ticker-direction-options, .post-type-options:has(> .post-type-option)) {
+  flex-wrap: nowrap !important;
+  gap: 2px !important;
+  min-height: var(--fi-ctl-h) !important;
+  padding: 2px !important;
+  border: 0 !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  background: var(--fi-track) !important;
+  box-shadow: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.select-chips .select-chip, .stat-template-count .post-type-option, .image-asset-tabs > button, .ticker-direction-options > button, .post-type-options > .post-type-option) {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  min-height: calc(var(--fi-ctl-h) - 4px) !important;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 4px 8px !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--fi-ink-3) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 16px !important;
+  letter-spacing: 0 !important;
+  text-align: center !important;
+  white-space: normal !important;
+  transform: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.select-chips .select-chip, .stat-template-count .post-type-option, .image-asset-tabs > button, .ticker-direction-options > button, .post-type-options > .post-type-option):hover { color: var(--fi-ink) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.select-chips .select-chip, .stat-template-count .post-type-option, .image-asset-tabs > button, .ticker-direction-options > button, .post-type-options > .post-type-option):is([aria-checked="true"], [aria-pressed="true"], [aria-selected="true"], .is-selected, .is-active, .active) {
+  background: var(--fi-bg) !important;
+  box-shadow: 0 1px 2px rgb(14 16 20 / .12), 0 0 0 1px rgb(14 16 20 / .06) !important;
+  color: var(--fi-ink) !important;
+  font-weight: 600 !important;
+}
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.select-chips .select-chip, .stat-template-count .post-type-option, .image-asset-tabs > button, .ticker-direction-options > button, .post-type-options > .post-type-option):is([aria-checked="true"], [aria-pressed="true"], [aria-selected="true"], .is-selected, .is-active, .active) {
+  background: var(--es-btn-line, #3B4049) !important;
+  box-shadow: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.select-chips .select-chip, .stat-template-count .post-type-option, .image-asset-tabs > button, .ticker-direction-options > button, .post-type-options > .post-type-option):focus-visible {
+  outline: var(--es-focus-outline) !important;
+  outline-offset: 0 !important;
+}
+
+/* ─── Switches: label left, 36 x 20 switch right, a 40px row, no box ─────── */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .quote-switch {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-height: var(--fi-ctl-h) !important;
+  height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--fi-ink) !important;
+  text-align: left !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .quote-switch > span:first-child {
+  color: var(--fi-ink) !important;
+  font-family: var(--es-font-ui) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 20px !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .quote-switch .quote-switch-track {
+  position: relative !important;
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  height: 20px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--fi-field-line) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .quote-switch .quote-switch-track::before {
+  top: 2px !important;
+  left: 2px !important;
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgb(14 16 20 / .2) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .quote-switch:is(.is-active, [aria-checked="true"], [aria-pressed="true"]) .quote-switch-track { background: var(--es-brand-fill, #0a6fde) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .quote-switch:is(.is-active, [aria-checked="true"], [aria-pressed="true"]) .quote-switch-track::before { transform: translateX(16px) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .quote-switch:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 2px !important; border-radius: 6px !important; }
+
+/* ─── Swatches and logo choices ─────────────────────────────────────────── */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .palette-row { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.palette-row, .stats-double-palette-row) .swatch {
+  width: var(--fi-swatch) !important;
+  height: var(--fi-swatch) !important;
+  min-width: 0 !important;
+  flex: none !important;
+  border: 0 !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  box-shadow: inset 0 0 0 1px rgb(14 16 20 / .12) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.palette-row, .stats-double-palette-row) .swatch .swatch-inner { border-radius: 6px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.palette-row, .stats-double-palette-row) .swatch:hover { box-shadow: inset 0 0 0 1px rgb(14 16 20 / .12), 0 0 0 1px var(--fi-hover-line) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.palette-row, .stats-double-palette-row) .swatch:is(.active, [aria-pressed="true"], [aria-checked="true"]) {
+  outline: 0 !important;
+  box-shadow: inset 0 0 0 1px rgb(14 16 20 / .12), 0 0 0 2px var(--fi-bg), 0 0 0 4px var(--fi-accent-line) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.palette-row, .stats-double-palette-row) .swatch:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 4px !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.palette-row, .stats-double-palette-row) .swatch { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16) !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.palette-row, .stats-double-palette-row) .swatch:is(.active, [aria-pressed="true"], [aria-checked="true"]) { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .16), 0 0 0 2px var(--fi-bg), 0 0 0 4px var(--fi-accent-line) !important; }
+
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-options { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 8px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option {
+  min-height: var(--fi-ctl-h) !important;
+  height: var(--fi-ctl-h) !important;
+  border-radius: var(--fi-ctl-radius) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option:not(:is([aria-checked="true"], [aria-pressed="true"], .is-active)):hover { border-color: var(--fi-hover-line) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option img { max-height: 22px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .brand-logo-option:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 2px !important; }
+
+/* Small colour inputs (stat label colours, listicle accent): a 32px square. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel input[type="color"] {
+  box-sizing: border-box !important;
+  width: var(--fi-swatch) !important;
+  height: var(--fi-swatch) !important;
+  min-height: 0 !important;
+  padding: 2px !important;
+  border: 1px solid var(--fi-field-line) !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  background: var(--fi-bg) !important;
+  cursor: pointer;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 5px; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel input[type="color"]:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 2px !important; }
+
+/* ─── Repeated items are the only cards: 12px, one line, flat inside ─────── */
+/* Listicle rows (Rankings table, Ranked list). */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-list { display: grid !important; gap: 8px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-card {
+  overflow: hidden !important;
+  border: 1px solid var(--fi-line) !important;
+  border-radius: var(--fi-card-radius) !important;
+  background: var(--fi-bg) !important;
+  box-shadow: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-card.is-expanded { border-color: var(--fi-field-line) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  min-height: 48px !important;
+  padding: 0 8px 0 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-summary {
+  flex: 1 1 auto !important;
+  min-height: 48px !important;
+  padding: 0 12px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-summary:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: -2px !important; border-radius: var(--fi-card-radius) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-block-label { color: var(--fi-ink) !important; font: 600 13px/20px var(--es-font-ui) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-hide-toggle {
+  min-height: 32px !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: var(--fi-ink-3) !important;
+  font: 500 12px/16px var(--es-font-ui) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-hide-toggle:hover { background: var(--fi-well) !important; color: var(--fi-ink) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-hide-toggle:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 0 !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-panel-inner,
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-editor {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-card.is-expanded .listicle-row-editor {
+  display: grid !important;
+  gap: 12px !important;
+  padding: 4px 12px 16px !important;
+  border: 0 !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.listicle-row-primary-grid, .listicle-row-metric-grid, .listicle-row-asset-grid, .listicle-header-grid) { gap: 8px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.listicle-row-primary-grid, .listicle-row-metric-grid, .listicle-row-asset-grid, .listicle-header-grid) > * { min-width: 0 !important; }
+
+/* Logo slots (team logo with Change / Remove): one flat row. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.logo-slot, .listicle-logo-control) {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 48px !important;
+  padding: 4px 4px 4px 8px !important;
+  border: 1px solid var(--fi-line) !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  background: var(--fi-bg) !important;
+  box-shadow: none !important;
+}
+
+/* Newsletter Top Picks: no grey card; a hairline and a sub-heading row. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel #widget-picks-fields .widget-field-group:has(> .widget-pick-head) {
+  margin: 0 !important;
+  padding: 16px 0 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--fi-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-label {
+  color: var(--fi-ink) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-head { min-height: 32px; margin-bottom: 8px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-switch { min-height: 32px !important; border-radius: 6px; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-switch:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 2px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-switch-track { flex: 0 0 36px !important; width: 36px !important; background: var(--fi-field-line) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-switch-track::before { top: 2px !important; left: 2px !important; width: 16px !important; height: 16px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-switch[aria-checked="true"] .widget-pick-switch-track { background: var(--es-brand-fill, #0a6fde) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-switch[aria-checked="true"] .widget-pick-switch-track::before { transform: translateX(16px) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .widget-pick-switch-label { color: var(--fi-ink-3) !important; font: 500 12px/16px var(--es-font-ui) !important; }
+
+/* Infographic item cards (newsletter FI): the same 12px card. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .ig-card { border-radius: var(--fi-card-radius) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .ig-card-head { min-height: 56px !important; padding: 8px 12px !important; border-radius: var(--fi-card-radius) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .ig-card-thumb { border-radius: var(--fi-ctl-radius) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .ig-card-titles strong { font-size: 13px !important; line-height: 20px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .ig-card-titles span { font-size: 12px !important; line-height: 16px !important; }
+
+/* ─── Photo: the empty drop area and the ES Image Pool search ───────────── */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .image-context-empty {
+  gap: 12px !important;
+  padding: 16px !important;
+  border: 1px dashed var(--fi-field-line) !important;
+  border-radius: var(--fi-card-radius) !important;
+  background: transparent !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .image-context-empty strong { line-height: 20px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .image-context-empty span { margin-top: 0 !important; font-size: 12px !important; line-height: 16px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-search {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: var(--fi-ctl-h) !important;
+  height: var(--fi-ctl-h) !important;
+  padding: 0 4px 0 12px !important;
+  border: 1px solid var(--fi-field-line) !important;
+  border-radius: var(--fi-ctl-radius) !important;
+  background: var(--fi-bg) !important;
+  box-shadow: none !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-search:hover { border-color: var(--fi-hover-line) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-search:focus-within { border-color: var(--es-focus-color) !important; box-shadow: var(--es-focus-halo) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-search > svg { flex: none; width: 16px !important; height: 16px !important; color: var(--fi-ink-3) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-search input {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  color: var(--fi-ink) !important;
+  font: 400 14px/20px var(--es-font-ui) !important;
+  text-overflow: ellipsis;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-search button { --es-btn-h: 32px; flex: none; }
+
+/* ─── The pinned header: Export first, a hairline under it ──────────────── */
+@media (min-width: 901px) {
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-control-dock > .studio-export-section {
+    z-index: 5 !important;
+    padding: 12px var(--fi-gutter) !important;
+    border-bottom: 1px solid var(--fi-line) !important;
+  }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-topbar-right { display: flex !important; gap: 8px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-export-btn { flex: 1 1 0 !important; min-width: 0 !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-link-btn { flex: 0 1 auto !important; min-width: 0 !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-export-options-btn { flex: 0 0 40px !important; width: 40px !important; padding: 0 !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section :is(.studio-export-btn, .studio-link-btn) > span { overflow: hidden; text-overflow: ellipsis; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section :is(.fu-nl-copy-hint, [data-fu-nl-hint]) { margin-top: 8px !important; font-size: 12px !important; line-height: 16px !important; }
+}
+
+/* ─── Dark ──────────────────────────────────────────────────────────────── */
+html[data-theme="dark"] { --fi-hover-line: #8A93A3; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.listicle-row-card, .logo-slot, .listicle-logo-control) { border-color: var(--fi-line) !important; background: transparent !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-card.is-expanded { border-color: var(--fi-field-line) !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .image-context-empty { background: transparent !important; }
+
+/* Stats inputs (value | label) centre their text. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.stats-entry-value-input, .stats-entry-label-input):not(:where(#stats-single-fields *)) { padding: 0 8px !important; text-align: center !important; }
+/* Head-to-Head: Sport | Team | Colours share the row instead of overflowing 320px. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .stats-double-team-row { grid-template-columns: minmax(0, .8fr) minmax(0, 1.4fr) auto !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.stats-double-team-row, .stats-double-name-grid, .stats-double-entity-grid, .stats-double-entity-grid .stats-entry) > * { min-width: 0 !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .stats-double-entity-grid .stats-entry { grid-template-columns: minmax(0, .8fr) minmax(0, 1fr) !important; gap: 4px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .stats-double-palette-group { min-width: 0 !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .stats-double-palette-row { min-height: var(--fi-ctl-h) !important; gap: 8px !important; padding: 0 4px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .stats-double-name-grid { gap: 8px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .double-entity-section-title { color: var(--fi-ink) !important; font: 600 13px/20px var(--es-font-ui) !important; }
+
+/* Listicle colour + logo: colour square, then the logo row takes the rest. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-row-asset-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-asset-field { gap: var(--fi-label-gap) !important; min-width: 0 !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-logo-control > :first-child { flex: 1 1 auto !important; min-width: 0 !important; display: grid !important; gap: 0 !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-logo-control > :first-child > * { overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; font-family: var(--es-font-ui) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-logo-control > :first-child > :first-child { color: var(--fi-ink) !important; font-size: 13px !important; font-weight: 600 !important; line-height: 20px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-logo-control > :first-child > :not(:first-child) { color: var(--fi-ink-3) !important; font-size: 12px !important; font-weight: 400 !important; line-height: 16px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.listicle-logo-button, .listicle-logo-remove) {
+  flex: none !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  padding: 0 10px !important;
+  border-radius: 6px !important;
+  font: 500 13px/16px var(--es-font-ui) !important;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-logo-button { border: 1px solid var(--es-btn-line, #c8cdd5) !important; background: var(--fi-bg) !important; color: var(--fi-ink) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .listicle-logo-remove { border: 0 !important; background: transparent !important; color: var(--fi-ink-3) !important; text-decoration: none !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.listicle-logo-button, .listicle-logo-remove):hover { background: var(--fi-well) !important; color: var(--fi-ink) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.listicle-logo-button, .listicle-logo-remove):focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 1px !important; }
+
+/* Narrow panel (320px, laptops under 1280): Copy link drops its icon so
+   Export keeps its full label. */
+@media (min-width: 901px) and (max-width: 1279px) {
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-link-btn > svg { display: none !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-link-btn { flex: 0 1 auto !important; padding: 0 12px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.select-chips .select-chip) { font-size: 12px !important; }
+}
+
+/* ─── Phone and tablet (≤ 900px): the bottom sheet ──────────────────────────
+   One 16px gutter in every sheet, no card inside the sheet, 44px controls
+   with 16px text (no iOS zoom). */
+@media (max-width: 900px) {
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel { --fi-ctl-h: 44px; --fi-swatch: 40px; padding-left: 0 !important; padding-right: 0 !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(input:is([type="text"], [type="url"], [type="number"], :not([type])), textarea, .select-dropdown-trigger .select-option-name):not(:where(.studio-ai-search *, #stats-single-fields .stats-entry *, .image-context-precision *)) { font-size: 16px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-ai-search input { font-size: 16px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-sheet-head { min-height: 56px !important; padding: 12px 8px 8px 16px !important; border-bottom: 1px solid var(--fi-line) !important; background: var(--fi-bg) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-sheet-head strong { font-size: 20px !important; line-height: 24px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-sheet-grip:is(:focus, :focus-visible) { outline: none !important; box-shadow: none !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-sheet-grip:focus-visible span { box-shadow: 0 0 0 2px var(--fi-bg), 0 0 0 4px var(--es-focus-color, #0a6fde); }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-sheet-grip span { width: 36px !important; background: var(--fi-field-line) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-list { padding: 0 16px !important; background: var(--fi-bg) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-body :is(.card, .text-card, .swipe-button-control, .quote-logo-control, #widget-main-fields, #widget-picks-fields, #trivia-fields, #ticker-fields, #list-fields, #list2-fields, #infographic-fields) {
+    padding: 16px 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-accordion-body > * + * { border-top-color: var(--fi-line) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-control-dock { padding: 16px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-primary-controls { padding: 0 !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-primary-controls .card { padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
+  /* One scroll for the whole sheet (the head stays put): blocks used to get
+     fixed grid rows and overlapped (YouTube Player + background, Media). */
+  html[data-studio-shell="on"]:root body.is-mobile-workspace-active .app[data-workspace] > .panel { display: flex !important; flex-direction: column !important; overflow-y: auto !important; overscroll-behavior: contain; }
+  html[data-studio-shell="on"]:root body.is-mobile-workspace-active .app[data-workspace] > .panel > * { flex: none !important; height: auto !important; max-height: none !important; overflow: visible !important; }
+  html[data-studio-shell="on"]:root body.is-mobile-workspace-active .app[data-workspace] > .panel > .mobile-editor-sheet-head { position: sticky !important; top: 0 !important; z-index: 5 !important; }
+  /* Photo tools flow under Upload / ES Image Pool: tabs, then the panel. */
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-dock-tools .image-tool-rail { position: static !important; display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: 16px !important; width: 100% !important; height: auto !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  html[data-studio-shell="on"]:root body:is([data-instagram-post-type="listicle-type-1"], [data-instagram-post-type="listicle-type-2"]) .app[data-workspace] > .panel .studio-dock-tools .image-tool-rail { display: none !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-dock-tools .image-tool-panel { position: static !important; inset: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; transform: none !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-dock-tools .image-tool-panel:not(.is-open) { display: none !important; }
+  html[data-studio-shell="on"]:root body[data-mobile-editor-panel="media"] .app[data-workspace] > .panel .mobile-editor-media-actions:not(.is-mobile-last) { padding-bottom: 16px !important; border-bottom-color: var(--fi-line) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-media-actions button {
+    min-height: 44px !important;
+    border: 1px solid var(--es-btn-line, #c8cdd5) !important;
+    border-radius: var(--fi-ctl-radius) !important;
+    background: var(--fi-bg) !important;
+    color: var(--fi-ink) !important;
+    font: 500 14px/20px var(--es-font-ui) !important;
+  }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-media-actions svg { width: 18px !important; height: 18px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-media-actions button:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 2px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-more-actions.is-mobile-tool-visible { gap: 8px !important; padding: 0 16px 16px !important; border-top: 0 !important; background: var(--fi-bg) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-more-actions > button {
+    min-height: 56px !important;
+    grid-template-columns: 24px minmax(0, 1fr) !important;
+    gap: 12px !important;
+    padding: 8px 12px !important;
+    border: 1px solid var(--fi-line) !important;
+    border-radius: var(--fi-card-radius) !important;
+    background: var(--fi-bg) !important;
+    color: var(--fi-ink) !important;
+  }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-more-actions > button > svg { width: 18px !important; height: 18px !important; stroke: var(--fi-ink-3) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-more-actions > button > span { gap: 0 !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-more-actions strong { font: 600 14px/20px var(--es-font-ui) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-more-actions small { font: 400 12px/16px var(--es-font-ui) !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .mobile-editor-more-actions > button:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 2px !important; }
+}
+
+/* Foreground image drop zones (Photo layers): the same dashed 12px card as
+   the background one, quiet type, keyboard focus. */
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .photo-drop {
+  display: grid !important;
+  gap: 4px !important;
+  min-height: 0 !important;
+  padding: 16px !important;
+  border: 1px dashed var(--fi-field-line) !important;
+  border-radius: var(--fi-card-radius) !important;
+  background: transparent !important;
+  text-align: center;
+  cursor: pointer;
+}
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .photo-drop:hover { border-color: var(--fi-accent-line) !important; background: var(--es-brand-soft) !important; }
+html[data-theme="dark"][data-studio-shell="on"]:root body .app[data-workspace] > .panel .photo-drop:hover { background: rgb(84 164 251 / .08) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .photo-drop:focus-visible { outline: var(--es-focus-outline) !important; outline-offset: 2px !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .photo-drop .photo-drop-main { color: var(--fi-ink) !important; font: 600 13px/20px var(--es-font-ui) !important; }
+html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .photo-drop .photo-supported { margin: 0 !important; color: var(--fi-ink-3) !important; font: 400 12px/16px var(--es-font-ui) !important; }

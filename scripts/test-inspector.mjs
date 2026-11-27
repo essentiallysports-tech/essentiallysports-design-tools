@@ -31,7 +31,7 @@ c = I.contextFor({ workspace: 'instagram', ids: ['pills'], names: ['Headline'] }
 assert.equal(c.title, 'Headline', 'a renamed layer keeps its own name');
 assert.equal(c.kind, 'text');
 assert.match(c.sub, /Content/);
-assert.match(I.contextFor({ ids: ['logo'], names: [''] }).sub, /Brand & Colors/);
+assert.match(I.contextFor({ ids: ['logo'], names: [''] }).sub, /Brand & colors/);
 assert.equal(I.contextFor({ ids: ['logo'], names: [''] }).title, 'Logo', 'falls back to the default name');
 assert.match(I.contextFor({ workspace: 'youtube', ids: ['photo'], names: ['Background Image'] }).sub, /Photos/);
 assert.match(I.contextFor({ workspace: 'instagram', ids: ['photo'], names: ['Background Image'] }).sub, /in Photo$/);
