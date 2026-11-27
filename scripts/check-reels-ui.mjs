@@ -222,7 +222,7 @@ await evaluate(FAKE_SESSION);
 
 // The client feedback hook: wrap ReelFeedback.log (fire-and-forget) so every event is seen even
 // when it is batched or sent with sendBeacon. Events land in window.__qaFeedback.
-const FEEDBACK_HOOK = `(() => { window.__qaFeedback = window.__qaFeedback || []; const wrap = () => { const F = window.ReelFeedback; if (!F || typeof F.log !== 'function' || F.log.__qa) return false; const orig = F.log; F.log = function (evt) { try { window.__qaFeedback.push(JSON.parse(JSON.stringify(evt || {}))); } catch { window.__qaFeedback.push({ event: String(evt && evt.event) }); } return orig.apply(this, arguments); }; F.log.__qa = true; return true; }; if (!wrap()) { let n = 0; const t = setInterval(() => { if (wrap() || ++n > 100) clearInterval(t); }, 100); } return 1; })()`;
+const FEEDBACK_HOOK = `(() => { window.__qaFeedback = window.__qaFeedback || []; const wrap = () => { const F = window.ReelFeedback; if (!F || typeof F.log !== 'function' || F.log.__qa) return false; const orig = F.log; F.log = function (evt) { try { window.__qaFeedback.push(JSON.parse(JSON.stringify(evt || {}))); } catch { window.__qaFeedback.push({ event: String(evt && evt.event) }); } return orig.apply(this, arguments); }; F.log.__qa = true; return true; }; const wrapX = () => { const T = window.FrameUpTrack; if (!T || typeof T.exported !== 'function' || T.exported.__qa) return false; const o = T.exported; window.__qaExported = window.__qaExported || []; T.exported = function (d) { try { window.__qaExported.push(JSON.parse(JSON.stringify(d || {}))); } catch {} return o.apply(this, arguments); }; T.exported.__qa = true; return true; }; wrapX(); setTimeout(wrapX, 1500); if (!wrap()) { let n = 0; const t = setInterval(() => { if (wrap() || ++n > 100) clearInterval(t); }, 100); } return 1; })()`;
 async function load(q = '') {
   await evaluate(`(() => { try { for (const k of Object.keys(localStorage)) if (/reel/i.test(k)) localStorage.removeItem(k); sessionStorage.clear(); sessionStorage.setItem('frameup.tours.offered', '1'); } catch {} return 1; })()`);
   await send('Page.navigate', { url: `${base}/reel-maker.html${q}` });
@@ -667,11 +667,16 @@ for (const w of WIDTHS) {
   });
   if (first) {
     await step('Export MP4 (and the export feedback event)', async () => {
+      // Headless Chrome encodes frame by frame: allow 6x the reel's length + 30 s.
+      const reelMs = Number(await ctx('(c.state.timeline && c.state.timeline.durationMs) || 0')) || 90000;
+      const exportMs = Math.round(reelMs * 6 + 30000);
       await must('#rm-export');
-      await waitFor(`!document.querySelector('#rm-files')?.hidden || /fail|cancel|fix/i.test(document.querySelector('#rm-export-status')?.textContent || '')`, 150000, 'exported file row').catch(async e => { throw new Error(e.message + ' (status: "' + (await evaluate(`(document.querySelector('#rm-export-status')?.textContent || '') + '" gate: "' + (document.querySelector('#rm-gate')?.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 200)`)) + '")'); });
+      await waitFor(`!document.querySelector('#rm-files')?.hidden || /fail|cancel|fix/i.test(document.querySelector('#rm-export-status')?.textContent || '')`, exportMs, `exported file row (${Math.round(exportMs / 1000)} s for a ${Math.round(reelMs / 1000)} s reel)`).catch(async e => { throw new Error(e.message + ' (status: "' + (await evaluate(`(document.querySelector('#rm-export-status')?.textContent || '') + '" gate: "' + (document.querySelector('#rm-gate')?.textContent || '').trim().replace(/\\s+/g, ' ').slice(0, 200)`)) + '")'); });
       const st = await evaluate(`document.querySelector('#rm-export-status').textContent`);
       expect(/^Exported/.test(st), `export said: ${st}`);
       await expectFeedback('export', 'Export');
+      const ex = await evaluate('window.__qaExported || []');
+      expect(ex.some(e => e.tool === 'reels-studio' && /mp4|webm/i.test(String(e.format || ''))), `FrameUpTrack.exported() did not fire for the MP4 (${JSON.stringify(ex).slice(0, 160)})`);
     });
     await sleep(900);
     await audit('export-done', w);
