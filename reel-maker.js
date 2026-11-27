@@ -1136,11 +1136,14 @@
         state.spent.director += Number(data.costs?.director) || 0;
         state.spent.factCheck += Number(data.costs?.factCheck) || 0;
         const plan = data.plan ? ensureV4(data.plan) : null;
-        if (plan && data.source !== 'draft' && SBC && SBC.keepsScript(plan, script)) {
+        // Only a plan the AI planned is used here: a server code plan ('code' / 'draft', AI off or capped)
+        // gives way to the page's own code plan, one scene per line of the script (as v3 did).
+        const planned = plan && !['draft', 'code', 'script', 'free'].includes(String(data.source || ''));
+        if (planned && SBC && SBC.keepsScript(plan, script)) {
           plan.script = { text: script.replace(/\s+/g, ' ').trim(), locked: true };
           applyStyle(plan, style);
           made = { ...data, plan, corpus: [data.corpus, corpus, ...sourceClaims(plan)].filter(Boolean).join('\n'), sources: [...sources, ...(data.sources || []).filter(x => x && x.type !== 'brief')] };
-        } else if (plan && data.source !== 'draft') why = 'The AI plan changed some of your words, so the scenes were built from your script by code.';
+        } else if (planned) why = 'The AI plan changed some of your words, so the scenes were built from your script by code.';
       } catch (error) {
         why = error.offline ? '' : 'The AI planner is unavailable right now, so the scenes were built from your script by code.';
       }
@@ -1715,8 +1718,9 @@
   // The clip loader ReelSourcing uses to sample clips for the judge (shares this page's cache).
   async function sourcingVideo(clip) { const id = await loadClip(clip).catch(() => ''); return id ? state.videos[id] || null : null; }
   // The page's API for ReelSourcing, keeping scene-media's per-beat verdict (motionOk, motionWhy) from the server.
+  let broadenRun = false;
   async function sourcingApi(body) {
-    const data = await api(body);
+    const data = await api(body && body.mode === 'scene-media' && broadenRun ? { ...body, broaden: true, ladder: 'broad', findClips: true } : body);
     if (body && body.mode === 'scene-media' && data && Array.isArray(data.beats)) {
       const seen = {};
       data.beats.forEach(b => { if (b && b.beatId && typeof b.motionOk === 'boolean') seen[b.beatId] = { motionOk: b.motionOk, why: b.motionWhy || '' }; });
@@ -1725,6 +1729,10 @@
     return data;
   }
   async function fillFromSourcing(plan, beats, { force = false, broaden = false } = {}) {
+    broadenRun = Boolean(broaden);
+    try { return await fillFromSourcingRun(plan, beats, { force, broaden }); } finally { broadenRun = false; }
+  }
+  async function fillFromSourcingRun(plan, beats, { force = false, broaden = false } = {}) {
     for (const beat of beats) { if (state.plan !== plan) return { note: '' }; await componentVisuals(beat).catch(() => {}); }
     const todo = beats.filter(b => b.kind !== 'cta' && (force || !state.photos[b.id]?.length));
     if (!todo.length) return { note: 'Nothing new needed' };
@@ -2134,11 +2142,13 @@
     const SB = window.ReelStoryboardCore;
     if (!SB || !beat) return { ok: true, why: '' };
     if (ES && ES.blockOf(beat).type === 'endcard') return { ok: true, why: 'end' };
-    // 1. The engine's own per-beat flag; 2. the v4 lint's static-beat check (it
-    // looks at what actually animates); 3. a confirmed clip or a checked photo.
+    // A scene is static when ANY check says so: the engine's per-beat moves flag,
+    // the sourcing (browser or the server's own verdict) with no clip or photo of
+    // the page's own on it, or the v4 lint's static-beat. Otherwise it moves when
+    // the engine / lint says so, or it has a confirmed clip or a checked photo.
     // "Has a module" alone never counts as moving.
     const tb = state.timeline && Array.isArray(state.timeline.beats) ? state.timeline.beats.find(x => x.id === beat.id) : null;
-    if (tb && typeof tb.moves === 'boolean') return { ok: tb.moves, why: tb.moves ? 'engine' : 'static' };
+    if (tb && tb.moves === false) return { ok: false, why: 'static' };
     const a = state.assets[(state.photos[beat.id] || [])[0]];
     const media = a ? (a.kind === 'clip' ? 'clip' : ((a.verified || a.kind === 'upload') ? 'photo' : '')) : '';
     const row = state.motion && state.motion[beat.id];
@@ -2146,7 +2156,9 @@
     // The sourcing (browser or server) found nothing that moves for this scene, and the page has no clip or photo on it.
     if (!media && ((row && row.motionOk === false) || (srv && srv.motionOk === false))) return { ok: false, why: 'static' };
     const v4tl = Boolean(state.timeline && (state.timeline.v === 4 || Array.isArray(state.timeline.layers)));
-    if (v4tl && state.lint) { const still = state.lint.issues.some(i => i.id === 'static-beat' && i.beat === beat.id); return { ok: !still, why: still ? 'static' : (media || 'lint') }; }
+    if (v4tl && state.lint && state.lint.issues.some(i => i.id === 'static-beat' && i.beat === beat.id)) return { ok: false, why: 'static' };
+    if (tb && tb.moves === true) return { ok: true, why: media || 'engine' };
+    if (v4tl && state.lint) return { ok: true, why: media || 'lint' };
     if (media) return { ok: true, why: media };
     // A v3 data block counts up, fills or grows on the v3 engine; a v4 module waits for the engine's word.
     return SB.motionOf({ media: '', block: !v4Beat(beat) && ES ? ES.blockOf(beat).type : '' });
