@@ -126,6 +126,53 @@ const CHECKS = [
       return '';
     },
   },
+  {
+    // Offline: Generate showed the browser's "Failed to fetch". fetchWithAuth
+    // (es-auth.js) now turns a network failure into a plain sentence.
+    id: 'offline-plain-error',
+    async run() {
+      if (!await open('/generate.html', { ready: "document.querySelector('#gen-brief') && document.querySelector('#gen-submit') && window.ESAuth?.fetchWithAuth" })) return 'Generate never loaded';
+      await sleep(800);
+      await c.send('Network.enable');
+      await c.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+      try {
+        await c.evaluate("(() => { const t = document.querySelector('#gen-brief'); t.value = 'Josh Allen runs for 3 TDs as the Bills beat the Chiefs 30-21'; t.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('#gen-submit').click(); return true; })()");
+        if (!await waitFor("/Could not generate/.test(document.querySelector('#gen-notice')?.innerText || '')", 8000)) return 'no error notice when offline';
+        const text = await c.evaluate("document.querySelector('#gen-notice').innerText");
+        if (/Failed to fetch|NetworkError|Load failed/i.test(text)) return 'raw browser error shown: ' + text.replace(/\s+/g, ' ').slice(0, 160);
+        if (!/offline|connection/i.test(text)) return 'offline notice does not mention the connection: ' + text.replace(/\s+/g, ' ').slice(0, 160);
+        // The type survives (callers check error.name), aborts pass through.
+        const kinds = await c.evaluate("(async () => { const out = {}; try { await window.ESAuth.fetchWithAuth('/api/x'); } catch (e) { out.offline = e.name; } const ac = new AbortController(); ac.abort(); try { await window.ESAuth.fetchWithAuth('/api/x', { signal: ac.signal }); } catch (e) { out.abort = e.name; } return out; })()");
+        if (kinds.offline !== 'TypeError') return 'network failure is no longer a TypeError: ' + kinds.offline;
+        if (kinds.abort !== 'AbortError') return 'an abort is reported as ' + kinds.abort;
+      } finally {
+        await c.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+      }
+      return '';
+    },
+  },
+  {
+    // Video Ads "Make my daily set" with the trends check failing (500) said
+    // "No trending moment for this sport right now": an outage read as no news.
+    id: 'video-ads-daily-set-trends-down',
+    async run() {
+      API = { '/api/video-ads': { status: 500, body: { ok: false, error: 'boom' } } };
+      if (!await open('/video-ads.html', { ready: "[...document.querySelectorAll('button')].some(b => /Make my daily set/.test(b.textContent))", ms: 15000 })) return 'Video Ads never showed Make my daily set';
+      await sleep(600);
+      await c.evaluate("[...document.querySelectorAll('button')].find(b => /Make my daily set/.test(b.textContent)).click(); true");
+      if (!await waitFor("/load today|trending moment/i.test(document.body.innerText)", 6000)) return 'no message after the daily set failed';
+      const text = await c.evaluate("document.body.innerText");
+      if (/No trending moment for this sport/.test(text)) return 'a failed trends check is reported as "No trending moment"';
+      if (!/Couldn’t load today’s trending moments/.test(text)) return 'no "couldn’t load" message';
+      // With trends up but nothing for the sport, the "no moment" message stays.
+      API = { '/api/video-ads': (req, url) => ({ status: 200, body: { ok: true, items: [] } }) };
+      await c.evaluate("[...document.querySelectorAll('button')].find(b => /^\\s*Try again\\s*$/.test(b.textContent) && b.closest('[id*=set], [class*=set]'))?.click(); true");
+      await waitFor("/No trending moment for this sport/.test(document.body.innerText)", 6000);
+      const after = await c.evaluate("document.body.innerText");
+      if (!/No trending moment for this sport/.test(after)) return 'empty trends no longer say "No trending moment"';
+      return '';
+    },
+  },
 ];
 
 let failed = 0; let ran = 0;
