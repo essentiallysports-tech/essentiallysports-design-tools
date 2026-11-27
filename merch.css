@@ -214,6 +214,8 @@ html body .mx-prompt.ais-surface:focus-within { box-shadow: var(--ais-glow-stron
 .mx-create-btn { min-width: 196px; gap: var(--es-space-2, 8px); }
 .mx-create-btn:disabled .es-ai-mark { filter: grayscale(1); box-shadow: none; opacity: .5; }
 .mx-create-btn:disabled .mx-kbd { opacity: .6; }
+/* Phones and touch screens have no ⌘ / Ctrl + Enter: no shortcut hint (Generate hides its own the same way). UX audit 2026-11-27. */
+@media (max-width: 900px), (hover: none) { .mx-kbd { display: none; } }
 .mx-prompt__note { margin: 0; padding: 0 var(--es-space-2, 8px); color: var(--mx-ink-3); font-size: 13px; line-height: 1.45; text-align: center; }
 .mx-prompt__note:empty { display: none; }
 .mx-prompt__note--status { color: var(--mx-ink-2); }

@@ -349,3 +349,10 @@ html[data-theme="dark"] .how-step__line { background: var(--theme-dark-border, #
 html[data-theme="dark"] .how-pin { background: #f3f5f7; color: #0e1014; box-shadow: 0 0 0 3px var(--theme-dark-surface, #121212); }
 html[data-theme="dark"] :is(.how-mock__nav span, .how-mock__top span, .how-mock__toolbar span:not(.is-wide), .how-mock__field) { background: transparent; box-shadow: inset 0 0 0 1px var(--theme-dark-border-strong, #444); }
 html[data-theme="dark"] .how-mock__nav span { background: var(--theme-dark-border, #303030); box-shadow: none; }
+
+/* Design requests are paused (app-shell.js FEATURES.requests, html.fu-requests-off):
+   no "send the design team a brief" copy with its button hidden, which left a
+   dead end. The Help links stay. UX audit 2026-11-27. */
+html.fu-requests-off .how-page [data-requests-only],
+html:not(.fu-requests-off) .how-page [data-requests-off] { display: none !important; }
+html.fu-requests-off .how-custom { grid-template-columns: minmax(0, 1fr); }

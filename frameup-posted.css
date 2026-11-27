@@ -136,6 +136,7 @@ html[data-theme="dark"] :is(.fp-root, .fp-inline) {
   white-space: nowrap;
 }
 .fp-platform.is-good { background: var(--fp-good-soft); color: var(--fp-good); }
+.fp-platform[hidden] { display: none; } /* the gallery's "Posted" status starts hidden: display:inline-flex showed it as an empty blue pill */
 
 /* Saved links */
 .fp-links { display: grid; gap: var(--es-space-2); margin: var(--es-space-3) 0 0; padding: 0; list-style: none; }
