@@ -261,7 +261,6 @@ function run(entry, opts) {
     // Under the slab: outgoing frozen on the first half, incoming first frame on the second half.
     const out0 = Q.frame(w.inMs - 1, { pixels: true }).px;
     const endF = Q.frame(w.outMs + 1, { pixels: true }).px;
-    const after = Q.frame(w.outMs + 34, { pixels: true }).px;
     const bad = [];
     for (let t = w.inMs + 16; t < w.outMs; t += 32) {
       const f = Q.frame(t, { pixels: true });
@@ -272,8 +271,10 @@ function run(entry, opts) {
       if (d.n > Q.SW * Q.SH * 0.04 && (d.mean > 5 || d.share > 0.05)) bad.push('@' + t + ' (' + (t < mid ? 'first half: outgoing' : 'second half: incoming') + ' picture differs from the ' + (t < mid ? 'last frame before the wipe' : 'wipe end frame') + ', ' + (d.share * 100).toFixed(1) + '% px, mean ' + d.mean.toFixed(1) + ')');
       if (!Q.markIn(Q.frame(t).log)) bad.push('@' + t + ' the ES mark is hidden by the wipe');
     }
-    const j = Q.diff(endF, after, keep);
-    if (j.mean > 4 || j.share > 0.04) bad.push('the frame jumps right after the wipe (' + (j.share * 100).toFixed(1) + '% px change in 33 ms): the wipe did not end on the next chapter\'s first frame');
+    // Right after the wipe, what was revealed stays put (the modules may start building: an entrance is
+    // checked by the beat rules, a jump of what was already there is not allowed).
+    const eEnd = elements(Q.frame(w.outMs + 1).log, vocAt(w.outMs + 1), band).els, eAfter = elements(Q.frame(w.outMs + 34).log, vocAt(w.outMs + 34), band).els;
+    for (const [k, x] of eEnd) { const y = eAfter.get(k); if (y && x.a > 0.5 && (Math.hypot(x.x - y.x, x.y - y.y) > 3 || Math.abs(x.w - y.w) > 4)) bad.push(k.replace(/#\d+$/, '') + ' jumps right after the wipe (' + Math.round(Math.hypot(x.x - y.x, x.y - y.y)) + ' px in 33 ms): the wipe did not end on the next chapter\'s first frame'); }
     // The engine's own head frame of the next chapter, when it can draw one without the wipe.
     rec.bad = [...new Set(bad)];
     rec.bad.forEach(m => fail('wipe', prevCh.id + ' -> ' + ch.id + ': ' + m));
