@@ -309,7 +309,7 @@
           vo: clean(b && b.vo, 320),
           ...(media ? { media } : {}),
           ...(b && b.module ? { module: cleanModule(b.module) } : {}),
-          ...(b && b.module && !cleanModule(b.module) ? { moduleRaw: { type: clean(b.module.type, 20) } } : {}),
+          ...(b && b.module && !cleanModule(b.module) ? { moduleRaw: { type: clean(b.module.type, 20) } } : (b && b.moduleRaw ? { moduleRaw: { type: clean(b.moduleRaw.type, 20) } } : {})),
           ...(b && stampOf(b.stamp) ? { stamp: { ...stampOf(b.stamp), at: b.stamp.at === 'module' ? 'module' : b.stamp.at === 'media' ? 'media' : '' } } : {}),
           ...(b && b.tag && b.tag.text ? { tag: { text: up(b.tag.text, 28), tone: tone(b.tag.tone, 'red') } } : {}),
           ...(b && b.layout ? { layout: clean(b.layout, 10) } : {}),
@@ -402,7 +402,7 @@
   // enter ('rise' | 'pop' | 'fade' | 'media' | 'draw'), order (stagger index),
   // parent (props dx / dy relative to the parent's x / y), at (absolute entry time) }.
   const DRAWN = new Set(['line', 'poly', 'check']);
-  const sp = (id, kind, p, o = {}) => ({ id, kind, z: o.z != null ? o.z : 20, p: { alpha: 1, dy: 0, sc: 1, sy: 1, ...(DRAWN.has(kind) ? { p: 1 } : {}), ...p }, from: o.from || null, enter: o.enter || 'rise', order: o.order || 0, parent: o.parent || null, at: o.at != null ? o.at : null, ambient: o.ambient || null });
+  const sp = (id, kind, p, o = {}) => ({ id, kind, buildAt: o.buildAt != null ? o.buildAt : null, z: o.z != null ? o.z : 20, p: { alpha: 1, dy: 0, sc: 1, sy: 1, ...(DRAWN.has(kind) ? { p: 1 } : {}), ...p }, from: o.from || null, enter: o.enter || 'rise', order: o.order || 0, parent: o.parent || null, at: o.at != null ? o.at : null, ambient: o.ambient || null });
   function tSize(measure, text, sizes, width, font = dFont) { for (const s of sizes) if (measure(text, font(s)) <= width) return s; return sizes[sizes.length - 1]; }
 
   function markerSpecs(marker) {
@@ -427,6 +427,13 @@
   function titlePill(text, r) { return text ? [sp('mod.title', 'pill', { x: r.x + PAD, y: r.y - PILL(TS.label).h / 2, size: TS.label, fill: INK, ink: WHITE, text }, { z: 32, order: 0 })] : []; }
   function inner(r, top = 0) { return { x: r.x + PAD, y: r.y + PAD + top, w: r.w - 2 * PAD, h: r.h - 2 * PAD - top }; }
   const MOD = {};
+  // When the voiceover says a figure ('35', 'thirty-five'): a reveal flips there.
+  function spokenAt(c, value) {
+    const want = num(value);
+    if (!Number.isFinite(want) || !c.words) return null;
+    const w = c.words.find(x => x.beat === c.beat.id && (num(x.w) === want || (ES.spelledNumber && ES.spelledNumber(String(x.w).toLowerCase().replace(/[^a-z-]/g, '')) === want)));
+    return w ? w.s - DUR.xs : null;
+  }
   MOD.scoreboard = (m, r) => {
     const n = m.rows.length;
     const tagH = m.tag ? 72 : 0;
@@ -496,7 +503,8 @@
   MOD.dotGrid = (m, r, c) => {
     const out = [panel(r), ...titlePill(m.title, r)];
     const a = inner(r, m.title ? 12 : 0);
-    const legendH = m.groups.length ? PILL(TS.label).h + 24 : 0;
+    // The legend's row is always kept, so the grid does not move when groups fill in.
+    const legendH = PILL(TS.label).h + 24;
     const gw = a.w;
     const gh = a.h - legendH;
     let best = { cell: 0, cols: 1, rows: 1 };
@@ -630,7 +638,7 @@
     const ty = y + (h - (CAP * size + 32 + (m.label ? ph : 0))) / 2 + CAP * size;
     return [
       sp('mod.rv.card', 'card', { x, y, w, h }, { z: 12 }),
-      sp('mod.rv.val', 'text', { x: x + w / 2, y: ty, size, color: toneHex(m.tone, 'blue'), align: 'center', text: m.to }, { z: 14, from: { text: m.from, color: INK } }),
+      sp('mod.rv.val', 'text', { x: x + w / 2, y: ty, size, color: toneHex(m.tone, 'blue'), align: 'center', text: m.to }, { z: 14, from: { text: m.from, color: INK }, buildAt: spokenAt(c, m.to) }),
       ...(m.label ? [sp('mod.rv.lab', 'pill', { x: x + w / 2, y: ty + 32, size: TS.label, fill: INK, ink: WHITE, text: m.label, anchor: 'center' }, { z: 15, order: 1 })] : []),
     ];
   };
@@ -885,11 +893,11 @@
         // headline, marker, media (and tags). The module enters and builds
         // after the reveal, so the revealed frame is exactly that first frame
         // and every chapter opens with motion.
-        const deferred = mode === 'cover' && s.at == null && /^mod\./.test(s.id);
+        const deferred = mode === 'cover' && s.at == null && /^(mod\.|tag$)/.test(s.id);
         if (mode === 'cover' && s.at == null && !deferred) {
           addKey(el, t, 0, 'set', { ...start }, { cover: true });
           el.born.push(t);
-          if (s.from) morph(el, target, reveal + delay, 'build');
+          if (s.from) morph(el, target, Math.max(reveal + delay, s.buildAt || 0), 'build');
         } else {
           const at = s.at != null ? Math.max(t, s.at) : (mode === 'cover' ? reveal : t) + delay;
           addKey(el, t, 0, 'set', { ...start, ...enterFrom(s) }, { cover: true });
@@ -905,7 +913,7 @@
             Object.keys(pre).forEach(k => { back[k] = start[k]; });
             addKey(el, at, s.enter === 'rise' ? DUR.m : DUR.s, 'out', back);
           }
-          if (s.from) morph(el, target, at + DUR.m - DUR.xs, 'build');
+          if (s.from) morph(el, target, Math.max(at + DUR.m - DUR.xs, s.buildAt || 0), 'build');
         }
         if (s.ambient === 'beat' && ctx && ctx.beatEnd) {
           // A read bar: grows over the beat (ambient, on the inOut curve).
@@ -1023,7 +1031,7 @@
         const hasMedia = Boolean(media && media.kind !== 'none');
         const layout = chooseLayout({ ...b, media }, hasMedia);
         beatLayout[b.id] = layout;
-        const ctx = { ...ctxBase, beat: b, beatEnd: beat.outMs };
+        const ctx = { ...ctxBase, beat: b, beatEnd: beat.outMs, words };
         const mr = zoneOf(layout, 'media');
         let dr = zoneOf(layout, 'module');
         let capY = LAYOUTS[layout].cap;
@@ -1062,8 +1070,9 @@
       const specs = closeSpecs(close, plan, ctxBase);
       applyScene(L, specs, closeIn, 'cover', closeIn + WIPE.half, { ...ctxBase, beatEnd: durationMs });
       addKey(capEl, closeIn, 0, 'set', { y: close.kind === 'yourCall' ? 1500 : 1480 }, { cover: true });
-      // Ambient: the two options breathe until the end (every beat moves).
-      if (close.kind === 'yourCall') ['close.opt.0', 'close.opt.1'].forEach((id, i) => {
+      // Ambient: the options (or the last check, or the CTA) breathe until the end (every beat moves).
+      const breathe = close.kind === 'yourCall' ? ['close.opt.0', 'close.opt.1'] : close.kind === 'checklist' ? [...L.els.keys()].filter(id => /\.box$/.test(id)).slice(-1) : ['close.cta.1'];
+      breathe.forEach((id, i) => {
         const el = L.els.get(id);
         if (!el) return;
         for (let at = closeIn + WIPE.half + DUR.l + DUR.m + i * DUR.m; at + 2 * DUR.l < durationMs; at += 2 * DUR.l + DUR.m) { addKey(el, at, DUR.l, 'inOut', { sc: 1.04 }); addKey(el, at + DUR.l, DUR.l, 'inOut', { sc: 1 }); }
