@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Reels Studio | FrameUp</title>
-  <meta name="description" content="Turn a trend, a script or a game into an ES reel: a storyboard you can edit, voiceover, official clips, ES photos and captions. Exports MP4 in the browser.">
+  <meta name="description" content="Describe a reel, pick one of four ES styles and get a reel that is ready to post: verified clips and photos, voiceover, captions. Exports MP4 in the browser.">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <link rel="preload" href="/vendor/supabase-js-2.118.0.min.js" as="script" integrity="sha384-UagCvVPT5XXA0Hx+nJYUAGBFseHT9zBgpJMSebsAxl9lciTwbT+39j5VfRjdP5Tp" crossorigin="anonymous">
   <script src="es-auth-config.js?v=20260707-auth4"></script>
@@ -25,7 +25,7 @@
   <link rel="stylesheet" href="es-ui.css?v=20261122-rel">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
   <link rel="stylesheet" href="ai-studio.css?v=20261120-rel2">
-  <link rel="stylesheet" href="reel-maker.css?v=20261125-reels2">
+  <link rel="stylesheet" href="reel-maker.css?v=20261128-reels3">
   <link rel="stylesheet" href="reel-inputs.css?v=20261125-reels2">
   <link rel="stylesheet" href="reel-b-panels.css?v=20261125-reels2">
   <script src="theme.js?v=20261120-rel2"></script>
@@ -68,18 +68,90 @@
   <main class="rm-page ais-page" id="main">
     <header class="rm-head">
       <h1 class="es-sr-only" id="rm-title">Reels Studio</h1>
-      <!-- Three steps: Start, Storyboard, Export. -->
+      <!-- Reels Studio v3: three steps, Create, Review, Export. -->
       <nav class="rm-steps" id="rm-steps" aria-label="Reel steps">
         <ol>
-          <li><button class="rm-step" type="button" data-step="topic" aria-current="step"><span class="rm-step__num" aria-hidden="true">1</span><span>Start</span></button></li>
-          <li><button class="rm-step" type="button" data-step="edit" disabled><span class="rm-step__num" aria-hidden="true">2</span><span>Storyboard</span></button></li>
+          <li><button class="rm-step" type="button" data-step="topic" aria-current="step"><span class="rm-step__num" aria-hidden="true">1</span><span>Create</span></button></li>
+          <li><button class="rm-step" type="button" data-step="edit" disabled><span class="rm-step__num" aria-hidden="true">2</span><span>Review</span></button></li>
           <li><button class="rm-step" type="button" data-step="export" disabled><span class="rm-step__num" aria-hidden="true">3</span><span>Export</span></button></li>
         </ol>
       </nav>
+      <button class="rm-link rm-guide-link rm-head__guide" type="button" data-open-guide aria-haspopup="dialog">ES video guidelines</button>
     </header>
 
     <div class="rm-work" id="rm-work" data-step="topic">
-      <!-- ── Stage: the live preview ────────────────────────────────────── -->
+      <!-- ── Create: one prompt, four styles, one button ───────────────────── -->
+      <section class="rm-create" id="rm-pane-topic" data-pane="topic" aria-labelledby="rm-create-title">
+        <div class="rm-create__intro">
+          <h2 class="rm-create__title" id="rm-create-title">What’s the reel about?</h2>
+          <p class="rm-create__lede">A topic, a trend, a link or your own script. Reels Studio writes it, finds verified clips and photos, checks every scene and hands you a reel that is ready to post.</p>
+        </div>
+
+        <div class="rm-prompt ais-surface" id="rm-prompt-card">
+          <div class="rm-prompt__picked" id="rm-picked" hidden></div>
+          <label class="es-sr-only" for="rm-prompt">What’s the reel about?</label>
+          <textarea class="rm-prompt__input" id="rm-prompt" rows="3" maxlength="4000" placeholder="Rodgers’ 2011 season has no twin. Or paste a link, or your script." aria-describedby="rm-prompt-hint"></textarea>
+          <div class="rm-prompt__bar">
+            <label class="rm-switch rm-prompt__script"><input type="checkbox" role="switch" id="rm-script-mode"><span>Use my exact words</span></label>
+            <span class="rm-meta rm-prompt__hint" id="rm-prompt-hint">Your script stays word for word; wrap a key word in *asterisks* to make it pop.</span>
+          </div>
+        </div>
+
+        <section class="rm-stylesec" aria-labelledby="rm-styles4-label">
+          <div class="rm-sec__head">
+            <h3 class="rm-sec__title" id="rm-styles4-label">Style</h3>
+            <span class="rm-meta" id="rm-style-why"></span>
+          </div>
+          <div class="rm-styles4" id="rm-styles4" role="radiogroup" aria-labelledby="rm-styles4-label"></div>
+        </section>
+
+        <div class="rm-makebar">
+          <button class="es-btn es-btn--primary es-btn--lg rm-make rm-write" type="button" id="rm-make" data-alias="rm-write" aria-describedby="rm-make-hint rm-write-status">
+            <span class="rm-spin rm-write__spin" aria-hidden="true"></span>
+            <svg class="rm-write__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
+            <span id="rm-write-text">Make my reel</span>
+          </button>
+          <p class="rm-hint rm-make__hint" id="rm-make-hint"></p>
+          <p class="rm-status" id="rm-write-status" role="status" aria-live="polite"></p>
+        </div>
+
+        <section class="rm-trendrow" id="rm-trendrow" aria-labelledby="rm-trendrow-title">
+          <div class="rm-sec__head">
+            <h3 class="rm-sec__title" id="rm-trendrow-title">Start from a trend</h3>
+            <div class="rm-filter" role="radiogroup" aria-label="League" id="rm-leagues"></div>
+          </div>
+          <ul class="rm-trends" id="rm-trends" aria-label="Trending stories" aria-busy="true"></ul>
+        </section>
+
+        <p class="rm-inspire"><button class="rm-link" type="button" id="rm-inspire-link" aria-haspopup="dialog">Need an idea?</button><span class="rm-hint">See which official clips are doing well, or brainstorm ES angles.</span></p>
+
+        <section class="rm-recent" id="rm-recent" aria-labelledby="rm-recent-title" hidden>
+          <h3 class="rm-sec__title" id="rm-recent-title">Continue a reel</h3>
+          <ul class="rm-recent__list" id="rm-recent-list"></ul>
+        </section>
+
+        <!-- A reel from a game, a clip or a player (data formats, opened from elsewhere) -->
+        <div class="rm-sec rm-datastory" id="rm-data-story" hidden></div>
+
+        <!-- Making: the step checklist takes the screen while the reel is made -->
+        <div class="rm-makingcard" id="rm-makingcard" hidden>
+          <div class="rm-makingcard__head">
+            <span class="rm-makingcard__title"><span class="rm-makingcard__orb" aria-hidden="true"></span><span id="rm-making-title">Making your reel</span></span>
+            <span class="rm-makingcard__time" id="rm-making-time" aria-hidden="true"></span>
+          </div>
+          <p class="rm-makingcard__about" id="rm-making-about"></p>
+          <ol class="rm-making" id="rm-making" aria-label="Making your reel"></ol>
+          <p class="rm-hint rm-makingcard__note">Every clip and photo is checked against its scene before you see it.</p>
+        </div>
+        <span class="es-sr-only" id="rm-making-live" aria-live="polite"></span>
+      </section>
+
+      <!-- Data formats: the game, clip or player picker -->
+      <section class="rm-pane rm-sourcepane" id="rm-pane-source" data-pane="source" hidden>
+        <div class="rm-srcstep" id="rm-source-step"></div>
+      </section>
+
+      <!-- ── Review / Export: the phone and its scenes ──────────────────────── -->
       <section class="rm-stage" id="rm-stage" aria-label="Reel preview">
         <div class="es-segmented rm-seg rm-view" role="radiogroup" aria-label="Preview" id="rm-view" hidden>
           <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-view="reel">Reel</button>
@@ -91,7 +163,7 @@
           <div class="rm-empty-stage" id="rm-empty-stage">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>
             <p>Your reel plays here.</p>
-            <span>Pick what to start from, then Make my reel.</span>
+            <span>Describe it, pick a style, then Make my reel.</span>
           </div>
         </div>
         <div class="rm-slidenav" id="rm-slidenav" hidden>
@@ -110,185 +182,195 @@
           <button class="rm-icon-btn" type="button" id="rm-mute" aria-pressed="false" aria-label="Mute preview" title="Mute preview">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></svg>
           </button>
-          <button class="rm-icon-btn" type="button" id="rm-calm" aria-pressed="false" aria-label="Calm preview: cuts in place of wipes" title="Calm preview: cuts in place of wipes" aria-describedby="rm-calm-note">
+          <button class="rm-icon-btn" type="button" id="rm-calm" aria-pressed="false" aria-label="Calm preview: cuts in place of wipes" title="Calm preview: cuts in place of wipes" aria-describedby="rm-calm-note" data-admin hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12h4"/><path d="M10 12h4"/><path d="M18 12h4"/></svg>
           </button>
-          <button class="rm-icon-btn" type="button" id="rm-safe-toggle" aria-pressed="false" aria-label="Show safe zones" title="Show safe zones">
+          <button class="rm-icon-btn" type="button" id="rm-safe-toggle" aria-pressed="false" aria-label="Show safe zones" title="Show safe zones" data-admin hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
           </button>
         </div>
         <p class="rm-meta" id="rm-stage-meta" aria-live="polite"></p>
         <p class="rm-hint rm-calm-note" id="rm-calm-note" hidden>Calm preview is on: scenes cut in place of the wipe. Your export keeps the full motion.</p>
         <p class="es-sr-only" id="rm-scene-desc" aria-live="polite"></p>
+
+        <!-- The scene strip: every scene's media, words and block, with Swap -->
+        <section class="rm-scenes" id="rm-scenes" aria-labelledby="rm-sb-title">
+          <div class="rm-scenes__head">
+            <h3 class="rm-sec__title" id="rm-sb-title">Scenes</h3>
+            <span class="rm-meta" id="rm-beats-meta"></span>
+            <button class="es-btn es-btn--sm es-btn--tertiary" type="button" id="rm-add-beat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              <span>Add a scene</span>
+            </button>
+          </div>
+          <p class="es-sr-only" id="rm-sb-help">Each scene is a card. Pick one to change its words, block or media. To reorder, drag a card or press Alt and an arrow key.</p>
+          <div class="rm-sb__scroll" id="rm-sb-scroll">
+            <ol class="rm-beats" id="rm-beats" aria-labelledby="rm-sb-title" aria-describedby="rm-sb-help"></ol>
+          </div>
+          <p class="es-sr-only" id="rm-sb-live" aria-live="assertive"></p>
+          <section id="ri-tray"></section>
+        </section>
       </section>
 
-      <!-- ── Panel: Start, Storyboard or Export ─────────────────────────── -->
+      <!-- ── One panel: Review or Export ───────────────────────────────────── -->
       <section class="rm-panel" id="rm-panel" aria-labelledby="rm-panel-title">
-        <h2 class="es-sr-only" id="rm-panel-title">Make a reel</h2>
+        <h2 class="es-sr-only" id="rm-panel-title">Your reel</h2>
 
-        <!-- Start: six ways in. The picked tile opens its own source below. -->
-        <div class="rm-startbar" id="rm-start">
-          <div class="rm-sec__head">
-            <h3 class="rm-sec__title" id="rm-start-title">Start from</h3>
-            <span class="rm-meta" id="rm-start-meta"></span>
-          </div>
-          <div class="rm-tiles" id="rm-fmt-entry" role="radiogroup" aria-labelledby="rm-start-title"></div>
-        </div>
-
-        <!-- Start from a game, a clip or a player: the picker -->
-        <div class="rm-pane" id="rm-pane-source" data-pane="source" hidden>
-          <div class="rm-srcstep" id="rm-source-step"></div>
-        </div>
-
-        <!-- Step 1: Start -->
-        <div class="rm-pane" id="rm-pane-topic" data-pane="topic">
-          <div class="rm-sec rm-datastory" id="rm-data-story" hidden></div>
-          <div class="rm-sec" id="rm-topic">
-            <div class="rm-source" id="rm-source-trend">
-              <div class="rm-trendbox" id="rm-trendbox">
-                <div class="rm-trendbox__head">
-                  <div class="rm-filter" role="radiogroup" aria-label="League" id="rm-leagues"></div>
-                </div>
-                <ul class="rm-trends" id="rm-trends" aria-label="Trending stories" aria-busy="true"></ul>
-              </div>
-              <p class="rm-hint" id="rm-trends-note">News from the last 48 hours. Check facts before you post.</p>
-            </div>
-            <div class="rm-source" id="rm-source-words" hidden>
-              <div class="es-segmented rm-seg" role="radiogroup" aria-label="What you have" id="rm-source">
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-source="script">Script</button>
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-source="brief">Brief</button>
-              </div>
-              <div class="rm-source" id="rm-source-script">
-                <div class="es-field">
-                  <label class="es-field__label" for="rm-script">Your script</label>
-                  <textarea class="es-input rm-brief" id="rm-script" rows="7" maxlength="4000" placeholder="The Cubs lost. This bar got *paid.* Kalshi says 1 in 2,500 bets was insurance." aria-describedby="rm-script-hint"></textarea>
-                  <p class="es-field__hint" id="rm-script-hint">Your words, as you'll say them. Reels Studio splits them into scenes and never rewrites them. Wrap a key word in *asterisks* to make it yellow in the captions.</p>
-                </div>
-                <div class="rm-script-row">
-                  <div class="es-field">
-                    <label class="es-field__label" for="rm-script-source">Source line</label>
-                    <input class="es-input" id="rm-script-source" type="text" maxlength="120" placeholder="Source: ESPN, Kalshi" aria-describedby="rm-script-source-hint">
-                    <p class="es-field__hint" id="rm-script-source-hint">Shown on the end card. Every claim needs a source.</p>
-                  </div>
-                  <div class="es-field">
-                    <label class="es-field__label" for="rm-script-vo">Voiceover length (seconds)</label>
-                    <input class="es-input" id="rm-script-vo" type="number" min="5" max="180" step="0.1" inputmode="decimal" placeholder="Optional" aria-describedby="rm-script-vo-hint">
-                    <p class="es-field__hint" id="rm-script-vo-hint">Without it, scenes are timed at 2.6 words a second. Times are estimates until the voice is in.</p>
-                  </div>
-                </div>
-              </div>
-              <div class="rm-source" id="rm-source-brief" hidden>
-                <div class="es-field">
-                  <label class="es-field__label" for="rm-brief">Brief</label>
-                  <textarea class="es-input rm-brief" id="rm-brief" rows="6" maxlength="2400" placeholder="Josh Allen threw for 412 yards and 4 TDs as the Bills beat the Chiefs 31-28. It's his third 400-yard game this season." aria-describedby="rm-brief-hint"></textarea>
-                  <p class="es-field__hint" id="rm-brief-hint">Who, what happened, and the numbers. Every number in the reel must come from here or a source.</p>
-                </div>
-              </div>
-            </div>
-            <div class="rm-source rm-inspo" id="rm-source-inspo" hidden>
-              <div class="es-empty rm-inspo__soon" id="rm-inspo-soon">
-                <p class="es-empty__title">Inspiration is on its way</p>
-                <p class="es-empty__copy">Soon you will see which official clips are doing well on a trend, and get ES angles to make your own version. For now, start from a trend or your own words.</p>
-              </div>
-              <div class="es-segmented rm-seg" role="radiogroup" aria-label="Inspiration" id="rm-inspo-tabs" hidden>
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-inspo="radar">What is doing well</button>
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-inspo="ideas">Brainstorm angles</button>
-              </div>
-              <div class="rm-inspo__host" id="rm-radar-host" hidden></div>
-              <div class="rm-inspo__host" id="rm-ideas-host" hidden></div>
-            </div>
-            <div class="rm-picked" id="rm-picked" hidden></div>
-            <div class="rm-brainstorm" id="rm-brainstorm-row">
-              <button class="es-btn es-btn--sm" type="button" id="rm-brainstorm" aria-describedby="rm-brainstorm-note">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
-                <span>Brainstorm angles</span>
-              </button>
-              <span class="rm-hint" id="rm-brainstorm-note">ES angles for this story, each with a storyboard.</span>
-            </div>
-          </div>
-
-          <section class="rm-sec rm-recipesec" id="rm-recipe-sec" aria-labelledby="rm-recipes-label">
-            <div class="rm-sec__head">
-              <h3 class="rm-sec__title" id="rm-recipes-label">Recipe</h3>
-              <span class="rm-meta" id="rm-recipe-why">The shape of the story. Auto picks for you.</span>
-            </div>
-            <div class="rm-recipes rm-scroll" role="radiogroup" aria-labelledby="rm-recipes-label" id="rm-recipes"></div>
-          </section>
-
-          <button class="es-btn es-btn--primary es-btn--lg rm-block rm-write" type="button" id="rm-write" aria-describedby="rm-write-status">
-            <span class="rm-spin rm-write__spin" aria-hidden="true"></span>
-            <svg class="rm-write__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/></svg>
-            <span id="rm-write-text">Make my reel</span>
-          </button>
-          <ol class="rm-making" id="rm-making" aria-label="Making your reel" hidden></ol>
-          <span class="es-sr-only" id="rm-making-live" aria-live="polite"></span>
-          <p class="rm-status" id="rm-write-status" role="status" aria-live="polite"></p>
-          <p class="rm-guide-row"><button class="rm-link rm-guide-link" type="button" data-open-guide aria-haspopup="dialog">ES video guidelines</button><span class="rm-hint">How every ES reel looks, moves and reads.</span></p>
-
-          <div class="rm-sec rm-recent" id="rm-recent" hidden>
-            <h3 class="rm-sec__title">Continue a reel</h3>
-            <ul class="rm-recent__list" id="rm-recent-list"></ul>
-          </div>
-        </div>
-
-        <!-- Step 2: Storyboard -->
+        <!-- Review -->
         <div class="rm-pane" id="rm-pane-edit" data-pane="edit" hidden>
-          <div class="rm-sbtop">
+          <div class="rm-revhead">
             <div class="rm-summary" id="rm-summary"></div>
-            <div class="rm-versions" id="rm-versions"></div>
+            <button class="rm-ready" type="button" id="rm-ready" aria-expanded="false" aria-controls="rm-lint" data-tone="good">
+              <span class="rm-ready__dot" aria-hidden="true"></span>
+              <span class="rm-ready__text" id="rm-ready-text">Checking…</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
           </div>
-          <button class="rm-statusline" type="button" id="rm-statusline" aria-expanded="false" aria-controls="rm-lint"><span class="rm-statusline__dot" aria-hidden="true"></span><span id="rm-statusline-text">Checking…</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
-          <div class="rm-sec rm-lintbox" id="rm-lint" hidden>
-            <div class="rm-sec__head">
-              <h3 class="rm-sec__title">Quality checks</h3>
-              <span class="es-badge" id="rm-lint-badge"></span>
-            </div>
-            <ul class="rm-checklist" id="rm-checklist" aria-label="ES video checklist" hidden></ul>
-            <button class="rm-link rm-guide-link" type="button" data-open-guide aria-haspopup="dialog">ES video guidelines</button>
+          <div class="rm-lintbox" id="rm-lint" hidden>
+            <p class="rm-lintbox__sum" id="rm-statusline-text"></p>
+            <ul class="rm-checklist" id="rm-checklist" aria-label="Ready to post checklist"></ul>
             <ul class="rm-issues" id="rm-issues"></ul>
+            <button class="rm-link rm-guide-link" type="button" data-open-guide aria-haspopup="dialog">ES video guidelines</button>
           </div>
           <div class="rm-notice" id="rm-notice" hidden></div>
           <div class="rm-sec rm-datarev" id="rm-data-review" hidden></div>
 
-          <section class="rm-sec rm-sb" id="rm-storyboard" aria-labelledby="rm-sb-title">
-            <div class="rm-sec__head">
-              <h3 class="rm-sec__title" id="rm-sb-title">Storyboard</h3>
-              <span class="rm-meta" id="rm-beats-meta"></span>
-              <button class="es-btn es-btn--sm" type="button" id="rm-add-beat">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                <span>Add a scene</span>
-              </button>
+          <!-- The picked scene: words, block and media (Swap) -->
+          <section class="rm-scene" id="rm-scene-edit" aria-label="Scene" hidden></section>
+
+          <!-- Ask AI -->
+          <section class="rm-ask-card" id="rm-revise" aria-labelledby="rm-ask-title">
+            <div class="rm-ask-card__head"><span class="ais-badge" aria-hidden="true">AI</span><h3 class="rm-sec__title" id="rm-ask-title">Ask AI</h3></div>
+            <form class="rm-ask" id="rm-ask">
+              <label class="es-sr-only" for="rm-ask-input">Ask for a change</label>
+              <input class="es-input" id="rm-ask-input" type="text" maxlength="300" placeholder="Lead with the 45 TD number">
+              <button class="es-btn" type="submit">Revise</button>
+            </form>
+            <div class="rm-chips" role="group" aria-label="Quick changes">
+              <button class="es-chip" type="button" data-revise="shorter">Shorter</button>
+              <button class="es-chip" type="button" data-revise="punchier">Punchier</button>
+              <button class="es-chip" type="button" data-revise="hook">Stronger hook</button>
+              <button class="es-chip" type="button" data-revise="calmer">Calmer</button>
             </div>
-            <p class="es-sr-only" id="rm-sb-help">Each scene is a card. Change its words and colours on the card. To reorder, drag a card, use its Move buttons, or press Alt and an arrow key.</p>
-            <div class="rm-sb__scroll" id="rm-sb-scroll">
-              <ol class="rm-beats" id="rm-beats" aria-labelledby="rm-sb-title" aria-describedby="rm-sb-help"></ol>
-            </div>
-            <p class="es-sr-only" id="rm-sb-live" aria-live="assertive"></p>
           </section>
 
-          <section id="ri-tray"></section>
-
-          <details class="rm-fold" id="rm-revise">
-            <summary><span class="rm-fold__title">Revise with AI</span><span class="rm-fold__meta">Shorter, punchier, your words</span></summary>
+          <details class="rm-fold" id="rm-voice">
+            <summary><span class="rm-fold__title">Voice &amp; music</span><span class="es-badge" id="rm-voice-badge">Captions only</span></summary>
             <div class="rm-fold__body">
-              <div class="rm-chips" role="group" aria-label="Quick changes">
-                <button class="es-chip" type="button" data-revise="shorter">Shorter</button>
-                <button class="es-chip" type="button" data-revise="punchier">Punchier</button>
-                <button class="es-chip" type="button" data-revise="hook">Stronger hook</button>
-                <button class="es-chip" type="button" data-revise="calmer">Calmer</button>
+              <div id="rm-voice-edit"></div>
+              <p class="rm-hint" id="rm-voice-note"></p>
+              <div class="rm-voicestate" id="rm-voice-state" role="status" aria-live="polite"></div>
+              <button class="es-btn rm-block" type="button" id="rm-voice-btn" hidden>Make the voiceover</button>
+              <div class="rm-progress" id="rm-voice-progress" hidden><span></span></div>
+              <div id="ri-voice-panel"></div>
+              <div class="rm-subsec" id="rm-music">
+                <div class="rm-sec__head"><span class="es-field__label">Music</span><span class="rm-fold__meta" id="rm-music-meta">None</span></div>
+                <div class="es-field">
+                  <label class="es-sr-only" for="rm-music-pick">Track</label>
+                  <select class="es-select" id="rm-music-pick"><option value="">No music</option></select>
+                  <p class="es-field__hint" id="rm-music-hint">Only tracks cleared for brand use. Music sits under the voice, 14 dB down.</p>
+                </div>
+                <div class="rm-upload">
+                  <input type="file" id="rm-music-file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/aac" class="es-sr-only">
+                  <label class="es-btn es-btn--sm" for="rm-music-file">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+                    Upload a track
+                  </label>
+                  <span class="rm-meta" id="rm-music-name"></span>
+                </div>
+                <div class="rm-musicgen" id="rm-music-gen-row" hidden>
+                  <label class="es-sr-only" for="rm-music-mood">Music mood</label>
+                  <select class="es-select es-select--sm" id="rm-music-mood">
+                    <option value="hype">Hype</option>
+                    <option value="tension">Tension</option>
+                    <option value="calm">Calm</option>
+                    <option value="celebration">Celebration</option>
+                  </select>
+                  <button class="es-btn es-btn--sm" type="button" id="rm-music-gen"><span>Generate a music bed</span></button>
+                  <p class="rm-hint">AI instrumental, cleared for organic posts only.</p>
+                </div>
+                <div class="rm-licence" id="rm-licence" hidden>
+                  <div class="es-field">
+                    <label class="es-field__label" for="rm-licence-note">Licence</label>
+                    <input class="es-input" id="rm-licence-note" type="text" maxlength="140" placeholder="Epidemic Sound Enterprise #1234" aria-describedby="rm-licence-hint">
+                    <p class="es-field__hint" id="rm-licence-hint">Where the track comes from and its licence. Required to export.</p>
+                  </div>
+                  <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-licence-paid"><span>Cleared for paid ads too</span></label>
+                </div>
+                <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-clip-audio"><span><b>Original clip audio</b><small>Off: clips play muted under the voice and music.</small></span></label>
               </div>
-              <form class="rm-ask" id="rm-ask">
-                <label class="es-sr-only" for="rm-ask-input">Ask for a change</label>
-                <input class="es-input" id="rm-ask-input" type="text" maxlength="300" placeholder="Lead with the 31-28 score">
-                <button class="es-btn" type="submit">Revise</button>
-              </form>
             </div>
           </details>
+
+          <details class="rm-fold" id="rm-captions">
+            <summary><span class="rm-fold__title">Captions</span><span class="rm-fold__meta" id="rm-captions-meta">Always on</span></summary>
+            <div class="rm-fold__body">
+              <p class="rm-hint" id="rm-captions-note">Every spoken word is on screen, so the reel works with the sound off. Caption files are on Export.</p>
+              <div class="es-field" id="rm-capstyle-field">
+                <span class="es-field__label" id="rm-capstyle-label">Caption style</span>
+                <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-capstyle-label" id="rm-capstyle">
+                  <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-cap="highlight">Highlight</button>
+                  <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-cap="box">Box</button>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="rm-fold" id="rm-details">
+            <summary><span class="rm-fold__title">Details</span><span class="rm-fold__meta" id="rm-details-meta"></span></summary>
+            <div class="rm-fold__body">
+              <div class="rm-railrow" id="rm-aspect-sec">
+                <span class="es-field__label" id="rm-aspect-label">Size</span>
+                <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-aspect-label" id="rm-aspect">
+                  <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-aspect="9:16">Reel 9:16</button>
+                  <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-aspect="4:5">Feed 4:5</button>
+                </div>
+              </div>
+              <div class="rm-subsec" id="rm-sources">
+                <div class="rm-sec__head"><span class="es-field__label">Sources</span><span class="rm-fold__meta" id="rm-sources-meta"></span></div>
+                <ul class="rm-sources" id="rm-sources-list"></ul>
+                <div class="es-field">
+                  <label class="es-field__label" for="rm-extra-source">Add a source</label>
+                  <textarea class="es-input rm-extra" id="rm-extra-source" rows="2" maxlength="1200" placeholder="ESPN box score: Rodgers 45 TD, 6 INT" aria-describedby="rm-extra-hint"></textarea>
+                  <p class="es-field__hint" id="rm-extra-hint">Numbers you add to a scene must appear in a source.</p>
+                </div>
+              </div>
+              <!-- Admins only: cost, model tier, fact check, clip switches -->
+              <div class="rm-subsec rm-admin" id="rm-admin" data-admin hidden>
+                <div class="rm-sec__head"><span class="es-field__label">Admin</span><span class="es-badge">Admins only</span></div>
+                <div class="rm-cost" id="rm-cost" aria-live="polite"></div>
+                <div class="rm-spend" id="rm-spend" hidden></div>
+                <span class="rm-meta" id="rm-cost-meta" hidden></span>
+                <div class="es-field">
+                  <span class="es-field__label" id="rm-tier-label">Script model</span>
+                  <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-tier-label" id="rm-tier">
+                    <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-tier="standard" title="Haiku writes; Sonnet steps in only if the script comes back weak">Standard</button>
+                    <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-tier="economy" title="Haiku only">Economy</button>
+                  </div>
+                </div>
+                <div class="es-field rm-field-sport">
+                  <label class="es-field__label" for="rm-sport">Sport</label>
+                  <select class="es-select" id="rm-sport">
+                    <option value="">Auto</option>
+                    <option value="nfl">NFL</option>
+                    <option value="cfb">College Football</option>
+                    <option value="mlb">MLB</option>
+                    <option value="golf">Golf</option>
+                  </select>
+                </div>
+                <label class="rm-check rm-check--sm" id="rm-factcheck-row"><input type="checkbox" id="rm-factcheck"><span><b>Fact check with web search</b><small id="rm-factcheck-note">Two searches, capped at $0.03.</small></span></label>
+                <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-clips-on" checked><span><b>Use video clips</b><small>Verified official clips where a scene has one.</small></span></label>
+                <label class="rm-check rm-check--sm" id="rm-aiclips-row" hidden><input type="checkbox" id="rm-aiclips-on"><span><b>AI b-roll when no clip fits</b><small id="rm-aiclips-note">Stadium, crowd or field shots, never people or logos.</small></span></label>
+              </div>
+            </div>
+          </details>
+
           <input type="file" id="rm-visual-file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" class="es-sr-only" tabindex="-1" aria-hidden="true">
         </div>
 
-        <!-- Step 3: Export -->
+        <!-- Export -->
         <div class="rm-pane" id="rm-pane-export" data-pane="export" hidden>
+          <div class="rm-gate" id="rm-gate"></div>
           <div class="rm-sec">
             <span class="es-field__label" id="rm-target-label">Where it will run</span>
             <div class="es-segmented es-segmented--full rm-seg" role="radiogroup" aria-labelledby="rm-target-label" id="rm-target">
@@ -296,46 +378,47 @@
               <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-target="paid">Paid ad</button>
             </div>
           </div>
-          <div class="rm-sec" id="rm-rights">
-            <h3 class="rm-sec__title">Rights</h3>
-            <div class="rm-rights" id="rm-rights-table"></div>
-          </div>
-          <div class="rm-sec">
-            <h3 class="rm-sec__title">Before you export</h3>
-            <div class="rm-gate" id="rm-gate"></div>
-          </div>
-          <div class="rm-sec rm-exportbox">
-            <h3 class="rm-sec__title">Export</h3>
-            <p class="rm-hint" id="rm-export-what"></p>
+          <div class="rm-exportbox">
             <button class="es-btn es-btn--primary es-btn--lg rm-block" type="button" id="rm-export">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
               <span id="rm-export-text">Export MP4</span>
             </button>
-            <button class="es-btn es-btn--lg rm-block" type="button" id="rm-export-all" aria-describedby="rm-export-all-note">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-              <span id="rm-export-all-text">Export all (zip)</span>
-            </button>
-            <p class="rm-hint" id="rm-export-all-note"></p>
+            <p class="rm-hint" id="rm-export-what"></p>
             <div class="rm-progress" id="rm-export-progress" hidden><span></span></div>
             <p class="rm-status" id="rm-export-status" role="status" aria-live="polite"></p>
             <ul class="rm-files" id="rm-files" aria-label="Exported files" hidden></ul>
-            <div id="rm-captions-host"></div>
           </div>
-          <div class="rm-sec rm-carousel-out" id="rm-carousel-out" hidden>
-            <h3 class="rm-sec__title">Carousel</h3>
-            <p class="rm-hint" id="rm-carousel-note">1080×1350 slides for an Instagram carousel, as a PNG zip.</p>
-            <button class="es-btn es-btn--lg rm-block" type="button" id="rm-export-carousel">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="18" x="5" y="3" rx="2"/><path d="M2 7v10"/><path d="M22 7v10"/></svg>
-              <span id="rm-export-carousel-text">Export carousel</span>
-            </button>
+          <div class="rm-also" id="rm-also">
+            <span class="es-field__label" id="rm-also-label">Also export</span>
+            <div class="rm-also__row" role="group" aria-labelledby="rm-also-label">
+              <button class="es-btn es-btn--sm" type="button" id="rm-export-45">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="16" height="20" x="4" y="2" rx="2"/></svg>
+                <span id="rm-export-45-text">Feed 4:5 MP4</span>
+              </button>
+              <button class="es-btn es-btn--sm" type="button" id="rm-export-captions" aria-haspopup="true" aria-expanded="false" aria-controls="rm-captions-host">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M7 15h4"/><path d="M15 15h2"/><path d="M7 11h2"/><path d="M13 11h4"/></svg>
+                <span>Captions</span>
+              </button>
+              <button class="es-btn es-btn--sm" type="button" id="rm-export-carousel" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="18" x="5" y="3" rx="2"/><path d="M2 7v10"/><path d="M22 7v10"/></svg>
+                <span id="rm-export-carousel-text">Carousel</span>
+              </button>
+            </div>
+            <div id="rm-captions-host" hidden></div>
+            <p class="rm-hint" id="rm-carousel-note" hidden>1080×1350 slides for an Instagram carousel, as a PNG zip.</p>
             <p class="rm-status" id="rm-carousel-status" role="status" aria-live="polite"></p>
           </div>
+          <details class="rm-fold" id="rm-rights">
+            <summary><span class="rm-fold__title">Rights</span><span class="rm-fold__meta" id="rm-rights-meta"></span></summary>
+            <div class="rm-fold__body"><div class="rm-rights" id="rm-rights-table"></div></div>
+          </details>
+          <div class="rm-sec rm-carousel-out" id="rm-carousel-out" hidden></div>
         </div>
 
         <footer class="rm-pane-nav" id="rm-pane-nav">
           <button class="es-btn es-btn--tertiary" type="button" id="rm-back" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-            <span>Back</span>
+            <span id="rm-back-text">Back</span>
           </button>
           <button class="es-btn" type="button" id="rm-next" hidden>
             <span id="rm-next-text">Next: Export</span>
@@ -343,148 +426,26 @@
           </button>
         </footer>
       </section>
-
-      <!-- ── Settings rail: one place for every setting, on every step ──── -->
-      <aside class="rm-rail" id="rm-settings" aria-labelledby="rm-rail-title">
-        <h2 class="rm-rail__title" id="rm-rail-title">Settings</h2>
-
-        <details class="rm-fold" id="rm-style-fold" open>
-          <summary><span class="rm-fold__title" id="rm-styles-label">Look</span><span class="rm-fold__meta" id="rm-style-meta"></span></summary>
-          <div class="rm-fold__body">
-            <div class="rm-looks" role="radiogroup" aria-labelledby="rm-styles-label" id="rm-looks" hidden></div>
-            <div class="rm-styles" role="radiogroup" aria-labelledby="rm-styles-label" id="rm-styles"></div>
-            <div class="rm-styles" id="rm-styles-edit" hidden></div>
-            <p class="rm-hint" id="rm-style-why"></p>
-          </div>
-        </details>
-
-        <div class="rm-railrow" id="rm-aspect-sec">
-          <span class="rm-fold__title" id="rm-aspect-label">Size</span>
-          <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-aspect-label" id="rm-aspect">
-            <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-aspect="9:16">Reel 9:16</button>
-            <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-aspect="4:5">Feed 4:5</button>
-          </div>
-        </div>
-
-        <details class="rm-fold" id="rm-voice">
-          <summary><span class="rm-fold__title">Voice</span><span class="es-badge" id="rm-voice-badge">Captions only</span></summary>
-          <div class="rm-fold__body">
-            <div id="rm-voice-edit"></div>
-            <p class="rm-hint" id="rm-voice-note"></p>
-            <div class="rm-voicestate" id="rm-voice-state" role="status" aria-live="polite"></div>
-            <button class="es-btn rm-block" type="button" id="rm-voice-btn" hidden>Make the voiceover</button>
-            <div class="rm-progress" id="rm-voice-progress" hidden><span></span></div>
-            <div id="ri-voice-panel"></div>
-          </div>
-        </details>
-
-        <details class="rm-fold" id="rm-music">
-          <summary><span class="rm-fold__title">Music</span><span class="rm-fold__meta" id="rm-music-meta">None</span></summary>
-          <div class="rm-fold__body">
-            <div class="es-field">
-              <label class="es-field__label" for="rm-music-pick">Track</label>
-              <select class="es-select" id="rm-music-pick"><option value="">No music</option></select>
-              <p class="es-field__hint" id="rm-music-hint">Only tracks cleared for brand use. Music sits under the voice, 14 dB down.</p>
-            </div>
-            <div class="rm-upload">
-              <input type="file" id="rm-music-file" accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/aac" class="es-sr-only">
-              <label class="es-btn es-btn--sm" for="rm-music-file">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
-                Upload a track
-              </label>
-              <span class="rm-meta" id="rm-music-name"></span>
-            </div>
-            <div class="rm-musicgen" id="rm-music-gen-row" hidden>
-              <label class="es-sr-only" for="rm-music-mood">Music mood</label>
-              <select class="es-select es-select--sm" id="rm-music-mood">
-                <option value="hype">Hype</option>
-                <option value="tension">Tension</option>
-                <option value="calm">Calm</option>
-                <option value="celebration">Celebration</option>
-              </select>
-              <button class="es-btn es-btn--sm" type="button" id="rm-music-gen"><span>Generate a music bed</span></button>
-              <p class="rm-hint">AI instrumental (about $0.08 for 30 s). ElevenLabs' music terms don't name paid ads, so it is cleared for organic posts only.</p>
-            </div>
-            <div class="rm-licence" id="rm-licence" hidden>
-              <div class="es-field">
-                <label class="es-field__label" for="rm-licence-note">Licence</label>
-                <input class="es-input" id="rm-licence-note" type="text" maxlength="140" placeholder="Epidemic Sound Enterprise #1234" aria-describedby="rm-licence-hint">
-                <p class="es-field__hint" id="rm-licence-hint">Where the track comes from and its licence. Required to export.</p>
-              </div>
-              <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-licence-paid"><span>Cleared for paid ads too</span></label>
-            </div>
-            <label class="rm-check rm-check--sm"><input type="checkbox" id="rm-clip-audio"><span><b>Original clip audio</b><small>Off by default: clips play muted under the voice and music. On, their sound sits low and ducks under the voice.</small></span></label>
-          </div>
-        </details>
-
-        <details class="rm-fold" id="rm-captions">
-          <summary><span class="rm-fold__title">Captions</span><span class="rm-fold__meta" id="rm-captions-meta">Always on</span></summary>
-          <div class="rm-fold__body">
-            <p class="rm-hint" id="rm-captions-note">Captions are always on: every spoken word is on screen, so the reel works with the sound off. Caption files (SRT, VTT, transcript) are on the Export step.</p>
-            <div class="es-field" id="rm-capstyle-field">
-              <span class="es-field__label" id="rm-capstyle-label">Caption style</span>
-              <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-capstyle-label" id="rm-capstyle">
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-cap="highlight">Highlight</button>
-                <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-cap="box">Box</button>
-              </div>
-            </div>
-          </div>
-        </details>
-
-        <details class="rm-fold" id="rm-sources" hidden>
-          <summary><span class="rm-fold__title">Sources</span><span class="rm-fold__meta" id="rm-sources-meta"></span></summary>
-          <div class="rm-fold__body">
-            <ul class="rm-sources" id="rm-sources-list"></ul>
-            <div class="es-field">
-              <label class="es-field__label" for="rm-extra-source">Add a source</label>
-              <textarea class="es-input rm-extra" id="rm-extra-source" rows="2" maxlength="1200" placeholder="ESPN box score: Allen 28/37, 412 yds, 4 TD" aria-describedby="rm-extra-hint"></textarea>
-              <p class="es-field__hint" id="rm-extra-hint">Numbers you add to a scene must appear in a source.</p>
-            </div>
-          </div>
-        </details>
-
-        <details class="rm-fold" id="rm-costs">
-          <summary><span class="rm-fold__title">Cost</span><span class="rm-fold__meta" id="rm-cost-meta"></span></summary>
-          <div class="rm-fold__body">
-            <div class="rm-cost" id="rm-cost" aria-live="polite"></div>
-            <div class="rm-spend" id="rm-spend" hidden></div>
-          </div>
-        </details>
-
-        <details class="rm-fold" id="rm-more">
-          <summary><span class="rm-fold__title">Script and clips</span><span class="rm-fold__meta" id="rm-settings-meta">Auto</span></summary>
-          <div class="rm-fold__body">
-            <div class="rm-sec" id="rm-set-clips">
-              <label class="rm-check"><input type="checkbox" id="rm-clips-on" checked><span><b>Use video clips</b><small>About 80% of the reel moves: official team and league clips from X, found for you. Stills fill the rest.</small></span></label>
-              <label class="rm-check" id="rm-aiclips-row" hidden><input type="checkbox" id="rm-aiclips-on"><span><b>AI b-roll when no clip fits</b><small id="rm-aiclips-note">Stadium, crowd or field shots, never people or logos.</small></span></label>
-            </div>
-            <div class="rm-sec rm-sec--row" id="rm-set-script">
-              <div class="es-field rm-field-sport">
-                <label class="es-field__label" for="rm-sport">Sport</label>
-                <select class="es-select" id="rm-sport">
-                  <option value="">Auto</option>
-                  <option value="nfl">NFL</option>
-                  <option value="cfb">College Football</option>
-                  <option value="mlb">MLB</option>
-                  <option value="golf">Golf</option>
-                </select>
-              </div>
-              <div class="es-field">
-                <span class="es-field__label" id="rm-tier-label">Script quality</span>
-                <div class="es-segmented rm-seg" role="radiogroup" aria-labelledby="rm-tier-label" id="rm-tier">
-                  <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-tier="standard" title="Haiku writes; Sonnet steps in only if the script comes back weak">Standard</button>
-                  <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-tier="economy" title="Haiku only">Economy</button>
-                </div>
-              </div>
-            </div>
-            <label class="rm-check" id="rm-factcheck-row">
-              <input type="checkbox" id="rm-factcheck">
-              <span><b>Fact check with web search</b><small id="rm-factcheck-note">Two searches, capped at $0.03. Found numbers can be used in the reel.</small></span>
-            </label>
-          </div>
-        </details>
-      </aside>
     </div>
+
+    <dialog class="es-dialog rm-ideas" id="rm-ideas" aria-labelledby="rm-ideas-title">
+      <form method="dialog" class="rm-photos__head">
+        <h2 class="rm-photos__title" id="rm-ideas-title">Need an idea?</h2>
+        <button class="rm-icon-btn" value="cancel" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </form>
+      <div class="es-segmented rm-seg" role="radiogroup" aria-label="Inspiration" id="rm-inspo-tabs" hidden>
+        <button class="es-segmented__item" type="button" role="radio" aria-checked="true" data-inspo="radar">What is doing well</button>
+        <button class="es-segmented__item" type="button" role="radio" aria-checked="false" data-inspo="ideas">Brainstorm angles</button>
+      </div>
+      <div class="es-empty rm-inspo__soon" id="rm-inspo-soon">
+        <p class="es-empty__title">Ideas are loading</p>
+        <p class="es-empty__copy">If they do not appear, start from a trend or your own words.</p>
+      </div>
+      <div class="rm-inspo__host" id="rm-radar-host" hidden></div>
+      <div class="rm-inspo__host" id="rm-ideas-host" hidden></div>
+    </dialog>
 
     <dialog class="es-dialog rm-photos rm-guide" id="rm-guide" aria-labelledby="rm-guide-title">
       <form method="dialog" class="rm-photos__head">
@@ -493,7 +454,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </form>
-      <p class="rm-hint">The ES video team's reels system (from Vinay), built into Reels Studio. Every reel follows it.</p>
+      <p class="rm-hint">The ES video team’s reels system, built into Reels Studio. Every reel follows it.</p>
       <div class="rm-guide__body" id="rm-guide-body"></div>
     </dialog>
 
@@ -506,13 +467,13 @@
       </form>
       <form class="rm-photos__search" id="rm-photos-search">
         <label class="es-sr-only" for="rm-photos-q">Search the ES image pool</label>
-        <input class="es-input" id="rm-photos-q" type="search" maxlength="120" placeholder="Josh Allen">
+        <input class="es-input" id="rm-photos-q" type="search" maxlength="120" placeholder="Aaron Rodgers">
         <button class="es-btn" type="submit">Search</button>
       </form>
       <p class="rm-hint">From the ES image pool. Editorial licence: fine for organic posts; check before paid use.</p>
       <ul class="rm-photos__grid" id="rm-photos-grid" aria-label="Photos"></ul>
       <div class="rm-photos__foot">
-        <button class="es-btn es-btn--tertiary" type="button" id="rm-photos-none">Use the designed background</button>
+        <button class="es-btn es-btn--tertiary" type="button" id="rm-photos-none">No photo: use an infographic</button>
       </div>
     </dialog>
   </main>
@@ -537,17 +498,18 @@
   <script src="reel-render.js?v=20261125-reels2"></script>
   <script src="reel-lint.js?v=20261125-reels2"></script>
   <script src="reel-clips.js?v=20261119-rel"></script>
+  <script src="reel-sourcing.js?v=20261128-reels3"></script>
   <script src="frameup-zip.js?v=20261118-rel1"></script>
   <script src="reel-export.js?v=20261119-rel4"></script>
   <script src="reel-flow.js?v=20261119-rel4"></script>
-  <script src="reel-gallery.js?v=20261120-rel2"></script>
+  <script src="reel-gallery.js?v=20261128-reels3"></script>
   <script src="es-motion.js?v=20261115-ds1"></script>
   <script src="reel-captions-export.js?v=20261125-reels2"></script>
   <script src="reel-media-tray.js?v=20261125-reels2"></script>
   <script src="reel-voice-input.js?v=20261125-reels2"></script>
-  <script src="reel-storyboard.js?v=20261125-reels2"></script>
+  <script src="reel-storyboard.js?v=20261128-reels3"></script>
   <script src="reel-a11y.js?v=20261125-reels2"></script>
-  <script src="reel-maker.js?v=20261125-reels2"></script>
+  <script src="reel-maker.js?v=20261128-reels3"></script>
   <script src="reel-ideas.js?v=20261125-reels2"></script>
   <script src="reel-radar.js?v=20261125-reels2"></script>
 </body>
