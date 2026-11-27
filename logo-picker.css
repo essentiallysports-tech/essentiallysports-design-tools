@@ -22,7 +22,7 @@ html.flp-open { overflow: hidden; }
 .flp__dialog {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto;
   width: min(880px, 100%);
   height: min(720px, calc(100dvh - 48px));
   border-radius: var(--es-radius-container, 16px);
@@ -201,3 +201,158 @@ html[data-theme="dark"] .flp__foot { border-top-color: #2A2D34; }
   .flp__foot { flex-direction: column; align-items: stretch; }
   .flp__actions { justify-content: flex-end; }
 }
+
+/* ── My logos (frameup-custom-logos.js) ─────────────────────────────────── */
+.flp__session { margin: var(--es-space-2, 8px) var(--es-space-5, 20px) 0; font-size: var(--es-type-meta-size, 13px); }
+/* Hidden rows keep their grid track (zero height) so the grid stays in the 1fr row. */
+.flp .flp__session[hidden],
+.flp.is-only-custom .flp__chips { display: block !important; height: 0; min-height: 0; margin: 0; padding: 0; border: 0; overflow: hidden; visibility: hidden; }
+.flp.is-only-custom .flp__dialog { width: min(720px, 100%); }
+.flp__fav--left { right: auto; left: 4px; }
+/* Rename / delete show on hover or focus where there is a mouse; always on touch. */
+@media (hover: hover) {
+  .flp__tool { opacity: 0; }
+  .flp__tile:hover .flp__tool,
+  .flp__tile:focus-within .flp__tool { opacity: 1; }
+}
+.flp__tool { background: var(--es-surface, #FFFFFF); box-shadow: inset 0 0 0 1px var(--es-line); }
+.flp__art { position: relative; overflow: hidden; }
+.flp__thumb-wait { position: absolute; inset: 6px; border-radius: 8px; }
+.flp__thumb-missing { color: var(--es-ink-3); font-size: 11px; }
+.flp.is-dark .flp__thumb-missing { color: #98A6BF; }
+.flp__tile--wait { min-height: 132px; }
+.flp__skeleton { display: block; width: 100%; height: 132px; border-radius: var(--es-radius-control, 12px); }
+.flp__pick--static { cursor: default; }
+.flp__pick--static:hover { background: var(--es-bg); }
+.flp__rename {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--es-radius-chip, 10px);
+  background: var(--es-bg);
+  box-shadow: inset 0 0 0 1px var(--es-line-2);
+  color: var(--es-ink);
+  font: 500 13px/1.2 var(--es-font-ui);
+  text-align: center;
+  outline: none;
+}
+.flp__rename:focus { box-shadow: inset 0 0 0 1px var(--es-focus-color), var(--es-focus-halo); }
+.flp__confirm {
+  display: grid;
+  align-content: center;
+  gap: var(--es-space-2, 8px);
+  min-height: 132px;
+  padding: var(--es-space-3, 12px) var(--es-space-2, 8px);
+  border-radius: var(--es-radius-control, 12px);
+  background: var(--es-bad-soft);
+  box-shadow: inset 0 0 0 1px var(--es-bad);
+  text-align: center;
+}
+.flp__confirm-text { margin: 0; color: var(--es-ink); font-size: 13px; font-weight: 500; line-height: 1.3; overflow-wrap: anywhere; }
+.flp__confirm-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--es-space-1, 4px); }
+.flp__empty .es-btn { justify-self: center; margin-top: var(--es-space-2, 8px); }
+.flp__empty.es-error-state { display: grid; justify-items: center; gap: var(--es-space-2, 8px); text-align: center; }
+
+html[data-theme="dark"] .flp__tool { background: #2A2D34; box-shadow: inset 0 0 0 1px #3B4049; }
+html[data-theme="dark"] .flp__pick--static:hover { background: #2A2D34; }
+html[data-theme="dark"] .flp__rename { background: #1F2126; box-shadow: inset 0 0 0 1px #707A8C; color: #FFFFFF; }
+html[data-theme="dark"] .flp__confirm { background: var(--es-bad-soft-on-dark, rgb(255 138 138 / .14)); box-shadow: inset 0 0 0 1px var(--es-bad-on-dark, #FF8A8A); }
+html[data-theme="dark"] .flp__confirm-text { color: #FFFFFF; }
+html[data-theme="dark"] .flp__session { color: #BFC8D9; }
+
+/* ── Crop dialog (.fcl, frameup-custom-logos.js) ────────────────────────── */
+.fcl {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: var(--es-space-6, 24px);
+  border: 0;
+  background: transparent;
+  color: var(--es-ink);
+  font-family: var(--es-font-ui, "Roboto", sans-serif);
+}
+.fcl[open] { display: grid; place-items: center; }
+.fcl::backdrop { background: transparent; }
+.fcl__scrim { position: absolute; inset: 0; background: rgb(14 16 20 / .56); }
+.fcl__dialog {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(760px, 100%);
+  max-height: calc(100dvh - 48px);
+  border-radius: var(--es-radius-container, 16px);
+  background: var(--es-surface, #FFFFFF);
+  box-shadow: var(--es-shadow-float);
+  overflow: hidden;
+}
+.fcl__head { display: flex; align-items: center; justify-content: space-between; gap: var(--es-space-3, 12px); padding: var(--es-space-5, 20px) var(--es-space-5, 20px) var(--es-space-3, 12px); }
+.fcl__title { margin: 0; font-family: var(--es-font-display); font-size: var(--es-type-panel-title-size, 18px); font-weight: 800; letter-spacing: .005em; text-transform: uppercase; }
+.fcl__body {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: var(--es-space-6, 24px);
+  padding: 0 var(--es-space-5, 20px) var(--es-space-5, 20px);
+  overflow-y: auto;
+}
+.fcl__stage-wrap { display: grid; gap: var(--es-space-2, 8px); align-content: start; }
+/* Checkerboard = see-through. The stage is the square crop itself. */
+.fcl__stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--es-radius-control, 12px);
+  background-color: #FFFFFF;
+  background-image: linear-gradient(45deg, #E6E8EC 25%, transparent 25%), linear-gradient(-45deg, #E6E8EC 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #E6E8EC 75%), linear-gradient(-45deg, transparent 75%, #E6E8EC 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+  box-shadow: inset 0 0 0 1px var(--es-line-2);
+  cursor: grab;
+  touch-action: none;
+  overflow: hidden;
+}
+.fcl__stage.is-dragging { cursor: grabbing; }
+.fcl__stage:focus-visible { outline: var(--es-focus-outline); outline-offset: var(--es-focus-offset); }
+.fcl__canvas { display: block; width: 100%; height: 100%; }
+.fcl__help { margin: 0; color: var(--es-ink-3); font-size: var(--es-type-meta-size, 13px); text-align: center; }
+.fcl__side { display: grid; align-content: start; gap: var(--es-space-5, 20px); min-width: 0; }
+.fcl__field { gap: var(--es-space-2, 8px); }
+.fcl__zoom { display: flex; align-items: center; gap: var(--es-space-2, 8px); }
+.fcl__range { flex: 1 1 auto; min-width: 0; accent-color: var(--es-brand-fill, #0A6FDE); }
+.fcl__step { flex: none; }
+.fcl__fit { width: 100%; }
+.fcl__fit .es-segmented__item { flex: 1 1 0; }
+.fcl__previews { display: flex; gap: var(--es-space-3, 12px); }
+.fcl__preview { display: grid; justify-items: center; gap: var(--es-space-1, 4px); margin: 0; }
+.fcl__preview canvas { width: 64px; height: 64px; border-radius: 10px; }
+.fcl__preview.is-light canvas { background: #FFFFFF; box-shadow: inset 0 0 0 1px rgb(14 16 20 / .12); }
+.fcl__preview.is-dark canvas { background: #101114; box-shadow: inset 0 0 0 1px #2A2D34; }
+.fcl__preview figcaption { color: var(--es-ink-3); font-size: 12px; }
+.fcl__name { width: 100%; }
+.fcl__error { min-height: 0; margin: 0; color: var(--es-bad); font-size: var(--es-type-meta-size, 13px); line-height: 1.4; }
+.fcl__error:empty { display: none; }
+.fcl__foot { display: flex; justify-content: flex-end; gap: var(--es-space-2, 8px); padding: var(--es-space-3, 12px) var(--es-space-5, 20px); border-top: 1px solid var(--es-line); }
+
+html[data-theme="dark"] .fcl__dialog { background: var(--es-slate-800, #1F2126); box-shadow: 0 0 0 1px #3B4049; color: #FFFFFF; }
+html[data-theme="dark"] .fcl__stage { box-shadow: inset 0 0 0 1px #707A8C; }
+html[data-theme="dark"] .fcl__help,
+html[data-theme="dark"] .fcl__preview figcaption { color: #98A6BF; }
+html[data-theme="dark"] .fcl__error { color: var(--es-bad-on-dark, #FF8A8A); }
+html[data-theme="dark"] .fcl__foot { border-top-color: #2A2D34; }
+html[data-theme="dark"] .fcl .es-input { background: #2A2D34; box-shadow: inset 0 0 0 1px #707A8C; color: #FFFFFF; }
+
+@media (max-width: 640px) {
+  .flp__session { margin-left: var(--es-space-4, 16px); margin-right: var(--es-space-4, 16px); }
+  .fcl { padding: 0; }
+  .fcl[open] { place-items: end stretch; }
+  .fcl__dialog { width: 100%; max-height: 100dvh; border-radius: 16px 16px 0 0; }
+  .fcl__head, .fcl__foot { padding-left: var(--es-space-4, 16px); padding-right: var(--es-space-4, 16px); }
+  .fcl__body { grid-template-columns: minmax(0, 1fr); gap: var(--es-space-4, 16px); padding: 0 var(--es-space-4, 16px) var(--es-space-4, 16px); }
+  .fcl__stage-wrap { justify-self: center; width: min(100%, 320px); }
+  .fcl__foot .es-btn { flex: 1 1 0; }
+}
+.flp.is-only-custom .flp__status { padding-top: var(--es-space-3, 12px); }
