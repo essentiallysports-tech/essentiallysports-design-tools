@@ -4,6 +4,13 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-27 — Suhail (Claude, Agent ENGINE): Reels v3 works for any brief or script (branch release/reels3)
+- Status: committed on release/reels3, not pushed. $0 (code only).
+- `reel-es.js`: on-screen words from a script are always a contiguous excerpt and a complete phrase: `phraseFor` (the whole sentence up to 12 words / 60 chars, else its strongest clause: a figure, then a name; a cut never ends on a lead-in word, `DANGLE`), `phraseLines` (balanced lines, 20 chars x 3, a 4th at H2 for a whole sentence; Hype Cut 14 x 4). One emphasis per scene by code (`emphasisIn`: a figure, else a name, else the payoff word). Spelled numbers (`spelledNumber`, `figuresIn`: "four shots clear" -> 4 / SHOTS CLEAR, "twenty-fourth Grand Slam" -> 24TH, "started seventeenth" -> 17TH / STARTED) become statTiles (`statTilesFor`) in Receipts, Stat Card, Hype Cut (1 tile) and Game Tape (max 1). `blockForStyle(line, style)`; `subjectOf(script)` = Stat Card's kicker; statement blocks take a kicker. Hook pills with a marked word stay ink and split at it.
+- `reel-recipes.js applyStyle`: a script plan (plan.source 'script' or `{ reshape: true }`) is rebuilt scene by scene from its own voiceover in the style; voiceover unchanged.
+- `reel-lint.js`: spelled numbers in the script back the digits on tiles. Statement lines warn above 20 chars or 4 lines (was 14 / 3).
+- Tests: new `scripts/test-reel-briefs.mjs` (22: 5 briefs x 4 styles + figures + style differences; in `npm run test:reels`), test-reel-es updated. All reel tests pass except the accepted transcription-framework; `check-reels3-brand` 0 failures.
+
 ## 2026-11-28 — Suhail (Claude, sleeve-logo lane): ES sleeve logo on the merch photo mockups, wrapped round the sleeve (branch feature/sleeve-logo)
 - Status: committed on feature/sleeve-logo (base origin/main e4a04a0), not pushed. Files: merch-print.js, scripts/test-merch-v3.mjs, merch.html (only the merch-print.js cache key -> 20261128-sleeve1) (+ this entry). $0, no env vars, no AI. render() / renderLogo() byte-identical (Chrome guard, now also the 600x525 and 450x1800 sleeve files on white / black / navy).
 - Owner: the sleeve logo on our photo mockup looked very wrong (Fourthwall's own mockup is right). Before: a flat, straight, camera-facing wordmark strip (rot ~13 deg, ~1.6 in wide) near the sleeve's outer edge, unrelated to the print file.

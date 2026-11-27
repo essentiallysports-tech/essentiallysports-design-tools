@@ -84,7 +84,7 @@ await test('ES Reels is the default style for news reels; the other looks stay p
 await test('blocks: the seven kit blocks (plus the v3 blocks) with exactly their fields; anything else is dropped', () => {
   assert.deepEqual(E.BLOCK_TYPES, ['hook', 'statement', 'number', 'dots', 'compare', 'quote', 'endcard', 'photoCard', 'statTiles', 'dotGrid', 'streak', 'rankTile', 'tagPill', 'clipLabel']);
   assert.deepEqual(E.BLOCKS.hook.fields, ['media', 'pills', 'stamp', 'kicker']);
-  assert.deepEqual(E.BLOCKS.statement.fields, ['lines', 'media', 'top']);
+  assert.deepEqual(E.BLOCKS.statement.fields, ['lines', 'media', 'top', 'kicker']);
   assert.deepEqual(E.BLOCKS.number.fields, ['value', 'prefix', 'suffix', 'label', 'kicker', 'color']);
   assert.deepEqual(E.BLOCKS.dots.fields, ['count', 'highlight', 'label', 'note']);
   assert.deepEqual(E.BLOCKS.compare.fields, ['items', 'kicker']);
@@ -361,12 +361,13 @@ await test('lint: words outside the safe frame; more than 2 signal colours; long
   const boxes = [...R.textBoxes(measure, tlFar), { beat: 'x', role: 'line', text: 'GONE', x: 60, y: 1610, w: 300, h: 60 }, { beat: 'x', role: 'pill', text: 'WIDE', x: 20, y: 600, w: 300, h: 60 }];
   const r1 = L.lintTimeline(tlFar, { boxes, measure });
   assert.equal(r1.issues.filter(i => i.id === 'safe-frame' && i.severity === 'critical').length, 2, JSON.stringify(r1.issues));
-  assert.ok(r1.issues.some(i => i.id === 'copy' && /4 lines/.test(i.message)));
+  // cleanBlock keeps 4 lines; v3 allows a 4th line at H2, so 4 no longer warns.
+  assert.ok(!r1.issues.some(i => i.id === 'copy' && /4 lines/.test(i.message)));
   assert.ok(!E.checklist(r1.issues)[0].ok);
   assert.ok(E.outsideSafe({ x: 60, y: 260, w: 100, h: 60 }), 'above y 300');
   const loud = { ...STAT, beats: [{ ...STAT.beats[0], block: { type: 'hook', pills: [{ text: 'WIN', color: 'green' }, { text: 'LOSS', color: 'red' }], stamp: { text: 'WOW' } }, vo: 'Win, loss, *wow.*' }, STAT.beats[3]] };
   assert.ok(lintOf(loud).issues.some(i => i.id === 'signals' && i.severity === 'critical' && /3 signal/.test(i.message)));
-  const longs = { ...STAT, beats: [{ ...STAT.beats[0], block: { type: 'hook', pills: [{ text: 'A PILL THAT IS FAR TOO LONG' }] } }, { id: 'q', kind: 'quote', block: { type: 'quote', text: 'This is a quote that runs on for far longer than seventy characters, honestly.', who: '' }, vo: 'He said it.' }, { id: 's', kind: 'point', block: { type: 'statement', lines: [{ text: 'FIFTEEN LETTERS!' }] }, vo: 'Line.' }, STAT.beats[3]] };
+  const longs = { ...STAT, beats: [{ ...STAT.beats[0], block: { type: 'hook', pills: [{ text: 'A PILL THAT IS FAR TOO LONG' }] } }, { id: 'q', kind: 'quote', block: { type: 'quote', text: 'This is a quote that runs on for far longer than seventy characters, honestly.', who: '' }, vo: 'He said it.' }, { id: 's', kind: 'point', block: { type: 'statement', lines: [{ text: 'TWENTY-ONE LETTERS!!!' }] }, vo: 'Line.' }, STAT.beats[3]] };
   const r3 = lintOf(longs);
   ['pill', 'quote is', 'the line'].forEach(t => assert.ok(r3.issues.some(i => i.id === 'copy' && i.message.includes(t)), t));
   assert.ok(r3.issues.some(i => /doesn't say who/.test(i.message)));

@@ -204,6 +204,9 @@
     // roles…) and the plan-level eyebrow, series tag and data strip.
     const v2 = timeline.v === 2 && R.provenanceNumbers;
     const sourceSet = F.numberSet(`${timeline.corpus || ''} ${extraSources || ''}`);
+    // v3: a number the script spells out ("thirty-six", "twenty-fourth") backs
+    // the same figure shown as digits on a tile.
+    if (ES && ES.spelledNumbers) ES.spelledNumbers(`${timeline.corpus || ''} ${extraSources || ''} ${(timeline.beats || []).map(b => b.vo || '').join(' ')}`).forEach(n => sourceSet.add(n));
     // v2: a beat with no refs (hook, payoff) may use any fact of the data block;
     // a beat with refs only its own refs (so 2001 cannot borrow 2022's yards).
     const wholeData = v2 ? new Set([...sourceSet, ...F.numberSet(dataFacts(timeline))]) : sourceSet;

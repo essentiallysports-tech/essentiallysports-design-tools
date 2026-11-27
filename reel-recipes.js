@@ -244,7 +244,11 @@
   // its block when the style allows it, else takes the first block the style
   // allows that its own line can honestly fill, else a statement. Words never
   // change. Blocks the style cannot use are noted.
-  function applyStyle(plan, styleId) {
+  // A script plan (plan.source 'script', or opts.reshape) is rebuilt scene by
+  // scene from its own voiceover in the style (ReelES.blockForStyle): whole
+  // phrases, one emphasis, figures as tiles where the style shows data (within
+  // the style's max), never a changed word.
+  function applyStyle(plan, styleId, { reshape = null } = {}) {
     if (!ES || !ES.getStyle || !plan || !Array.isArray(plan.beats)) return { plan, notes: [], changed: [] };
     const style = ES.getStyle(styleId);
     const out = clone(plan);
@@ -252,6 +256,19 @@
     const changed = [];
     const allowed = new Set(style.blocks);
     const last = out.beats.length - 1;
+    if ((reshape == null ? plan.source === 'script' : reshape) && ES.blockForStyle) {
+      const room = { ...(style.max || {}) };
+      const subject = ES.subjectOf ? ES.subjectOf((plan.script && plan.script.text) || out.beats.map(b => b.vo || '').join(' ')) : '';
+      out.beats.forEach((beat, i) => {
+        if (!beat.vo || (i === last && typeOf(beat) === 'endcard')) return;
+        const block = ES.cleanBlock(ES.blockForStyle(beat.vo, style.id, { first: i === 0, room, subject }));
+        setBlock(beat, block);
+        changed.push(beat.id);
+      });
+      out.esStyle = style.id;
+      delete out.recipe;
+      return { plan: out, notes, changed };
+    }
     out.beats.forEach((beat, i) => {
       if (!beat.block) setBlock(beat, ES.blockOf(beat));
       const was = typeOf(beat);

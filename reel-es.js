@@ -172,7 +172,7 @@
   // director, number provenance and the lint keep working unchanged.
   const BLOCKS = {
     hook: { kind: 'hook', fields: ['media', 'pills', 'stamp', 'kicker'], label: 'Hook', media: true },
-    statement: { kind: 'point', fields: ['lines', 'media', 'top'], label: 'Statement', media: true },
+    statement: { kind: 'point', fields: ['lines', 'media', 'top', 'kicker'], label: 'Statement', media: true },
     number: { kind: 'stat', fields: ['value', 'prefix', 'suffix', 'label', 'kicker', 'color'], label: 'Number' },
     dots: { kind: 'dotrank', fields: ['count', 'highlight', 'label', 'note'], label: 'Dots' },
     compare: { kind: 'bars', fields: ['items', 'kicker'], label: 'Compare' },
@@ -246,6 +246,7 @@
       out.lines = (Array.isArray(b.lines) ? b.lines : []).slice(0, 4).map(l => (typeof l === 'string' ? { text: str(l, 40), color: 'ink' } : { text: str(l && l.text, 40), color: colorName(l && l.color) })).filter(l => l.text);
       if (Number.isFinite(Number(b.top)) && b.top !== '' && b.top != null) out.top = Math.max(300, Math.min(1100, Number(b.top)));
       if (b.media) out.media = str(b.media, 200);
+      if (str(b.kicker, 28)) out.kicker = str(b.kicker, 28);
     } else if (type === 'number') {
       const v = numOf(b.value);
       out.value = Number.isFinite(v) ? v : 0;
@@ -530,8 +531,10 @@
     const fit = at14.length <= LIMITS.pills ? { lines: at14, size: 0 } : { lines: headlineLines(text, 18, LIMITS.pills), size: 110 };
     // The pill holding the marked word is blue; with none marked, the last pill
     // (the kit's ink-then-blue stack).
-    const hit = fit.lines.findIndex(t => words(t).some(w => marks.has(bareWord(w))));
-    const blue = hit >= 0 ? hit : (fit.lines.length > 1 ? fit.lines.length - 1 : -1);
+    // v3: with a marked word, every pill is ink and only that word turns blue
+    // (the layout splits the pill at it); with none, the last pill is blue.
+    if (marks.size) return markLines(fit.lines, marks).map((t, i) => ({ text: t, color: 'ink', ...(fit.size && fit.lines[i].length > LIMITS.pillChars ? { size: fit.size } : {}) }));
+    const blue = fit.lines.length > 1 ? fit.lines.length - 1 : -1;
     return fit.lines.map((t, i) => ({ text: t, color: i === blue ? 'blue' : 'ink', ...(fit.size && t.length > LIMITS.pillChars ? { size: fit.size } : {}) }));
   }
   // Sentences, keeping every character: joined back with single spaces they
@@ -567,7 +570,7 @@
       const who = (plain.match(/([A-Z][a-z'’.-]+(?:\s+[A-Z][a-z'’.-]+){0,2})\s+(?:said|says|told|added|admitted)\b/) || plain.match(/\b(?:said|says)\s+([A-Z][a-z'’.-]+(?:\s+[A-Z][a-z'’.-]+){0,2})/) || [])[1] || '';
       return { type: 'quote', text: quoted[1].trim().replace(/[,;:]$/, ''), who: who.toUpperCase() };
     }
-    if (first) return { type: 'hook', pills: hookPills(headline(quoted ? quoted[1] : plain, 8)) };
+    if (first) { const list = phraseFor(quoted ? quoted[1] : plain, { maxWords: 8, maxChars: 42 }); return { type: 'hook', pills: hookPills(markIdx(list, emphasisIn(list)).join(' ')) }; }
     const scale = plain.match(/\b(\d{1,3}(?:,\d{3})*|\d+)\s+(?:in|out of)\s+(?:every\s+)?(\d{1,3}(?:,\d{3})+|\d+)\b/i);
     if (scale) {
       const hi = Number(scale[1].replace(/,/g, ''));
@@ -592,8 +595,10 @@
       const kicker = headline(plain.slice(0, big.index), 4);
       return { type: 'number', value: Number(big[2].replace(/,/g, '')), prefix: big[1], suffix: unit.length <= 2 ? unit.toUpperCase() : '', label: labelAfter(plain, big.index + big[0].length, 3), kicker: words(kicker).length >= 2 ? kicker : '', color: 'blue', display: `${big[1]}${big[2]}${unit.length <= 2 ? unit.toUpperCase() : ''}` };
     }
-    const lines = headlineLines(headline(plain, 8), LIMITS.lineChars, LIMITS.lines);
-    return { type: 'statement', lines: markLines(lines, marksIn(line)).map(t => ({ text: t, color: 'ink' })) };
+    // v3: a complete phrase (the sentence, or its strongest clause), one emphasis.
+    const own = marksIn(line);
+    const lines = own.size ? markLines(phraseFor(line).length ? splitLines(phraseFor(line).join(' '), 20) : [], own) : phraseLines(line);
+    return { type: 'statement', lines: lines.map(t => ({ text: t, color: 'ink' })) };
   }
   // The words a text marks with *asterisks* (lower case, bare).
   const bareWord = w => String(w || '').toLowerCase().replace(/[^a-z0-9%$#'’.-]/g, '').replace(/[.]+$/, '');
@@ -606,6 +611,198 @@
   function markLines(lines, marks) {
     if (!marks || !marks.size) return lines.slice();
     return lines.map(l => words(l).map(w => (marks.has(bareWord(w)) ? `*${w}*` : w)).join(' '));
+  }
+  // ─── v3: any script, honest on-screen words (code only, $0) ────────────
+  // On-screen words are always a contiguous excerpt of the script (plus
+  // *emphasis*), a complete phrase that never ends on a word that leads
+  // into the next. Numbers, spelled out or not, become data where a style
+  // can show them. The voiceover is never touched.
+  const DANGLE = new Set(['the', 'a', 'an', 'on', 'in', 'of', 'to', 'as', 'at', 'for', 'and', 'but', 'or', 'nor', 'with', 'by', 'from', 'into', 'onto', 'about', 'after', 'before', 'over', 'under', 'than', 'like', 'since', 'his', 'her', 'their', 'its', 'our', 'your', 'my', 'this', 'that', 'these', 'those', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'has', 'have', 'had', 'will', 'would', 'could', 'should', 'can', 'may', 'very', 'just', 'so', 'then', 'when', 'where', 'who', 'whom', 'which', 'what', 'if', 'says', 'said', 'say']);
+  const bareLow = w => String(w || '').toLowerCase().replace(/^[^a-z0-9$#]+|[^a-z0-9%]+$/g, '');
+  const trimDangle = list => { const out = list.slice(); while (out.length > 1 && DANGLE.has(bareLow(out[out.length - 1]))) out.pop(); while (out.length > 1 && /^(?:and|but|so|then|or)$/.test(bareLow(out[0]))) out.shift(); return out; };
+  const UNIT_WORDS = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19 };
+  const TEN_WORDS = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+  const ORD_WORDS = { second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9, tenth: 10, eleventh: 11, twelfth: 12, thirteenth: 13, fourteenth: 14, fifteenth: 15, sixteenth: 16, seventeenth: 17, eighteenth: 18, nineteenth: 19, twentieth: 20, thirtieth: 30, fortieth: 40, fiftieth: 50 };
+  const ordSuffix = n => { const t = n % 100; if (t >= 11 && t <= 13) return 'TH'; return ({ 1: 'ST', 2: 'ND', 3: 'RD' })[n % 10] || 'TH'; };
+  // A spelled number word ("four", "thirty-six", "twenty-fourth", "seventeenth")
+  // -> { value, ordinal } or null. One and first are words, not figures.
+  function spelledNumber(word) {
+    const w = bareLow(word);
+    if (!w) return null;
+    if (UNIT_WORDS[w] != null) return { value: UNIT_WORDS[w], ordinal: false };
+    if (TEN_WORDS[w] != null) return { value: TEN_WORDS[w], ordinal: false };
+    if (ORD_WORDS[w] != null) return { value: ORD_WORDS[w], ordinal: true };
+    const m = w.match(/^([a-z]+)-([a-z]+)$/);
+    if (m && TEN_WORDS[m[1]] != null) {
+      const unit = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 }[m[2]];
+      const ord = { first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6, seventh: 7, eighth: 8, ninth: 9 }[m[2]];
+      if (unit) return { value: TEN_WORDS[m[1]] + unit, ordinal: false };
+      if (ord) return { value: TEN_WORDS[m[1]] + ord, ordinal: true };
+    }
+    return null;
+  }
+  // The numbers spelled out in a text, as digits ("thirty-six" -> "36"): the
+  // lint adds them to the sources, so a tile showing 36 is backed by the script.
+  function spelledNumbers(text) {
+    return words(text).map(spelledNumber).filter(Boolean).map(n => String(n.value));
+  }
+  const isNumberWord = w => /\d/.test(w) || Boolean(spelledNumber(w));
+  // Figures in a line (digits or spelled), each with the words that name it:
+  // up to three words after it (to the next punctuation, no dangling end), else
+  // the verb before it ("started seventeenth" -> 17TH / STARTED).
+  function figuresIn(line) {
+    const list = words(plainVo(line).replace(/[“”"]/g, ''));
+    const out = [];
+    list.forEach((w, i) => {
+      const bare = w.replace(/[^\w$%.,'’-]/g, '').replace(/[.,]+$/, '');
+      let display = '';
+      const sp = spelledNumber(w);
+      if (sp) display = sp.ordinal ? `${sp.value}${ordSuffix(sp.value)}` : String(sp.value);
+      else if (/^\$?\d[\d,.]*(?:%|[KMB])?$/i.test(bare) && !(/^(?:19|20)\d\d$/.test(bare))) display = bare.toUpperCase();
+      if (!display) return;
+      if (/[.!?]$/.test(w) && !sp && list[i + 1] == null) { /* a figure that ends the line */ }
+      const after = [];
+      if (!/[,;:.!?]$/.test(w)) {
+        for (let j = i + 1; j < list.length && after.length < 3; j += 1) {
+          const nw = list[j];
+          if (isNumberWord(nw)) break;
+          after.push(nw.replace(/[,;:.!?”"]+$/, ''));
+          if (/[,;:.!?]$/.test(nw)) break;
+        }
+      }
+      let label = after.length && (DANGLE.has(bareLow(after[0])) || /^(?:or|nor)$/.test(bareLow(after[0]))) ? [] : trimDangle(after);
+      let before = false;
+      if (!label.length && i > 0 && !DANGLE.has(bareLow(list[i - 1])) && !/[,;:.!?]$/.test(list[i - 1])) { label = [list[i - 1]]; before = true; }
+      if (!label.length || DANGLE.has(bareLow(label[label.length - 1]))) return;
+      out.push({ index: i, display, label: label.join(' ').replace(/[^\w\s'’%-]/g, '').toUpperCase(), spelled: Boolean(sp), labelBefore: before });
+    });
+    return out;
+  }
+  // Proper nouns (capitalised, not the sentence's first word unless a name follows).
+  function properRuns(list) {
+    const runs = [];
+    let run = [];
+    list.forEach((w, i) => {
+      const clean = w.replace(/^[“"(]+|[”"),.;:!?]+$/g, '');
+      const cap = /^[A-Z][a-zA-Z'’.-]+$/.test(clean) && clean !== 'I';
+      const sentenceStart = i === 0 || /[.!?]$/.test(list[i - 1]);
+      if (cap && (!sentenceStart || /^[A-Z]/.test(String(list[i + 1] || '')) || run.length)) { run.push(i); if (/[,.;:!?]$/.test(w)) { runs.push(run); run = []; } } else { if (run.length) runs.push(run); run = []; }
+    });
+    if (run.length) runs.push(run);
+    return runs;
+  }
+  // The scene's one emphasis: a figure, else a proper noun (up to two words),
+  // else the longest key word. Returns word indexes into the list.
+  function emphasisIn(list) {
+    const fig = list.findIndex(isNumberWord);
+    if (fig >= 0) return [fig];
+    const runs = properRuns(list);
+    if (runs.length) { const r = runs.sort((a, b) => b.length - a.length)[0]; return r.slice(-2); }
+    // The payoff word: the last key word of the phrase (not a helper verb).
+    let best = -1;
+    list.forEach((w, i) => { const b = bareLow(w); if (b.length >= 4 && !DANGLE.has(b) && !STOP.has(b) && !WEAK_KEY.has(b)) best = i; });
+    return best >= 0 ? [best] : [];
+  }
+  const WEAK_KEY = new Set(['does', 'did', 'done', 'doing', 'goes', 'went', 'gone', 'keep', 'keeps', 'kept', 'make', 'makes', 'made', 'gets', 'got', 'take', 'takes', 'took', 'come', 'comes', 'came', 'want', 'wants', 'said', 'says', 'tell', 'tells', 'told', 'still', 'even', 'also', 'every', 'there', 'here', 'they', 'them', 'were', 'been', 'have', 'into', 'about', 'some', 'same', 'more', 'most', 'much', 'many', 'only', 'ever', 'never', 'again', 'anyway']);
+  const markIdx = (list, idx) => list.map((w, i) => (idx.includes(i) ? `*${w.replace(/^\*|\*$/g, '')}*` : w));
+  // The strongest complete phrase of a line, at most maxWords / maxChars: the
+  // whole sentence when it fits, else its best clause (a figure, then a name,
+  // then length). Returns the words, as written, trailing punctuation off.
+  function phraseFor(line, { maxWords = 12, maxChars = 60 } = {}) {
+    const text = plainVo(line).replace(/[“”"]/g, '').replace(/\s+/g, ' ').trim();
+    const sentences = scriptSentences(text).map(x => words(x.replace(FILLER_START, '')));
+    // Clauses end at punctuation (a natural end: kept as is) or before a
+    // conjunction (a cut: trimmed so it never ends on a lead-in word).
+    const clauses = [];
+    sentences.forEach(sw => {
+      clauses.push({ w: sw, cut: false });
+      let cur = [];
+      sw.forEach((w, i) => {
+        if (cur.length >= 3 && /^(?:and|but|so|while|because|when|though|although|then)$/i.test(w)) { clauses.push({ w: cur, cut: true }); cur = []; }
+        cur.push(w);
+        if (/[,;:—–]$/.test(w) && i < sw.length - 1) { clauses.push({ w: cur, cut: false }); cur = []; }
+      });
+      if (cur.length && cur.length < sw.length) clauses.push({ w: cur, cut: false });
+    });
+    const tidy = c => { const l = c.w.map(w => w.replace(/[,;:—–]+$/, '')); const t = c.cut ? trimDangle(l) : l; return t.map((w, i, arr) => (i === arr.length - 1 ? w.replace(/[.!?…]+$/, '') : w)); };
+    const fits = l => l.length <= maxWords && l.join(' ').length <= maxChars;
+    const score = l => (l.some(isNumberWord) ? 4 : 0) + (properRuns(l).length ? 2 : 0) + Math.min(l.length, 8) / 8;
+    const all = clauses.map(tidy).filter(l => l.length >= 2 || (l.length === 1 && sentences.length === 1));
+    const ok = all.filter(fits);
+    if (ok.length) return ok.sort((x, y) => score(y) - score(x))[0];
+    // Nothing fits: the shortest complete clause (the layout steps the type
+    // down), and only past 16 words a cut that never ends on a lead-in word.
+    const shortest = all.slice().sort((x, y) => x.join(' ').length - y.join(' ').length)[0] || words(text);
+    return shortest.length <= 16 ? shortest : trimDangle(shortest.slice(0, maxWords));
+  }
+  // Lines of at most `max` characters, balanced (no one-word tail when a
+  // fairer break exists).
+  function balancedLines(list, max) {
+    const greedy = splitLines(list.join(' '), max);
+    const k = greedy.length;
+    if (k <= 1) return greedy;
+    let best = null;
+    const walk = (from, left, acc) => {
+      if (left === 1) { const l = list.slice(from).join(' '); if (l.length <= max || !best) { const lines = [...acc, l]; const worst = Math.max(...lines.map(x => x.length)); const spread = worst - Math.min(...lines.map(x => x.length)); if (lines.every(x => x.length <= max) && (!best || spread < best.spread)) best = { lines, spread }; } return; }
+      for (let i = from + 1; i <= list.length - left + 1 - 0; i += 1) { const l = list.slice(from, i).join(' '); if (l.length > max) break; walk(i, left - 1, [...acc, l]); }
+    };
+    if (list.length <= 16) walk(0, k, []);
+    return best ? best.lines : greedy;
+  }
+  // Statement lines from a phrase: lines of up to `max` characters (3 at most;
+  // a longer phrase falls back to its strongest clause), with its one emphasis.
+  function phraseLines(line, { max = 20, n = 3, maxWords = 12 } = {}) {
+    let list = phraseFor(line, { maxWords, maxChars: max * n });
+    let lines = balancedLines(list, max);
+    // Too long for this shape: the wider statement shape (20 x 3), then 24 x 4 at H2.
+    if (lines.length > n) { list = phraseFor(line, { maxWords: 12, maxChars: 60 }); lines = balancedLines(list, 20); }
+    // (A 4th line at H2 is allowed for a whole sentence; never a cut phrase.)
+    const marked = markIdx(list, emphasisIn(list));
+    let k = 0;
+    return lines.map(l => { const c = words(l).length; const part = marked.slice(k, k + c).join(' '); k += c; return part; });
+  }
+  // statTiles for a line with figures (at most `max` tiles), the words before
+  // the first figure as its title when they make a phrase. null when none.
+  function statTilesFor(line, { max = 2 } = {}) {
+    const figs = figuresIn(line).slice(0, max);
+    if (!figs.length) return null;
+    const list = words(plainVo(line).replace(/[“”"]/g, ''));
+    const before = trimDangle(list.slice(0, figs[0].index - (figs[0].labelBefore ? 1 : 0)).map(w => w.replace(/[,;:—–]+$/, '')));
+    const startsLine = !before.length || /[.!?]$/.test(list[figs[0].index - 1] || '.');
+    const title = !startsLine && before.length >= 2 && !DANGLE.has(bareLow(before[before.length - 1])) ? markIdx(before, emphasisIn(before)).join(' ') : '';
+    return { type: 'statTiles', ...(title ? { title } : {}), tiles: figs.map((f, i) => ({ value: f.display, label: f.label, tone: i === 0 ? 'blue' : 'ink' })) };
+  }
+  // The block a beat of script becomes in a v3 style (code only).
+  // The reel's subject: the longest name (two or more capitalised words) in a
+  // script, as written. Stat Card carries it as the kicker pill of its cards.
+  function subjectOf(script) {
+    const lw = words(plainVo(script).replace(/[“”"]/g, ''));
+    const runs = properRuns(lw).filter(r => r.length >= 2);
+    if (!runs.length) return '';
+    const r = runs.sort((a, b) => b.length - a.length || a[0] - b[0])[0];
+    return r.map(i => lw[i].replace(/[^\w'’.-]/g, '').replace(/[.]+$/, '')).join(' ').toUpperCase().slice(0, 28);
+  }
+  function blockForStyle(line, styleId, { first = false, room = {}, subject = '' } = {}) {
+    const st = TH.getStyle(styleId);
+    const plain = plainVo(line);
+    if (first) {
+      const q = plain.match(/[“"]([^”"]{4,})[”"]/);
+      const list = phraseFor(q ? q[1] : line, { maxWords: 8, maxChars: 42 });
+      const pills = hookPills(markIdx(list, emphasisIn(list)).join(' '));
+      return { type: 'hook', pills };
+    }
+    const quoted = plain.match(/[“"]([^”"]{4,})[”"]/);
+    if (quoted && quoted[1].length <= LIMITS.quoteChars && st.blocks.includes('quote')) return cleanBlock(blockForLine(line));
+    if (st.blocks.includes('statTiles') && (room.statTiles == null || room.statTiles > 0)) {
+      const tiles = statTilesFor(line, { max: styleId === 'hypecut' ? 1 : 2 });
+      if (tiles) { if (room.statTiles != null) room.statTiles -= 1; if (styleId === 'statcard' && subject) tiles.kicker = subject; return tiles; }
+    }
+    const kinetic = st.kinetic;
+    const lines = phraseLines(line, kinetic ? { max: 14, n: 4, maxWords: 10 } : { max: 20, n: 3 });
+    const out = { type: 'statement', lines: lines.map(t => ({ text: t, color: 'ink' })) };
+    // Stat Card: the reel's subject rides as the kicker pill of every card.
+    if (styleId === 'statcard' && subject && !lines.join(' ').replace(/\*/g, '').toUpperCase().includes(subject)) out.kicker = subject;
+    return out;
   }
   // opts: { title, sport, voLengthSec, sourceLine, format }
   function scriptToPlan(script, opts = {}) {
@@ -999,6 +1196,7 @@
       }
       if (graphic.media && full) clearFace(ops.filter(o => o.role === 'pill' || o.role === 'stamp'));
     } else if (block.type === 'statement') {
+      if (block.kicker) kickerOp(block.kicker);
       const lines = (block.lines || []).map(l => ({ ...l, toks: emTokens(l.text) }));
       const lineColor = l => (l.color === 'yellow' || l.color === 'white' ? 'ink' : l.color);
       const top0 = block.top != null ? block.top * K : geo.slots.head;
@@ -1959,8 +2157,9 @@
       if (b.type === 'hook' && !(b.pills || []).length) out.push(issue('copy', 'critical', `${label(i)}: the hook has no pills.`, 'Add one to three short pills that state the tension.', g.beat));
       if (b.type === 'statement') {
         if (!(b.lines || []).length) out.push(issue('copy', 'critical', `${label(i)}: the statement has no lines.`, 'Add one to three short lines.', g.beat));
-        if ((b.lines || []).length > LIMITS.lines) out.push(issue('copy', 'warning', `${label(i)}: ${b.lines.length} lines. A statement has 1 to 3.`, 'Cut a line, or make it two scenes.', g.beat));
-        (b.lines || []).forEach(l => { if (plainVo(l.text).length > LIMITS.lineChars) out.push(issue('copy', 'warning', `${label(i)}: the line “${l.text.slice(0, 24)}” is ${l.text.length} characters. Keep lines under ${LIMITS.lineChars}.`, 'Shorten it or split it.', g.beat)); });
+        if ((b.lines || []).length > LIMITS.lines + 1) out.push(issue('copy', 'warning', `${label(i)}: ${b.lines.length} lines. A statement has 1 to 3 (4 at H2 for a whole sentence).`, 'Cut a line, or make it two scenes.', g.beat));
+        // v3: a whole phrase steps down to H2, which holds about 20 characters a line.
+        (b.lines || []).forEach(l => { if (plainVo(l.text).length > 20) out.push(issue('copy', 'warning', `${label(i)}: the line “${l.text.slice(0, 24)}” is ${plainVo(l.text).length} characters. Keep lines to about 20 (the H2 step).`, 'Shorten it or split it.', g.beat)); });
       }
       if (b.type === 'quote') {
         if (b.text.length > LIMITS.quoteChars) out.push(issue('copy', 'warning', `${label(i)}: the quote is ${b.text.length} characters. Keep it under ${LIMITS.quoteChars}.`, 'Use the strongest part of what they said, word for word.', g.beat));
@@ -2063,6 +2262,7 @@
     // Reels Studio v3
     TYPE_SCALE, STEP_NAMES, SCALE_STEPS, SPACE, GRID, PILL_SIZES, PILL_CHARS, ELEMENT_LIMITS, GREY, KNOWN_OPS,
     STYLES: TH.STYLES, STYLE_IDS: TH.STYLE_IDS, DEFAULT_STYLE: TH.DEFAULT_STYLE, styleOf: TH.styleOf, legacyStyle: TH.legacyStyle, isStyle: TH.isStyle, getStyle: TH.getStyle, hasClips: TH.hasClips,
+    phraseFor, phraseLines, subjectOf, balancedLines, figuresIn, statTilesFor, blockForStyle, spelledNumber, spelledNumbers, emphasisIn, DANGLE,
     snapStep, stepName, onScale, pickStep, pillMetricsAt, pillClass, focusBox, faceBox, focusCrop, tileNumber, elementsOf, v3Checks, showsMark, marksIn, markLines, emTokens,
   };
 }));
