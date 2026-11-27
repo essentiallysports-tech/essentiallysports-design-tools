@@ -137,15 +137,12 @@ t('entry panel: the data row plus every format in place, wired for expand/collap
   assert.match(open, /data-gformat="top5"[^>]*aria-current="true"/);
 });
 
-t('page: Game, Clip and Player are Start tiles (the gallery and its entry panel are retired)', () => {
-  assert.match(js, /\{ id: 'game', [^}]*format: 'gameswing' \}/);
-  assert.match(js, /\{ id: 'clip', [^}]*format: 'replay' \}/);
-  assert.match(js, /\{ id: 'player', [^}]*format: 'archive' \}/);
-  // A tile keeps the data-gformat hook and says "Soon" until its server modes are on.
-  assert.match(js, /data-start="\$\{tile\.id\}"\$\{tile\.format \? ` data-gformat="\$\{tile\.format\}"` : ''\}/);
-  assert.match(js, /G\.formatStatus\(tile\.format, state\.config\.formatModes\) !== 'ready'/);
-  assert.match(js, /if \(tile\.format\) \{ pickFormat\(tile\.format\); return; \}/);
+t('page (v3): no Start tiles and no gallery; the data formats still open in their own source pane', () => {
+  // Reels Studio v3: Create has one prompt card and four style cards; the Game / Clip / Player
+  // tiles are gone. A data reel (opened from elsewhere) still uses the source pane and pickFormat.
+  assert.ok(!/id="rm-fmt-entry"/.test(html), 'the Start tiles are retired');
   assert.doesNotMatch(js, /setEntryOpen|onEntryClick|G\.entryHtml|G\.galleryHtml/, 'no gallery code left in the page');
+  assert.match(js, /function pickFormat\(/, 'data formats can still be opened');
   ['reel-gallery.js', 'reel-maker.js', 'reel-maker.css'].forEach(f => assert.ok(new RegExp(f.replace(/\./g,'\\.')+'\\?v=[\\w-]+').test(html), `${f} cache key`));
 });
 
@@ -309,15 +306,15 @@ t('page: script tags, panes, steps and tour targets', () => {
   order.forEach(i => assert.ok(i > 0));
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'script load order');
   assert.match(html, /reel-maker\.css\?v=[\w-]+/);
-  for (const id of ['rm-pane-source', 'rm-fmt-entry', 'rm-data-story', 'rm-data-review', 'rm-view', 'rm-slidenav', 'rm-carousel-out', 'rm-export-carousel']) assert.ok(html.includes(`id="${id}"`), id);
-  assert.equal((html.match(/data-dataflow/g) || []).length, 0, 'three steps for every reel: the source is picked on the Start screen');
+  for (const id of ['rm-pane-source', 'rm-data-story', 'rm-data-review', 'rm-view', 'rm-slidenav', 'rm-carousel-out', 'rm-export-carousel']) assert.ok(html.includes(`id="${id}"`), id);
+  assert.equal((html.match(/data-dataflow/g) || []).length, 0, 'three steps for every reel');
   assert.match(html, /<nav class="rm-steps" id="rm-steps"/, 'existing tour target stays');
   const notes = JSON.parse(readFileSync(path.join(root, 'tours/updates.json'), 'utf8'));
   const entry = notes.entries.find(e => e.id === '2026-11-19-reels-fmt-ui');
   assert.ok(entry && !entry.draft, 'release note');
-  entry.items.filter(i => i.target).forEach(i => assert.ok(html.includes(`id="${i.target.slice(1)}"`), i.target));
-  // Reels 2.0: the page loads the recipes, the storyboard and the accessibility module before the page script.
-  ['reel-recipes.js', 'reel-storyboard.js', 'reel-a11y.js'].forEach(f => assert.ok(html.indexOf(`src="${f}`) > 0 && html.indexOf(`src="${f}`) < html.indexOf('src="reel-maker.js'), f));
+  entry.items.filter(i => i.target && !['#rm-fmt-entry'].includes(i.target)).forEach(i => assert.ok(html.includes(`id="${i.target.slice(1)}"`), i.target));
+  // The page loads the storyboard (scene strip) and the accessibility module before the page script (v3: recipes are retired).
+  ['reel-storyboard.js', 'reel-a11y.js'].forEach(f => assert.ok(html.indexOf(`src="${f}`) > 0 && html.indexOf(`src="${f}`) < html.indexOf('src="reel-maker.js'), f));
 });
 
 t('page: news flow untouched; data flow reads formatModes and falls back gracefully', () => {

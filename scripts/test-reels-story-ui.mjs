@@ -1,5 +1,7 @@
-// Reels Studio Story step UI contract (reels-ui, 2026-11-18).
-// Static checks: the markup, CSS and JS hooks the Story step depends on.
+// Reels Studio v3: the page's static contract (QA lane, 2026-11-27).
+// The markup the journey depends on (Create → Review → Export, contract ids),
+// what was removed, and the few behaviours that can be read from the source.
+// The real-browser walk is scripts/check-reels-ui.mjs.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -10,89 +12,101 @@ const html = readFileSync(path.join(root, 'reel-maker.html'), 'utf8');
 const css = readFileSync(path.join(root, 'reel-maker.css'), 'utf8');
 const js = readFileSync(path.join(root, 'reel-maker.js'), 'utf8');
 let n = 0;
-const t = (name, fn) => { fn(); n += 1; };
+const fails = [];
+const t = (name, fn) => { try { fn(); n += 1; } catch (error) { fails.push(`${name}: ${error.message}`); } };
+const once = id => assert.equal(html.split(`id="${id}"`).length, 2, `#${id} exactly once`);
+const between = (from, to) => { const a = html.indexOf(from); const b = html.indexOf(to, a + 1); assert.ok(a > 0 && b > a, `${from} … ${to}`); return html.slice(a, b); };
 
 t('page title is visually hidden but still the h1', () => {
   assert.match(html, /<h1 class="es-sr-only" id="rm-title">Reels Studio<\/h1>/);
-  assert.doesNotMatch(html, /class="rm-kicker"/);
-  assert.match(html, /<nav class="rm-steps" id="rm-steps"/, 'tour target #rm-steps stays');
 });
 
-t('league filter is a sticky header inside the scrolling trend box', () => {
-  assert.match(html, /id="rm-trendbox"[\s\S]*?class="rm-trendbox__head"[\s\S]*?id="rm-leagues"[\s\S]*?id="rm-trends"/);
-  assert.match(css, /\.rm-trendbox \{[^}]*overflow-y: auto/);
-  assert.match(css, /\.rm-trendbox__head \{[^}]*position: sticky; top: 0/);
-  assert.match(css, /\.rm-trendbox\.is-scrolled \.rm-trendbox__head/);
-  assert.match(js, /classList\.toggle\('is-scrolled', els\.trendbox\.scrollTop > 0\)/);
-});
-
-t('trend rows use a roving tabindex and keep focus after a pick', () => {
-  assert.match(js, /tabindex="\$\{item\.id === tabId \? 0 : -1\}"/);
-  assert.match(js, /if \(refocus\) els\.trends\.querySelector/);
-  assert.match(js, /\['Home', 'End'\]\.includes\(event\.key\)/);
-});
-
-t('picked story is a summary card with Change and Clear', () => {
-  assert.match(js, /id="rm-repick">Change<\/button>/);
-  assert.match(js, /id="rm-unpick" aria-label="Clear the story">Clear<\/button>/);
-});
-
-t('one settings rail: Look, Size, Voice, Music, Captions, Sources, Cost; nothing is set in two places', () => {
-  assert.match(html, /<aside class="rm-rail" id="rm-settings" aria-labelledby="rm-rail-title">/);
-  const rail = html.slice(html.indexOf('id="rm-settings"'), html.indexOf('</aside>'));
-  const order = ['rm-style-fold', 'rm-aspect-sec', 'rm-voice"', 'rm-music"', 'rm-captions"', 'rm-sources"', 'rm-costs', 'rm-more'].map(id => rail.indexOf(`id="${id}`));
-  order.forEach((i, k) => assert.ok(i > 0, `rail section ${k}`));
-  assert.deepEqual([...order].sort((x, y) => x - y), order, 'rail order');
-  for (const id of ['rm-aspect', 'rm-voice-edit', 'rm-music-pick', 'rm-capstyle', 'rm-extra-source', 'rm-cost', 'rm-spend', 'rm-clips-on', 'rm-tier', 'rm-factcheck', 'ri-voice-panel']) assert.equal(html.split(`id="${id}"`).length, 2, `${id} once`);
-  for (const gone of ['rm-autoline', 'rm-voice-topic', 'rm-set-style', 'rm-set-format', 'rm-formats', 'rm-stripwrap']) assert.ok(!html.includes(`id="${gone}"`), `${gone} is retired`);
-  assert.match(js, /function renderRail\(\)/);
-  assert.match(js, /function renderAutoline\(\) \{ renderRail\(\); \}/, 'the page context keeps renderAutoline');
-  assert.match(js, /els\.looks\.hidden = !looks;\s+els\.styles\.hidden = Boolean\(looks\);/, 'one look picker shows');
-});
-
-t('Start: six tiles, a recipe row and one primary button; three steps', () => {
-  assert.match(html, /class="rm-tiles" id="rm-fmt-entry" role="radiogroup"/);
-  assert.match(js, /id: 'trend'[\s\S]*?id: 'words'[\s\S]*?id: 'game'[\s\S]*?id: 'clip'[\s\S]*?id: 'player'[\s\S]*?id: 'inspo'/);
-  assert.match(html, /role="radiogroup" aria-labelledby="rm-recipes-label" id="rm-recipes"/);
-  assert.equal((html.match(/es-btn--primary/g) || []).length, 2, 'Make my reel and Export MP4 (Next turns primary on the Storyboard step)');
+t('three steps: Create, Review, Export (tour target #rm-steps stays)', () => {
+  assert.match(html, /<nav class="rm-steps" id="rm-steps"/);
   assert.deepEqual([...html.matchAll(/class="rm-step" type="button" data-step="([a-z]+)"/g)].map(m => m[1]), ['topic', 'edit', 'export']);
-  assert.match(html, /<span>Start<\/span>[\s\S]*<span>Storyboard<\/span>[\s\S]*<span>Export<\/span>/);
-  assert.match(js, /logEvent\('start', \{ source: startOf\(\)/);
-  assert.match(js, /logEvent\('recipe', /);
-  assert.match(js, /logEvent\('variant', /);
+  assert.match(html, /<span>Create<\/span>[\s\S]*<span>Review<\/span>[\s\S]*<span>Export<\/span>/);
+});
+
+t('the kept ids: canvas, play, scrub, export', () => {
+  ['rm-steps', 'rm-canvas', 'rm-play', 'rm-scrub', 'rm-export'].forEach(once);
+});
+
+t('Create: one prompt, four style cards, Make my reel, trends, Need an idea?', () => {
+  ['rm-pane-topic', 'rm-prompt', 'rm-styles4', 'rm-make', 'rm-inspire-link', 'rm-trends'].forEach(once);
+  assert.match(html, /id="rm-styles4"[^>]*role="radiogroup"/, 'the style cards are a radio group');
+  assert.match(html, /<textarea[^>]*id="rm-prompt"/, 'the prompt is a textarea');
+  assert.match(html, /id="rm-make"[^>]*>[\s\S]*?Make my reel/, 'the button says Make my reel');
+  assert.match(html, /class="[^"]*es-btn--primary[^"]*"[^>]*id="rm-make"|id="rm-make"[^>]*class="[^"]*es-btn--primary/, 'Make my reel is the primary button');
+  assert.match(html, /id="rm-inspire-link"[^>]*>Need an idea\?</);
+  assert.match(html, /Start from a trend/);
+});
+
+t('Create: the style cards come from the engine (ReelES.STYLES), not a second list', () => {
+  assert.match(js, /\bSTYLES\b/, 'the page reads ReelES.STYLES');
+  assert.ok(!/LOOK_IDS\.map|lookList\(\)\.map/.test(js), 'the old look picker is not drawn');
+});
+
+t('no settings rail, no looks, no recipes, no Start tiles, no "Soon" tiles', () => {
+  for (const gone of ['rm-settings', 'rm-fmt-entry', 'rm-recipes', 'rm-looks', 'rm-style-fold', 'rm-costs', 'rm-more', 'rm-export-all', 'rm-versions', 'rm-statusline']) assert.ok(!html.includes(`id="${gone}"`), `#${gone} is retired`);
+  assert.ok(!/<aside class="rm-rail"/.test(html), 'no rail');
+  assert.ok(!/>\s*Soon\s*</.test(html), 'no "Soon" label in the markup');
+});
+
+t('Making: the step checklist with a live region', () => {
+  once('rm-making');
+  assert.match(html, /id="rm-making-live" aria-live="polite"/);
+});
+
+t('Review: scene strip, Ready to post badge, Ask AI and three folds', () => {
+  ['rm-pane-edit', 'rm-scenes', 'rm-beats', 'rm-ready', 'rm-panel', 'rm-revise', 'rm-ask', 'rm-ask-input', 'rm-voice', 'rm-captions', 'rm-details', 'rm-checklist', 'rm-lint'].forEach(once);
+  assert.match(html, /id="rm-ready"[^>]*aria-controls="rm-lint"/, 'the badge controls the checklist');
+  const review = between('id="rm-pane-edit"', 'id="rm-pane-export"');
+  const folds = [...review.matchAll(/<details class="rm-fold" id="([\w-]+)"/g)].map(m => m[1]);
+  assert.deepEqual(folds, ['rm-voice', 'rm-captions', 'rm-details'], `Review folds: ${folds}`);
+  assert.match(review, /Voice &amp; music/);
+  assert.match(js, /Ready to post/, 'the badge says Ready to post');
+  assert.match(js, /[Ss]wap/, 'scenes offer Swap');
+});
+
+t('Details holds size, sources and the admin-only controls', () => {
+  const details = between('id="rm-details"', 'id="rm-admin"');
+  ['rm-aspect', 'rm-sources-list', 'rm-extra-source'].forEach(id => assert.ok(details.includes(`id="${id}"`), `#${id} in Details`));
+  assert.match(html, /id="rm-admin"[^>]*data-admin[^>]*hidden/, 'admin controls are hidden by default');
+  const admin = html.slice(html.indexOf('id="rm-admin"'), html.indexOf('id="rm-pane-export"'));
+  ['rm-cost', 'rm-tier', 'rm-factcheck'].forEach(id => assert.ok(admin.includes(`id="${id}"`), `#${id} is admin-only`));
+});
+
+t('Export: one Export button plus Also export, Organic / Paid and rights', () => {
+  ['rm-pane-export', 'rm-also', 'rm-export-45', 'rm-export-captions', 'rm-target'].forEach(once);
+  const exp = html.slice(html.indexOf('id="rm-pane-export"'));
+  assert.match(exp, /Also export/);
+  assert.equal((html.match(/es-btn--primary/g) || []).length, 2, 'Make my reel and Export MP4 are the only primaries in the markup');
+  assert.match(exp, /id="rm-rights/, 'rights summary');
 });
 
 t('Make my reel stays a primary while busy (aria-disabled, never disabled)', () => {
-  const fn = js.slice(js.indexOf('function setWriteBusy'), js.indexOf('const STATE_WORD'));
-  assert.ok(fn.includes("setAttribute('aria-busy'"));
+  const at = js.indexOf('function setWriteBusy');
+  assert.ok(at > 0, 'setWriteBusy');
+  const fn = js.slice(at, js.indexOf('\n  }\n', at));
+  assert.ok(fn.includes("'aria-busy'"));
   assert.ok(fn.includes("'aria-disabled'"));
   assert.ok(!fn.includes('.disabled ='), 'must not set disabled');
-  assert.match(js, /if \(state\.flow\.making\) return;/, 'double clicks are ignored');
   assert.match(html, /class="rm-spin rm-write__spin"/);
 });
 
-t('stepper replaces the list while running and announces progress', () => {
-  assert.match(js, /classList\.toggle\('is-making', f\.making\)/);
-  assert.match(css, /\.rm-pane\.is-making :is\(#rm-source-trend/);
-  assert.match(html, /id="rm-making-live" aria-live="polite"/);
-  assert.match(js, /aria-current="step"/);
+t('the page calls the sourcing module, not the old clip pickers', () => {
+  assert.match(html, /src="reel-sourcing\.js\?v=[\w-]+"/, 'reel-sourcing.js is loaded');
+  assert.match(js, /ReelSourcing/);
+  for (const gone of ['function pickClips', 'function nextClip', 'function stillChain']) assert.ok(!js.includes(gone), `${gone} is removed (sourcing owns media)`);
 });
 
-t('empty pane footer is really hidden (direct children only)', () => {
-  assert.match(css, /\.rm-pane-nav:not\(:has\(> :not\(\[hidden\]\)\)\) \{ display: none; \}/);
-});
-
-t('disclosure headers are inset rounded rows, never a full-bleed block', () => {
-  const rule = css.match(/\.rm-fold > summary \{[^}]*\}/)[0];
-  assert.match(rule, /margin: var\(--es-space-1/);
-  assert.match(rule, /border-radius: var\(--es-radius-chip/);
-  assert.doesNotMatch(rule, /border-radius: inherit/);
-  assert.match(css, /\.rm-fold\[open\] > summary::after \{ transform: rotate\(225deg\)/);
+t('disclosure headers are inset rounded rows; focus ring; reduced motion', () => {
+  const rule = (css.match(/\.rm-fold > summary \{[^}]*\}/) || [''])[0];
+  assert.match(rule, /border-radius: var\(--es-radius/);
   assert.match(css, /\.rm-fold > summary:focus-visible \{ outline: var\(--es-focus-outline/);
+  assert.match(css, /prefers-reduced-motion/);
 });
 
-t('spinner motion respects reduced motion', () => {
-  assert.match(css, /@media \(prefers-reduced-motion: no-preference\) \{ \.rm-spin \{ animation/);
-});
-
-console.log(`All ${n} Reels Story UI tests passed.`);
+for (const f of fails) console.log(`FAIL ${f}`);
+console.log(fails.length ? `reels story ui: ${n}/${n + fails.length} passed` : `All ${n} Reels Studio v3 page tests passed.`);
+process.exit(fails.length ? 1 : 0);

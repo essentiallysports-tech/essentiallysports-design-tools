@@ -1,4 +1,4 @@
-// Reels Studio 2.0, lane C (inputs): a real-browser check of the media tray,
+// Reels Studio inputs (2.0 lane C, updated for the v3 Create step): a real-browser check of the media tray,
 // your own voiceover (upload, in-browser recording, fallbacks, nudge) and the
 // caption files. Real headless Chrome over CDP with a FAKE microphone
 // (--use-fake-device-for-media-stream), Node's built-in WebSocket, no npm deps.
@@ -170,12 +170,12 @@ async function step(name, fn) {
 }
 const expect = (cond, message) => { if (!cond) throw new Error(message); };
 const SCRIPT = 'The Cubs lost on Sunday night. But one bar in Chicago got *paid* in full. Kalshi says 1 in 2,500 bets was insurance. Josh Allen fans are still arguing about it.';
+// Reels Studio v3: one prompt card; "Use my exact words" keeps the script word for word.
+const scriptMode = () => evaluate(`(() => { const s = document.querySelector('#rm-script-mode'); if (s && !s.checked) s.click(); return Boolean(s); })()`);
 async function makeScriptReel() {
-  await click('#rm-source [data-source="script"]');
-  await waitFor(`!document.querySelector('#rm-source-script').hidden`, 3000, 'script field');
-  await typeInto('#rm-script', SCRIPT);
-  await typeInto('#rm-script-source', 'Source: Kalshi');
-  await click('#rm-write');
+  await scriptMode();
+  await typeInto('#rm-prompt', SCRIPT);
+  await click('#rm-make');
   await waitFor(`!document.querySelector('#rm-pane-edit').hidden && Boolean(window.ReelMakerCtx.state.timeline)`, 30000, 'Review step');
   await sleep(400);
 }
@@ -548,11 +548,9 @@ try {
   });
   await step('a pasted script with no reel yet: the voiceover makes the reel from the script, word for word', async () => {
     await load();
-    await click('#rm-source [data-source="script"]');
-    await typeInto('#rm-script', SCRIPT);
-    const hint = await evaluate(`document.querySelector('#rm-script-vo-hint').textContent`);
-    expect(/record or upload your voiceover/i.test(hint), `hint: ${hint}`);
-    await click('#ri-script-voice');
+    expect(await scriptMode(), 'no "Use my exact words" switch (#rm-script-mode)');
+    await typeInto('#rm-prompt', SCRIPT);
+    expect(await click('#ri-script-voice'), 'no "Record your voiceover" button next to the script (#ri-script-voice)');
     await waitFor(`document.querySelector('#ri-voice').open`, 2000, 'dialog from the Script source');
     expect(await evaluate(`document.querySelectorAll('#ri-voice .ri-prompter li').length`) >= 3, 'the prompter does not show the pasted script');
     await click('#ri-voice [data-ri-close]');
