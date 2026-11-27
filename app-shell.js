@@ -1100,9 +1100,37 @@
     document.documentElement.classList.toggle('es-sidebar-collapsed', readCollapsed());
   }
 
+  // Old Design Request links are sent Home with ?paused=requests (above).
+  // Say why, once, instead of a silent jump, and tidy the link. UX audit 2026-11-27.
+  function notePausedRequests() {
+    let query;
+    try { query = new URLSearchParams(window.location.search); } catch (error) { return; }
+    if (query.get('paused') !== 'requests') return;
+    query.delete('paused');
+    const rest = query.toString();
+    try { history.replaceState(history.state, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`); } catch (error) { /* file:// */ }
+    let region = document.getElementById('es-toast-region');
+    if (!region) {
+      region = document.createElement('div');
+      region.id = 'es-toast-region';
+      region.className = 'es-toast-region';
+      region.setAttribute('role', 'status');
+      region.setAttribute('aria-live', 'polite');
+      document.body.appendChild(region);
+    }
+    const toast = document.createElement('div');
+    toast.className = 'es-toast';
+    toast.dataset.shellNote = 'requests-paused';
+    toast.textContent = 'Design requests are paused for now. Make it yourself with Generate or the editor.';
+    region.appendChild(toast);
+    setTimeout(() => toast.classList.add('is-leaving'), 9600);
+    setTimeout(() => toast.remove(), 10000);
+  }
+
   // site-chrome.js builds the account menu first; wait for it.
   function start() {
     if (leavingPage || !document.body) return; // [qa-auth-errors] see leavingPage
+    setTimeout(notePausedRequests, 0);
     setTimeout(boot, 0);
     setTimeout(startTickerIfAuthed, 0);
     setTimeout(tagNewTemplates, 0);

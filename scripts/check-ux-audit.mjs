@@ -113,6 +113,19 @@ const CHECKS = [
       return '';
     },
   },
+  {
+    // Old Design Request links (requests are paused) used to jump Home with
+    // ?paused=requests and no word of why.
+    id: 'requests-paused-note',
+    async run() {
+      if (!await open('/design-request.html', { ready: "location.pathname.endsWith('/index.html') && document.querySelector('[data-shell-note=requests-paused]')", ms: 15000 })) return 'no "requests are paused" note after an old Design Request link';
+      const r = await c.evaluate("({ text: document.querySelector('[data-shell-note=requests-paused]').textContent, live: document.querySelector('#es-toast-region').getAttribute('aria-live'), search: location.search })");
+      if (!/paused/i.test(r.text)) return 'note does not say requests are paused: ' + r.text;
+      if (r.live !== 'polite') return 'note is not announced (aria-live ' + r.live + ')';
+      if (/paused=/.test(r.search)) return 'the ?paused= flag stays in the address (shows again on reload)';
+      return '';
+    },
+  },
 ];
 
 let failed = 0; let ran = 0;
