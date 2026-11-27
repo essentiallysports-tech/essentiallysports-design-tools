@@ -1099,6 +1099,9 @@
   if (desktop.matches) {
     document.documentElement.classList.add('es-shell');
     document.documentElement.classList.toggle('es-sidebar-collapsed', readCollapsed());
+    // Editors drop the top bar from the flow; set it before first paint, not
+    // at DOM ready (the page jumped up 40px after it was drawn: UX audit R3).
+    try { document.documentElement.classList.toggle('es-editor', Boolean(findItem(currentId())?.item.editor)); } catch (error) { /* boot() sets it */ }
   }
 
   // Old Design Request links are sent Home with ?paused=requests (above).

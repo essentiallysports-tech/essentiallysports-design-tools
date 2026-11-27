@@ -937,6 +937,17 @@
         <button type="button" class="fu-view-btn" data-fu-safe aria-pressed="false" title="Safe zones">${ICONS.safe}<span>Safe zones</span><i class="fu-view-btn__warn" data-fu-safe-warn hidden></i></button>
         <button type="button" class="fu-view-btn" data-fu-small aria-pressed="false" aria-expanded="false" aria-controls="fu-small-preview" title="See it at YouTube's sizes" hidden>${ICONS.small}<span>Small size</span></button>`;
       group.insertAdjacentElement('afterend', el);
+      const topbar = group.parentElement;
+      if (topbar && 'ResizeObserver' in win) {
+        let lastWidth = 0;
+        let fitFrame = 0;
+        new win.ResizeObserver(entries => {
+          const width = Math.round(entries[0]?.contentRect.width || 0);
+          if (width === lastWidth) return;
+          lastWidth = width;
+          if (!fitFrame) fitFrame = win.requestAnimationFrame(() => { fitFrame = 0; fitChip(); });
+        }).observe(topbar);
+      }
       el.querySelector('[data-fu-format]').addEventListener('click', openTemplatePicker);
       el.querySelector('[data-fu-safe]').addEventListener('click', () => {
         bar.safe = !bar.safe;
@@ -1000,16 +1011,29 @@
       const smallBtn = el.querySelector('[data-fu-small]');
       smallBtn.hidden = w !== 'youtube';
       if (w !== 'youtube' && bar.preview) toggleSmallPreview(false);
-      // Short of room: drop the button words first, then the size, so the
-      // template name stays readable.
+      bar.label = info.label;
+      fitChip();
+      syncMobileMeta(info);
+      syncNewsletterHints();
+    }
+
+    // Short of room: drop the button words first, then the size, then the
+    // variant ("Thumbnail · One image" -> "Thumbnail"), so the template name
+    // stays readable; the full name stays in the tooltip and aria-label.
+    // Re-run when the bar changes width (Layers column, panel resize): it was
+    // measured once and stayed cut as "Thum…" at 1024-1440 (UX audit P2).
+    function fitChip() {
+      const el = bar.el;
+      const chip = el?.querySelector('[data-fu-format]');
+      if (!chip || el.hidden || !bar.label) return;
+      const labelNode = chip.querySelector('[data-fu-format-label]');
+      if (labelNode.textContent !== bar.label) labelNode.textContent = bar.label;
       chip.classList.remove('is-compact');
       el.classList.remove('is-tight');
-      const labelNode = chip.querySelector('[data-fu-format-label]');
       const truncated = () => labelNode.scrollWidth > labelNode.clientWidth + 1;
       if (truncated()) el.classList.add('is-tight');
       if (truncated()) chip.classList.add('is-compact');
-      syncMobileMeta(info);
-      syncNewsletterHints();
+      if (truncated() && bar.label.includes(' · ')) labelNode.textContent = bar.label.split(' · ')[0];
     }
 
     function syncSafeZones(host, workspace) {
@@ -1302,6 +1326,10 @@
         });
       });
     }
+    // The one exception: the Layers column's open / rail default is decided
+    // now, before first paint. Waiting for load folded it to a rail after the
+    // canvas was drawn, sliding the canvas ~190px (UX audit R3, 1024-1439px).
+    if (EDITOR_PAGES.has(page())) { try { syncCollapse(); } catch (error) { collapseFor = ''; } }
     if (doc.readyState === 'complete') win.setTimeout(markReady, 0);
     else win.addEventListener('load', () => win.setTimeout(markReady, 0), { once: true });
 

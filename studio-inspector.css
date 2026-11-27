@@ -1730,6 +1730,11 @@ html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.listic
 @media (min-width: 901px) and (max-width: 1279px) {
   html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-link-btn > svg { display: none !important; }
   html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-link-btn { flex: 0 1 auto !important; padding: 0 12px !important; }
+  /* Newsletter's longer "Copy image link" left Export 1px short ("Exp…" at
+     1024): Export never shrinks below its label, and a 6px gap gives both
+     labels room (button padding is fixed by the global button layer). */
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-topbar-right { gap: 6px !important; }
+  html[data-studio-shell="on"]:root body .app[data-workspace] > .panel .studio-export-section .studio-export-btn { min-width: max-content !important; }
   html[data-studio-shell="on"]:root body .app[data-workspace] > .panel :is(.select-chips .select-chip) { font-size: 12px !important; }
 }
 

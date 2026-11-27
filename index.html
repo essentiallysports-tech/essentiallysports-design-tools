@@ -3521,6 +3521,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     letter-spacing: .08em;
     text-transform: uppercase;
   }
+  /* Dark: the brand blue was 3.9:1 on the dark page; the light brand blue passes (UX audit P2). */
+  html[data-theme="dark"] .guidelines-kicker { color: #54A4FB; }
   .guidelines-title {
     margin-top: 10px;
     color: var(--text-primary);
@@ -5192,9 +5194,20 @@ body[data-current-page="faq"] .faq-cta-art img {
     .frame-hero-arrow {
       display: none;
     }
+    /* Phones: the dots sit under the slide, not over the artwork (they
+       covered the banner's own text); the artwork keeps the page gutter in
+       dark mode, so its white plate reads as a card, not a band (UX audit P2). */
     .frame-hero-dots {
-      top: 10px;
-      bottom: auto;
+      position: static;
+      transform: none;
+      justify-content: center;
+      margin: 0 0 12px;
+    }
+    html[data-theme="dark"] .frame-hero-picture {
+      width: auto;
+      margin: 12px 16px 0;
+      border-radius: 12px;
+      overflow: hidden;
     }
     .frame-hero-actions,
     [data-hero-slide="0"] .frame-hero-actions,
@@ -6346,6 +6359,13 @@ body[data-current-page="faq"] .faq-cta-art img {
       max-width: none;
       gap: 12px;
       transition: width .16s var(--motion-smooth);
+    }
+
+    /* No size animation while the editor loads: each fit (fonts, panel, brief
+       box) animated the canvas, three visible resizes (UX audit R3). It turns
+       on with the first pointer / key input, so zoom still glides. */
+    html[data-studio-shell="on"]:not(.studio-canvas-settled) .canvas-stack {
+      transition: none;
     }
 
     html[data-studio-shell="on"] body[data-current-page="instagram"] .canvas-stack {
@@ -7940,30 +7960,30 @@ body[data-current-page="faq"] .faq-cta-art img {
   }
 </style>
 <link rel="stylesheet" href="site-mobile-chrome.css?v=20261117-ready1">
-<link rel="stylesheet" href="studio-inspector.css?v=20261127-panel2">
+<link rel="stylesheet" href="studio-inspector.css?v=20261128-ux2">
 <link rel="stylesheet" href="theme.css?v=20261117-ready1">
 <link rel="stylesheet" href="site-chrome.css?v=20261120-rel2">
 <link rel="stylesheet" href="cta-hover.css?v=20261115-btn1">
 <link rel="stylesheet" href="how-it-works.css?v=20261115-btn1">
 <link rel="stylesheet" href="design-tokens.css?v=20261121-rel2">
-<link rel="stylesheet" href="es-ui.css?v=20261122-rel">
+<link rel="stylesheet" href="es-ui.css?v=20261128-ux2">
 <link rel="stylesheet" href="logo-picker.css?v=20261128-logos1">
   <link rel="stylesheet" href="es-motion.css?v=20261115-btn1">
 <link rel="stylesheet" href="frameup-posted.css?v=20261118-rel1">
 <link rel="stylesheet" href="editor-polish.css?v=20261121-rel2">
 <link rel="stylesheet" href="frameup-quick-wins.css?v=20261118-rel1">
 <link rel="stylesheet" href="frameup-editor-assist.css?v=20261119-rel3">
-<link rel="stylesheet" href="frameup-home-today.css?v=20261121-rel2">
+<link rel="stylesheet" href="frameup-home-today.css?v=20261128-ux2">
 <script src="theme.js?v=20261120-rel2"></script>
 <script src="site-mobile-chrome.js?v=20261113-uipass1"></script>
 <script src="site-chrome.js?v=20261120-rel2"></script>
 <script src="frameup-ai-mode.js?v=20261121-rel"></script>
-<script src="app-shell.js?v=20261125-merch"></script>
-<link rel="stylesheet" href="frameup-tour.css?v=20261120-rel2">
+<script src="app-shell.js?v=20261128-ux2"></script>
+<link rel="stylesheet" href="frameup-tour.css?v=20261128-ux2">
 <script src="frameup-tour.js?v=20261117-tour1"></script>
 <script src="tours/updates.js?v=20261121-notes"></script>
 <script src="tours/tours.js?v=20261128-reels3"></script>
-<script src="tours/tour-launcher.js?v=20261120-rel2"></script>
+<script src="tours/tour-launcher.js?v=20261128-ux2"></script>
 <script src="es-motion.js?v=20261115-ds1"></script>
 </head>
 <body>
@@ -8156,7 +8176,8 @@ body[data-current-page="faq"] .faq-cta-art img {
     <div class="home-start__card">
       <header class="home-start__head">
         <h2 id="home-start-title">How FrameUp works</h2>
-        <p>Make brand-ready designs yourself in minutes, or hand the brief to the design team.</p>
+        <p data-requests-only>Make brand-ready designs yourself in minutes, or hand the brief to the design team.</p>
+        <p data-requests-off>Make brand-ready designs yourself in minutes, from a template or a one-line brief.</p>
         <a class="home-start__more" href="how-frameup-works.html">See the full guide</a>
       </header>
       <ol class="home-start__steps">
@@ -8188,8 +8209,11 @@ body[data-current-page="faq"] .faq-cta-art img {
       <div class="home-start__foot">
         <div class="home-start__cta">
           <h3>Need something custom?</h3>
-          <p>Send the design team one clear brief with context, copy, deadline and references.</p>
-          <a class="es-btn es-btn--primary" href="design-request.html">Request a design</a>
+          <p data-requests-only>Send the design team one clear brief with context, copy, deadline and references.</p>
+          <a class="es-btn es-btn--primary" href="design-request.html" data-requests-only>Request a design</a>
+          <!-- Design requests are paused (app-shell.js FEATURES.requests): Generate instead. -->
+          <p data-requests-off>Describe it in Generate: who, what happened and the numbers. You get on-brand designs to edit and export.</p>
+          <a class="es-btn es-btn--primary" href="generate.html" data-requests-off>Open Generate</a>
         </div>
         <nav class="home-start__links" aria-label="Help and resources">
           <a class="home-start__link" href="#logo-guidelines" data-route="logo-guidelines"><span class="es-tile es-tile--amber" aria-hidden="true">G</span><span><strong>Brand guidelines</strong><small>Approved logo, social and video rules</small></span></a>
@@ -19666,7 +19690,10 @@ function applyDesignHistoryEntry(entry) {
   state.isDraggingText = false;
   const textarea = document.getElementById('pill-text');
   if (textarea) textarea.value = (state.lines || []).join('\n');
-  if (activeWorkspace === 'newsletter') syncInfographicAfterHistory();
+  if (activeWorkspace === 'newsletter') {
+    syncNewsletterAssetAfterHistory();
+    syncInfographicAfterHistory();
+  }
   syncWorkspaceControls();
   if (activeWorkspace === 'instagram') updateInstagramSlideNavigation();
   renderRestoredContextNow();
@@ -19674,6 +19701,27 @@ function applyDesignHistoryEntry(entry) {
   autoGrowTextarea(textarea);
   // Let the re-render settle before history listens again.
   setTimeout(() => { isApplyingHistory = false; updateHistoryButtons(); }, HISTORY_SETTLE_MS + 50);
+}
+
+// Undo / Redo across a Newsletter asset switch: the snapshot brings back the
+// asset it was taken on (state.newsletterAsset) but the editor still drew the
+// other one, so the old asset's text showed on the wrong canvas. Point the
+// canvas, brand list and asset picker at the restored asset without touching
+// the restored state (no switchNewsletterAsset: it saves / resets contexts and
+// the palette) and without a new history step (isApplyingHistory is on).
+function syncNewsletterAssetAfterHistory() {
+  const assetType = state.newsletterAsset;
+  if (!assetType || assetType === activeNewsletterAsset || !NEWSLETTER_ASSET_TYPES[assetType]) return;
+  activeNewsletterAsset = assetType;
+  if ((assetType === 'widgets' && widgetBuilderState) || (assetType === 'trivia' && triviaBuilderState) || (assetType === 'ticker' && tickerBuilderState) || (assetType === 'list' && listBuilderState) || (assetType === 'list2' && list2BuilderState)) renderWidgetPreview();
+  populateNewsletterBrandSelect(assetType);
+  const workspace = getWorkspace();
+  const canvas = document.getElementById('preview');
+  canvas.closest('.canvas-wrap').classList.remove('is-dragging');
+  canvas.width = workspace.width;
+  canvas.height = workspace.height;
+  canvas.setAttribute('aria-label', `${workspace.width} by ${workspace.height} design preview`);
+  document.querySelector('.canvas-label').textContent = `${workspace.width} × ${workspace.height}`;
 }
 
 function undoDesign() {
@@ -22501,6 +22549,9 @@ function activateWorkspace(workspaceName) {
 
   syncWorkspaceControls();
   updateInstagramSlideNavigation();
+  // Layers panel column now, not at the first render (that waits for fonts
+  // and moved the canvas 240px sideways after first paint: UX audit R3).
+  updateLayersPanel();
   renderRestoredContextNow();
 }
 
@@ -23940,6 +23991,9 @@ loadFont().then(() => render());
     });
   }
 
+  const settleStudioCanvas = () => document.documentElement.classList.add('studio-canvas-settled');
+  ['pointerdown', 'keydown', 'wheel'].forEach(type => window.addEventListener(type, settleStudioCanvas, { once: true, passive: true, capture: true }));
+
   // Desktop: size the canvas so 100% zoom fills the free stage (width and
   // height), instead of a fixed size that leaves big empty margins.
   const desktopStudioQuery = window.matchMedia('(min-width: 901px)');
@@ -23968,7 +24022,9 @@ loadFont().then(() => render());
     stack.style.setProperty('--studio-canvas-base', `${Math.max(280, Math.floor(fit))}px`);
   }
   function queueStudioCanvasFit() {
-    if (!studioFitFrame) studioFitFrame = setTimeout(fitStudioCanvasToStage, 0);
+    // Next frame, before it paints (a timeout let the default size paint
+    // first, then the fitted one: a visible jump on load, UX audit R3).
+    if (!studioFitFrame) studioFitFrame = requestAnimationFrame(fitStudioCanvasToStage);
   }
 
   function syncStudioMeta() {
@@ -25049,7 +25105,7 @@ loadFont().then(() => render());
 <script src="frameup-autosave.js?v=20261119-rel3"></script>
 <script src="frameup-designs.js?v=20261118-rel1"></script>
 <script src="trends-logic.js?v=20261128-nba1" defer></script>
-<script src="frameup-home-today.js?v=20261125-tracking" defer></script>
+<script src="frameup-home-today.js?v=20261128-ux2" defer></script>
 <script src="frameup-cloud-drafts.js?v=20261119-rel3"></script>
 <script src="frameup-templates.js?v=20261119-rel3"></script>
 <script src="frameup-spec.js?v=20261128-brief1"></script>
@@ -25063,9 +25119,9 @@ loadFont().then(() => render());
 <script src="es-guidelines.js?v=20261125-pills"></script>
 <script src="frameup-editor-assist.js?v=20261119-archivefi"></script>
 <!-- Editor UI styles load here, after first paint: they only style what frameup-editor-ui.js adds. -->
-<link rel="stylesheet" href="frameup-editor-ui.css?v=20261121-rel2">
-<script src="frameup-editor-ui.js?v=20261121-rel2"></script>
-<script src="frameup-inspector.js?v=20261127-panel2" defer></script>
+<link rel="stylesheet" href="frameup-editor-ui.css?v=20261128-ux2">
+<script src="frameup-editor-ui.js?v=20261128-ux2"></script>
+<script src="frameup-inspector.js?v=20261128-ux2" defer></script>
 <link rel="stylesheet" href="frameup-brief.css?v=20261127-brief1">
 <script src="frameup-brief.js?v=20261127-brief1"></script>
 </body>

@@ -22,8 +22,13 @@
   if (typeof window !== 'undefined' && window.document && window.top === window) {
     window.FrameUpInspector = api;
     const start = () => api.install(window);
-    if (document.readyState === 'complete') setTimeout(start, 0);
-    else window.addEventListener('load', () => setTimeout(start, 0), { once: true });
+    // Install in the same task as the editor shell builds the panel (its
+    // DOMContentLoaded listener runs just before this one). Waiting for window
+    // load inserted the selection strip and Photo title after first paint
+    // and pushed the whole panel down ~56px (UX audit R3).
+    const safeStart = () => { try { start(); } catch (error) { setTimeout(() => { throw error; }, 0); } };
+    if (document.readyState !== 'loading') setTimeout(start, 0);
+    else document.addEventListener('DOMContentLoaded', safeStart, { once: true });
   }
 }(typeof globalThis !== 'undefined' ? globalThis : this, () => {
   'use strict';

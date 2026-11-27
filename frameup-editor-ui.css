@@ -608,3 +608,16 @@ html[data-theme="dark"][data-studio-shell] body.is-mobile-workspace-active .mobi
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* One size in the editor top bar: Help matches Undo / Redo / Recent (36px,
+   was 32). Under 1280px the save status keeps its dot (the words stay in its
+   label and tooltip), so the template chip has room (UX audit P2). */
+@media (min-width: 901px) {
+  html.es-shell.es-editor .es-topbar .studio-history-group .fu-tour-help { width: 36px; height: 36px; min-width: 36px; border-radius: 10px; }
+}
+@media (min-width: 901px) and (max-width: 1279px) {
+  html.es-shell.es-editor .es-topbar .editor-save-chip { padding-inline: 12px; gap: 0; }
+  html.es-shell.es-editor .es-topbar .fu-canvas-bar { gap: 6px; }
+  html.es-shell.es-editor .es-topbar .fu-format-chip.is-compact { padding-inline: 10px; }
+  html.es-shell.es-editor .es-topbar .editor-save-chip__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+}

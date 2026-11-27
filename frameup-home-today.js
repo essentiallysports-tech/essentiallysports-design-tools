@@ -399,13 +399,17 @@
     function renderTrends() {
       const target = body('trends');
       if (!target) return;
-      if (!trendData?.ok) { target.innerHTML = failed('trends', 'trends'); renderSpotlight(null); return; }
+      // No stories at all (or trends down): the top-story card says it once;
+      // the Trending now card steps aside instead of repeating it (UX audit R7).
+      const trendsCard = card('trends');
+      if (!trendData?.ok) { if (trendsCard) trendsCard.hidden = true; target.innerHTML = ''; renderSpotlight(null); return; }
       let sport = 'all';
       try { sport = win.localStorage.getItem(SPORT_KEY) || 'all'; } catch (error) { /* ignore */ }
       const cats = (trendData.categories || []).filter(c => trendData.items.some(item => item.category === c.id));
       if (sport !== 'all' && !cats.some(c => c.id === sport)) sport = 'all';
       const plan = planTrends(trendData.items, sport, { n: 5, logic: L() });
       renderSpotlight(plan.spotlight);
+      if (trendsCard) trendsCard.hidden = !plan.spotlight && !plan.rows.length;
       counts.trends = trendData.items.length;
       paintSummary();
       const chips = cats.length ? `<div class="home-today__chips" role="group" aria-label="Sport">${[{ id: 'all', label: 'All sports' }, ...cats].map(c => `<button type="button" class="es-chip" data-today-sport="${esc(c.id)}" aria-pressed="${c.id === sport}">${esc(c.id === 'others' ? 'Other sports' : c.label)}</button>`).join('')}</div>` : '';

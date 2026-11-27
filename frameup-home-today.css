@@ -399,3 +399,15 @@ html.es-shell .home-today { padding-top: var(--es-space-12) !important; }
 @media (prefers-reduced-motion: reduce) {
   .home-today__tool, .home-today__shot { transition: none !important; transform: none !important; }
 }
+
+/* No trends at all (or trends down): the Trending now card is hidden and the
+   top-story card speaks once (frameup-home-today.js renderTrends). */
+.home-today__layout:has(.home-today__trends-card[hidden]) { grid-template-areas: "spot" "tools" "continue" "requests" "exports" "pulse"; }
+@container today (min-width: 600px) and (max-width: 859.98px) {
+  .home-today__layout:has(.home-today__trends-card[hidden]) { grid-template-areas: "spot spot" "tools tools" "continue pulse" "requests requests" "exports exports"; }
+}
+@container today (min-width: 860px) {
+  .home-today__layout:has(.home-today__trends-card[hidden]) { grid-template-areas: "spot tools" "continue pulse" "requests requests" "exports exports"; grid-template-rows: auto auto auto auto; }
+  .home-today__layout:has(.home-today__trends-card[hidden]):has(.home-today__requests[hidden]) { grid-template-areas: "spot tools" "continue pulse" "exports exports"; grid-template-rows: auto auto auto; }
+  .home-today__layout:has(.home-today__trends-card[hidden]) .home-today__continue { align-self: stretch; }
+}

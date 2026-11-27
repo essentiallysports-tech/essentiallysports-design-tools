@@ -2036,3 +2036,7 @@ html.fu-requests-off a[href*="design-request.html?"],
 html.fu-requests-off a[href$="requests.html"],
 html.fu-requests-off a[href*="requests.html?"],
 html.fu-requests-off [data-today="requests"] { display: none !important; }
+/* Copy that only fits one state: [data-requests-only] while requests are on,
+   [data-requests-off] while they are paused. */
+html.fu-requests-off [data-requests-only],
+html:not(.fu-requests-off) [data-requests-off] { display: none !important; }

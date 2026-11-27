@@ -243,6 +243,77 @@ const CHECKS = [
   },
   // ── Slice 2 (qa/ux-audit-2, 2026-11-28) ────────────────────────────────
   {
+    // Newsletter's longer "Copy image link" squeezed Export to "Exp…" in the
+    // 320px panel (1024-1279px).
+    id: 'editor-export-label',
+    async run() {
+      for (const [hash, width] of [['newsletter', 1024], ['newsletter', 1279], ['instagram', 1024], ['youtube', 1280]]) {
+        if (!await open(`/index.html#${hash}`, { width, ready: "document.querySelector('.studio-export-section #studio-export-btn')?.getClientRects().length", ms: 15000 })) return `${hash} ${width}: no Export button`;
+        await sleep(600);
+        const cut = await c.evaluate(`[...document.querySelectorAll('.studio-export-section .studio-topbar-right > button')].filter(b => b.getClientRects().length).filter(b => { const s = b.querySelector('span') || b; return s.scrollWidth > s.clientWidth + 1; }).map(b => b.id)`);
+        if (cut.length) return `${hash} at ${width}px: label cut on ${cut.join(', ')}`;
+      }
+      return '';
+    },
+  },
+  {
+    // Editor load layout shift was ~0.25-0.4 (canvas animated through each
+    // fit, the Layers column folded after paint, the panel strip arrived on
+    // window load). Median of three loads must stay low.
+    id: 'editor-load-shift',
+    async run() {
+      await c.send('Page.addScriptToEvaluateOnNewDocument', { source: "window.__uxCls=[];try{new PerformanceObserver(l=>{for(const e of l.getEntries())if(!e.hadRecentInput)window.__uxCls.push(e.value)}).observe({type:'layout-shift',buffered:true})}catch(e){}" });
+      const out = [];
+      for (const [hash, width] of [['youtube', 1280], ['instagram', 1440], ['newsletter', 1440]]) {
+        const vals = [];
+        for (let i = 0; i < 3; i++) {
+          await c.send('Page.navigate', { url: `${base}/__blank` }); await sleep(150);
+          if (!await open(`/index.html#${hash}`, { width, ready: "document.readyState === 'complete'", ms: 15000 })) return `${hash}: never loaded`;
+          await sleep(2500);
+          vals.push(await c.evaluate('(window.__uxCls || []).reduce((a, b) => a + b, 0)'));
+        }
+        vals.sort((a, b) => a - b);
+        out.push(`${hash}@${width} ${vals[1].toFixed(3)}`);
+        if (vals[1] > 0.15) return `layout shift on load too high: ${out.join(', ')}`;
+      }
+      return '';
+    },
+  },
+  {
+    // Undo across a Newsletter asset switch restored the old asset's state
+    // under the other asset's canvas (activeNewsletterAsset was not synced).
+    id: 'newsletter-undo-asset',
+    async run() {
+      if (!await open('/index.html#newsletter', { ready: "window.FrameUpEditorBridge && document.querySelector('#newsletter-asset-select') && document.readyState === 'complete'", ms: 15000 })) return 'newsletter never loaded';
+      await sleep(1200);
+      const r = await c.evaluate(`(async () => {
+        const sl = ms => new Promise(res => setTimeout(res, ms));
+        const B = window.FrameUpEditorBridge;
+        const sel = document.getElementById('newsletter-asset-select');
+        const ta = document.getElementById('pill-text');
+        const pick = v => { sel.value = v; sel.dispatchEvent(new Event('change', { bubbles: true })); };
+        const type = v => { ta.value = v; ta.dispatchEvent(new Event('input', { bubbles: true })); };
+        const snap = () => ({ active: B.activeNewsletterAsset, state: B.state.newsletterAsset, select: sel.value, label: document.querySelector('.canvas-label').textContent, text: ta.value, ratio: +(document.getElementById('preview').width / document.getElementById('preview').height).toFixed(2) });
+        pick('feature-image'); await sl(700); type('FEATURE TEXT'); await sl(900);
+        const a = snap();
+        pick('section-header'); await sl(900); type('HEADER TEXT'); await sl(900);
+        const b = snap();
+        const undo = document.querySelector('[data-history="undo"]');
+        for (let i = 0; i < 6 && B.state.newsletterAsset !== 'feature-image'; i++) { undo.click(); await sl(700); }
+        const u = snap();
+        const redo = document.querySelector('[data-history="redo"]');
+        for (let i = 0; i < 6 && B.state.newsletterAsset !== 'section-header'; i++) { redo.click(); await sl(700); }
+        return { a, b, u, r: snap() };
+      })()`);
+      const same = (x, y) => x.active === y.active && x.state === y.state && x.select === y.select && x.label === y.label && x.ratio === y.ratio;
+      if (r.u.state !== 'feature-image') return 'Undo never got back to the Feature Image step';
+      if (!same(r.u, r.a)) return `after Undo the editor shows ${JSON.stringify(r.u)}, expected ${JSON.stringify(r.a)}`;
+      if (!/FEATURE TEXT/.test(r.u.text)) return 'after Undo the text box does not hold the Feature Image text: ' + r.u.text;
+      if (!same(r.r, r.b)) return `after Redo the editor shows ${JSON.stringify(r.r)}, expected ${JSON.stringify(r.b)}`;
+      return '';
+    },
+  },
+  {
     // Owner decision R4: while Design Requests are paused the admin dashboard
     // hides the Open requests KPI, the Board and Requests tabs and request
     // activity; switching requests back on brings them back.
@@ -345,6 +416,43 @@ const CHECKS = [
       const text = await c.evaluate("document.querySelector('#gen-notice').innerText");
       if (/TypeError|Internal error|undefined/.test(text)) return 'raw server error shown: ' + text.replace(/\s+/g, ' ').slice(0, 160);
       errors.length = 0;
+      return '';
+    },
+  },
+  {
+    // R7: with no trends, Home said "nothing trending" twice (top story and
+    // Trending now). Also no "brief the design team" copy while paused.
+    id: 'home-no-trends-once',
+    async run() {
+      API = { '/api/trend-design': { status: 200, body: { ok: true, items: [], categories: [] } } };
+      await c.evaluate('sessionStorage.clear(); true');
+      if (!await open('/index.html#frames', { ready: "document.querySelector('[data-today=spotlight] .home-today__body:not([aria-busy=true])') && /trending/i.test(document.querySelector('[data-today=spotlight]').innerText)", ms: 15000 })) return 'Home top story never settled';
+      await sleep(500);
+      const r = await c.evaluate("({ cards: [...document.querySelectorAll('.home-today__card')].filter(e => e.getClientRects().length && /nothing trending|nothing else trending|no sports trends|quiet right now/i.test(e.innerText)).map(e => e.dataset.today), how: document.querySelector('.home-start').innerText })");
+      if (r.cards.length !== 1) return `${r.cards.length} cards say nothing is trending: ${r.cards.join(', ')}`;
+      if (/design team/i.test(r.how)) return 'Home still tells people to brief the design team while requests are paused';
+      // With stories the Trending now card is back.
+      API = { '/api/trend-design': { status: 200, body: { ok: true, categories: [{ id: 'nba', label: 'NBA' }], items: [1, 2, 3, 4].map(i => ({ id: 't' + i, title: `Story ${i} about the Lakers`, category: 'nba', publishedAt: new Date().toISOString() })) } } };
+      await c.evaluate('sessionStorage.clear(); true'); // Home caches each source for a few minutes
+      await c.send('Page.navigate', { url: `${base}/__blank` }); await sleep(200);
+      if (!await open('/index.html#frames', { ready: "document.querySelector('[data-today=trends]') && !document.querySelector('[data-today=trends]').hidden && document.querySelector('[data-today=trends] .home-today__trend')", ms: 15000 })) return 'Trending now card did not come back with stories';
+      return '';
+    },
+  },
+  {
+    // P2: the YouTube template chip read "Thum…" at 1024-1440 (measured once,
+    // before the Layers column settled); Help was 32px beside 36px buttons.
+    id: 'editor-topbar-fit',
+    async run() {
+      for (const width of [1440, 1280, 1024]) {
+        await c.send('Page.navigate', { url: `${base}/__blank` }); await sleep(150);
+        if (!await open('/index.html#youtube', { width, ready: "document.querySelector('.fu-format-chip__label')?.textContent", ms: 15000 })) return `no template chip at ${width}`;
+        await sleep(1500);
+        const r = await c.evaluate("(() => { const l = document.querySelector('.fu-format-chip__label'); const h = document.querySelector('.es-topbar .fu-tour-help')?.getBoundingClientRect(); return { text: l.textContent, cut: l.scrollWidth > l.clientWidth + 1, help: h ? Math.round(h.height) : 0, aria: document.querySelector('.fu-format-chip').getAttribute('aria-label') }; })()");
+        if (r.cut) return `template chip cut at ${width}px ("${r.text}")`;
+        if (!/Thumbnail · One image/.test(r.aria)) return `chip lost its full name in aria-label at ${width}: ${r.aria}`;
+        if (r.help && r.help !== 36) return `Help button is ${r.help}px tall at ${width}, not 36`;
+      }
       return '';
     },
   },
