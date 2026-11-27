@@ -226,7 +226,7 @@ try {
     apiCalls.length = 0;
     await must('.rb-angle [data-use="i1"]', 'Use this angle');
     await waitFor(`window.ReelMakerCtx.state.plan && window.ReelMakerCtx.state.plan.lens === 'money'`, 5000, 'the plan to be applied');
-    const plan = await evaluate(`(() => { const p = window.ReelMakerCtx.state.plan; return { beats: p.beats.length, first: p.beats[0].block.type, last: p.beats[p.beats.length - 1].block.type, style: p.style, ids: p.beats.every(b => b.id), tl: window.ReelMakerCtx.state.timeline ? window.ReelMakerCtx.state.timeline.beats.length : 0, sources: window.ReelMakerCtx.state.sources.length, pane: Boolean(document.querySelector('#rm-pane-edit') && !document.querySelector('#rm-pane-edit').hidden) }; })()`);
+    const plan = await evaluate(`(() => { const p = window.ReelMakerCtx.state.plan; return { beats: p.beats.length, first: p.beats[0].block.type, last: p.beats[p.beats.length - 1].block.type, style: p.esStyle, ids: p.beats.every(b => b.id), tl: window.ReelMakerCtx.state.timeline ? window.ReelMakerCtx.state.timeline.beats.length : 0, sources: window.ReelMakerCtx.state.sources.length, pane: Boolean(document.querySelector('#rm-pane-edit') && !document.querySelector('#rm-pane-edit').hidden) }; })()`);
     expect(at, plan.beats === 6 && plan.first === 'hook' && plan.last === 'endcard' && ['gametape', 'statcard', 'receipts', 'hypecut'].includes(plan.style) && plan.ids && plan.tl === 6, `the storyboard was not built from the angle: ${JSON.stringify(plan)}`);
     expect(at, !(await count('dialog[open]')), 'the inspiration dialog stayed open after "Use this angle"');
     expect(at, plan.sources === 7 && plan.pane, `the reel did not open in Review with its sources: ${JSON.stringify(plan)}`);

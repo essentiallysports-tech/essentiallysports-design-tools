@@ -160,6 +160,8 @@ const FEATURE_NAMES = [
   ['reels-ideas', 'The Reels ideas room'],
   ['reels-radar', 'The Reels trend radar'],
   ['reels-voice-align', 'Voiceover sync'],
+  ['reels-photo-verify', 'Reels photo check'],
+  ['reels-review', 'The Reels review pass'],
 ];
 // A call is switched off when its feature or its task is listed.
 function trackDisabled(track) {

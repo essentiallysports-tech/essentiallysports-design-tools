@@ -99,7 +99,7 @@
     if (s.backgroundImage !== 'none') return true;
     for (const k of e.children) {
       if (k.matches('canvas, img, video, svg') && shown(k)) return true;
-      if ((visSet.has(k) || css(k).display === 'contents') && hasContent(k)) return true; // a boxless wrapper: look through it
+      if ((shown(k) || css(k).display === 'contents') && hasContent(k)) return true; // a boxless wrapper: look through it
     }
     return false;
   };
