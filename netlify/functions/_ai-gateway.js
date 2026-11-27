@@ -162,6 +162,13 @@ const FEATURE_NAMES = [
   ['reels-voice-align', 'Voiceover sync'],
   ['reels-photo-verify', 'Reels photo check'],
   ['reels-review', 'The Reels review pass'],
+  // Reels v4: the director (prefix covers reels-director-sonnet), AI edits,
+  // the critic, the "Need a script?" helper and the daily house lessons.
+  ['reels-director', 'The Reels director'],
+  ['reels-revise', 'Reels AI edits'],
+  ['reels-critique', 'The Reels critic'],
+  ['reels-script-draft', 'The Reels script helper'],
+  ['reels-lessons', 'Reels house lessons'],
 ];
 // A call is switched off when its feature or its task is listed.
 function trackDisabled(track) {
