@@ -4,6 +4,17 @@ Running handoff log for edits made to this site by any AI assistant (Claude or o
 **Read this file first** before making changes, so you know what's in progress, what's finished,
 and what's still uncommitted.
 
+## 2026-11-28 — Suhail (Claude, brief lane): Design from a brief, R3 YouTube + learning loop (branch feature/brief-to-design)
+- Status: committed on feature/brief-to-design after R2, not pushed. No migration, no env vars, caps unchanged.
+- YouTube brief templates: One image (variation-1), Player + background (variation-2), Two players + background (variation-3), Quote thumbnail (Quote Mode; exact words only). Pills 1-2 x 2-20 chars, layouts stagger / aligned, brand colours from the team. Player layouts use the person's STORED cut-out from the ES cut-out store (findPhotos `cutouts`; none are made here, so no remove-bg cost); a second named person in a matchup brief gets a second lookup. No cut-out -> the option becomes One image (same words), duplicates dropped.
+- Undo: each YouTube layout keeps its own design and history, so the layout a brief design opens in is given a starting point (Undo is available) and that Undo also moves you back to the layout you were on; Redo stays on the current layout (re-pick from the thumbnails).
+- Cache keys: frameup-brief.js / .css -> 20261128-brief3 (after the R2 release's brief2); frameup-spec.js unchanged.
+- Phones: while a bottom sheet is open the editor lifts the canvas over where the box sits, so the box is hidden until the sheet closes (found by check-editor-ui at 375 on YouTube).
+- Applier: switches the variation, Quote Mode on/off, brand, pills, background photo, cut-outs as the entity photos; all one undo step. Swap photo changes the background.
+- Learning loop (shipped with R1, now covering all three editors): `brief-design` rows on open and `brief-export` rows on export / Copy HTML (template, rank, engine, kept / changed / switched); the server's 90-day team acceptance per editor + template nudges the matcher (±0.75 max, 5+ designs, service role, cached 6 h). No new table, no migration.
+- The brief box now shows in all three editors (Social, Newsletter, YouTube).
+- Tests: test-brief-design (YouTube matcher, checks, fills, cut-out fallback, quote refusal); check-brief-design YouTube flow (variation-2 with cut-out, undo, quote mode on/off, learning rows) plus every earlier state.
+
 ## 2026-11-27 — Suhail (Claude, brief lane): Design from a brief, R2 Newsletter (branch feature/brief-to-design)
 - Status: committed on feature/brief-to-design after R1 (origin/main panel v2 merged in), not pushed. No migration, no env vars.
 - Newsletter brief templates (core TEMPLATES.newsletter, checks, rules, free fills): Tag FI, Headline Photo FI (ig-headline-photo), Player Quote FI (ig-player-quote, exact words only), Archive Page FI, Video FI, Section Header (Left / Centred), and the HTML widgets Headline List (Big Numbers / Simple: five ES headlines with their own links, only articles research returned), Financial Ticker and Trivia (only when asked). Locked templates (Feature Image, Desktop News Layout) are never offered.

@@ -418,3 +418,7 @@ html[data-theme="dark"] .fu-brief .fu-brief__input::placeholder { color: var(--f
   .fu-brief *,
   .fu-brief *::before { animation: none !important; transition: none !important; }
 }
+
+/* Phones: while a bottom sheet is open the editor lifts the canvas up under
+   the top bar, over where the box sits; the box steps aside until it closes. */
+body.is-mobile-sheet-open .fu-brief { visibility: hidden; }

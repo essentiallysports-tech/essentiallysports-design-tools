@@ -51,6 +51,11 @@ const NL_OPTIONS = [
   { template: 'ig-headline-photo', label: 'Headline Photo FI', why: 'A boxed headline over his photo', layout: 'default', fields: { line1: 'LeBron Drops 41', line2: 'In Phoenix' }, lines: ['LeBron Drops 41', 'In Phoenix'], listicle: null, sport: 'NBA', team: '', warnings: [], source: 'ai' },
   { template: 'list', label: 'Headline List (Big Numbers)', why: 'Five ES stories from this week', layout: 'default', fields: { items: NL_ITEMS }, lines: NL_ITEMS.map(i => i.text), listicle: null, sport: 'NBA', team: '', warnings: [], source: 'ai' },
 ];
+const YT_OPTIONS = [
+  { template: 'variation-2', label: 'Player + background', why: 'LeBron cut out over the scene', layout: 'stagger', fields: { pills: ['LeBron Drops 41'] }, lines: ['LeBron Drops 41'], listicle: null, sport: 'NBA', team: 'Los Angeles Lakers', warnings: [], source: 'ai' },
+  { template: 'quote', label: 'Quote thumbnail', why: 'His own words', layout: 'default', fields: { lines: ['We Got It', 'Done Tonight'] }, lines: ['We Got It', 'Done Tonight'], listicle: null, sport: 'NBA', team: 'Los Angeles Lakers', warnings: [], source: 'ai' },
+  { template: 'variation-1', label: 'One image', why: 'One big photo with a headline', layout: 'aligned', fields: { pills: ['Lakers Beat', 'The Suns'] }, lines: ['Lakers Beat', 'The Suns'], listicle: null, sport: 'NBA', team: 'Los Angeles Lakers', warnings: [], source: 'ai' },
+];
 const withIds = list => list.map((option, rank) => ({ ...option, id: `brief-qa-${rank}`, rank }));
 
 let mode = 'ok'; // ok | free | error500 | error429 | tweet | slow
@@ -65,6 +70,9 @@ const api = async (req, url, body) => {
       return { status: 200, delay: 400, body: { option: { ...option, fields: { pills }, lines: pills }, costUsd: 0.0006 } };
     }
     return { status: 422, body: { error: 'No better version this time. Try another.' } };
+  }
+  if (body?.workspace === 'youtube' && mode === 'ok') {
+    return { status: 200, delay: 500, body: { options: withIds(YT_OPTIONS), photos: [{ url: '/__qa/photo/lebron-1.svg', title: 'LeBron James' }], cutouts: [{ url: '/__qa/photo/cutout-1.svg', person: 'LeBron James' }], tweets: [], subject: 'LeBron James', notes: [], engine: 'ai', ms: 500, costUsd: 0.001 } };
   }
   if (body?.workspace === 'newsletter' && mode === 'ok') {
     return { status: 200, delay: 500, body: { options: withIds(NL_OPTIONS), photos: [{ url: '/__qa/photo/lebron-1.svg', title: 'LeBron James', sourceUrl: 'https://image-cdn.essentiallysports.com/qa.jpg' }, { url: '/__qa/photo/lebron-2.svg', title: 'LeBron James', sourceUrl: 'https://image-cdn.essentiallysports.com/qa2.jpg' }], tweets: [], subject: 'LeBron James', notes: [], engine: 'ai', ms: 500, costUsd: 0.001 } };
@@ -89,7 +97,7 @@ const api = async (req, url, body) => {
 const extra = url => {
   const m = url.pathname.match(/^\/__qa\/photo\/([a-z0-9-]+)\.svg$/);
   if (!m) return null;
-  return { type: 'image/svg+xml', body: figureSvg({ pose: m[1].endsWith('2') ? 'bust' : 'stand', cutout: false, colour: '#552583' === '' ? '#1D428A' : '#FDB927' }) };
+  return { type: 'image/svg+xml', body: figureSvg({ pose: m[1].endsWith('2') ? 'bust' : 'stand', cutout: m[1].startsWith('cutout'), colour: '#552583' === '' ? '#1D428A' : '#FDB927' }) };
 };
 const { server, base } = await startServer({ api, extra });
 const browser = await startChrome(CHROME, { width: 1440, height: 900 });
@@ -151,7 +159,7 @@ const SCAN = `(() => {
   for (const [p, rs] of rows) { const byTop = new Map(); rs.forEach(r => { const k = Math.round(r.top / 3); byTop.set(k, [...(byTop.get(k) || []), r.height]); }); for (const hs of byTop.values()) if (hs.length > 1 && Math.max(...hs) - Math.min(...hs) > 1.5) issues.push('misaligned buttons in ' + name(p) + ': ' + hs.map(Math.round).join('/')); }
   // The canvas stays on screen (desktop).
   const c = document.getElementById('preview')?.getBoundingClientRect();
-  if (W > 900 && c && c.height > 0 && (c.bottom > innerHeight + 2 || c.height < 200)) issues.push('canvas pushed off screen (' + Math.round(c.top) + '..' + Math.round(c.bottom) + ')');
+  if (W > 900 && c && c.height > 0 && (c.bottom > innerHeight + 2 || c.width < 240)) issues.push('canvas pushed off screen (' + Math.round(c.top) + '..' + Math.round(c.bottom) + ')');
   return { issues: [...new Set(issues)], grid: [...new Set(grid)] };
 })()`;
 
@@ -406,15 +414,35 @@ try {
   await sleep(400);
   expect(await evaluate(`listBuilderState.items[0].text === ${JSON.stringify(oldList)} && document.querySelector('[data-list-field="items.0.text"]').value === ${JSON.stringify(oldList)}`), 'newsletter: Restore puts the old widget back');
 
-  // ── Editors without brief templates yet: no box.
-  for (const ws of ['youtube']) {
-    const has = await evaluate(`(() => { const core = window.FrameUpBriefCore; return Boolean(core && Object.keys(core.templatesFor(${JSON.stringify(ws)})).length); })()`);
-    await evaluate(`location.hash = ${JSON.stringify(ws)}, true`);
-    await waitFor(`document.body.dataset.currentPage === ${JSON.stringify(ws)}`, 8000);
-    await sleep(500);
-    const shown = await evaluate(`Boolean(document.querySelector('.canvas-stack > .fu-brief'))`);
-    expect(shown === has, `${ws}: the brief box ${has ? 'shows' : 'stays off until its templates ship'}`);
-  }
+  // ── YouTube (R3).
+  await open('youtube');
+  expect(await waitFor(`Boolean(document.querySelector('.canvas-stack > .fu-brief:first-child'))`, 8000), 'youtube: the brief box sits above the canvas');
+  await sweep('yt-idle', { widths: [1440, 375] });
+  await evaluate(`(() => { const t = document.getElementById('pill-text'); t.value = 'OLD THUMB'; t.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
+  await sleep(1300);
+  const startVariation = await evaluate('activeYoutubeVariation');
+  await typeBrief('LeBron James drops 41 points as the Lakers beat the Suns');
+  await submit();
+  expect(await waitFor(resultShown, 15000), 'youtube: ready');
+  expect(await evaluate(`activeYoutubeVariation === 'variation-2' && JSON.stringify(state.lines) === '["LeBron Drops 41"]' && Boolean(state.entityPhoto) && Boolean(state.photo) && !state.youtubeQuote`), 'youtube: Player + background with the cut-out and the photo');
+  expect(await waitFor(`[...document.querySelectorAll('.fu-brief__thumb')].every(img => img.naturalWidth > 0)`, 25000), 'youtube: three thumbnails');
+  await sweep('yt-result');
+  await evaluate(`document.querySelector('[data-history="undo"]').click(), true`);
+  await sleep(700);
+  await debug(`JSON.stringify({ l: state.lines, v: activeYoutubeVariation, sv: Object.keys(youtubeVariationStates).map(k => youtubeVariationStates[k].lines) })`);
+  expect(await evaluate(`JSON.stringify(state.lines) === '["OLD THUMB"]' && activeYoutubeVariation === ${JSON.stringify('VAR')}`.replace('VAR', startVariation)), 'youtube undo: ONE step back to the old layout and text');
+  expect(await evaluate(`youtubeVariationStates['variation-2'].lines.length === 0`), 'youtube undo: the brief layout is back to how it was');
+  await evaluate(`document.querySelector('.fu-brief__opt[data-option="0"]').click(), true`);
+  await waitFor(idle, 8000);
+  await evaluate(`document.querySelector('.fu-brief__opt[data-option="1"]').click(), true`);
+  expect(await waitFor(`state.youtubeQuote === true && JSON.stringify(state.lines) === '["We Got It","Done Tonight"]'`, 8000), 'youtube: the quote thumbnail switches on Quote Mode');
+  await waitFor(idle, 8000);
+  await evaluate(`document.querySelector('.fu-brief__opt[data-option="2"]').click(), true`);
+  expect(await waitFor(`state.youtubeQuote === false && activeYoutubeVariation === 'variation-1' && JSON.stringify(state.lines) === '["Lakers Beat","The Suns"]'`, 8000), 'youtube: One image, Quote Mode off');
+  await waitFor(idle, 8000);
+  rows = await queued();
+  expect(rows.some(r => r.action === 'brief-design' && r.meta.ws === 'youtube' && r.meta.template === 'variation-1'), 'youtube: learning rows');
+  expect(Boolean(startVariation), 'youtube: started on a variation');
 
   const offGrid = [...gridAll];
   console.log(`brief design: ${failures.length} behaviour failure(s), ${uiIssues.length} UI issue(s), ${offGrid.length} off-grid value(s), ${errors.length} console error(s) in ${Math.round((Date.now() - started) / 1000)}s`);

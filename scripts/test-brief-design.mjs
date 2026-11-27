@@ -67,6 +67,17 @@ const eq = (a, b, message) => { assert.deepEqual(a, b, message); passed += 1; };
   eq(Core.rulesFill('newsletter', 'tag-fi', 'Big NBA night in Phoenix'), { tag: 'NBA' }, 'rules: the sport is the tag');
   eq(Core.rulesFill('newsletter', 'list', 'Top stories', { articles: five.map(a => ({ title: a.text, url: a.url })) }).items.length, 5, 'rules: a list from ES articles');
   eq(Core.rulesFill('newsletter', 'list', 'Top stories', { articles: [] }), null, 'rules: no articles, no list');
+  // YouTube (R3).
+  const yt = (text, opts) => Core.shortlist(text, 'youtube', opts).map(item => item.value);
+  eq(yt('Caitlin Clark is changing the WNBA'), ['variation-1'], 'youtube: one image by default');
+  eq(yt('Caitlin Clark is changing the WNBA', { cutouts: 1 })[0], 'variation-2', 'youtube: a player cut-out when there is one');
+  eq(yt('Mahomes vs Allen: who wins Sunday', { cutouts: 2 })[0], 'variation-3', 'youtube: two players for a matchup');
+  eq(yt('Kelce said "I still love this game"')[0], 'quote', 'youtube: a quote thumbnail');
+  eq(Core.checkFields('youtube', 'variation-1', { pills: ['Mahomes', 'Is Back'] }).lines, ['Mahomes', 'Is Back']);
+  ok(Core.checkFields('youtube', 'variation-2', { pills: ['a', 'b', 'c'] }).error, 'youtube: two pills max');
+  ok(Core.checkFields('youtube', 'quote', { lines: ['x'.repeat(19)] }).error, 'youtube quote: 18 chars a line');
+  eq(Core.rulesFill('youtube', 'quote', 'Kelce: "I still love this game"'), { lines: ['I still love this', 'game'] }, 'rules: the quote from the brief');
+  eq(Core.rulesFill('youtube', 'variation-1', 'Mahomes is back, again'), { pills: ['Mahomes is back'] }, 'rules: pills from the brief');
   // Acceptance nudge.
   eq(Core.acceptanceBonus({ applied: 4, exported: 4, kept: 4 }), 0, 'needs 5 brief designs');
   ok(Core.acceptanceBonus({ applied: 20, exported: 18, kept: 15 }) > 0, 'often kept: up');
@@ -364,6 +375,34 @@ const reset = () => { aiQueue = []; aiCalls = []; photoCalls = []; fetched.lengt
   ok(!body.options.some(o => o.template === 'ig-player-quote'), 'newsletter: an invented quote is refused');
   ok(body.options.some(o => o.template === 'tag-fi'), 'newsletter: the feature image passes');
   T.deps.esCoverage = async () => ({ articles: [{ title: 'LeBron James leads the Lakers past the Suns', url: 'https://www.essentiallysports.com/nba-news-lebron/', date: '2026-11-26', excerpt: 'LeBron scored 41 points.', body: 'He also had 12 assists and 9 rebounds in the 120-112 win.' }] });
+}
+
+{
+  // YouTube: player layouts keep their cut-outs, else become one image.
+  reset();
+  let withCutout = true;
+  const realFind = T.deps.findPhotos;
+  T.deps.findPhotos = async args => { const res = await realFind(args); return withCutout ? { ...res, cutouts: [{ url: 'https://store.example.com/cutouts/lebron.png', person: args.person }] } : res; };
+  const v2 = { template: 'variation-2', why: 'The player over the scene', layout: 'stagger', fields: { pills: ['LeBron Drops 41'] } };
+  const v1 = { template: 'variation-1', why: 'One image', fields: { pills: ['Lakers Beat Suns'] } };
+  aiQueue.push({ subject: 'LeBron James', options: [v2, v1] });
+  let res = await call({ mode: 'design', workspace: 'youtube', brief: BRIEF });
+  eq(res.status, 200, 'youtube: 200');
+  eq(res.body.options[0].template, 'variation-2', 'youtube: the player layout with a cut-out');
+  eq(res.body.cutouts[0].url, 'https://store.example.com/cutouts/lebron.png', 'youtube: the cut-out goes to the page');
+  ok(/variation-2/.test(aiCalls[0].system) && /Quote thumbnail/.test(aiCalls[0].system), 'youtube: its own templates');
+  reset();
+  withCutout = false;
+  aiQueue.push({ subject: 'LeBron James', options: [v2, { ...v1, fields: { pills: ['LeBron Drops 41'] } }] });
+  res = await call({ mode: 'design', workspace: 'youtube', brief: BRIEF });
+  eq(res.body.options[0].template, 'variation-1', 'youtube: no cut-out, one image');
+  eq(res.body.options.filter(o => o.lines.join() === 'LeBron Drops 41').length, 1, 'youtube: no duplicate after the fallback');
+  reset();
+  aiQueue.push({ subject: 'LeBron James', options: [{ template: 'quote', why: 'His words', fields: { lines: ['I Am The', 'Best Ever'] } }] });
+  aiQueue.push({ options: [] });
+  res = await call({ mode: 'design', workspace: 'youtube', brief: BRIEF });
+  ok(!res.body.options.some(o => o.template === 'quote'), 'youtube: an invented quote is refused');
+  T.deps.findPhotos = realFind;
 }
 
 {

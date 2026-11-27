@@ -166,6 +166,8 @@ async function verifiedPhotos(subject, { sport = '', team = '', others = [], tra
       .filter(p => (!checked || p.verified) && p.graphic !== true && !['object', 'graphic', 'text'].includes(String(p.kind || '')))
       .slice(0, 6)
       .map(p => ({ url: String(p.url || p.src), sourceUrl: String(p.sourceUrl), title: cut(p.title || subject, 120), kind: String(p.kind || ''), focus: p.focus || null })),
+    // Stored cut-outs of the person (YouTube player layouts); none are made here.
+    cutouts: (res.cutouts || []).filter(c => c && /^https:\/\//.test(String(c.url || ''))).slice(0, 1).map(c => ({ url: String(c.url), person: cut(c.person || subject, 60) })),
   };
 }
 
@@ -299,16 +301,22 @@ async function design({ workspace, brief, ownPhoto = false, event, token, email 
   ]);
   if (links.tweets.length && tweets.length < links.tweets.length) notes.push(tweets.length ? 'One X post could not be read, so it was left out.' : 'The X post could not be read (it may be private or deleted).');
   if (links.es.length && !facts.article) notes.push('The ES article could not be read, so the design uses your words and ES coverage.');
-  const shortlist = CORE.shortlist(`${brief} ${facts.article?.title || ''}`, workspace, { tweets: tweets.length, articles: facts.listed.length, stats: stats[workspace] || null });
 
   // The photo search starts now and runs beside the AI call.
   const words = `${CORE.withoutLinks(brief)} ${facts.article?.title || ''}`;
   const names = GEN.nameCandidates(words);
   const subjectGuess = names[0] || '';
+  // YouTube cut-outs are only known after the photo search: the matcher assumes
+  // one per named person, and options without one fall back to one image.
+  const shortlist = CORE.shortlist(`${brief} ${facts.article?.title || ''}`, workspace, { tweets: tweets.length, articles: facts.listed.length, cutouts: workspace === 'youtube' && !ownPhoto ? Math.min(2, names.length) : 0, stats: stats[workspace] || null });
   const sportGuess = facts.article ? GEN.sportFromUrl(facts.article.url) : '';
   const wantsPhoto = !ownPhoto && shortlist.some(item => CORE.templateOf(workspace, item.value)?.photo);
   const photoJob = wantsPhoto && subjectGuess
     ? verifiedPhotos(subjectGuess, { sport: sportGuess, others: names.slice(1), track: { ...track, feature: 'brief-design-photo' } }).catch(() => null)
+    : Promise.resolve(null);
+  // YouTube's two-player layout: the second named person's stored cut-out.
+  const secondJob = workspace === 'youtube' && !ownPhoto && names[1] && /\b(?:vs\.?|versus|against|rivalry|head[- ]to[- ]head|or)\b/i.test(words)
+    ? verifiedPhotos(names[1], { sport: sportGuess, others: [subjectGuess], track: { ...track, feature: 'brief-design-photo' } }).catch(() => null)
     : Promise.resolve(null);
 
   const ctx = { brief, corpus: [facts.corpus, ...tweets.map(t => t.text)].join('\n'), leads: new Map(), tweets, urls: facts.urls, listed: facts.listed, sport: sportGuess, team: '' };
@@ -381,8 +389,24 @@ async function design({ workspace, brief, ownPhoto = false, event, token, email 
       options.push({ ...result.option, why: item.why || result.option.why, source: 'rules' });
     });
   }
-  const photo = await photoJob;
+  const [photo, second] = await Promise.all([photoJob, secondJob]);
   if (photo) cost += photo.cost;
+  if (second) cost += second.cost;
+  const cutouts = [...(photo?.cutouts || []), ...(second?.cutouts || [])].slice(0, 2);
+  // YouTube player layouts need their cut-outs: without them an option
+  // becomes the one-image layout (same words), duplicates dropped.
+  if (workspace === 'youtube') {
+    const need = { 'variation-2': 1, 'variation-3': 2 };
+    const seen = new Set();
+    options = options.map(option => (need[option.template] > cutouts.length
+      ? { ...option, template: 'variation-1', label: CORE.labelOf(workspace, 'variation-1'), layout: CORE.pickLayout(workspace, 'variation-1', option.layout, 0) }
+      : option)).filter(option => {
+      const key = `${option.template}|${option.lines.join('|')}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
   if (!options.length) {
     return { status: 422, body: { error: 'Nothing in that brief could fill a template. Add a name, a headline or a link and try again.', reason: 'empty', shortlist, notes: notes.filter(Boolean) } };
   }
@@ -393,6 +417,7 @@ async function design({ workspace, brief, ownPhoto = false, event, token, email 
       shortlist,
       subject,
       photos: photo?.photos || [],
+      cutouts,
       photoChecked: Boolean(photo),
       tweets,
       article: facts.article ? { title: facts.article.title, url: facts.article.url } : null,
