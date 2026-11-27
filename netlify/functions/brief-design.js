@@ -495,11 +495,19 @@ exports.handler = withAiMode(async function handler(event) {
       return json(result.status, result.body);
     }
     if (overHour && !free) return json(429, { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' });
-    const result = await design({ workspace, brief, ownPhoto: body.ownPhoto === true, event, token, email: auth.user.email });
-    return json(result.status, result.body);
+    try {
+      const result = await design({ workspace, brief, ownPhoto: body.ownPhoto === true, event, token, email: auth.user.email });
+      return json(result.status, result.body);
+    } catch (error) {
+      // Anything unexpected: still a design, from the brief's own words.
+      console.error('brief-design failed, rules fill:', String(error?.message || error).slice(0, 200));
+      const options = CORE.localOptions(workspace, brief).map((option, rank) => ({ ...option, source: 'rules', id: `brief-${clock.now().toString(36)}-${rank}`, rank }));
+      if (!options.length) return json(500, { error: 'The design service had a problem. Try again in a moment.' });
+      return json(200, { options, shortlist: [], subject: '', photos: [], cutouts: [], tweets: [], article: null, notes: ['Filled without AI: something went wrong on our side, so this uses your own words.'], engine: 'rules', ms: 0, costUsd: 0 });
+    }
   } catch (error) {
     console.error('brief-design failed:', String(error?.message || error).slice(0, 200));
-    return json(500, { error: 'Design from a brief failed. Try again in a moment.' });
+    return json(500, { error: 'The design service had a problem. Try again in a moment.' });
   }
 });
 

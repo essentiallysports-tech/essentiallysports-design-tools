@@ -58,7 +58,7 @@ const YT_OPTIONS = [
 ];
 const withIds = list => list.map((option, rank) => ({ ...option, id: `brief-qa-${rank}`, rank }));
 
-let mode = 'ok'; // ok | free | error500 | error429 | tweet | slow
+let mode = 'ok'; // ok | free | error500 | error500nolocal | error503off | error429 | tweet | slow
 let calls = [];
 const api = async (req, url, body) => {
   if (url.pathname !== '/api/brief-design') return null;
@@ -77,7 +77,9 @@ const api = async (req, url, body) => {
   if (body?.workspace === 'newsletter' && mode === 'ok') {
     return { status: 200, delay: 500, body: { options: withIds(NL_OPTIONS), photos: [{ url: '/__qa/photo/lebron-1.svg', title: 'LeBron James', sourceUrl: 'https://image-cdn.essentiallysports.com/qa.jpg' }, { url: '/__qa/photo/lebron-2.svg', title: 'LeBron James', sourceUrl: 'https://image-cdn.essentiallysports.com/qa2.jpg' }], tweets: [], subject: 'LeBron James', notes: [], engine: 'ai', ms: 500, costUsd: 0.001 } };
   }
-  if (mode === 'error500') return { status: 500, delay: 300, body: { error: 'Design from a brief failed. Try again in a moment.' } };
+  // A raw server crash, as a broken deploy would send it.
+  if (mode === 'error500' || mode === 'error500nolocal') return { status: 500, delay: 300, body: { error: 'Internal error: TypeError: x is undefined' } };
+  if (mode === 'error503off') return { status: 503, delay: 200, body: { error: 'Design from a brief is switched off for now. Everything else in FrameUp still works.', reason: 'feature-off' } };
   if (mode === 'error429') return { status: 429, delay: 300, body: { error: "You've made a lot of designs this hour. Take a short break and try again soon.", reason: 'limit' } };
   if (mode === 'tweet') return { status: 200, delay: 800, body: { options: withIds([TWEET_OPTION, COVER_OPTION]), photos: [], tweets: [TWEET], subject: 'LeBron James', notes: [], engine: 'ai', ms: 800, costUsd: 0.0011 } };
   if (mode === 'free') {
@@ -107,6 +109,7 @@ browser.on(m => {
   if (m.method === 'Runtime.exceptionThrown') errors.push('uncaught: ' + (m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text).split('\n')[0].slice(0, 200));
   if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') errors.push('console.error: ' + m.params.args.map(a => a.value ?? a.description ?? '').join(' ').split('\n')[0].slice(0, 200));
 });
+const BLOCKED = ['*://*.supabase.co/*', '*://*.essentiallysports.com/*', '*vercel*', '*google-analytics*', '*googletagmanager*', '*fonts.googleapis.com*'];
 const failures = [];
 const expect = (ok, what) => { if (!ok) failures.push(what); };
 const debug = async expr => { if (process.env.BRIEF_DEBUG) console.log('DEBUG', await evaluate(expr).catch(e => String(e))); };
@@ -215,17 +218,26 @@ try {
   await send('Page.enable');
   await send('Runtime.enable');
   await send('Network.enable');
-  await send('Network.setBlockedURLs', { urls: ['*://*.supabase.co/*', '*://*.essentiallysports.com/*', '*vercel*', '*google-analytics*', '*googletagmanager*', '*fonts.googleapis.com*'] });
+  await send('Network.setBlockedURLs', { urls: BLOCKED });
   const started = Date.now();
+
+  // How far the canvas moves while the editor loads (layout shifts whose
+  // source is the canvas), so the box can be checked for pushing it down.
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__canvasShift = 0; try { new PerformanceObserver(list => { for (const e of list.getEntries()) for (const src of (e.sources || [])) { const n = src.node; if (n && (n.id === 'preview' || (n.classList && n.classList.contains('canvas-wrap')))) window.__canvasShift = Math.max(window.__canvasShift, Math.abs(src.currentRect.y - src.previousRect.y)); } }).observe({ type: 'layout-shift', buffered: true }); } catch (e) {}` });
 
   // ── Flag off: nothing added.
   await open('instagram', '?brief=off');
+  const shiftOff = await evaluate('window.__canvasShift || 0');
   expect(await evaluate(`!document.querySelector('.fu-brief') && !window.FrameUpBriefCore`), 'flag off: no brief box and no extra scripts');
 
   // ── Idle.
   await open('instagram');
   expect(await waitFor(`Boolean(document.querySelector('.canvas-stack > .fu-brief:first-child'))`, 8000), 'idle: the brief box sits at the top of the canvas column');
   expect(await evaluate(`document.getElementById('fu-brief-input').placeholder.startsWith('Describe what you need')`), 'idle: placeholder "Describe what you need…"');
+  // P1 regression: the box is there from the first layout, so it never pushes the canvas down.
+  const shiftOn = await evaluate('window.__canvasShift || 0');
+  if (process.env.BRIEF_DEBUG) console.log('DEBUG shift', shiftOff, shiftOn);
+  expect(shiftOn <= shiftOff + 4, `idle: the canvas does not move when the box mounts (shift ${Math.round(shiftOn)}px with the box, ${Math.round(shiftOff)}px without)`);
   await sweep('idle');
 
   // ⌘K lists it.
@@ -351,15 +363,40 @@ try {
   expect(await evaluate(`document.querySelector('[data-brief="another"]').disabled`), 'free mode: Try another is off with one option');
   await sweep('free');
 
-  // ── Errors.
+  // ── Errors (P1 regression): a raw 500 never shows its text; the page
+  // designs from the brief's own words instead, with one small note.
   mode = 'error500';
-  await typeBrief('LeBron James is unstoppable');
+  calls = [];
+  await typeBrief('Josh Allen 3 TDs as Bills beat Chiefs 30-21 in a wild Sunday night game at Arrowhead');
   await submit();
-  expect(await waitFor(`!document.querySelector('.fu-brief__error').hidden`, 8000), 'error 500: the error line shows');
-  expect(await evaluate(`/Try again/.test(document.querySelector('.fu-brief__error').textContent) && !document.querySelector('[data-brief="retry"]').hidden`), 'error 500: Try again is offered');
+  expect(await waitFor(resultShown, 10000), 'error 500: a design opens anyway (rules fill in the page)');
+  expect(await evaluate(`!/TypeError|Internal error|undefined/.test(document.body.innerText) && !/TypeError|Internal error/.test(document.querySelector('.fu-brief').textContent)`), 'error 500: no raw error text anywhere on the page');
+  expect(await evaluate(`[...document.querySelectorAll('.fu-brief__note')].filter(n => /Filled without AI/.test(n.textContent)).length === 1`), 'error 500: one "Filled without AI" note');
+  expect(await evaluate(`state.postType === 'cover' && state.lines[0] === 'Josh Allen 3 TDs as' && document.querySelector('.fu-brief__error').hidden`), 'error 500: the Cover from your words is on the canvas');
+  await sweep('fallback', { widths: [1440, 375] });
+  rows = await queued();
+  expect(rows.some(r => r.action === 'brief-design' && r.meta.engine === 'local'), 'error 500: the learning row says it was filled without AI');
+  // Nothing to fill from: one friendly message, shown once.
+  mode = 'error500nolocal';
+  await typeBrief('Supercalifragilisticexpialidocious');
+  await submit();
+  expect(await waitFor(`!document.querySelector('.fu-brief__error').hidden`, 8000), 'error 500 with nothing to fill: the error line shows');
+  expect(await evaluate(`(() => { const t = document.querySelector('.fu-brief__error-text').textContent; const all = document.body.innerText; return /had a problem/.test(t) && !/TypeError|Internal error/.test(all) && (all.match(/had a problem/g) || []).length === 1; })()`), 'error 500 with nothing to fill: a friendly message, once');
   await sweep('error');
+  // Network failure: the same fallback.
+  mode = 'ok';
+  await send('Network.setBlockedURLs', { urls: [...BLOCKED, '*/api/brief-design*'] });
+  await typeBrief('Caitlin Clark is changing the WNBA forever');
+  await submit();
+  expect(await waitFor(resultShown, 10000) && await evaluate(`[...document.querySelectorAll('.fu-brief__note')].some(n => /Filled without AI/.test(n.textContent))`), 'network failure: filled without AI');
+  await send('Network.setBlockedURLs', { urls: BLOCKED });
+  // Switched off: the plain message, no fallback.
+  mode = 'error503off';
+  await typeBrief('Caitlin Clark is changing the WNBA forever');
+  await submit();
+  expect(await waitFor(`!document.querySelector('.fu-brief__error').hidden && /switched off/.test(document.querySelector('.fu-brief__error-text').textContent)`, 8000), 'switched off: its own message, no fill');
   mode = 'error429';
-  await evaluate(`document.querySelector('[data-brief="retry"]').click(), true`);
+  await submit();
   expect(await waitFor(`/short break/.test(document.querySelector('.fu-brief__error-text').textContent)`, 8000), 'error 429: the hourly-limit message');
   mode = 'ok';
   await evaluate(`document.querySelector('[data-brief="retry"]').click(), true`);

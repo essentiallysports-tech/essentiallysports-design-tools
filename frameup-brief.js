@@ -129,14 +129,34 @@
   }
 
   // ─── Network ──────────────────────────────────────────────────────────────
+  // Server text is shown only when it is a plain sentence meant for people
+  // (limits, switched off, nothing to design); never an internal error.
+  const FRIENDLY = 'The design service had a problem. Try again in a moment.';
+  const RAW = /\b(?:error|exception|undefined|null|stack|TypeError|ReferenceError|SyntaxError|at\s+\S+\s*\(|ECONN|fetch failed|Internal)\b/i;
+  function friendlyMessage(status, data) {
+    const text = String((data && (data.notice && data.skipped ? data.notice : data.error)) || '').trim();
+    if (status === 429) return text && !RAW.test(text) ? text : 'Too many designs this hour. Take a short break and try again.';
+    if (text && !RAW.test(text) && text.length <= 200 && (status < 500 || data?.reason === 'feature-off' || data?.skipped)) return text;
+    return FRIENDLY;
+  }
   async function post(body, signal) {
     const doFetch = window.ESAuth?.fetchWithAuth || fetch;
-    const response = await doFetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body), signal });
+    let response;
+    try {
+      response = await doFetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body), signal });
+    } catch (cause) {
+      if (cause?.name === 'AbortError') throw cause;
+      // Offline / network failure: the page can still design without AI.
+      throw Object.assign(new Error(FRIENDLY), { status: 0, fallback: true });
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.skipped) {
-      const error = new Error(data.notice && data.skipped ? data.notice : (data.error || (response.status === 429 ? 'Too many designs this hour. Take a short break and try again.' : 'Design from a brief is not available right now. Try again in a moment.')));
+      const error = new Error(friendlyMessage(response.status, data));
       error.status = response.status;
       error.reason = data.reason || (data.skipped ? 'free' : '');
+      // A server failure (not a limit, not a switch, not "nothing to design")
+      // falls back to designing from the brief's own words.
+      error.fallback = (response.status >= 500 && !['feature-off', 'off', 'limit-unknown'].includes(error.reason) && !data.skipped) || response.status === 0;
       throw error;
     }
     return data;
@@ -457,7 +477,6 @@
     els.errorText.textContent = error.message || 'Something went wrong. Try again.';
     els.retry.hidden = error.reason === 'free' || error.reason === 'feature-off';
     showPanel('error');
-    announce(els.errorText.textContent);
   }
 
   // ─── Run ──────────────────────────────────────────────────────────────────
@@ -488,9 +507,14 @@
     } catch (error) {
       clearTimeout(timeout);
       if (running !== controller) return;
-      running = null;
-      fail(error.name === 'AbortError' ? new Error('That took too long. Try again, or shorten the brief.') : error);
-      return;
+      // The service failed or timed out: design from the brief's own words.
+      const local = (error.fallback || error.name === 'AbortError') ? Core().localOptions(ws, brief) : [];
+      if (!local.length) {
+        running = null;
+        fail(error.name === 'AbortError' ? new Error('That took too long. Try again, or shorten the brief.') : error);
+        return;
+      }
+      data = { options: local.map((option, rank) => ({ ...option, id: `brief-local-${rank}`, rank })), photos: [], tweets: [], cutouts: [], subject: '', engine: 'local', notes: ['Filled without AI: the design service didn’t answer, so this uses your own words.'] };
     }
     clearTimeout(timeout);
     if (running !== controller) return;
@@ -745,7 +769,8 @@
   // ─── Mount / unmount with the page ───────────────────────────────────────
   function available(ws) {
     const core = Core();
-    return EDITORS.has(ws) && core && Object.keys(core.templatesFor(ws)).length > 0;
+    // Before the core loads (first paint) every editor has brief templates.
+    return EDITORS.has(ws) && (!core || Object.keys(core.templatesFor(ws)).length > 0);
   }
   function mount() {
     const ws = page();
@@ -833,10 +858,15 @@
   document.addEventListener('click', event => { if (event.target.closest?.('[data-history]')) followHistory(); });
   document.addEventListener('keydown', event => { if ((event.metaKey || event.ctrlKey) && /^[zy]$/i.test(event.key || '')) followHistory(); });
 
+  // Mount now, in the same task as the page's first layout (this script runs
+  // after the editor markup and its router), so the canvas never moves down
+  // when the box appears.
+  try { mount(); } catch (error) { /* mounted again once the core loads */ }
+  new MutationObserver(mount).observe(document.body, { attributes: true, attributeFilter: ['data-current-page', 'data-newsletter-asset'] });
+  window.addEventListener('hashchange', () => setTimeout(mount, 60));
+
   libs.then(() => {
     mount();
-    new MutationObserver(mount).observe(document.body, { attributes: true, attributeFilter: ['data-current-page', 'data-newsletter-asset'] });
-    window.addEventListener('hashchange', () => setTimeout(mount, 60));
     try { window.FrameUpSpec?.setOrigin?.(originNow); } catch (error) { /* export origin is optional */ }
     window.FrameUpShell?.addPaletteSource?.(() => [{
       label: 'AI',
