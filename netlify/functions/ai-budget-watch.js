@@ -54,6 +54,14 @@ exports.handler = async function handler(event) {
     console.warn(JSON.stringify({ event: 'merch-sync-in-budget-watch', error: merch.error }));
   }
   if (merch && merch.ok === false) console.warn(JSON.stringify({ event: 'merch-sync-in-budget-watch', ok: false }));
+  // Reels v4: the daily house lessons ride this cron too (same two-cron rule).
+  // Soft-fail and $0 when nothing changed; never changes the budget answer.
+  try {
+    const lessons = await require('./_reel-lessons.js').runLessonsJob({ service: true });
+    if (lessons && lessons.ok === false) console.warn(JSON.stringify({ event: 'reel-lessons-in-budget-watch', reason: lessons.reason }));
+  } catch (error) {
+    console.warn(JSON.stringify({ event: 'reel-lessons-in-budget-watch', error: String(error?.message || error).slice(0, 200) }));
+  }
   return json(result.ok ? 200 : 502, result); // the budget answer's shape is unchanged
 };
 

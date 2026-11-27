@@ -2581,3 +2581,23 @@ and what's still uncommitted.
   lessons (seeds) under their own heading in the director and judge prompts.
 - Tests: `scripts/test-gen-director.mjs` (23 briefs, 8 sports, every class asserted), `test-generate-creative.mjs`
   updated for the say-it-once rule. Suite: only the 7 baseline failures.
+
+### 2026-11-27 — Reels v4 (AI lane): script-first director, critic, learning loop
+- Status: `[branch feature/reels4-ai, not pushed]`. Lane AI of reels4-contract.md.
+- Owner decision (mid-lane): the person writes the script; the AI never writes or rewrites the voiceover.
+- New `netlify/functions/_reel-director4.js` (re-exported by `_reel-director.js`): the script is cut into segments
+  by code; the model (Haiku, Sonnet only when weak) only picks where each beat starts and what it shows (chapters,
+  headline with one *word*, media kind + subject, module per beat with numbers from script + sources, stamps, tags,
+  yourCall close). Every beat's vo is rebuilt from the script, so it is word for word by construction.
+  `scriptToV4` = the same chapters by code ($0, AI off / free mode / fallback). Reference reels reach the prompt as
+  structure only (QA's `scripts/fixtures/reels4/reference-plans.json` when present, else 6 built-in shapes).
+  `critiqueV4` (Haiku, cached 30 min): scores hook / oneIdea / mediaWords / moduleClaim / pacing / close, applies
+  safe fixes (headline, stamp, tag, media kind/subject, drop module, close), never the vo; script edits are notes.
+  `draftScript`: the small "Need a script?" helper.
+- New `netlify/functions/_reel-lessons.js` + client `reel-feedback.js` (`window.ReelFeedback.log`): feedback rows,
+  daily distillation (code summary, hash-skip, one Haiku call) into `frameup_reel_lessons`; top lessons go into the
+  director and critic prompts. The job rides the `ai-budget-watch` cron (two-cron rule) and an admin button.
+- `reel-maker.js`: plan v4 (`v: 4` or a v4 esStyle; `script` required), revise v4, `critique`, `script-draft`,
+  `feedback`, `lessons` (admins). `_ai-gateway.js`: FEATURE_NAMES only. `ai-budget-watch.js`: soft-fail lessons call.
+- Migration written, NOT run: `supabase/migrations/20261130120000_frameup_reel_feedback.sql`.
+- Tests: `scripts/test-reel-director-v4.mjs` (24, AI and fetch mocked). Not yet in `npm run test:reels`.

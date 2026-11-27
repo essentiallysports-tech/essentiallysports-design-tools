@@ -33,6 +33,20 @@
 //             relevance gate (_reel-sourcing.js). judgeQueue lists the clips
 //             the browser should sample and send to clip-judge (<= 24, $0.03 a
 //             reel). Over a cap / free mode: library + caption evidence only.
+//   plan (v4) body.v === 4 or a v4 esStyle (breakdown, casefile, outlier,
+//             hotseat): body.script is the voiceover, read word for word; the
+//             director (_reel-director4.js) only decides what is seen: chapters,
+//             headlines, media kind + subject, modules, stamps, the yourCall
+//             close. body.length 'full' (~90 s) | 'short' (~40 s). Free mode /
+//             AI off: the same chapters by code ($0). Top house lessons ride in.
+//   critique  Reels v4 critic: code checks + one Haiku call (reels-critique,
+//             ~$0.001, cached 30 min) -> scores, safe fixes applied (never the
+//             vo), suggestions, optional script notes, pass (Ready to post).
+//   script-draft  the small "Need a script?" helper (reels-script-draft)
+//   feedback  Reels v4 learning loop: up to 20 edit events (frameup_reel_feedback)
+//   lessons   admins: { action: 'list' } the house lessons; { action: 'refresh' }
+//             runs the daily distillation now (it also rides the
+//             ai-budget-watch cron)
 //   review    Reels v3: code checks + one Haiku call (reels-review, ~$0.001)
 //             -> issues, auto-fixed plan, ready (_reel-sourcing.js review)
 //   ai-clip-start / ai-clip-status
@@ -88,6 +102,8 @@ const ideas = require('./_reel-ideas.js');
 const { cachedEnrichment } = require('./trend-design.js');
 // Reels v3: per-scene sourcing and the review pass.
 const sourcing = require('./_reel-sourcing.js');
+// Reels v4: house lessons and the edit feedback that teaches them.
+const lessonsApi = require('./_reel-lessons.js');
 
 const REEL_SPORTS = ['nfl', 'cfb', 'mlb', 'golf'];
 const TREND_HOURS = 48;
@@ -104,7 +120,9 @@ const EVENT_TYPES = ['plan', 'revise', 'voice', 'edit', 'export', 'lint_blocked'
   // ── Reels 2.0: C (inputs) ── start source, idea lens, recipe, look, version, media added, voice mode, captions export, radar
   'start', 'idea_pick', 'recipe', 'look', 'variant', 'media_add', 'voice_upload', 'captions_export', 'radar_open', 'radar_handoff',
   // ── Reels v3 ── the style picked, sourcing, a Swap, the review pass and its badge
-  'style', 'scene_media', 'media_swap', 'review', 'ready'];
+  'style', 'scene_media', 'media_swap', 'review', 'ready',
+  // ── Reels v4 ── the critic pass
+  'critique'];
 
 function json(statusCode, body) {
   return { statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, body: JSON.stringify(body) };
@@ -223,6 +241,7 @@ async function plan(body, track, gates) {
     }
     if (director.hasDataInput(input)) return dataPlan(input, body, track, gates);
   }
+  if (body.v === 4 || director.V4_IDS.includes(String(body.esStyle || ''))) return planV4(body, track, gates);
   const brief = clean(body.brief, 2400);
   const trend = readTrend(body.trend);
   if (!brief && !trend) return { ok: false, status: 400, error: 'Pick a trend or write a brief.' };
@@ -300,8 +319,93 @@ async function plan(body, track, gates) {
   return value;
 }
 
+// ─── Plan v4: the person's script, word for word ─────────────────────────
+// Links ride as sources (titles only; nothing is fetched).
+const linksOf = raw => (Array.isArray(raw) ? raw : []).slice(0, 6).map(u => String(u && u.url || u || '').trim()).filter(u => /^https:\/\/[^\s"'<>]{1,400}$/.test(u));
+const lintV4 = (plan, corpus) => { try { return lintPlan(director.flattenV4(plan), { corpus }); } catch { return null; } };
+async function planV4(body, track, gates, { loadLessons = lessonsApi.loadLessons } = {}) {
+  const script = String(body.script == null ? '' : body.script).replace(/\s+/g, ' ').trim();
+  if (F.wordCount(script) < 6) return { ok: false, status: 400, reason: 'need-script', error: 'Paste or write your script first: a sentence or two at least. It is read word for word.' };
+  if (script.length > director.MAX_SCRIPT_CHARS) return { ok: false, status: 413, reason: 'too-long', error: 'That script is longer than a reel. Keep it under about 500 words.' };
+  const trend = readTrend(body.trend);
+  const topic = clean(body.topic || body.brief, 2400);
+  const links = linksOf(body.links);
+  const esStyle = director.v4StyleOf(clean(body.esStyle, 20));
+  const length = director.LENGTHS[body.length] ? body.length : 'full';
+  const tier = body.tier === 'economy' ? 'economy' : 'standard';
+  const sport = REEL_SPORTS.includes(body.sport) ? body.sport : '';
+  const steer = clean(body.steer, 300);
+  const blocked = gates.free ? 'free' : gates.off ? 'off' : (gates.weekly ? 'weekly-limit' : (gates.hourly ? 'limit' : ''));
+  const lessons = blocked ? [] : await loadLessons({ style: esStyle, token: track && track.token }).catch(() => []);
+  const key = planKey(['v4', script, trend?.id || trend?.title || '', topic, links, esStyle, length, tier, steer, sport, Boolean(body.factCheck), lessons.map(l => l.lesson)]);
+  const hit = PLAN_CACHE.get(key);
+  if (hit && Date.now() - hit.at < PLAN_TTL_MS) return { ...hit.value, cached: true, cost: 0, costs: { director: 0, factCheck: 0 } };
+  let facts = null;
+  let factCost = 0;
+  if (!blocked && body.factCheck) {
+    try { facts = await director.factCheck({ topic: [trend?.title, topic || script.slice(0, 400)].filter(Boolean).join('. '), sport, track }); factCost = facts.cost; } catch { facts = null; }
+  }
+  let result;
+  if (blocked) {
+    const read = director.readV4({ script, topic, trend, sport });
+    result = { plan: director.scriptToV4(script, { esStyle, length, read, team: read.team, title: trend ? trend.title : '', sport: read.sport }), read, source: 'code', cost: 0, model: '', issues: [], scriptNotes: [] };
+  } else {
+    result = await director.runDirectorV4({ script, topic, trend, facts: facts?.text || '', sport, esStyle, length, tier, steer, lessons, track });
+  }
+  const corpus = result.read.corpus;
+  const sources = [{ type: 'script', title: 'Your script' }, ...sourcesOf(trend, topic, facts).filter(x => x.type !== 'brief'), ...(topic ? [{ type: 'brief', title: 'Your notes' }] : []), ...links.map(url => ({ type: 'link', title: url, url }))].slice(0, 16);
+  result.plan.sources = sources;
+  const value = {
+    ok: true, v: 4, plan: result.plan, source: result.source, reason: blocked || result.reason || '',
+    notice: blocked === 'weekly-limit' ? `${weeklyLimitMessage()} Your script is laid out by code (free).` : blocked === 'limit' ? "You've used a lot of AI this hour. Your script is laid out by code (free)." : blocked === 'off' ? 'AI is off, so your script is laid out by code.' : '',
+    escalated: Boolean(result.escalated), model: result.model || '',
+    issues: (result.issues || []).slice(0, 8), scriptNotes: (result.scriptNotes || []).slice(0, 4),
+    corpus: corpus.slice(0, 12000), sources, esStyle, length, pacing: result.plan.pacing,
+    lessons: lessons.length, voMatchesScript: director.voMatchesScript(result.plan),
+    lint: lintV4(result.plan, corpus),
+    costs: { director: money(result.cost), factCheck: money(factCost) }, cost: money(result.cost + factCost),
+    factCheck: facts ? { capped: Boolean(facts.capped), urls: facts.urls.length } : null,
+  };
+  if (!blocked && result.source !== 'code') PLAN_CACHE.set(key, { at: Date.now(), value });
+  if (PLAN_CACHE.size > 200) PLAN_CACHE.delete(PLAN_CACHE.keys().next().value);
+  return value;
+}
+async function reviseV4(body, track, { loadLessons = lessonsApi.loadLessons } = {}) {
+  const current = body.plan;
+  const lessons = await loadLessons({ style: director.v4StyleOf(current.esStyle), token: track && track.token }).catch(() => []);
+  const out = await director.reviseV4({ plan: current, instruction: clean(body.instruction, 300), corpus: clean(body.corpus, 12000), lessons, track });
+  if (!out.plan || !director.voMatchesScript(out.plan)) return { ok: false, status: 422, error: 'That change did not come back clean. Try a different wording.', issues: out.issues };
+  out.plan.sources = current.sources || out.plan.sources;
+  return { ok: true, v: 4, plan: out.plan, issues: (out.issues || []).slice(0, 8), scriptNotes: out.scriptNotes || [], model: out.model, source: out.source, cost: money(out.cost), lint: lintV4(out.plan, clean(body.corpus, 12000)) };
+}
+async function scriptDraft(body, track) {
+  const out = await director.draftScript({ topic: clean(body.topic || body.brief, 2400), trend: readTrend(body.trend), length: director.LENGTHS[body.length] ? body.length : 'full', track });
+  return out.ok ? { ...out, cost: money(out.cost) } : out;
+}
+// The critic: always answers; with AI paused it is the code checks alone.
+async function critique(body, ctx, { loadLessons = lessonsApi.loadLessons } = {}) {
+  const plan = body.plan && typeof body.plan === 'object' ? body.plan : null;
+  if (!plan || plan.v !== 4) return { ok: false, status: 400, error: 'There is no v4 reel to check.' };
+  if (JSON.stringify(plan).length > 150 * 1024) return { ok: false, status: 413, error: 'That reel is too large to check.' };
+  const lessons = ctx.aiAllowed ? await loadLessons({ style: director.v4StyleOf(plan.esStyle), token: ctx.track && ctx.track.token }).catch(() => []) : [];
+  const out = await director.critiqueV4({ plan, corpus: clean(body.corpus, 8000), lessons, aiAllowed: ctx.aiAllowed, track: ctx.track });
+  return out.ok ? { ...out, cost: money(out.cost), lessons: lessons.length } : out;
+}
+// Admins: the house lessons, and the daily distillation on demand.
+async function lessonsMode(body, auth, token, { admin = isAdmin } = {}) {
+  if (!(await admin(token))) return { ok: false, status: 403, error: 'Admins only.' };
+  if (body.action === 'refresh') {
+    const out = await lessonsApi.runLessonsJob({ token, track: { email: auth.user.email, token }, force: body.force === true });
+    return { ...out, ok: out.ok !== false, cost: money(out.cost) };
+  }
+  lessonsApi.CACHE.clear();
+  const style = lessonsApi.STYLES.includes(body.style) ? body.style : 'breakdown';
+  return { ok: true, style, lessons: await lessonsApi.loadLessons({ style, token }) };
+}
+
 async function revise(body, track) {
   const current = body.plan && typeof body.plan === 'object' ? body.plan : null;
+  if (current && current.v === 4 && Array.isArray(current.chapters) && current.chapters.length) return reviseV4(body, track);
   if (!current || !Array.isArray(current.beats) || !current.beats.length) return { ok: false, status: 400, error: 'There is no reel to revise yet.' };
   const out = await director.revisePlan({ plan: current, instruction: clean(body.instruction, 300), corpus: clean(body.corpus, 12000), track });
   if (!out.plan.beats.length || out.weak && out.plan.beats.length < 3) return { ok: false, status: 422, error: 'That change did not come back clean. Try a different wording.', issues: out.issues };
@@ -473,9 +577,12 @@ async function formatMode(mode, body, ctx, gates = {}) {
   }
 }
 
-const AI_MODES = { plan, revise, voice: speak, 'voice-align': voiceAlign, music, 'voice-sample': voiceSample, scene: sceneImage, 'ai-clip-start': aiClipStart };
+const AI_MODES = { plan, revise, 'script-draft': scriptDraft, voice: speak, 'voice-align': voiceAlign, music, 'voice-sample': voiceSample, scene: sceneImage, 'ai-clip-start': aiClipStart };
 // ai-clip-status only reads a job that was already billed and capped.
-const DATA_MODES = { 'ai-clip-status': aiClipStatus, projects, 'project-save': projectSave, 'project-load': projectLoad, event: recordEvent };
+const DATA_MODES = { 'ai-clip-status': aiClipStatus, projects, 'project-save': projectSave, 'project-load': projectLoad, event: recordEvent,
+  // ── Reels v4 ── the learning loop (fire-and-forget) and the admins' lessons.
+  feedback: (body, auth, token) => lessonsApi.saveFeedback(Array.isArray(body.events) ? body.events : [body.event && typeof body.event === 'object' ? body.event : body], { auth, token }),
+  lessons: lessonsMode };
 
 // withAiMode (ai-free-mode): one free-mode store per request; replies carry mode: 'free'.
 exports.handler = withAiMode(async function handler(event) {
@@ -538,6 +645,14 @@ exports.handler = withAiMode(async function handler(event) {
       const result = await run(body, { track, aiAllowed });
       return json(result.ok ? 200 : (result.status || 400), { ...result, ...(aiAllowed ? {} : { aiPaused: free ? 'free' : gate ? (gate.reason || 'limit') : hourly ? 'limit' : 'off' }) });
     }
+    // ── Reels v4: the critic ── always answers; AI paused = code checks only.
+    if (body.mode === 'critique') {
+      const [gate, hourly] = await Promise.all([aiSpendGate(token, { feature: 'reels-critique' }), userOverHourlyLimit(token)]);
+      const free = freeModeGate(gate);
+      const aiAllowed = !free && !gate && !hourly && gatewayConfigured();
+      const result = await critique(body, { track, aiAllowed });
+      return json(result.ok ? 200 : (result.status || 400), { ...result, ...(aiAllowed ? {} : { aiPaused: free ? 'free' : gate ? (gate.reason || 'limit') : hourly ? 'limit' : 'off' }) });
+    }
     // ── Reels 2.0: lane B ── the ideas room. Over a cap, with AI off or on
     // any AI failure it answers with free template drafts, never an error.
     if (body.mode === 'ideas') {
@@ -585,4 +700,4 @@ exports.handler = withAiMode(async function handler(event) {
   }
 });
 
-exports._test = { sourcing, MAX_JUDGE_BODY, voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf, TREND_SPORTS, trendSport, ideas };
+exports._test = { planV4, reviseV4, scriptDraft, critique, lessonsMode, linksOf, lessonsApi, sourcing, MAX_JUDGE_BODY, voiceAlign, MAX_VOICE_BODY, FORMAT_MODES, formatMode, dataPlan, EVENT_TYPES, isAdmin, voiceSample, sceneImage, aiClipStart, aiClipStatus, trends, plan, revise, speak, projects, projectSave, projectLoad, recordEvent, readTrend, PLAN_CACHE, sourcesOf, TREND_SPORTS, trendSport, ideas };
