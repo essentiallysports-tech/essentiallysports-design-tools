@@ -24,7 +24,7 @@
 // Costs (logged in frameup_ai_usage): clip search as video-ads-find-clips
 // (cached 30 min per team, library first, $0.06 cap a live search), photo
 // verification as reels-photo-verify (vision for at most LIMITS.visionSubjects
-// subjects, ~$0.01 each; the rest by caption evidence, $0), the clip judge as
+// subjects x 6 photos, ~$0.015 each; the rest by caption evidence, $0), the clip judge as
 // reels-clip-judge ($0.03 a reel), the review as reels-review (~$0.001).
 const C = require('../../reel-clips.js');
 const F = require('../../reel-formats.js');
@@ -37,7 +37,8 @@ const LIMITS = {
   scenes: 14,
   subjects: 6, // clip / photo searches per reel
   liveSearches: 2, // paid live clip searches per reel (the rest: library + free sources)
-  visionSubjects: 3, // photo vision checks per reel (~$0.01 each)
+  visionSubjects: 2, // photo vision checks per reel (Sonnet, ~$0.015 each at 6 photos; verdicts cached 7 days per photo)
+  visionPhotos: 6, // photos per vision check (Generate uses 12; a scene needs one good photo)
   clipsPerScene: 12,
   photosPerSubject: 4,
   searchMs: 40000,
@@ -156,7 +157,7 @@ async function sceneMedia(body = {}, ctx = {}) {
         : { query: sub.name, team: sub.team || '', sport: plan.sport || '', count: LIMITS.photosPerSubject };
     const photoCtx = {
       email: track && track.email, token: track && track.token, gated: true,
-      deps: { verify: vision ? (subject, photos, opts) => deps.verifyWithVision(subject, photos, { ...opts, gateway: photoGateway }) : null, vision: null },
+      deps: { verify: vision ? (subject, photos, opts) => deps.verifyWithVision(subject, photos, { ...opts, max: Math.min(Number(opts && opts.max) || LIMITS.visionPhotos, LIMITS.visionPhotos), gateway: photoGateway }) : null, vision: null },
     };
     const res = await withTimeout(deps.findPhotos(args, photoCtx), LIMITS.photoMs, null);
     if (!res || res.ok === false) return;
