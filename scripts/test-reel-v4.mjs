@@ -365,6 +365,40 @@ test('MP4 export path: every frame draws (9:16 and 4:5), clip times follow the s
   const f = R.frameAt(tl, 1000);
   assert.ok(f.graphic && f.graphic.beat === 'd1');
 });
+test('visuals v5: ambient motion holds under every wipe (matched transitions), clips too', () => {
+  REEL_ORDER.forEach(id => {
+    const tl = TL[id];
+    const w0 = tl.wipes[0];
+    assert.equal(E4.ambClock(tl, w0.at - w0.ms / 2 - 10), w0.at - w0.ms / 2 - 10, `${id}: real time before the first wipe`);
+    tl.wipes.forEach(w => {
+      const a = E4.ambClock(tl, w.at - w.ms / 2);
+      [w.at - 200, w.at, w.at + 200, w.at + w.ms / 2].forEach(t => assert.equal(E4.ambClock(tl, t), a, `${id}: held at ${t}`));
+      assert.ok(E4.ambClock(tl, w.at + w.ms / 2 + 100) > a, `${id}: runs again after the wipe`);
+      // A clip revealed by the wipe shows one frame until the slab has gone.
+      const at = R.clipTimes(tl, w.at + 20).map(c => `${c.asset}@${c.time.toFixed(3)}`);
+      assert.deepEqual(R.clipTimes(tl, w.at + w.ms / 2 - 1).map(c => `${c.asset}@${c.time.toFixed(3)}`), at, `${id}: the clip holds under the slab`);
+    });
+  });
+  assert.equal(E4.PARALLAX.module, 1);
+  assert.ok(E4.PARALLAX.media > 1, 'the media window sits in front of the data');
+});
+test('visuals v5: a long headline takes a third h2 line and the zones make room (16:9 kept)', () => {
+  const long = 'Real Madrid are preparing a *January* bid';
+  const fit = E4.headFit(long, E4.approxMeasure);
+  assert.equal(fit.lines, 3);
+  assert.ok(fit.extra > 0);
+  assert.deepEqual(E4.headFit('Dallas blew a *21-point lead*', E4.approxMeasure), { lines: 2, extra: 0 });
+  const m = E4.zoneOf('both', 'media', fit.extra);
+  assert.equal(m.y, E4.LAYOUTS.both.media.y + fit.extra);
+  assert.ok(Math.abs(m.w / m.h - 16 / 9) < 0.03, 'still 16:9');
+  assert.ok(m.y + m.h <= E4.LAYOUTS.both.media.y + E4.LAYOUTS.both.media.h, 'the data zone keeps its place');
+  const tl = R.buildTimeline({ v: 4, chapters: [{ headline: long, beats: [{ id: 'x', vo: 'one two three four five', media: { kind: 'clip', label: 'A' }, module: { type: 'statTiles', tiles: [{ value: '3', label: 'BIDS' }] } }] }] }, { assets: { c: { kind: 'clip', durationMs: 6000 } }, photos: { x: ['c'] } });
+  const head = tl.els.find(e => e.id === 'head');
+  assert.equal(head.final.lines, 3);
+  const card = tl.els.find(e => e.id === 'media.card');
+  assert.equal(card.final.y, m.y);
+  R.drawFrame(mockCtx(), tl, 1500, {});
+});
 test('style previews (the Create cards) build and draw', () => {
   TH.STYLE_IDS.forEach(id => {
     const tl = R.buildTimeline(TH.STYLES[id].previewPlan, { style: 'es', esStyle: id });

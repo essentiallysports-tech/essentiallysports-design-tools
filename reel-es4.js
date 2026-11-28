@@ -77,14 +77,30 @@
   const STAGGER = Object.freeze({ min: 40, max: 60, step: 48 });
   const WIPE = Object.freeze({ ms: 640, half: 320, curve: 'inOut', skewDeg: -14 });
   const CAPTION_POP = Object.freeze({ ms: 160, curve: 'out', from: 0.86, exitMs: 160, exitCurve: 'in' });
-  const AMBIENT = Object.freeze({ photo: [1, 1.12], clip: [1, 1.03], curve: 'inOut' });
+  // Ken Burns: photos push in 8% with a drift toward the face, clips 4%.
+  const AMBIENT = Object.freeze({ photo: [1, 1.08], clip: [1, 1.04], curve: 'inOut' });
   // Camera drift: two slow sines (6.7 s and 5.3 s), 5 px and 7 px: continuous
   // (no kink at any boundary), always under 0.12 px a frame, never still for
-  // more than about half a second. Ambient, like Ken Burns.
+  // more than about half a second. Ambient, like Ken Burns. The zones drift
+  // at different depths (PARALLAX): the media window in front, the data module
+  // at 1x, the paper ground behind (it moves against them), so the frame has
+  // depth and no beat ever reads as a still. The paper ground holds still
+  // (ground 0): a drifting texture costs ~10% more MP4 bytes for little gain.
   const CAMERA = Object.freeze({ ax: 5, px: 6700, ay: 7, py: 5300, phase: 1.3 });
+  const PARALLAX = Object.freeze({ media: 1.5, module: 1, ground: 0 });
   const cameraAt = t => ({ x: CAMERA.ax * Math.sin((2 * Math.PI * t) / CAMERA.px), y: CAMERA.ay * Math.sin((2 * Math.PI * t) / CAMERA.py + CAMERA.phase) });
+  // The ambient clock: real time with every chapter wipe taken out. Ambient
+  // motion (camera, Ken Burns, clip playback, idle module motion) holds while
+  // the slab is on screen, so the wipe's first half shows the outgoing frame
+  // exactly as it was and its second half reveals exactly the frame the next
+  // chapter starts on: matched transitions, pixel for pixel.
+  function ambClock(tl, t) {
+    let a = t;
+    (tl && tl.wipes ? tl.wipes : []).forEach(w => { const s = w.at - w.ms / 2; if (t > s) a -= Math.min(t, s + w.ms) - s; });
+    return a;
+  }
   const NO_CAMERA = /^(?:head$|marker|close\.(?:prompt|source|wordmark))/;
-  const MOTION4 = Object.freeze({ CAMERA, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, CAPTION_POP, AMBIENT, NAMED: ['out', 'inOut', 'in', 'spring'] });
+  const MOTION4 = Object.freeze({ CAMERA, PARALLAX, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, CAPTION_POP, AMBIENT, NAMED: ['out', 'inOut', 'in', 'spring'] });
 
   const clamp01 = v => Math.max(0, Math.min(1, Number(v) || 0));
   function bezier(x1, y1, x2, y2) {
@@ -406,7 +422,7 @@
   const LAYOUTS = Object.freeze({
     both: { media: { x: 60, y: 616, w: 960, h: 540 }, cap: 1222, module: { x: 60, y: 1296, w: 960, h: 328 } },
     data: { module: { x: 60, y: 616, w: 960, h: 560 }, cap: 1238, media: { x: 256, y: 1320, w: 568, h: 320 } },
-    media: { media: { x: 60, y: 656, w: 960, h: 540 }, cap: 1300 },
+    media: { media: { x: 60, y: 616, w: 960, h: 540 }, cap: 1288 },
     module: { module: { x: 60, y: 616, w: 960, h: 800 }, cap: 1496 },
     none: { cap: 1000 },
   });
@@ -432,24 +448,25 @@
   // enter ('rise' | 'pop' | 'fade' | 'media' | 'draw'), order (stagger index),
   // parent (props dx / dy relative to the parent's x / y), at (absolute entry time) }.
   const DRAWN = new Set(['line', 'poly', 'check']);
-  const sp = (id, kind, p, o = {}) => ({ id, kind, pulse: Boolean(o.pulse), buildAt: o.buildAt != null ? o.buildAt : null, z: o.z != null ? o.z : 20, p: { alpha: 1, dy: 0, sc: 1, sy: 1, sx: 1, ...(DRAWN.has(kind) ? { p: 1 } : {}), ...p }, from: o.from || null, enter: o.enter || 'rise', order: o.order || 0, parent: o.parent || null, at: o.at != null ? o.at : null, ambient: o.ambient || null });
+  const sp = (id, kind, p, o = {}) => ({ id, kind, pulse: Boolean(o.pulse), buildAt: o.buildAt != null ? o.buildAt : null, z: o.z != null ? o.z : 20, p: { alpha: 1, dy: 0, sc: 1, sy: 1, sx: 1, ...(DRAWN.has(kind) ? { p: 1 } : {}), ...p }, from: o.from || null, enter: o.enter || 'rise', order: o.order || 0, parent: o.parent || null, at: o.at != null ? o.at : null, ambient: o.ambient || null, depth: o.depth != null ? o.depth : null });
   function tSize(measure, text, sizes, width, font = dFont) { for (const s of sizes) if (measure(text, font(s)) <= width) return s; return sizes[sizes.length - 1]; }
 
   function markerSpecs(marker, measure = approxMeasure) {
     if (!marker) return [];
     const y = ZONE.markerY;
-    if (marker.kind === 'label') return [sp('marker', 'pill', { x: ZONE.left, y, size: TS.label, fill: INK, ink: WHITE, text: marker.text }, { z: 30 })];
+    if (marker.kind === 'label') return [sp('marker', 'pill', { x: ZONE.left, y, size: TS.label, fill: INK, ink: WHITE, text: marker.text, maxW: 820 }, { z: 30 })];
     // 3·2·1 / 1-N: a row of ES pills (pillMetrics), 8 px apart. Active blue,
     // done ink, to come white with an ink outline.
     const list = [];
-    const pm = PILL(TS.label);
+    const MS = TS.label;
+    const pm = PILL(MS);
     let x = ZONE.left;
     for (let i = 0; i < marker.of; i += 1) {
       const label = marker.kind === 'countdown' ? `#${marker.of - i}` : String(i + 1);
       const active = marker.kind === 'countdown' ? marker.of - i === marker.n : i + 1 === marker.i;
       const done = marker.kind === 'countdown' ? marker.of - i > marker.n : i + 1 < marker.i;
-      list.push(sp(`marker.${i}`, 'pill', { x, y, size: TS.label, fill: active ? BLUE : done ? INK : WHITE, ink: active || done ? WHITE : INK, text: label, line: active || done ? 0 : 1 }, { z: 30, order: i }));
-      x += measure(label, dFont(TS.label)) + pm.padLeft + pm.padRight + 8;
+      list.push(sp(`marker.${i}`, 'pill', { x, y, size: MS, fill: active ? BLUE : done ? INK : WHITE, ink: active || done ? WHITE : INK, text: label, line: active || done ? 0 : 1 }, { z: 30, order: i }));
+      x += measure(label, dFont(MS)) + pm.padLeft + pm.padRight + 8;
     }
     return list;
   }
@@ -491,9 +508,9 @@
       const key = `mod.sb.${row.team}`;
       const c0 = countable(row.value);
       const lead = Number.isFinite(vals[i]) && vals[i] === best && n > 1;
-      out.push(sp(`${key}.row`, 'card', { x: r.x, y, w: r.w, h: rowH }, { z: 12, order: i }));
-      out.push(sp(`${key}.chip`, 'teamchip', { x: r.x + 16, y: y + 16, w: rowH - 32, h: rowH - 32, text: row.team.slice(0, 3), logo: row.logo }, { z: 14, order: i }));
-      out.push(sp(`${key}.name`, 'text', { x: r.x + rowH + 16, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: INK, text: row.team, maxW: r.w - rowH - 300 }, { z: 14, order: i }));
+      out.push(sp(`${key}.row`, 'card', { x: r.x, y, w: r.w, h: rowH, lead: lead ? BLUE : WHITE }, { z: 12, order: i }));
+      out.push(sp(`${key}.chip`, 'teamchip', { x: r.x + 28, y: y + 16, w: rowH - 32, h: rowH - 32, text: row.team.slice(0, 3), logo: row.logo }, { z: 14, order: i }));
+      out.push(sp(`${key}.name`, 'text', { x: r.x + rowH + 28, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: INK, text: row.team, maxW: r.w - rowH - 300 }, { z: 14, order: i }));
       out.push(sp(`${key}.val`, 'text', { x: r.x + r.w - 32, y: y + rowH / 2 + (CAP * TS.h2) / 2, size: TS.h2, color: lead ? BLUE : INK, align: 'right', text: row.value, ...(c0 ? { value: c0.value, fmt: c0 } : {}) }, { z: 14, order: i, from: c0 ? { value: 0 } : null }));
     });
     if (m.tag) out.push(sp('mod.sb.tag', 'pill', { x: r.x, y: top + n * (rowH + 12) + 12, size: TS.label, fill: toneHex(m.tag.tone, 'red'), ink: WHITE, text: m.tag.text }, { z: 16, order: n + 1, enter: 'pop' }));
@@ -515,7 +532,9 @@
       const bw = Math.max(8, ((a.w - valW) * row.value) / max);
       const c0 = countable(`${row.value}${m.unit}`) || { value: row.value, pre: '', post: m.unit, dec: 0 };
       out.push(sp(`${key}.label`, 'text', { x: a.x, y: y + CAP * TS.label, size: TS.label, color: INK, text: row.label, maxW: a.w }, { order: i }));
-      out.push(sp(`${key}.bar`, 'rect', { x: a.x, y: y + CAP * TS.label + 14, w: bw, h: barH, fill: toneHex(row.tone) }, { order: i, from: { w: 0 }, enter: 'fade' }));
+      // The track: the full scale, so a bar reads as a share of it.
+      out.push(sp(`${key}.track`, 'rect', { x: a.x, y: y + CAP * TS.label + 14, w: a.w - valW, h: barH, fill: PAPER, track: 1 }, { z: 18, order: i, enter: 'fade' }));
+      out.push(sp(`${key}.bar`, 'rect', { x: a.x, y: y + CAP * TS.label + 14, w: bw, h: barH, fill: toneHex(row.tone), sheen: 1 }, { order: i, from: { w: 0 }, enter: 'fade' }));
       out.push(sp(`${key}.val`, 'text', { x: a.x + bw + 20, y: y + CAP * TS.label + 14 + barH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: toneHex(row.tone), text: fmtCount(c0, row.value), value: row.value, fmt: c0 }, { order: i, from: { value: 0, x: a.x + 20 }, enter: 'fade' }));
     });
     return out;
@@ -532,6 +551,10 @@
       out.push(sp(`mod.nl.tick${i}`, 'line', { x1: X(v), y1: ay - 24, x2: X(v), y2: ay + 24, stroke: INK, lw: 8 }, { order: 1 }));
       out.push(sp(`mod.nl.tl${i}`, 'text', { x: X(v), y: ay + 24 + 20 + CAP * TS.label, size: TS.label, color: INK, align: 'center', text: v > 0 && m.min < 0 ? `+${v}` : String(v) }, { order: 1 }));
     });
+    // Minor ticks (structural, no labels) and the run from the low end to the
+    // first mark, drawn in under it: the line reads as a measure, not a rule.
+    for (let k = 1; k < 10; k += 1) out.push(sp(`mod.nl.mt${k}`, 'line', { x1: x0 + ((x1 - x0) * k) / 10, y1: ay - 12, x2: x0 + ((x1 - x0) * k) / 10, y2: ay + 12, stroke: INK, lw: 4, alpha: 0.35 }, { order: 1, enter: 'fade' }));
+    if (m.marks[0]) { const xm = X(Math.max(m.min, Math.min(m.max, m.marks[0].value))); out.push(sp('mod.nl.run', 'line', { x1: x0, y1: ay, x2: xm, y2: ay, stroke: toneHex(m.marks[0].tone, 'blue'), lw: 14 }, { z: 21, order: 2, from: { p: 0 }, enter: 'fade' })); }
     const sorted = m.marks.map((k, i) => ({ ...k, i, x: X(Math.max(m.min, Math.min(m.max, k.value))) })).sort((p, q) => p.x - q.x);
     sorted.forEach((k, j) => {
       const below = j > 0 && Math.abs(k.x - sorted[j - 1].x) < 220 && !sorted[j - 1].below;
@@ -563,7 +586,7 @@
       const fill = fills[i] || GREY;
       const isAv = m.avatar && i === m.avatar.index;
       if (isAv) continue;
-      out.push(sp(`mod.dot.${i}`, 'dot', { x: ox + (i % cols) * cell, y: oy + row * cell, r: cell * 0.36, fill }, { z: 14, order: Math.min(row, 24), enter: 'pop', from: fill !== GREY ? { fill: GREY } : null }));
+      out.push(sp(`mod.dot.${i}`, 'dot', { x: ox + (i % cols) * cell, y: oy + row * cell, r: cell * 0.36, fill, breathe: fill !== GREY ? i : -1 }, { z: 14, order: Math.min(row, 24), enter: 'pop', from: fill !== GREY ? { fill: GREY } : null }));
     }
     if (m.avatar) {
       const i = m.avatar.index;
@@ -666,7 +689,7 @@
       const ph = PILL(TS.label).h;
       const blockH = CAP * size + 28 + ph;
       const ty = y + (h - blockH) / 2 + CAP * size;
-      out.push(sp(`${key}.card`, 'card', { x, y, w, h }, { z: 12, order: i }));
+      out.push(sp(`${key}.card`, 'card', { x, y, w, h, bar: toneHex(tile.tone, 'ink') }, { z: 12, order: i }));
       out.push(sp(`${key}.val`, 'text', { x: x + w / 2, y: ty, size, color: toneHex(tile.tone, 'ink'), align: 'center', text: tile.value, ...(c0 ? { value: c0.value, fmt: c0 } : {}) }, { z: 14, order: i, from: c0 ? { value: 0 } : null }));
       if (tile.label) out.push(sp(`${key}.lab`, 'pill', { x: x + w / 2, y: ty + 28, size: TS.label, fill: INK, ink: WHITE, text: tile.label, anchor: 'center', maxW: w - 32 }, { z: 15, order: i + 1 }));
     });
@@ -681,7 +704,7 @@
     const size = tSize(c.measure, m.to, [TS.statXL, TS.stat, TS.display, TS.h1].filter(s => CAP * s < h - ph - 80).concat([TS.h1]), w - 64);
     const ty = y + (h - (CAP * size + 32 + (m.label ? ph : 0))) / 2 + CAP * size;
     return [
-      sp('mod.rv.card', 'card', { x, y, w, h }, { z: 12 }),
+      sp('mod.rv.card', 'card', { x, y, w, h, bar: toneHex(m.tone, 'blue') }, { z: 12 }),
       sp('mod.rv.val', 'text', { x: x + w / 2, y: ty, size, color: toneHex(m.tone, 'blue'), align: 'center', text: m.to }, { z: 14, from: { text: m.from, color: INK }, buildAt: spokenAt(c, m.to) }),
       ...(m.label ? [sp('mod.rv.lab', 'pill', { x: x + w / 2, y: ty + 32, size: TS.label, fill: INK, ink: WHITE, text: m.label, anchor: 'center', maxW: w - 32 }, { z: 15, order: 1 })] : []),
     ];
@@ -697,7 +720,7 @@
     const side = (k, x, col, i) => {
       const c0 = countable(k.value);
       return [
-        sp(`mod.cmp.${i}.card`, 'card', { x, y, w, h }, { z: 12, order: i * 2 }),
+        sp(`mod.cmp.${i}.card`, 'card', { x, y, w, h, bar: i ? toneHex(m.tone, 'blue') : INK }, { z: 12, order: i * 2 }),
         sp(`mod.cmp.${i}.val`, 'text', { x: x + w / 2, y: ty, size, color: col, align: 'center', text: k.value, ...(c0 ? { value: c0.value, fmt: c0 } : {}) }, { z: 14, order: i * 2, from: c0 && i ? { value: countable(m.from.value) ? countable(m.from.value).value : 0 } : null }),
         ...(k.label ? [sp(`mod.cmp.${i}.lab`, 'pill', { x: x + w / 2, y: ty + 28, size: TS.label, fill: i ? toneHex(m.tone, 'blue') : INK, ink: WHITE, text: k.label, anchor: 'center', maxW: w - 32 }, { z: 15, order: i * 2 + 1 })] : []),
       ];
@@ -739,7 +762,7 @@
     const x = r.x + (r.w - w) / 2;
     const y = r.y + (r.h - h) / 2;
     const out = [sp('mod.cal', 'calendar', { x, y, w, h, month: m.month, big: m.day || m.year, year: m.day ? m.year : '' }, { z: 12 })];
-    if (m.stamp) out.push(sp('mod.cal.stamp', 'stamp', { x: x + w - 60, y: y + h - 40, text: m.stamp.text, color: toneHex(m.stamp.tone, 'red'), rot: -10, size: TS.caption }, { z: 40, order: 6, enter: 'pop' }));
+    if (m.stamp) out.push(sp('mod.cal.stamp', 'stamp', { x: x + w - 60, y: y + h - 40, text: m.stamp.text, color: toneHex(m.stamp.tone, 'red'), rot: -10, size: TS.caption }, { z: 40, order: 6, enter: 'slam' }));
     return out;
   };
   MOD.timeline = (m, r) => {
@@ -750,6 +773,7 @@
     const size = Math.min(132, (a.w - (n - 1) * gap) / n);
     const x0 = a.x + (a.w - (n * size + (n - 1) * gap)) / 2;
     const y = a.y + (a.h - size - 16 - CAP * TS.body - 8) / 2;
+    out.push(sp('mod.tl.rail', 'line', { x1: x0, y1: y + size / 2, x2: x0 + n * size + (n - 1) * gap, y2: y + size / 2, stroke: INK, lw: 6, alpha: 0.5 }, { z: 13, from: { p: 0 }, enter: 'fade' }));
     m.slots.forEach((s, i) => {
       const x = x0 + i * (size + gap);
       out.push(sp(`mod.tl.${i}`, 'slot', { x, y, w: size, h: size, f: s.filled ? 1 : 0, fill: toneHex(s.tone, 'blue') }, { z: 14, order: i, from: s.filled ? { f: 0 } : null }));
@@ -831,11 +855,13 @@
     const [xa, xb, ya, yb] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
     const P = p => [plot.x + ((p[0] - xa) / Math.max(1e-9, xb - xa)) * plot.w, plot.y + plot.h - 16 - ((p[1] - ya) / Math.max(1e-9, yb - ya)) * (plot.h - 40)];
     const list = m.points.map(P);
-    out.push(sp('mod.lc.line', 'poly', { pts: list, stroke: BLUE, lw: 10, dot: 1 }, { z: 14, order: 1, from: { p: 0 }, enter: 'fade' }));
+    // Light guides (structural) and a tinted area under the line as it draws.
+    [0.25, 0.5, 0.75].forEach((f, i) => out.push(sp(`mod.lc.g${i}`, 'line', { x1: plot.x, y1: plot.y + plot.h * f, x2: plot.x + plot.w, y2: plot.y + plot.h * f, stroke: INK, lw: 2, alpha: 0.18, dash: 1 }, { z: 12, order: 1, enter: 'fade' })));
+    out.push(sp('mod.lc.line', 'poly', { pts: list, stroke: BLUE, lw: 10, dot: 1, area: plot.y + plot.h }, { z: 14, order: 1, from: { p: 0 }, enter: 'fade' }));
     const last = list[list.length - 1];
     out.push(sp('mod.lc.end', 'dot', { x: last[0], y: last[1], r: 20, fill: BLUE, stroke: WHITE, lw: 6 }, { z: 16, order: 14, enter: 'pop', pulse: true }));
     if (m.axes.x) out.push(sp('mod.lc.lx', 'text', { x: plot.x + plot.w, y: plot.y + plot.h + 16 + CAP * TS.body, size: TS.body, font: 's', color: INK, align: 'right', text: m.axes.x }, { order: 1 }));
-    if (m.stamp) out.push(sp('mod.lc.stamp', 'stamp', { x: plot.x + plot.w * 0.72, y: plot.y + plot.h * 0.22, text: m.stamp.text, color: toneHex(m.stamp.tone, 'red'), rot: -8, size: TS.caption }, { z: 40, order: 16, enter: 'pop' }));
+    if (m.stamp) out.push(sp('mod.lc.stamp', 'stamp', { x: plot.x + plot.w * 0.72, y: plot.y + plot.h * 0.22, text: m.stamp.text, color: toneHex(m.stamp.tone, 'red'), rot: -8, size: TS.caption }, { z: 40, order: 16, enter: 'slam' }));
     return out;
   };
 
@@ -900,6 +926,7 @@
   function enterFrom(s) {
     switch (s.enter) {
       case 'pop': return { alpha: 0, sc: 0.6 };
+      case 'slam': return { alpha: 0, sc: 1.5 };
       case 'fade': case 'media': case 'draw': return { alpha: 0 };
       case 'rise': default: return { alpha: 0, dy: 28 };
     }
@@ -949,6 +976,7 @@
       el.parent = s.parent;
       el.z = s.z;
       el.kind = s.kind;
+      if (s.depth != null) el.depth = s.depth;
       if (fresh) {
         el.alive = true;
         // Under the slab (or frame one) the chapter's first frame is set:
@@ -966,7 +994,7 @@
           addKey(el, t, 0, 'set', { ...start, ...enterFrom(s) }, { cover: true });
           el.born.push(at);
           const pre = enterFrom(s);
-          if (s.enter === 'pop') {
+          if (s.enter === 'pop' || s.enter === 'slam') {
             addKey(el, at, DUR.xs, 'out', { alpha: start.alpha });
             addKey(el, at, DUR.m, 'spring', { sc: start.sc });
           } else if (s.enter === 'media') {
@@ -1008,13 +1036,36 @@
 
   const FRAMING = /^(?:CHAPTER|PART|NUMBER|STEP|EXHIBIT)\s+(?:[A-Z]+|\d+)$/;
   const CONTAINERS = new Set(['panel', 'card', 'field', 'quotecard', 'calendar']);
-  function chapterHeadSpecs(ch, measure) {
+  // How a chapter's headline sets: 1-2 lines on the h1 / h2 steps; a long
+  // headline gets a third line at h2 (never drops to the caption step while
+  // h2 fits in three) and the zones below make room (headExtra).
+  const HEAD_LH = Math.round((TS.h2 * 0.92) / 8) * 8;
+  function headFit(text, measure) {
+    const t = String(text || '').toUpperCase();
+    const a = wrapEm(measure, t, HEAD_STEPS, ZONE.headW, 2, TS.h2);
+    if (a.fits && a.size >= TS.h2) return { lines: 2, extra: 0 };
+    const b = wrapEm(measure, t, [TS.h2], ZONE.headW, 3, TS.h2);
+    if (b.fits && b.lines.length === 3) return { lines: 3, extra: HEAD_LH };
+    return { lines: 2, extra: 0 };
+  }
+  const headSteps = lines => (lines === 3 ? [TS.h2, TS.caption] : HEAD_STEPS);
+  function chapterHeadSpecs(ch, measure, fit = { lines: 2 }) {
     return [
-      sp('head', 'headline', { x: ZONE.left, y: ZONE.headY, w: ZONE.headW, text: ch.headline.toUpperCase(), em: toneHex(ch.tone === 'red' ? 'red' : 'blue') }, { z: 30 }),
+      sp('head', 'headline', { x: ZONE.left, y: ZONE.headY, w: ZONE.headW, text: ch.headline.toUpperCase(), em: toneHex(ch.tone === 'red' ? 'red' : 'blue'), lines: fit.lines }, { z: 30 }),
       ...markerSpecs(ch.marker, measure),
     ];
   }
-  function zoneOf(layout, which) { return LAYOUTS[layout] ? LAYOUTS[layout][which] || null : null; }
+  // A zone of a layout, moved down by a three-line headline: a 16:9 window in
+  // the 'both' layout shrinks (still 16:9, centred) so the data zone keeps its
+  // place; a module alone, or in the 'data' layout, gives up the height.
+  function zoneOf(layout, which, extra = 0) {
+    const z = LAYOUTS[layout] ? LAYOUTS[layout][which] || null : null;
+    if (!z || !extra) return z;
+    if (which === 'media' && layout === 'both') { const h = z.h - extra; const w = Math.round((h * 16) / 9 / 8) * 8; return { x: Math.round((W - w) / 2), y: z.y + extra, w, h }; }
+    if (which === 'media' && layout === 'media') return { ...z, y: z.y + extra };
+    if (which === 'module' && (layout === 'data' || layout === 'module')) return { ...z, y: z.y + extra, h: z.h - extra };
+    return z;
+  }
 
   function buildTimeline(plan0, opts = {}, helpers = {}) {
     const plan = toV4(plan0);
@@ -1093,6 +1144,7 @@
       layers.push(L);
       const reveal = ci === 0 ? DUR.s : ch0.inMs + WIPE.half;
       const cardMemo = {};
+      const fit = headFit(ch.headline, measure);
       ch.beats.forEach((b, bi) => {
         const beat = beats.find(x => x.id === b.id);
         const main = [b.media && b.media.asset, ...(photos[b.id] || [])].filter(a => a && assets[a])[0] || '';
@@ -1103,14 +1155,15 @@
         const layout = chooseLayout({ ...b, media }, hasMedia);
         beatLayout[b.id] = layout;
         const ctx = { ...ctxBase, beat: b, beatStart: beat.inMs, beatEnd: beat.outMs, words, cardMemo };
-        const mr = zoneOf(layout, 'media');
-        let dr = zoneOf(layout, 'module');
-        let capY = LAYOUTS[layout].cap;
+        const mr = zoneOf(layout, 'media', fit.extra);
+        let dr = zoneOf(layout, 'module', fit.extra);
+        let capY = LAYOUTS[layout].cap + (layout === 'media' ? fit.extra : 0);
         // Module alone: as tall as it needs (480-800), the caption under it.
-        if (layout === 'module' && b.module) { const need = moduleNeed(b.module); const h = need >= 600 ? 800 : Math.max(360, need); dr = { ...dr, y: dr.y + Math.round((800 - h) / 2 / 8) * 8, h }; }
+        // It sits under the headline (not floating mid-frame); the caption follows it.
+        if (layout === 'module' && b.module) { const full = dr.h; const need = moduleNeed(b.module); const h = need >= 600 ? full : Math.max(360, Math.min(full, need)); dr = { ...dr, y: dr.y + Math.min(48, full - h), h }; capY = Math.min(capY, dr.y + h + 104); }
         // In the data layout a small module (flow, tally) gets a card its size, centred in the zone.
         if (layout === 'data' && b.module && ['flow', 'tally'].includes(b.module.type)) { const h = Math.min(dr.h, Math.max(360, moduleNeed(b.module))); dr = { ...dr, y: dr.y + Math.round((dr.h - h) / 2 / 8) * 8, h }; }
-        const specs = [...chapterHeadSpecs(ch, measure)];
+        const specs = [...chapterHeadSpecs(ch, measure, fit)];
         if (hasMedia) specs.push(...mediaSpecs(media, mr, { main, cards: cardAssets }, ctx));
         if (b.module && MOD[b.module.type] && dr) specs.push(...MOD[b.module.type](b.module, dr, ctx));
         const tagZone = dr || mr;
@@ -1137,7 +1190,7 @@
           const tagW = b.tag && tagZone === zr ? measure(b.tag.text, dFont(TS.label)) + PILL(TS.label).padLeft + PILL(TS.label).padRight + 32 : 0;
           const sx = zr.x + zr.w - sw / 2 - 40 - tagW;
           const sy = onMedia ? zr.y + shh / 2 + 40 : zr.y + 4;
-          specs.push(sp('stamp', 'stamp', { x: sx, y: sy, text: b.stamp.text, color: toneHex(b.stamp.tone, 'red'), rot: -6, size: ssz }, { z: 40, enter: 'pop', at }));
+          specs.push(sp('stamp', 'stamp', { x: sx, y: sy, text: b.stamp.text, color: toneHex(b.stamp.tone, 'red'), rot: -6, size: ssz }, { z: 40, enter: 'slam', at }));
         }
         if (bi === 0) applyScene(L, specs, ci === 0 ? 0 : ch0.inMs, 'cover', reveal, ctx);
         else applyScene(L, specs, beat.inMs, 'beat', 0, ctx);
@@ -1263,8 +1316,10 @@
       out.push(sp('close.prompt', 'para', { x: ZONE.left, y: 560, w: 960, h: 300, text: close.prompt, color: INK, steps: [TS.h1, TS.h2], maxLines: 2, align: 'center', em: BLUE, emLast: 1 }, { z: 30 }));
       // Both options at one size (the biggest step both fit).
       const size = [TS.h2, TS.caption].find(z => close.options.every(o => ctx.measure(o.text, dFont(z)) <= 840 - 96)) || TS.caption;
-      close.options.forEach((o, i) => out.push(sp(`close.opt.${i}`, 'button', { x: 120, y: 900 + i * 196, w: 840, h: 164, fill: toneHex(o.tone, i ? 'blue' : 'red'), text: o.text, size }, { z: 30, order: i, from: { alpha: 0, sc: 0.9 } })));
-      if (close.comment) out.push(sp('close.comment', 'pill', { x: 540, y: 1330, size: TS.label, fill: INK, ink: WHITE, text: close.comment, anchor: 'center', bubble: 1 }, { z: 30, order: 3, from: { alpha: 0 } }));
+      close.options.forEach((o, i) => out.push(sp(`close.opt.${i}`, 'button', { x: 120, y: 900 + i * 220, w: 840, h: 164, fill: toneHex(o.tone, i ? 'blue' : 'red'), text: o.text, size }, { z: 30, order: i, from: { alpha: 0, sc: 0.9 } })));
+      // "OR" where the two options meet (a vote, not a list).
+      out.push(sp('close.or', 'orchip', { x: 540, y: 900 + 164 + 28, r: 44, text: 'OR' }, { z: 31, order: 2, from: { alpha: 0, sc: 0.6 } }));
+      if (close.comment) out.push(sp('close.comment', 'pill', { x: 540, y: 1370, size: TS.caption, fill: INK, ink: WHITE, text: close.comment, anchor: 'center', bubble: 1, maxW: 900 }, { z: 30, order: 3, from: { alpha: 0 } }));
     } else if (close.kind === 'checklist') {
       out.push(sp('close.prompt', 'para', { x: ZONE.left, y: 440, w: 840, h: 200, text: close.prompt, color: INK, steps: [TS.h1, TS.h2], maxLines: 2 }, { z: 30 }));
       const r = { x: 60, y: 680, w: 960, h: 640 };
@@ -1320,14 +1375,16 @@
     return { layer: L, list: list.filter(x => (x.s.alpha == null ? 1 : x.s.alpha) > 0.002).sort((a, b) => a.el.z - b.el.z) };
   }
   const capAt = (tl, t) => { const el = tl.els.find(e => e.layer === 'g' && e.id === 'cap'); return el ? stateAt(el, t).y : 1200; };
-  function clipTime(shot, t) {
+  // A clip plays on the ambient clock (it holds under a chapter wipe).
+  function clipTime(shot, t, tl) {
     if (!shot || !shot.clip) return 0;
     const span = Math.max(0.5, shot.clip.durSec - shot.clip.inSec);
-    return shot.clip.inSec + ((Math.max(0, t - shot.inMs) / 1000) % span);
+    const run = tl ? ambClock(tl, t) - ambClock(tl, shot.inMs) : t - shot.inMs;
+    return shot.clip.inSec + ((Math.max(0, run) / 1000) % span);
   }
   function clipTimes(tl, t) {
     const L = layerAt(tl, t);
-    return tl.tracks.video.filter(s => s.clip && s.asset && s.layer === L.i && t >= s.inMs && t < s.outMs + DUR.s).map(s => ({ asset: s.asset, time: clipTime(s, t) }));
+    return tl.tracks.video.filter(s => s.clip && s.asset && s.layer === L.i && t >= s.inMs && t < s.outMs + DUR.s).map(s => ({ asset: s.asset, time: clipTime(s, t, tl) }));
   }
   // frameAt (the page reads beat / caption from it like v3's).
   function frameAt(tl, tMs) {
@@ -1373,17 +1430,98 @@
     ctx.shadowOffsetY = skin === 'scrapbook' ? 8 : 10;
   }
   const noShadow = ctx => { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; };
+  // A sheet of paper with real depth. Clean: two shadows (a wide soft ambient
+  // one and a tight contact one) and a hairline edge. Scrapbook: a hard,
+  // slightly soft offset shadow (paper lifted off the page). Square corners.
+  function paperFill(ctx, skin, x, y, w, h, fill = WHITE, edge = true) {
+    ctx.save();
+    ctx.fillStyle = fill;
+    if (skin === 'scrapbook') {
+      ctx.shadowColor = 'rgba(18,18,18,0.20)'; ctx.shadowBlur = 3; ctx.shadowOffsetX = 7; ctx.shadowOffsetY = 9;
+      ctx.fillRect(x, y, w, h);
+    } else {
+      ctx.shadowColor = 'rgba(18,18,18,0.09)'; ctx.shadowBlur = 48; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 22;
+      ctx.fillRect(x, y, w, h);
+      ctx.shadowColor = 'rgba(18,18,18,0.12)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 3;
+      ctx.fillRect(x, y, w, h);
+    }
+    noShadow(ctx);
+    if (edge) { ctx.strokeStyle = 'rgba(18,18,18,0.07)'; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, w - 2, h - 2); }
+    ctx.restore();
+  }
+  // Scrapbook tape: translucent, faintly warm, with torn zig-zag ends.
   function tape(ctx, x, y, w, rot) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate((rot * Math.PI) / 180);
-    ctx.fillStyle = 'rgba(255,255,255,0.72)';
-    ctx.fillRect(-w / 2, -18, w, 36);
-    ctx.strokeStyle = 'rgba(201,197,188,0.9)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-w / 2, -18, w, 36);
+    const hh = 22;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, -hh);
+    ctx.lineTo(w / 2, -hh);
+    for (let k = 0; k <= 6; k += 1) ctx.lineTo(w / 2 + (k % 2 ? -7 : 0), -hh + (k * 2 * hh) / 6);
+    ctx.lineTo(-w / 2, hh);
+    for (let k = 6; k >= 0; k -= 1) ctx.lineTo(-w / 2 + (k % 2 ? 7 : 0), -hh + (k * 2 * hh) / 6);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(250,246,232,0.78)';
+    ctx.shadowColor = 'rgba(18,18,18,0.10)'; ctx.shadowBlur = 2; ctx.shadowOffsetY = 2;
+    ctx.fill();
+    noShadow(ctx);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(-w / 2 + 10, -hh + 5, w - 20, 5);
     ctx.restore();
   }
+  // A paper clip (Scrapbook media cards).
+  function paperClip(ctx, x, y) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(0.12);
+    ctx.strokeStyle = 'rgba(96,100,108,0.95)';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    // Two nested loops: the outer one, then the inner one.
+    ctx.moveTo(30, 40); ctx.lineTo(30, -36);
+    ctx.arc(14, -36, 16, 0, Math.PI, true);
+    ctx.lineTo(-2, 70);
+    ctx.arc(18, 70, 20, Math.PI, 0, true);
+    ctx.lineTo(38, -50);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // Torn-paper path: straight sides, a ragged bottom (and top, when asked).
+  function tornRect(ctx, x, y, w, h, seed, top = false) {
+    const rand = rng(seed);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    if (top) for (let xx = x; xx <= x + w; xx += 18) ctx.lineTo(xx, y + rand() * 8); else ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + h);
+    for (let xx = x + w; xx >= x; xx -= 16) ctx.lineTo(xx, y + h - rand() * 11);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+  }
+  // A light sweep across a coloured shape (idle motion on bars, chips, the
+  // close buttons, the caption's blue word): phase 0..1, visible on 0..0.34.
+  let AMB = 0;
+  function sheen(ctx, x, y, w, h, phase, strength = 0.26) {
+    if (phase <= 0 || phase >= 0.34 || w <= 0 || h <= 0 || typeof ctx.createLinearGradient !== 'function') return;
+    const q = ease.inOut(phase / 0.34);
+    const band = Math.max(80, Math.min(260, w * 0.45));
+    const cx = x - band + (w + 2 * band) * q;
+    const g = ctx.createLinearGradient(cx - band / 2, y, cx + band / 2, y + h * 0.4);
+    if (!g || typeof g.addColorStop !== 'function') return;
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.5, `rgba(255,255,255,${strength})`);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    // Clipped by the shape itself: the band is only drawn where it overlaps.
+    const l = Math.max(x, cx - band / 2); const r = Math.min(x + w, cx + band / 2);
+    if (r - l < 2) return;
+    ctx.save();
+    ctx.fillStyle = g;
+    ctx.fillRect(l, y, r - l, h);
+    ctx.restore();
+  }
+  const sheenPhase = (id, period = 3600) => { const p = ((AMB + hash(id) * period) % period) / period; return p < 0 ? p + 1 : p; };
   function drawPill(ctx, s, M, tl) {
     const size = fitStep(M, s.text, s.size || TS.label, s.maxW, dFont, true);
     const pm = PILL(size);
@@ -1476,6 +1614,25 @@
     withState(ctx, s, s.x + s.w / 2, s.y + (lay.lines.length * lh) / 2, () => {
       ctx.font = font;
       ctx.textAlign = 'left';
+      if (isHead && skin === 'scrapbook') {
+        // Scrapbook: each headline line is cut out on its own torn paper strip,
+        // tilted a touch (alternately), lifted off the page.
+        lay.lines.forEach((line, i) => {
+          const lx = s.align === 'center' ? s.x + (s.w - line.w) / 2 : s.x;
+          const top = s.y + i * lh - 16;
+          const sh = CAP * lay.size + 34;
+          ctx.save();
+          ctx.translate(lx + line.w / 2, top + sh / 2);
+          ctx.rotate(((i % 2 ? 1.3 : -1.2) * Math.PI) / 180);
+          ctx.translate(-(lx + line.w / 2), -(top + sh / 2));
+          ctx.shadowColor = 'rgba(18,18,18,0.18)'; ctx.shadowBlur = 2; ctx.shadowOffsetX = 5; ctx.shadowOffsetY = 6;
+          ctx.fillStyle = WHITE;
+          tornRect(ctx, lx - 22, top, line.w + 44, sh, `${s.text}${i}`, true);
+          ctx.fill();
+          ctx.restore();
+        });
+        ctx.font = font;
+      }
       lay.lines.forEach((line, i) => {
         let x = s.align === 'center' ? s.x + (s.w - line.w) / 2 : s.x;
         const y = s.y + CAP * lay.size + i * lh;
@@ -1528,15 +1685,17 @@
       return;
     }
     const isClip = asset && asset.kind === 'clip';
-    const span = shot ? Math.max(1, shot.outMs - shot.inMs) : 1;
-    let q = shot ? clamp01((t - shot.inMs) / span) : 0;
+    // Ken Burns on the ambient clock (held under the wipes).
+    const a0 = shot ? ambClock(tl, shot.inMs) : 0;
+    const span = shot ? Math.max(1, ambClock(tl, shot.outMs) - a0) : 1;
+    let q = shot ? clamp01((ambClock(tl, t) - a0) / span) : 0;
     // A still pushes once per beat, in then out then in (continuous at every
     // beat edge, eased inOut), so a photo held over a chapter visibly moves on
-    // every beat instead of drifting 6% over the whole chapter.
+    // every beat instead of one slow push over the whole chapter.
     if (!isClip && shot && Array.isArray(tl.beats)) {
       const parts = tl.beats.filter(b => b.outMs > shot.inMs && b.inMs < shot.outMs);
       const k = parts.findIndex(b => t >= b.inMs && t < b.outMs);
-      if (k >= 0) { const a = Math.max(parts[k].inMs, shot.inMs); const z = Math.min(parts[k].outMs, shot.outMs); const r = clamp01((t - a) / Math.max(1, z - a)); q = k % 2 === 0 ? r : 1 - r; }
+      if (k >= 0) { const a = ambClock(tl, Math.max(parts[k].inMs, shot.inMs)); const z = ambClock(tl, Math.min(parts[k].outMs, shot.outMs)); const r = clamp01((ambClock(tl, t) - a) / Math.max(1, z - a)); q = k % 2 === 0 ? r : 1 - r; }
     }
     const [z0, z1] = isClip ? AMBIENT.clip : AMBIENT.photo;
     const zoom = z0 + (z1 - z0) * ease.inOut(q);
@@ -1549,7 +1708,7 @@
     const { el, s } = x;
     const skin = tl.skin;
     switch (el.kind) {
-      case 'headline': drawPara(ctx, { ...s, steps: HEAD_STEPS, maxLines: 2 }, M, skin, true); return;
+      case 'headline': drawPara(ctx, { ...s, steps: headSteps(s.lines), maxLines: s.lines || 2 }, M, skin, true); return;
       case 'para': drawPara(ctx, s, M, skin, false); return;
       case 'pill': drawPill(ctx, s, M, tl); return;
       case 'text': drawText(ctx, s, M); return;
@@ -1570,29 +1729,29 @@
           ctx.save();
           if (s.chalk > 0) {
             // The board morphs: white card <-> chalkboard (chalk 0..1 on inOut).
-            paperShadow(ctx, skin);
-            ctx.fillStyle = mixHex(WHITE, INK, s.chalk);
-            ctx.fillRect(s.x, s.y, s.w, s.h);
-            noShadow(ctx);
+            paperFill(ctx, skin, s.x, s.y, s.w, s.h, mixHex(WHITE, INK, s.chalk), false);
             ctx.strokeStyle = `rgba(255,255,255,${(0.06 * clamp01(s.chalk)).toFixed(3)})`;
             ctx.lineWidth = 2;
             for (let k = 0; k < 14; k += 1) { const yy = s.y + ((k + 0.5) * s.h) / 14; ctx.beginPath(); ctx.moveTo(s.x + 24, yy + Math.sin(k) * 3); ctx.lineTo(s.x + s.w - 24, yy - Math.cos(k) * 3); ctx.stroke(); }
-          } else if (el.kind === 'quotecard' && skin === 'scrapbook') {
-            paperShadow(ctx, skin);
+            // The board's ledge.
+            ctx.fillStyle = `rgba(18,18,18,${(0.5 * clamp01(s.chalk)).toFixed(3)})`;
+            ctx.fillRect(s.x, s.y + s.h - 14, s.w, 14);
+          } else if (skin === 'scrapbook' && !s.media && (el.kind === 'quotecard' || el.kind === 'panel')) {
+            // Torn paper: a ragged bottom (and top on a quote), a lifted shadow.
+            ctx.shadowColor = 'rgba(18,18,18,0.20)'; ctx.shadowBlur = 3; ctx.shadowOffsetX = 7; ctx.shadowOffsetY = 9;
             ctx.fillStyle = WHITE;
-            const rand = rng(el.id);
-            ctx.beginPath();
-            ctx.moveTo(s.x, s.y);
-            for (let xx = s.x; xx <= s.x + s.w; xx += 24) ctx.lineTo(xx, s.y + rand() * 10);
-            ctx.lineTo(s.x + s.w, s.y + s.h);
-            for (let xx = s.x + s.w; xx >= s.x; xx -= 24) ctx.lineTo(xx, s.y + s.h - rand() * 12);
-            ctx.closePath();
+            tornRect(ctx, s.x, s.y, s.w, s.h, `${el.layer}${el.id}`, el.kind === 'quotecard');
             ctx.fill();
-          } else {
-            paperShadow(ctx, skin);
-            ctx.fillStyle = WHITE;
-            ctx.fillRect(s.x, s.y, s.w, s.h);
             noShadow(ctx);
+            if (el.kind === 'quotecard') {
+              // Ruled notebook lines and a red margin.
+              ctx.fillStyle = 'rgba(10,125,250,0.12)';
+              for (let yy = s.y + 72; yy < s.y + s.h - 24; yy += 56) ctx.fillRect(s.x + 16, yy, s.w - 32, 2);
+              ctx.fillStyle = 'rgba(232,50,43,0.35)';
+              ctx.fillRect(s.x + 96, s.y + 12, 3, s.h - 32);
+            }
+          } else {
+            paperFill(ctx, skin, s.x, s.y, s.w, s.h, WHITE, !s.media);
             if (el.kind === 'field') {
               ctx.strokeStyle = 'rgba(18,18,18,0.10)';
               ctx.lineWidth = 3;
@@ -1604,23 +1763,49 @@
               ctx.setLineDash([]);
             }
           }
+          // A tone bar on the top edge (a stat card's colour) and a lead stripe
+          // on the left (the leading row of a scoreboard or rank list).
+          if (s.bar && HEX.test(s.bar)) { ctx.fillStyle = s.bar; ctx.fillRect(s.x, s.y, s.w, 10); sheen(ctx, s.x, s.y, s.w, 10, sheenPhase(el.id, 4200), 0.5); }
+          if (s.lead && HEX.test(s.lead)) { ctx.fillStyle = s.lead; ctx.fillRect(s.x, s.y, 12, s.h); }
           ctx.restore();
-          if (skin === 'scrapbook' && (el.kind === 'quotecard' || s.media || el.kind === 'panel')) { tape(ctx, s.x + 70, s.y + 2, 150, -6); tape(ctx, s.x + s.w - 70, s.y + 2, 150, 7); }
+          if (skin === 'scrapbook' && (el.kind === 'quotecard' || el.kind === 'panel')) { tape(ctx, s.x + 70, s.y + 2, 150, -6); tape(ctx, s.x + s.w - 70, s.y + 2, 150, 7); }
+          if (skin === 'scrapbook' && s.media) { if (s.polaroid) tape(ctx, s.x + s.w / 2, s.y + 2, 180, (hash(el.id) - 0.5) * 10); else paperClip(ctx, s.x + s.w * 0.62, s.y + 34); }
         });
         return;
       }
       case 'media': {
         const ps = x.parentState;
         if (!ps) return;
-        const inset = 14;
+        // Clean: a slim white frame (a broadcast window). Scrapbook: a print
+        // with a wider border (a Polaroid's deep bottom for photos).
+        const inset = skin === 'scrapbook' ? 18 : 10;
         const rect = { x: ps.x + inset, y: ps.y + inset + (ps.dy || 0), w: ps.w - 2 * inset, h: ps.h - 2 * inset - (ps.polaroid ? 56 : 0) };
         const shot = tl.tracks.video.find(v => v.layer === el.layer && v.el === el.id);
         const rot = tilt(`${el.layer}${el.parent}`, skin) * 0.5;
-        withState(ctx, { alpha: s.alpha * (ps.alpha == null ? 1 : ps.alpha), sc: ps.sc, rot }, ps.x + ps.w / 2, ps.y + ps.h / 2, () => drawMediaInto(ctx, rect, s, shot, tl, env, t));
+        withState(ctx, { alpha: s.alpha * (ps.alpha == null ? 1 : ps.alpha), sc: ps.sc, rot }, ps.x + ps.w / 2, ps.y + ps.h / 2, () => {
+          drawMediaInto(ctx, rect, s, shot, tl, env, t);
+          const a = s.asset ? tl.assets[s.asset] : null;
+          if (!a) return;
+          // Depth inside the window: a soft inner shade at the edges.
+          if (typeof ctx.createLinearGradient === 'function') {
+            const g = ctx.createLinearGradient(0, rect.y, 0, rect.y + rect.h);
+            if (g && typeof g.addColorStop === 'function') {
+              g.addColorStop(0, 'rgba(18,18,18,0.18)'); g.addColorStop(0.22, 'rgba(18,18,18,0)'); g.addColorStop(0.7, 'rgba(18,18,18,0)'); g.addColorStop(1, 'rgba(18,18,18,0.30)');
+              ctx.fillStyle = g; ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+            }
+          }
+          // A clip shows it is playing: a thin ES-blue run bar along the window's foot.
+          if (a.kind === 'clip' && shot) {
+            const a0 = ambClock(tl, shot.inMs); const span = Math.max(1, ambClock(tl, shot.outMs) - a0);
+            const q = clamp01((ambClock(tl, t) - a0) / span);
+            ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(rect.x, rect.y + rect.h - 8, rect.w, 8);
+            ctx.fillStyle = BLUE; ctx.fillRect(rect.x, rect.y + rect.h - 8, rect.w * q, 8);
+          }
+        });
         return;
       }
       case 'namecard': withState(ctx, { ...s, rot: tilt(el.id, skin) }, s.x + s.w / 2, s.y + s.h / 2, () => {
-        ctx.save(); paperShadow(ctx, skin); ctx.fillStyle = WHITE; ctx.fillRect(s.x, s.y, s.w, s.h); ctx.restore();
+        paperFill(ctx, skin, s.x, s.y, s.w, s.h);
         const pm = PILL(TS.caption);
         const photo = { x: s.x + 14, y: s.y + 14, w: s.w - 28, h: s.h - 28 - pm.h - 20 };
         const shot = tl.tracks.video.find(v => v.layer === el.layer && v.el === el.id);
@@ -1649,19 +1834,35 @@
         const cut = env.cutouts && env.cutouts[s.asset];
         const img = mediaSize(cut) ? cut : null;
         withState(ctx, s, s.x + s.w / 2, s.y + s.h / 2, () => {
+          // The backdrop: an ES-blue block with a printed halftone, a slab
+          // edge on the right (the cut-out stands in front of it).
+          const bx = s.x + s.w * 0.1; const by = s.y + s.h * 0.26; const bw = s.w * 0.8; const bh = s.h * 0.74;
+          ctx.save();
           ctx.fillStyle = BLUE;
-          ctx.fillRect(s.x + s.w * 0.12, s.y + s.h * 0.3, s.w * 0.76, s.h * 0.7);
+          ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw - 48, by + bh); ctx.lineTo(bx, by + bh); ctx.closePath(); ctx.fill();
+          ctx.clip();
+          ctx.fillStyle = 'rgba(255,255,255,0.16)';
+          for (let yy = by + 12; yy < by + bh; yy += 22) for (let xx = bx + 12 + ((yy / 22) % 2) * 11; xx < bx + bw; xx += 22) { const r = 2 + 4.5 * clamp01((yy - by) / bh); ctx.beginPath(); ctx.arc(xx, yy, r, 0, Math.PI * 2); ctx.fill(); }
+          ctx.restore();
           if (img) {
             const [iw, ih] = mediaSize(img);
             const k = Math.min((s.h * 1.08) / ih, s.w / iw);
             const dw = iw * k; const dh = ih * k;
+            const dx = s.x + (s.w - dw) / 2; const dy2 = s.y + s.h - dh;
             ctx.save();
-            if (skin === 'scrapbook') { ctx.shadowColor = WHITE; ctx.shadowBlur = 0; [[6, 0], [-6, 0], [0, 6], [0, -6]].forEach(([ox, oy]) => { ctx.shadowOffsetX = ox; ctx.shadowOffsetY = oy; ctx.drawImage(img, s.x + (s.w - dw) / 2, s.y + s.h - dh, dw, dh); }); noShadow(ctx); }
-            ctx.drawImage(img, s.x + (s.w - dw) / 2, s.y + s.h - dh, dw, dh);
+            if (skin === 'scrapbook') {
+              // A clean white sticker edge all round (12 directions), then a lifted shadow.
+              ctx.shadowColor = WHITE; ctx.shadowBlur = 0;
+              for (let k2 = 0; k2 < 12; k2 += 1) { const an = (k2 / 12) * Math.PI * 2; ctx.shadowOffsetX = Math.cos(an) * 9; ctx.shadowOffsetY = Math.sin(an) * 9; ctx.drawImage(img, dx, dy2, dw, dh); }
+              noShadow(ctx);
+            } else {
+              ctx.shadowColor = 'rgba(18,18,18,0.28)'; ctx.shadowBlur = 30; ctx.shadowOffsetX = 10; ctx.shadowOffsetY = 14;
+            }
+            ctx.drawImage(img, dx, dy2, dw, dh);
             ctx.restore();
           } else {
             const shot = tl.tracks.video.find(v => v.layer === el.layer && v.el === el.id);
-            drawMediaInto(ctx, { x: s.x + s.w * 0.12, y: s.y + s.h * 0.3, w: s.w * 0.76, h: s.h * 0.7 }, { asset: s.asset, kind: 'photo' }, shot, tl, env, t);
+            drawMediaInto(ctx, { x: bx, y: by, w: bw - 48, h: bh }, { asset: s.asset, kind: 'photo' }, shot, tl, env, t);
           }
         });
         return;
@@ -1677,9 +1878,14 @@
         ctx.fillText(s.text, s.x + s.w / 2, s.y + s.h / 2 + (CAP * TS.label) / 2);
         ctx.textAlign = 'left';
       }); return;
-      case 'rect': withState(ctx, s, s.x, s.y + s.h / 2, () => { ctx.fillStyle = s.fill || INK; ctx.fillRect(s.x, s.y, Math.max(0, s.w), s.h); }); return;
+      case 'rect': withState(ctx, s, s.x, s.y + s.h / 2, () => {
+        ctx.fillStyle = s.fill || INK; ctx.fillRect(s.x, s.y, Math.max(0, s.w), s.h);
+        if (s.sheen && s.w > 24) sheen(ctx, s.x, s.y, s.w, s.h, sheenPhase(el.id, 3600));
+      }); return;
       case 'dot': withState(ctx, s, s.x, s.y, () => {
-        ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(0.5, s.r), 0, Math.PI * 2);
+        // Filled dots of a dot grid breathe in a slow wave (idle motion).
+        const br = s.breathe != null && s.breathe >= 0 ? 1 + 0.07 * Math.sin((2 * Math.PI * AMB) / 2400 - s.breathe * 0.32) : 1;
+        ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(0.5, s.r * br), 0, Math.PI * 2);
         ctx.fillStyle = s.fill || INK; ctx.fill();
         if (s.stroke && s.lw) { ctx.lineWidth = s.lw; ctx.strokeStyle = s.stroke; ctx.stroke(); }
       }); return;
@@ -1733,6 +1939,14 @@
             left -= segs[i];
           }
           ctx.stroke();
+          if (s.area != null) {
+            // The area under the drawn part of the line (ES blue, light).
+            ctx.save();
+            ctx.lineTo(end[0], s.area); ctx.lineTo(list[0][0], s.area); ctx.closePath();
+            ctx.fillStyle = 'rgba(10,125,250,0.10)';
+            ctx.fill();
+            ctx.restore();
+          }
           if (s.head && p > 0.85) arrowHead(ctx, prev[0], prev[1], end[0], end[1], s.lw, s.stroke, (p - 0.85) / 0.15);
           if (s.dot) list.forEach((q, i) => { if (i / (list.length - 1) <= p + 1e-6) { ctx.beginPath(); ctx.arc(q[0], q[1], s.lw * 0.9, 0, Math.PI * 2); ctx.fillStyle = WHITE; ctx.fill(); ctx.lineWidth = s.lw * 0.5; ctx.stroke(); } });
         });
@@ -1763,7 +1977,7 @@
         ctx.stroke();
       }); return;
       case 'calendar': withState(ctx, { ...s, rot: tilt(el.id, skin) }, s.x + s.w / 2, s.y + s.h / 2, () => {
-        ctx.save(); paperShadow(ctx, skin); ctx.fillStyle = WHITE; ctx.fillRect(s.x, s.y, s.w, s.h); ctx.restore();
+        paperFill(ctx, skin, s.x, s.y, s.w, s.h);
         const band = 112;
         ctx.fillStyle = RED; ctx.fillRect(s.x, s.y, s.w, band);
         ctx.fillStyle = WHITE; ctx.font = dFont(TS.caption); ctx.textAlign = 'center';
@@ -1792,14 +2006,30 @@
           ctx.textAlign = 'center';
           ctx.fillText(s.text, s.x, s.y + (CAP * size) / 2);
           ctx.textAlign = 'left';
+          // Rubber-stamp ink: the paper shows through in small worn specks.
+          const rand = rng(`stamp${s.text}`);
+          ctx.fillStyle = PAPER;
+          const n = Math.round((w * h) / 2600);
+          const ga = ctx.globalAlpha;
+          for (let k = 0; k < n; k += 1) { const sz = 2 + rand() * 4; ctx.globalAlpha = ga * (0.5 + rand() * 0.4); ctx.fillRect(s.x - w / 2 + rand() * w, s.y - h / 2 + rand() * h, sz, sz * (0.6 + rand() * 0.8)); }
         });
         return;
       }
       case 'button': withState(ctx, s, s.x + s.w / 2, s.y + s.h / 2, () => {
-        ctx.save(); paperShadow(ctx, 'clean'); ctx.fillStyle = s.fill; ctx.fillRect(s.x, s.y, s.w, s.h); ctx.restore();
+        // A poll button: solid colour on a hard ink block shadow, a light sweep.
+        ctx.save(); ctx.shadowColor = 'rgba(18,18,18,0.92)'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 12; ctx.fillStyle = s.fill; ctx.fillRect(s.x, s.y, s.w, s.h); ctx.restore();
+        sheen(ctx, s.x, s.y, s.w, s.h, sheenPhase(el.id, 3200), 0.3);
         const size = tSize(M, s.text, [s.size || TS.h2, TS.caption], s.w - 96);
         ctx.font = dFont(size); ctx.fillStyle = WHITE; ctx.textAlign = 'center';
         ctx.fillText(s.text, s.x + s.w / 2, s.y + s.h / 2 + (CAP * size) / 2);
+        ctx.textAlign = 'left';
+      }); return;
+      case 'orchip': withState(ctx, s, s.x, s.y, () => {
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = INK; ctx.fill();
+        ctx.lineWidth = 8; ctx.strokeStyle = PAPER; ctx.stroke();
+        ctx.font = dFont(TS.label); ctx.fillStyle = WHITE; ctx.textAlign = 'center';
+        ctx.fillText(s.text, s.x, s.y + (CAP * TS.label) / 2);
         ctx.textAlign = 'left';
       }); return;
       case 'wordmark': withState(ctx, s, s.x, s.y, () => {
@@ -1824,25 +2054,61 @@
     ctx.fill();
     ctx.restore();
   }
+  // The paper: ES paper with a soft light falloff toward the edges (depth,
+  // never a colour), then a printed texture that sits behind everything and
+  // can drift against the zones (PARALLAX.ground): a fine dot grid on Clean,
+  // graph paper on Scrapbook. Procedural (one small tile, made once per
+  // skin): no network, no AI, $0. No grain: noise costs ~18% more MP4 bytes.
   function drawGround(ctx, tl, w, h) {
     ctx.fillStyle = PAPER;
     ctx.fillRect(0, 0, w, h);
-    if (tl.skin === 'scrapbook') {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(10,125,250,0.10)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (let x = 20; x < w; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-      for (let y = 20; y < h; y += 40) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
-      ctx.stroke();
-      ctx.strokeStyle = 'rgba(10,125,250,0.18)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      for (let x = 20; x < w; x += 200) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-      for (let y = 20; y < h; y += 200) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
-      ctx.stroke();
-      ctx.restore();
+    const g = typeof ctx.createRadialGradient === 'function' ? ctx.createRadialGradient(w * 0.5, h * 0.42, h * 0.18, w * 0.5, h * 0.5, h * 0.78) : null;
+    if (g && typeof g.addColorStop === 'function') {
+      g.addColorStop(0, 'rgba(255,255,255,0.42)');
+      g.addColorStop(0.55, 'rgba(255,255,255,0)');
+      g.addColorStop(1, 'rgba(18,18,18,0.07)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
     }
+  }
+  const TILE = {};
+  function makeCanvas(w, h) {
+    if (typeof OffscreenCanvas === 'function') return new OffscreenCanvas(w, h);
+    if (typeof document !== 'undefined' && document.createElement) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+    return null;
+  }
+  function groundTile(skin) {
+    if (TILE[skin] !== undefined) return TILE[skin];
+    const size = skin === 'scrapbook' ? 200 : 240;
+    const c = makeCanvas(size, size);
+    const g = c && c.getContext ? c.getContext('2d') : null;
+    if (!g) { TILE[skin] = null; return null; }
+    if (skin === 'scrapbook') {
+      // Graph paper: 40 px minor lines, a 200 px major line.
+      g.fillStyle = 'rgba(10,125,250,0.11)';
+      for (let k = 0; k < size; k += 40) { g.fillRect(k, 0, 2, size); g.fillRect(0, k, size, 2); }
+      g.fillStyle = 'rgba(10,125,250,0.12)';
+      g.fillRect(0, 0, 3, size); g.fillRect(0, 0, size, 3);
+    } else {
+      // Clean: a fine printed dot grid (40 px).
+      g.fillStyle = 'rgba(18,18,18,0.075)';
+      for (let y = 20; y < size; y += 40) for (let x = 20; x < size; x += 40) { g.beginPath(); g.arc(x, y, 2.4, 0, Math.PI * 2); g.fill(); }
+    }
+    TILE[skin] = c;
+    return c;
+  }
+  function drawGroundLayer(ctx, tl, env, cam) {
+    const tile = groundTile(tl.skin === 'scrapbook' ? 'scrapbook' : 'clean');
+    if (!tile || typeof ctx.createPattern !== 'function') return;
+    let pat = null;
+    try { pat = ctx.createPattern(tile, 'repeat'); } catch (e) { pat = null; }
+    if (!pat) return;
+    ctx.save();
+    ctx.translate(Math.round(cam.x * PARALLAX.ground * 10) / 10, Math.round(cam.y * PARALLAX.ground * 10) / 10);
+    ctx.fillStyle = pat;
+    ctx.fillRect(-W, -400, 3 * W, H + 800);
+    ctx.restore();
+    void env;
   }
   // The slab: one blue diagonal slab; it covers the whole frame at p = 0.5.
   function slabPoly(p, w = W, h = H) {
@@ -1886,13 +2152,19 @@
       const a = Math.min(1, q * 2) * out;
       const sc = CAPTION_POP.from + (1 - CAPTION_POP.from) * e;
       const hl = w.em || w.hl;
+      // The line keeps a slow 8 px lift while it holds (ambient), so a
+      // caption is never a frozen sticker.
+      const lift = -8 * ease.inOut(clamp01((t - card.s) / Math.max(1, card.e - card.s)));
       ctx.save();
       ctx.globalAlpha *= a;
+      ctx.translate(0, lift);
       ctx.translate(x + ws[i] / 2, y);
       ctx.scale(sc, sc);
       ctx.translate(-(x + ws[i] / 2), -y);
       ctx.fillStyle = hl ? BLUE : INK;
+      ctx.shadowColor = 'rgba(18,18,18,0.24)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 8;
       ctx.fillRect(Math.round(x), Math.round(top), Math.ceil(ws[i]) + 1, Math.round(pm.h));
+      noShadow(ctx);
       ctx.fillStyle = WHITE;
       ctx.font = dFont(size);
       ctx.fillText(w.text, x + pm.padLeft, top + pm.baseline);
@@ -1930,11 +2202,15 @@
     const vis = visibleAt(tl, t);
     // The camera: a slow drift of the media and data zones (never the headline,
     // the marker, the captions or the mark), so no beat ever holds still.
-    const cam = cameraAt(t);
+    const at = ambClock(tl, t);
+    AMB = at;
+    const cam = cameraAt(at);
+    drawGroundLayer(ctx, tl, env, cam, at);
     vis.list.forEach(x => {
       if (x.el.kind === 'anchor') return;
       const fixed = NO_CAMERA.test(x.el.id);
-      if (!fixed) { ctx.save(); ctx.translate(cam.x, cam.y); }
+      const depth = x.el.depth != null ? x.el.depth : /^media/.test(x.el.id) ? PARALLAX.media : PARALLAX.module;
+      if (!fixed) { ctx.save(); ctx.translate(cam.x * depth, cam.y * depth); }
       drawEl(ctx, x, tl, env, t, M, helpers);
       if (!fixed) ctx.restore();
     });
@@ -1950,6 +2226,12 @@
       slab.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
       ctx.closePath();
       ctx.fill();
+      // Two edges give the slab body: a lit leading edge, a shaded trailing
+      // edge (both ES blue tints, so the slab still reads as one blue).
+      const [[ax], [bx], [cx2], [dx]] = slab;
+      const band = (x0, x1, l, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0 + l, 0); ctx.lineTo(x1 + l, ch); ctx.lineTo(x1, ch); ctx.closePath(); ctx.fill(); };
+      band(bx - 72, cx2 - 72, 72, '#2A8EFC');
+      band(ax, dx, 56, '#0670E8');
       ctx.restore();
     }
     drawMark(ctx, tl, helpers, env, slab, cw - 60 - ZONE.mark.size, four ? 60 : ZONE.mark.y);
@@ -1963,7 +2245,7 @@
     switch (el.kind) {
       case 'pill': { const z = fitStep(M, s.text, s.size || TS.label, s.maxW, dFont, true); const pm = PILL(z); const w = M(s.text, dFont(z)) + pm.padLeft + pm.padRight; let px = s.anchor === 'center' ? s.x - w / 2 : s.anchor === 'right' ? s.x - w : s.x; if (s.minX != null) px = Math.max(s.minX, Math.min((s.maxX || 1e9) - w, px)); return { x: px, y: s.y, w, h: pm.h, text: s.text }; }
       case 'text': { const size = fitStep(M, textOf(s), s.size || TS.label, s.maxW, s.font === 's' ? sFont : dFont); const w = M(textOf(s), s.font === 's' ? sFont(size) : dFont(size)); const px = s.align === 'center' ? s.x - w / 2 : s.align === 'right' ? s.x - w : s.x; return { x: px, y: s.y - CAP * size, w, h: CAP * size, text: textOf(s) }; }
-      case 'headline': case 'para': { const lay = el.kind === 'headline' ? wrapEm(M, s.text, HEAD_STEPS, s.w, 2, TS.h2) : wrapEm(M, s.text, s.steps || [TS.h2, TS.caption], s.w, s.maxLines || 2, Infinity, s.h || Infinity); return { x: s.x, y: s.y, w: Math.max(0, ...lay.lines.map(l => l.w)), h: lay.lines.length * lay.size * 0.92, text: s.text, fits: lay.fits }; }
+      case 'headline': case 'para': { const lay = el.kind === 'headline' ? wrapEm(M, s.text, headSteps(s.lines), s.w, s.lines || 2, TS.h2) : wrapEm(M, s.text, s.steps || [TS.h2, TS.caption], s.w, s.maxLines || 2, Infinity, s.h || Infinity); return { x: s.x, y: s.y, w: Math.max(0, ...lay.lines.map(l => l.w)), h: lay.lines.length * lay.size * 0.92, text: s.text, fits: lay.fits }; }
       case 'stamp': { const size = s.size || TS.caption; const w = M(s.text, dFont(size)) + 56; const h = CAP * size + 52; return { x: s.x - w / 2, y: s.y - h / 2, w, h, text: s.text }; }
       case 'sticker': { const size = s.size || TS.caption; const pm = PILL(size); const w = M(s.text, dFont(size)) + pm.padLeft + pm.padRight; return { x: s.x - w / 2, y: s.y - pm.h / 2, w, h: pm.h, text: s.text }; }
       default: return null;
@@ -2045,7 +2327,7 @@
   }
 
   return {
-    MOTION4, CAMERA, cameraAt, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, ease, springAt, curveAt, bezier,
+    MOTION4, CAMERA, PARALLAX, cameraAt, ambClock, headFit, zoneOf, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, ease, springAt, curveAt, bezier,
     MODULE_TYPES, MEDIA_KINDS, CLOSE_KINDS, LAYOUTS, ZONE, PALETTE, TONE,
     cleanModule, moduleProblems, moduleStrings, moduleNeed, normalize, toV4, isV4, STRUCTURAL,
     buildTimeline, stateAt, visibleAt, layerAt, wipeAt, frameAt, clipTimes, clipTime, capAt,
