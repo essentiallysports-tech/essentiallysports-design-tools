@@ -1649,3 +1649,51 @@ html[data-theme="dark"] .rm-card.has-warning:not(.is-on) .rm-card__n { color: #1
 @media (max-width: 1180px) { .rm-styles4 { min-height: calc(((100cqw - 36px) / 4 - 16px) * 544 / 432 + 136px); } }
 @media (max-width: 900px) { .rm-styles4 { min-height: calc((((100cqw - 16px) / 2 - 16px) * 544 / 432 + 118px) * 2 + 16px); } }
 @media (max-width: 480px) { .rm-styles4 { min-height: calc((((100cqw - 8px) / 2 - 12px) * 544 / 432 + 126px) * 2 + 8px); } }
+
+/* ══ Reels v5 UI polish (2026-11-28, fix/reels5-ui) ═════════════════════════
+   Calm script card, full style blurbs (no ellipsis) with four columns down to
+   601px, scrollers that fade at the edge instead of cutting a card, the
+   timeline's first card no longer clipped, the module's own fields grouped
+   under their heading, and toasts pinned over the frame's empty top band. */
+
+/* Create: the script card rests on a hairline and a soft shadow (no blue haze);
+   the house AI rim still lights it while you type. */
+.rm-script.ais-surface { box-shadow: 0 1px 2px rgb(14 16 20 / .04), 0 8px 24px -18px rgb(14 16 20 / .28); }
+html[data-theme="dark"] .rm-script.ais-surface { box-shadow: 0 1px 2px rgb(0 0 0 / .3), 0 8px 24px -18px rgb(0 0 0 / .7); }
+.rm-script.ais-surface:focus-within { box-shadow: 0 0 0 4px rgb(10 125 250 / .12), 0 8px 24px -18px rgb(14 16 20 / .28); }
+.rm-script .rm-meter__target { white-space: nowrap; }
+
+/* Style cards: every blurb reads in full. A fixed number of lines per width keeps
+   the four cards one height and the reserved grid height exact. */
+.rm-style4__name { line-height: 20px; }
+.rm-style4__blurb { --rm-bl: 3; display: block; -webkit-line-clamp: unset; overflow: visible; font-size: 13px; line-height: 18px; min-height: calc(var(--rm-bl) * 18px); }
+.rm-style4__media { line-height: 16px; }
+.rm-style4__body { flex: 1 1 auto; }
+@media (max-width: 1180px) { .rm-style4__blurb { --rm-bl: 5; } }
+@media (max-width: 600px) { .rm-style4__blurb { --rm-bl: 4; } }
+@media (min-width: 601px) and (max-width: 900px) { .rm-styles4 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--es-space-3, 12px); } }
+@media (max-width: 600px) { .rm-styles4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .rm-style4__blurb { --rm-bl: 5; font-size: 12px; line-height: 16px; min-height: calc(var(--rm-bl) * 16px); } }
+
+/* Scrollers (stories, the timeline) fade at the right edge instead of slicing a card. */
+.rm-trendrow .rm-trends { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); padding-right: 32px; }
+.rm-recent .rm-recent__item { max-width: min(100%, 360px); }
+.rm-recent .rm-recent__title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* Timeline: no fade on the left, so the first card's selection ring and label show whole. */
+.rm-scenes .rm-sb__scroll { padding-left: 6px; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%); mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent 100%); }
+
+/* Inspector: the module's fields sit under "Module · <name>"; a row group's label is a small heading. */
+.rm-modfields__h { margin-top: var(--es-space-2, 8px); }
+.rm-modfields .rm-genrows { gap: var(--es-space-2, 8px); min-width: 0; }
+.rm-modfields .rm-genrows > legend { margin: 0 0 var(--es-space-1, 4px); padding: 0; color: var(--rm-ink-3); font: 600 11px/16px var(--es-font-ui); letter-spacing: .06em; text-transform: uppercase; }
+
+/* Toasts on wide screens: pinned over the frame's top band, scrolling with it. */
+.rm-toasts.is-stage { position: absolute; right: auto; bottom: auto; align-items: stretch; transform: translateX(-50%); }
+.rm-toasts.is-stage .rm-toast { box-sizing: border-box; width: 100%; max-width: none; }
+/* The reserved grid height, re-derived for the fixed blurb lines above:
+   card = top pad + 432:544 preview + 12 gap + name 20 + 4 + blurb lines + 4 + media 20 + bottom pad. */
+.rm-styles4 { min-height: calc(((100cqw - 48px) / 4 - 16px) * 544 / 432 + 138px); }
+@media (max-width: 1180px) { .rm-styles4 { min-height: calc(((100cqw - 36px) / 4 - 16px) * 544 / 432 + 174px); } }
+@media (max-width: 600px) { .rm-styles4 { min-height: calc((((100cqw - 12px) / 2 - 16px) * 544 / 432 + 156px) * 2 + 12px); } }
+@media (max-width: 480px) { .rm-styles4 { min-height: calc((((100cqw - 8px) / 2 - 12px) * 544 / 432 + 154px) * 2 + 8px); } }
