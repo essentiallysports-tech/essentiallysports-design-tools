@@ -126,6 +126,23 @@ for (const [label, script, team, handle] of [['Dallas', DALLAS, 'Dallas Cowboys'
   });
 }
 
+await test('code plan: no clip beat leaves the lower frame empty (a module from its own words, else caption-led); the engine honours it', () => {
+  const R = require('../reel-render.js');
+  const plan = codePlan(DALLAS);
+  const beats = allBeats(plan);
+  beats.forEach(b => assert.ok(b.module || b.captionLed, `beat ${b.id} has media and an empty lower frame`));
+  const choice = beats.find(b => /play call or the players/.test(b.vo));
+  assert.equal(choice.module && choice.module.type, 'checklist');
+  assert.deepEqual(choice.module.rows.map(r => r.text), ['PLAY CALL', 'PLAYERS']);
+  assert.equal(D4.extraModuleFor('Flood the flat, get it out, yards after the catch.').type, 'checklist');
+  assert.equal(D4.extraModuleFor('He went 15 and 1 that season.').tiles[0].value, '15-1');
+  assert.deepEqual(D4.extraModuleFor('The Eagles kicked a 59-yard field goal.').tiles[0], { value: '59', label: 'yard field goal', tone: 'blue' });
+  assert.equal(D4.extraModuleFor('Pressure, all game long.'), null, 'no figure, choice or list: caption-led');
+  const tl = R.buildTimeline(plan, { photos: {}, assets: {} });
+  const layout = Object.fromEntries(tl.tracks.graphics.map(g => [g.beat, g.data.layout]));
+  beats.filter(b => b.captionLed).forEach(b => assert.equal(layout[b.id], 'caption'));
+});
+
 await test('wants cutout is treated like photo (a verified photo with Ken Burns)', () => {
   const sub = { type: 'player', name: 'Dak Prescott', team: 'Dallas Cowboys', key: 'dak prescott' };
   const picks = C.gatedPicks([{ beatId: 'x', beat: { id: 'x' }, subject: sub, wants: 'cutout', kind: 'cutout', clips: [], photos: [photo('dak')], teamPhotos: [] }], { judgeAvailable: true });

@@ -356,6 +356,7 @@
           ...(b && stampOf(b.stamp) ? { stamp: { ...stampOf(b.stamp), at: b.stamp.at === 'module' ? 'module' : b.stamp.at === 'media' ? 'media' : '' } } : {}),
           ...(b && b.tag && b.tag.text ? { tag: { text: up(b.tag.text, 28), tone: tone(b.tag.tone, 'red') } } : {}),
           ...(b && b.layout ? { layout: clean(b.layout, 10) } : {}),
+          ...(b && b.captionLed === true ? { captionLed: true } : {}),
         };
       }).filter(b => b.vo || b.module || b.media),
     })).filter(c => c.beats.length);
@@ -423,6 +424,9 @@
     both: { media: { x: 60, y: 616, w: 960, h: 540 }, cap: 1222, module: { x: 60, y: 1296, w: 960, h: 328 } },
     data: { module: { x: 60, y: 616, w: 960, h: 560 }, cap: 1238, media: { x: 256, y: 1320, w: 568, h: 320 } },
     media: { media: { x: 60, y: 616, w: 960, h: 540 }, cap: 1288 },
+    // caption: a clip beat with no module (director captionLed): the same window,
+    // the caption leads from the middle of the lower frame instead of hugging the window.
+    caption: { media: { x: 60, y: 616, w: 960, h: 540 }, cap: 1424 },
     module: { module: { x: 60, y: 616, w: 960, h: 800 }, cap: 1496 },
     none: { cap: 1000 },
   });
@@ -909,7 +913,7 @@
     if (b.layout && LAYOUTS[b.layout]) return b.layout;
     const mod = b.module;
     if (hasMedia && mod) return ['cards', 'cutout'].includes(b.media.kind) || moduleNeed(mod) <= LAYOUTS.both.module.h ? 'both' : 'data';
-    if (hasMedia) return 'media';
+    if (hasMedia) return b.captionLed ? 'caption' : 'media';
     if (mod) return 'module';
     return 'none';
   }
@@ -1062,7 +1066,7 @@
     const z = LAYOUTS[layout] ? LAYOUTS[layout][which] || null : null;
     if (!z || !extra) return z;
     if (which === 'media' && layout === 'both') { const h = z.h - extra; const w = Math.round((h * 16) / 9 / 8) * 8; return { x: Math.round((W - w) / 2), y: z.y + extra, w, h }; }
-    if (which === 'media' && layout === 'media') return { ...z, y: z.y + extra };
+    if (which === 'media' && (layout === 'media' || layout === 'caption')) return { ...z, y: z.y + extra };
     if (which === 'module' && (layout === 'data' || layout === 'module')) return { ...z, y: z.y + extra, h: z.h - extra };
     return z;
   }

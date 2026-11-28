@@ -289,7 +289,7 @@ function shapeModule(raw) {
     return nodes.length >= 2 ? { type, nodes, edges } : null;
   }
   if (type === 'checklist') {
-    const rows = list(m.rows, 5).map(x => ({ ...(Number.isFinite(numOf(x && x.rank)) ? { rank: Math.max(1, Math.min(9, Math.round(numOf(x.rank)))) } : {}), text: up(x && x.text, 24), checked: Boolean(x && x.checked) })).filter(x => x.text);
+    const rows = list(m.rows, 5).map(x => ({ ...(x && x.rank != null && x.rank !== '' && Number.isFinite(numOf(x.rank)) ? { rank: Math.max(1, Math.min(9, Math.round(numOf(x.rank)))) } : {}), text: up(x && x.text, 24), checked: Boolean(x && x.checked) })).filter(x => x.text);
     return rows.length >= 2 ? { type, rows } : null;
   }
   if (type === 'quote') {
@@ -557,6 +557,42 @@ function moduleFor(vo, set) {
   const best = figs.map((f, i) => ({ f, s: score(f, i), i })).sort((a, b) => b.s - a.s || a.i - b.i).slice(0, 3).sort((a, b) => a.i - b.i).map(x => x.f);
   return { type: 'statTiles', tiles: best.map((f, i) => ({ value: f.value, label: f.label, tone: i === 0 ? 'blue' : 'ink' })) };
 }
+// More modules from a beat's own words (code, no new facts), for a beat the
+// figures above left without one:
+//   "a 21-point lead", "a 59-yard field goal"  -> one stat tile (21 / POINT LEAD)
+//   "went 15 and 1", "82 and 38"              -> a record tile (15-1)
+//   "the play call or the players?"           -> a two-row checklist (the choice)
+//   "flood the flat, get it out, yards after the catch" -> a checklist of the list
+const ADJ_FIG = /\b(\d{1,3}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty)-(point|yard|game|win|man|year|run|touchdown|catch|sack|strike)\s+([a-z]+)(?:\s+([a-z]+))?/i;
+const SMALL = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, fifteen: 15, twenty: 20, thirty: 30, forty: 40, fifty: 50 };
+const ARTICLE = /^(?:on |in |at |to |for )?(?:the |a |an |his |her |their |this |that )?/i;
+function choiceText(raw) {
+  const t = String(raw || '').replace(/[?!.,;:"“”]+/g, ' ').replace(/\s+/g, ' ').trim().replace(ARTICLE, '').trim();
+  return t && words(t).length <= 4 ? t : '';
+}
+function extraModuleFor(vo, set) {
+  const text = plain(vo).replace(/[“”"]/g, '');
+  const adj = text.match(ADJ_FIG);
+  if (adj && !/^(?:and|or|but|with|to|in|on|at|the|a)$/i.test(adj[3])) {
+    const n = /^\d+$/.test(adj[1]) ? adj[1] : String(SMALL[adj[1].toLowerCase()] || '');
+    const tail = adj[4] && /^(?:goal|lead|deficit|streak|run|drive|contract|deal|season|loss|win|score)$/i.test(adj[4]) ? ` ${adj[4]}` : '';
+    if (n) return { type: 'statTiles', tiles: [{ value: n, label: `${adj[2]} ${adj[3]}${tail}`, tone: 'blue' }] };
+  }
+  const rec = text.match(/(?:^|[^\w-])(\d{1,3}) and (\d{1,3})\b/);
+  if (rec && !/\b(?:between|from)\s*$/i.test(text.slice(0, rec.index + 1)) && /\b(?:went|record|since|wins?|won|losses|lost|games?|season|does not happen|happen)\b/i.test(text)) {
+    return { type: 'statTiles', tiles: [{ value: `${rec[1]}-${rec[2]}`, label: 'RECORD', tone: 'blue' }] };
+  }
+  const q = /\?\s*$/.test(text) ? text.match(/^(?:so |but |and )?(?:was it|is it|is this|was this|who is it|which is it|is that)?\s*(.+?),?\s+or\s+(.+?)\?\s*$/i) : null;
+  if (q) {
+    const a = choiceText(q[1]); const b = choiceText(q[2]);
+    if (a && b && a.toLowerCase() !== b.toLowerCase()) return { type: 'checklist', rows: [{ text: a, checked: false }, { text: b, checked: false }] };
+  }
+  const parts = text.replace(/[.!?]+\s*$/, '').split(/,\s*(?:and |or )?/).map(x => x.trim()).filter(Boolean);
+  if (parts.length >= 3 && parts.length <= 5 && parts.every(x => words(x).length <= 5) && new Set(parts.map(x => x.toLowerCase())).size === parts.length) {
+    return { type: 'checklist', rows: parts.map(x => ({ text: x.replace(ARTICLE, '') || x, checked: true })) };
+  }
+  return null;
+}
 // The close, from the script's own argument (code only, no new facts):
 // "Cowboys fans, your call" -> the prompt; the hook's claim from its key word
 // ("still has no twin") -> option one, against "NOT BUYING IT".
@@ -714,6 +750,19 @@ function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = nul
     pacing: pacingOf(text, L.id),
   };
   if (cut.credits.length) plan.sourceLine = sourceLineOf(cut.credits);
+  // The lower frame never sits empty under a clip (2026-11-28): a module from
+  // the beat's own words when they hold a figure, a choice or a list (never a
+  // figure its chapter headline already shows); else the engine is told to
+  // lead with the caption (captionLed).
+  plan.chapters.forEach(ch => {
+    const inHead = sourceNumbers(ch.headline);
+    ch.beats.forEach(b => {
+      if (b.module) return;
+      let extra = shapeModule(extraModuleFor(b.vo, set));
+      if (extra && (unsourced(moduleClaims(extra), set).length || (extra.type === 'statTiles' && extra.tiles.every(t => F.numbersIn(t.value).every(n => inHead.has(n)))))) extra = null;
+      if (extra) b.module = extra; else b.captionLed = true;
+    });
+  });
   ensureMotion(plan, []);
   return plan;
 }
@@ -1213,6 +1262,6 @@ module.exports = {
   V4_STYLES, V4_IDS, v4StyleOf, LENGTHS, WPM, MAX_SCRIPT_CHARS, MODULE_SPEC, MODULE_TYPES, MEDIA_KINDS, BUILTIN_SHAPES, CRITIC_KEYS, REVISE_PRESETS_V4,
   splitCredits, figuresOf, moduleFor, claimOption, headlineFromWords, isCreditText,
   segmentScript, normScript, pacingOf, spelledNumbers, sourceNumbers, shapeModule, moduleClaims, shapeMedia, shapeHeadline, shapeClose, markerFor,
-  scriptToV4, ensureMotion, structureOf, referenceShapes, setReferencePlans, v4System, directorRequestV4, lessonsLines, validateV4, voMatchesScript, flattenV4,
+  scriptToV4, extraModuleFor, ensureMotion, structureOf, referenceShapes, setReferencePlans, v4System, directorRequestV4, lessonsLines, validateV4, voMatchesScript, flattenV4,
   readV4, runDirectorV4, reviseV4, codeCritique, applyFix, critiqueV4, CRITIQUE_CACHE, CRITIC_SYSTEM, draftScript, SCRIPT_SYSTEM,
 };
