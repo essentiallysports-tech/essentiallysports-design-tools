@@ -139,7 +139,8 @@
     progress('Finding the right pictures…');
     let media;
     try {
-      media = await call({ mode: 'scene-media', plan: slimPlan(plan), esStyle, exclude: opts.exclude || [] });
+      // broaden ("Find clips"): the server runs every rung, one more live search and a wider window.
+      media = await call({ mode: 'scene-media', plan: slimPlan(plan), esStyle, exclude: opts.exclude || [], ...(opts.broaden ? { broaden: true, ladder: 'broad', findClips: true } : {}) });
     } catch (error) {
       return { ...empty, esStyle, notes: [error.message || 'Pictures could not be found right now.'] };
     }
@@ -193,7 +194,7 @@
       const batch = toJudge.slice(i, i + clips.JUDGE.perCall);
       try {
         const data = await call({
-          mode: 'clip-judge', budgetUsd: left, subjects, sport: plan.sport || '',
+          mode: 'clip-judge', budgetUsd: left, subjects, sport: media.sport || plan.sport || '',
           clips: batch.map(({ clip: c, wantMs }) => ({ url: c.url, text: c.text, handle: c.handle, frames: frames[c.url], times: judgeTimes[c.url], durationMs: c.durationMs, wantMs, meta: metaOf(c) })),
         });
         state.spent.judge += Number(data.cost) || 0;
@@ -230,7 +231,8 @@
     const want = scenes.filter(s => isClipKind(s.wants)).length;
     if (want && used < want) notes.push(`${want - used} scene${want - used === 1 ? '' : 's'} had no clip confirmed for its subject and use${want - used === 1 ? 's' : ''} a verified photo, a module or a graphic instead.`);
     const summary = summarize(plan, picksById, opts);
-    const result = { beats, cost: Number(((Number(media.cost) || 0) + state.spent.judge).toFixed(6)), judged: Object.keys(judgements).length, notes, esStyle, subjects, judgements, judgeFailed, ...summary };
+    if (media.sport === '') notes.push('This reel names no NFL, college football or MLB team or player we can search clips for, so its scenes use photos and modules.');
+    const result = { beats, cost: Number(((Number(media.cost) || 0) + state.spent.judge).toFixed(6)), judged: Object.keys(judgements).length, notes, esStyle, sport: media.sport || '', subjects, judgements, judgeFailed, ...summary };
     state.last = result;
     progress('');
     return result;
@@ -253,7 +255,7 @@
   // The plan without heavy fields (the server needs beats, team, sport, title).
   function slimBeat(b) {
     return {
-      id: sid(b), kind: b.kind, text: b.text, photo: b.photo, name: b.name, visual: b.visual, subject: b.subject, block: b.block, stat: b.stat, durMs: b.durMs,
+      id: sid(b), kind: b.kind, text: b.text, ...(b.vo ? { vo: String(b.vo).slice(0, 280) } : {}), photo: b.photo, name: b.name, visual: b.visual, subject: b.subject, block: b.block, stat: b.stat, durMs: b.durMs,
       ...(b.media ? { media: { kind: b.media.kind, subject: b.media.subject, ...(Array.isArray(b.media.cards) ? { cards: b.media.cards.slice(0, 4).map(c => ({ name: c && c.name, tag: c && c.tag, sticker: c && c.sticker })) } : {}) } } : {}),
       ...(b.module && b.module.type ? { module: { type: b.module.type } } : {}),
     };
@@ -407,6 +409,8 @@
 
   return {
     mediaFor, candidates, choose, review, picksFor, nextCandidate, rank, motionCheck, keysFor,
+    // A clip file: direct download first, then the same-origin proxy (for the page's own loader).
+    fetchClip: url => fetchClipFile(url),
     styleOf: (plan, wanted) => { const c = C(); return c ? c.styleOf(plan || {}, wanted) : ''; },
     get last() { return state.last; },
     get spent() { return { ...state.spent }; },

@@ -39,6 +39,7 @@ const LIMITS = {
   photoSubjects: 8, // photo searches per reel (subjects, cards, teams)
   budgetMs: 44000, // the whole scene-media call (reel-maker runs in 60 s)
   liveSearches: 2, // paid live clip searches per reel (the rest: library + free sources)
+  broadExtraSearches: 1, // "Find clips" (the person asked): one more live search ($0.06 cap)
   visionSubjects: 3, // photo vision checks per reel (Sonnet, ~$0.0025 a photo; 3 x 4 photos ~ $0.03, the same cap as before; verdicts cached 7 days per photo)
   visionPhotos: 4, // photos per vision check (Generate uses 12; a scene needs one good photo)
   clipsPerScene: 12,
@@ -137,7 +138,11 @@ const isPerson = sub => sub && (sub.type === 'player' || sub.type === 'person');
 // judged), then the retry ladder (player+moment -> player+game -> team+game
 // -> team), one find-clips call per rung, until a rung gives enough.
 //   -> { clips, cost, rungs: [{ rung, n, cost, ms, error? }], reason }
-async function clipsForSubject(sub, wants, { deps, sport, track, exclude, claimLive, refundLive, deadlineAt, now }) {
+// broad (the person pressed "Find clips"): every rung runs (no early stop on
+// "enough") and recent rungs look back BROAD_WINDOW_HOURS instead of the
+// sport's few days.
+const BROAD_WINDOW_HOURS = 21 * 24;
+async function clipsForSubject(sub, wants, { deps, sport, track, exclude, claimLive, refundLive, deadlineAt, now, broad = false }) {
   const pool = new Map();
   const tried = [];
   let cost = 0;
@@ -157,7 +162,7 @@ async function clipsForSubject(sub, wants, { deps, sport, track, exclude, claimL
     if (list.filter(c => c.confirmed).length >= 2) return true;
     return isPerson(sub) ? list.filter(c => c.subjectHit).length >= 2 : list.length >= 4;
   };
-  if (enough()) return { clips: [...pool.values()], cost, rungs: [{ rung: 'library', n: pool.size }], reason: '' };
+  if (enough() && !broad) return { clips: [...pool.values()], cost, rungs: [{ rung: 'library', n: pool.size }], reason: '' };
   if (!sport) return { clips: [...pool.values()], cost, rungs: tried, reason: pool.size ? '' : 'no-sport' };
   // 2. The ladder.
   for (const step of C.ladderFor(sub, wants, { now: now() })) {
@@ -165,7 +170,8 @@ async function clipsForSubject(sub, wants, { deps, sport, track, exclude, claimL
     if (left < 4000) { tried.push({ rung: step.rung, n: 0, error: 'deadline' }); break; }
     const live = claimLive();
     const started = now();
-    const res = await withTimeout(deps.findClips({ mode: 'find-clips', sport, subject: { type: isPerson(sub) ? 'player' : (sub.type === 'game' || sub.type === 'moment' ? 'moment' : sub.type), name: sub.name, team: sub.team || '', moment: sub.moment || '' }, ...step.body },
+    const body = broad && !step.body.windowHours ? { ...step.body, windowHours: BROAD_WINDOW_HOURS } : step.body;
+    const res = await withTimeout(deps.findClips({ mode: 'find-clips', sport, subject: { type: isPerson(sub) ? 'player' : (sub.type === 'game' || sub.type === 'moment' ? 'moment' : sub.type), name: sub.name, team: sub.team || '', moment: sub.moment || '' }, ...body },
       { ...(track || {}), freeOnly: !live, deadlineAt: deadlineAt - 1500 }), Math.min(LIMITS.searchMs, left - 1000), null);
     const spent = res && res.ok ? Number(res.cost) || 0 : 0;
     if (live && !spent) refundLive(); // library / cached answer: the live slot is not used up
@@ -173,10 +179,24 @@ async function clipsForSubject(sub, wants, { deps, sport, track, exclude, claimL
     const before = pool.size;
     if (res && res.ok) (res.clips || []).forEach(c => keep(c, step.rung));
     tried.push({ rung: step.rung, n: pool.size - before, cost: money(spent), ms: now() - started, ...(res ? (res.ok ? {} : { error: clean(res.error || 'failed', 60) }) : { error: 'timeout' }), ...(live ? { live: true } : {}) });
-    if (enough()) break;
+    if (enough() && !broad) break;
   }
   const reason = pool.size ? '' : (tried.some(t => t.error === 'deadline') ? 'deadline' : tried.length && tried.every(t => t.error === 'timeout') ? 'timeout' : 'no-candidates');
   return { clips: [...pool.values()], cost, rungs: tried, reason };
+}
+
+// The clip sport of a plan without one: its team, then its words.
+function sportOfPlan(plan, beats = []) {
+  try {
+    const SPORT = require('./_reel-sport.js');
+    const teamName = clean(plan.team && plan.team.name, 80);
+    if (teamName) {
+      const hits = SPORT.teamsNamed(teamName).filter(h => CLIP_SPORTS.includes(h.team.sport));
+      if (hits.length && hits.every(h => h.team.sport === hits[0].team.sport)) return hits[0].team.sport;
+    }
+    const text = [plan.title, plan.script && plan.script.text, ...beats.map(b => [b.vo, b.text, b.media && b.media.subject && b.media.subject.team].filter(Boolean).join(' '))].filter(Boolean).join('\n').slice(0, 8000);
+    return SPORT.inferSport(text).sport || '';
+  } catch { return ''; }
 }
 
 async function sceneMedia(body = {}, ctx = {}) {
@@ -191,7 +211,12 @@ async function sceneMedia(body = {}, ctx = {}) {
   const exclude = new Set((Array.isArray(body.exclude) ? body.exclude : []).map(u => clean(u, 400)).filter(Boolean));
   const track = ctx.track || null;
   const aiAllowed = ctx.aiAllowed !== false;
-  const sport = CLIP_SPORTS.includes(plan.sport) ? plan.sport : '';
+  // No clip sport on the plan (a page-built plan, an older reel, a script
+  // that names a player but no team): the plan's own words decide it. Before
+  // 2026-11-28 such a reel searched nothing and every scene went static.
+  const sport = CLIP_SPORTS.includes(plan.sport) ? plan.sport : (clean(plan.sport, 20) ? '' : sportOfPlan(plan, allBeats));
+  // "Find clips": one more live search, every rung, a wider window.
+  const broad = body.broaden === true || body.ladder === 'broad' || body.findClips === true;
   const capped = { clips: false, photos: false };
   const costs = { clips: 0, photos: 0 };
 
@@ -211,11 +236,12 @@ async function sceneMedia(body = {}, ctx = {}) {
   const groups = [...new Map(clipScenes.map(s => [groupKey(s), { key: groupKey(s), sub: s.subject, wants: s.wants }])).values()];
   if (groups.length > LIMITS.subjects) capped.clips = true;
   let live = 0;
-  const claimLive = () => { if (!aiAllowed) return false; if (live >= LIMITS.liveSearches) { capped.clips = true; return false; } live += 1; return true; };
+  const liveCap = LIMITS.liveSearches + (broad ? LIMITS.broadExtraSearches : 0);
+  const claimLive = () => { if (!aiAllowed) return false; if (live >= liveCap) { capped.clips = true; return false; } live += 1; return true; };
   const refundLive = () => { live = Math.max(0, live - 1); };
   const ladders = {};
   const clipWork = groups.slice(0, LIMITS.subjects).map(async g => {
-    const res = await clipsForSubject(g.sub, g.wants, { deps, sport, track, exclude, claimLive, refundLive, deadlineAt, now });
+    const res = await clipsForSubject(g.sub, g.wants, { deps, sport, track, exclude, claimLive, refundLive, deadlineAt, now, broad });
     costs.clips += res.cost;
     ladders[g.key] = res.rungs;
     const rungOrder = r => (r === 'library' ? -1 : C.RUNGS.indexOf(r));
@@ -290,11 +316,23 @@ async function sceneMedia(body = {}, ctx = {}) {
   const picks = C.gatedPicks(scenes, { judgements, judgeAvailable });
   const judgedFor = (url, key) => Boolean(judgements[url] && judgements[url].relevance && key in judgements[url].relevance);
   const confirmedUrls = new Set(scenes.flatMap(s => s.clips.filter(c => c.confirmed).map(c => c.url)));
-  const judgeQueue = judgeAvailable ? C.judgeQueue(clipScenes, { judged: (url, key) => confirmedUrls.has(url) || judgedFor(url, key) }) : [];
+  // A person's clip is judged for their team too (the team gate): a verdict without the team key is judged again.
+  const teamKeyOf = new Map(clipScenes.filter(s => isPerson(s.subject) && s.subject.team).map(s => [s.subject.key, C.subjectKey({ name: s.subject.team })]));
+  const judgeQueue = judgeAvailable ? C.judgeQueue(clipScenes, { judged: (url, key) => confirmedUrls.has(url) || (judgedFor(url, key) && (!teamKeyOf.has(key) || judgedFor(url, teamKeyOf.get(key)))) }) : [];
 
   const subjects = [...new Map(scenes.map(s => [`${s.wants === 'presser' ? 'p' : 'c'}|${s.subject.key}`, s])).values()]
     .map(s => ({ key: s.subject.key, label: s.subject.name, type: s.subject.type, ...(s.subject.team ? { team: s.subject.team } : {}), ...(s.subject.date ? { date: s.subject.date } : {}), ...(s.subject.moment ? { moment: s.subject.moment } : {}), wants: s.wants }))
     .filter((s, i, a) => a.findIndex(x => x.key === s.key) === i);
+  // The team of every person on a clip scene is judged too, so a game clip of
+  // the right team can carry a player's scene when no clip shows the player
+  // (the ladder's team rung; before 2026-11-28 the judge rated team clips only
+  // against the player, 5-6 of 10, and the gate refused every one).
+  clipScenes.forEach(s => {
+    const team = clean(s.subject.team, 60);
+    if (!isPerson(s.subject) || !team) return;
+    const key = C.subjectKey({ name: team });
+    if (!subjects.some(x => x.key === key)) subjects.push({ key, label: team, type: 'team', team, wants: s.wants === 'presser' ? 'presser' : 'clip' });
+  });
   const picksById = {};
   const beats = scenes.map(s => {
     const p = picks[s.beatId] || { kind: 'none', failures: [] };
@@ -309,7 +347,9 @@ async function sceneMedia(body = {}, ctx = {}) {
         const mom = jj && jj.moment && Number.isFinite(jj.moment[s.subject.key]) ? jj.moment[s.subject.key] : null;
         const want = s.wants === 'presser' ? 'presser' : 'clip';
         const pass = jj && jj.relevance && s.subject.key in jj.relevance ? C.passesGate(jj, s.subject, C.GATE, want) : (c.confirmed ? true : (!judgeAvailable && C.textGate(c, s.subject, want)));
-        return { ...c, relevance: rel, moment: mom, judged: Boolean(jj), gate: pass ? (jj ? 'judge' : c.confirmed ? 'library' : 'text') : '', score: C.judgedScore(c, C.subjectFor({ subject: s.subject }, plan), jj || null).score };
+        const teamKey = isPerson(s.subject) && s.subject.team ? C.subjectKey({ name: s.subject.team }) : '';
+        const teamPass = !pass && teamKey && jj && jj.relevance && teamKey in jj.relevance && C.passesGate(jj, { type: 'team', name: s.subject.team, key: teamKey }, C.GATE, want);
+        return { ...c, relevance: rel, moment: mom, judged: Boolean(jj), gate: pass ? (jj ? 'judge' : c.confirmed ? 'library' : 'text') : teamPass ? 'team' : '', score: C.judgedScore(c, C.subjectFor({ subject: s.subject }, plan), jj || null).score };
       }),
       photos: s.photos, teamPhotos: s.teamPhotos, ...(s.cards.length ? { cards: s.cards } : {}),
       pick: {
@@ -332,10 +372,10 @@ async function sceneMedia(body = {}, ctx = {}) {
   const cost = costs.clips + costs.photos;
   const ms = now() - started;
   if (deps.log) {
-    try { deps.log(`reels-sourcing ${JSON.stringify({ style, sport: plan.sport || '', beats: stats.beats, clip: stats.clip, photo: stats.photo, module: stats.module, none: stats.none, failures: stats.failures, rungs: stats.rungs, cost: money(cost), ms, liveSearches: live })}`); } catch { /* logging never breaks sourcing */ }
+    try { deps.log(`reels-sourcing ${JSON.stringify({ style, sport: sport || 'none', planSport: plan.sport || '', broad, beats: stats.beats, clip: stats.clip, photo: stats.photo, module: stats.module, none: stats.none, failures: stats.failures, rungs: stats.rungs, cost: money(cost), ms, liveSearches: live })}`); } catch { /* logging never breaks sourcing */ }
   }
   return {
-    ok: true, v: 4, esStyle: style, beats, judgeQueue, subjects, photoDrops,
+    ok: true, v: 4, esStyle: style, sport, broad, beats, judgeQueue, subjects, photoDrops,
     clipCount: summary.clipCount, needsClips: summary.needsClips, motionOk: summary.motionOk, actions: summary.actions, stats, ms,
     judge: { ready: judgeAvailable, maxClips: C.JUDGE.maxClips, perCall: C.JUDGE.perCall, maxUsdPerReel: C.JUDGE.maxUsdPerReel, threshold: { relevance: C.GATE.relevance, moment: C.GATE.moment } },
     cost: money(cost), costs: { clips: money(costs.clips), photos: money(costs.photos) }, capped,

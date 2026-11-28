@@ -1558,12 +1558,17 @@
     if (!state.assets[id]) {
       let blob = clipBlobs.get(variant.url);
       if (!blob) {
-        try {
-          const response = await fetch(variant.url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
-          if (!response.ok) return '';
-          blob = await response.blob();
-          clipBlobs.set(variant.url, blob);
-        } catch { return ''; }
+        // Direct first, then the same-origin proxy (ReelSourcing.fetchClip) when the CDN refuses CORS.
+        const viaSrc = SRC() && typeof SRC().fetchClip === 'function' ? await SRC().fetchClip(variant.url).catch(() => null) : null;
+        if (viaSrc && viaSrc.blob) blob = viaSrc.blob;
+        else if (!viaSrc) {
+          try {
+            const response = await fetch(variant.url, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' });
+            if (!response.ok) return '';
+            blob = await response.blob();
+          } catch { return ''; }
+        } else return '';
+        clipBlobs.set(variant.url, blob);
       }
       const ok = await addClipAsset(id, {
         blob, remote: variant.url, post: clip.url, label: `Clip from @${clip.handle || 'x'}`,
@@ -1711,7 +1716,9 @@
         if (await useXClip(beat.id, pick.clip, pick.segment || null)) {
           usedClips.add(pick.clip.url);
           state.visualSrc[beat.id] = 'x-clip';
-          markAsset(beat.id, { verified: pick.gate === 'judge' || pick.gate === 'text' || pick.gate === 'library' || pick.clip.judged === true, gate: pick.gate || '', relevance: pick.relevance ?? null, subject: subject || null, presser: pick.kind === 'presser', rung: pick.rung || '', short: Boolean(pick.segment && pick.segment.short) });
+          // A team clip on a player's scene says so on its label (honest window tag).
+          if (pick.gate === 'team' && pick.label && beat.media && typeof beat.media === 'object') beat.media = { ...beat.media, label: pick.label };
+          markAsset(beat.id, { verified: pick.gate === 'judge' || pick.gate === 'text' || pick.gate === 'library' || pick.gate === 'team' || pick.clip.judged === true, gate: pick.gate || '', relevance: pick.relevance ?? null, subject: subject || null, presser: pick.kind === 'presser', rung: pick.rung || '', short: Boolean(pick.segment && pick.segment.short) });
           return 'clip';
         }
       }

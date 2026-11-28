@@ -77,7 +77,7 @@
   const STAGGER = Object.freeze({ min: 40, max: 60, step: 48 });
   const WIPE = Object.freeze({ ms: 640, half: 320, curve: 'inOut', skewDeg: -14 });
   const CAPTION_POP = Object.freeze({ ms: 160, curve: 'out', from: 0.86, exitMs: 160, exitCurve: 'in' });
-  const AMBIENT = Object.freeze({ photo: [1, 1.06], clip: [1, 1.03], curve: 'inOut' });
+  const AMBIENT = Object.freeze({ photo: [1, 1.12], clip: [1, 1.03], curve: 'inOut' });
   // Camera drift: two slow sines (6.7 s and 5.3 s), 5 px and 7 px: continuous
   // (no kink at any boundary), always under 0.12 px a frame, never still for
   // more than about half a second. Ambient, like Ken Burns.
@@ -1529,7 +1529,15 @@
     }
     const isClip = asset && asset.kind === 'clip';
     const span = shot ? Math.max(1, shot.outMs - shot.inMs) : 1;
-    const q = shot ? clamp01((t - shot.inMs) / span) : 0;
+    let q = shot ? clamp01((t - shot.inMs) / span) : 0;
+    // A still pushes once per beat, in then out then in (continuous at every
+    // beat edge, eased inOut), so a photo held over a chapter visibly moves on
+    // every beat instead of drifting 6% over the whole chapter.
+    if (!isClip && shot && Array.isArray(tl.beats)) {
+      const parts = tl.beats.filter(b => b.outMs > shot.inMs && b.inMs < shot.outMs);
+      const k = parts.findIndex(b => t >= b.inMs && t < b.outMs);
+      if (k >= 0) { const a = Math.max(parts[k].inMs, shot.inMs); const z = Math.min(parts[k].outMs, shot.outMs); const r = clamp01((t - a) / Math.max(1, z - a)); q = k % 2 === 0 ? r : 1 - r; }
+    }
     const [z0, z1] = isClip ? AMBIENT.clip : AMBIENT.photo;
     const zoom = z0 + (z1 - z0) * ease.inOut(q);
     const face = ES.faceBox(size, null, asset);

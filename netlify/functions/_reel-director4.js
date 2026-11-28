@@ -30,6 +30,7 @@ const RULES = require('../../frameup-rules.js');
 // Required when called, so tests can swap modules (and no load-time cycle).
 const gateway = () => require('./_ai-gateway.js');
 const D = () => require('./_reel-director.js');
+const SPORT = () => require('./_reel-sport.js');
 // The v3 engine's whole-phrase logic (phraseFor, DANGLE): headlines are
 // complete phrases that never end on a word that leads into the next.
 const ES = () => require('../../reel-es.js');
@@ -573,6 +574,15 @@ function fansPrompt(text) {
   return m ? up(`${m[1]} FANS: YOUR CALL`, 34) : '';
 }
 // The longest run of capitalised words (a name), possessives dropped.
+// Words that start a sentence before a name ("Then Dak Prescott was sacked"):
+// never part of the name (2026-11-28: the subject was "Then Dak Prescott").
+const LEAD_WORDS = /^(?:the|a|an|number|chapter|part|rumou?r|press|then|but|and|so|now|when|after|before|if|still|yet|last|this|that|these|those|only|even|with|without|on|in|at|for|every|his|her|their|meanwhile|today|tonight|yesterday|sources?|via|per|why|how|what|who|where|while|since|until|because|as|by|from|to|of|or|nor|also|plus|here|there|it|its|was|is|are|were|did|does|do|ask|look|watch|remember|meet|forget|enter|imagine)$/i;
+// A name that is a team ("Dallas Cowboys", "49ers"), not a player.
+function isTeamName(name) {
+  const n = String(name || '').trim().toLowerCase();
+  if (!n) return false;
+  return SPORT().teamsNamed(name).some(h => h.team.name.toLowerCase() === n || h.team.short.toLowerCase() === n);
+}
 function properName(text) {
   // A spoken credit ("Source: Pro Football Reference") names no subject.
   const w = words(plain(text).replace(/\b(?:sources?|credits?|data|photos?|via)\s*:.*$/i, '').replace(/[“”"()]/g, ' '));
@@ -584,7 +594,7 @@ function properName(text) {
     const bare = x.replace(/[,.!?;:]+$/, '').replace(/[’']s?$/, '');
     const sentenceStart = i === 0 || /[.!?:]$/.test(w[i - 1]);
     // A sentence's first word counts when a capitalised word follows ("Aaron Rodgers'"), never "The".
-    const cap = capWord(x) && (!sentenceStart || capWord(w[i + 1])) && !(run.length === 0 && /^(?:the|a|an|number|chapter|part|rumour|rumor|press)$/i.test(bare));
+    const cap = capWord(x) && (!sentenceStart || capWord(w[i + 1])) && !(run.length === 0 && LEAD_WORDS.test(bare));
     if (cap) run.push(bare); else close();
     if (cap && /[,.!?;:]$/.test(x)) close();
   });
@@ -599,7 +609,7 @@ function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = nul
   // One beat per sentence (a long one split at a clause), so the page's
   // per-scene voice and media flows line up with the script's sentences.
   const segs = segmentScript(text, { mergeTiny: false });
-  const r = read || { corpus: text, sport, team };
+  const r = read || withSport({ corpus: text, text, sport, team });
   let teamName = (team && team.name) || (r.team && r.team.name) || '';
   // No team from the brief: a team nickname in the words ("Jets") names it.
   if (!teamName) {
@@ -609,6 +619,11 @@ function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = nul
       const hit = D().teamInfo(b, r.sport || sport);
       if (hit && hit.name && hit.name.toLowerCase().endsWith(` ${b.toLowerCase()}`)) { teamName = hit.name; team = team || hit; break; }
     }
+  }
+  // Still none: any nickname of the reel's sport ("49ers", "Red Sox").
+  if (!teamName) {
+    const hit = SPORT().teamIn(text, r.sport || sport);
+    if (hit && (r.sport || sport || hit.sport !== 'cfb')) { teamName = hit.name; team = team || D().teamInfo(hit.name, hit.sport) || { name: hit.name }; }
   }
   const set = sourceNumbers(r.corpus || text);
   const reelSubject = properName(text) || teamName;
@@ -652,7 +667,8 @@ function scriptToV4(script, { esStyle = 'breakdown', length = 'full', read = nul
       const lead = bi === 0 ? leadLabel(vo) : null;
       if (lead) beat.tag = { text: lead.label, tone: /rumou?r|unconfirmed|report/i.test(lead.label) ? 'red' : 'ink' };
       const name = properName(vo);
-      const subjectRaw = name ? { type: 'player', name } : (reelSubject ? { type: reelSubject === teamName ? 'team' : 'player', name: reelSubject, team: teamName } : { type: 'moment', name: hookMoment, team: teamName });
+      const typeOf = n => (n === teamName || isTeamName(n) ? 'team' : 'player');
+      const subjectRaw = name ? { type: typeOf(name), name, ...(typeOf(name) === 'team' ? { team: name } : {}) } : (reelSubject ? { type: typeOf(reelSubject), name: reelSubject, team: teamName } : { type: 'moment', name: hookMoment, team: teamName });
       // A data beat keeps the subject on screen (a verified photo, Ken Burns)
       // beside its module; with no subject the module carries it alone.
       let kind = beat.module ? (name ? 'clip' : (reelSubject ? 'photo' : 'none')) : 'clip';
@@ -949,9 +965,21 @@ function flattenV4(plan) {
 }
 
 // ─── Director ────────────────────────────────────────────────────────────
+// The brief reader finds a sport only from a full team or city name; clip
+// search needs one (no sport = no clips, 2026-11-28). A nickname ("49ers"),
+// or plain sport words ("touchdowns", "tight end", "home runs") decide it.
+function withSport(read) {
+  if (!read || read.sport) return read;
+  const hit = SPORT().inferSport(read.corpus || read.text || '');
+  if (!hit.sport) return read;
+  read.sport = hit.sport;
+  if (!read.team && hit.team) read.team = D().teamInfo(hit.team.name, hit.sport) || { name: hit.team.name };
+  return read;
+}
 // sources: topic / trend / links text; facts: the capped fact check.
 function readV4({ script, topic = '', trend = null, facts = '', sport = '' }) {
   const read = D().readReelBrief({ brief: [normScript(script), str(topic, 1200)].filter(Boolean).join('\n'), trend, facts, sport });
+  withSport(read);
   read.sources = [str(topic, 1200), trend ? [trend.title, ...(trend.related || []).map(r => r.title), trend.why].filter(Boolean).join('\n') : '', str(facts, 4000)].filter(Boolean).join('\n');
   return read;
 }

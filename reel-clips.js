@@ -471,6 +471,11 @@
       const wants = s.wants || 'none';
       const failures = [];
       const clipWants = wants === 'presser' ? 'presser' : 'clip';
+      // A person's scene may take a game clip of their team when no clip shows
+      // them (the ladder's team rung): the judge rates the team as its own
+      // subject; gate 'team', ranked under every clip of the person.
+      const teamName = person(s) && s.subject.team ? String(s.subject.team) : '';
+      const teamSub = teamName ? { type: 'team', name: teamName, team: teamName, key: subjectKey({ name: teamName }) } : null;
       let judgedNo = 0;
       const ok = (s.clips || []).filter(c => c && c.url).map(clip => {
         const j = J(clip.url);
@@ -479,12 +484,16 @@
         let pass;
         let how;
         if (judged) { pass = passesGate(j, subject, gate, clipWants); how = 'judge'; if (!pass) judgedNo += 1; } else if (conf) { pass = true; how = 'library'; } else { pass = (!judgeAvailable || judgeFailed) && textGate(clip, subject, clipWants); how = 'text'; }
+        if (!pass && teamSub) {
+          const teamJudged = Boolean(j && relOf(j, teamSub.key) != null);
+          if (teamJudged ? passesGate(j, teamSub, gate, clipWants) : (!judged && (!judgeAvailable || judgeFailed) && textGate(clip, teamSub, clipWants))) { pass = true; how = 'team'; }
+        }
         if (!pass) return null;
         const sc = judgedScore(clip, subject, j);
         const reused = uses.get(clip.url) || 0;
-        const rel = judged ? relOf(j, subject.key) : conf ? Number(conf.relevance) : null;
+        const rel = how === 'team' ? relOf(j, teamSub.key) : judged ? relOf(j, subject.key) : conf ? Number(conf.relevance) : null;
         const rank = conf ? Number(conf.rank) || 0 : 0;
-        return { clip, score: sc.score - reused * 30 + (how === 'library' ? 8 + rank * 3 : 0), reused, relevance: rel, moment: judged ? momOf(j, subject.key) : conf && Number.isFinite(conf.moment) ? conf.moment : null, gate: how, segment0: conf && conf.segment ? conf.segment : (j && j.segment) || null };
+        return { clip, score: sc.score - reused * 30 + (how === 'library' ? 8 + rank * 3 : 0) - (how === 'team' ? 40 : 0), reused, relevance: rel, moment: judged ? momOf(j, subject.key) : conf && Number.isFinite(conf.moment) ? conf.moment : null, gate: how, segment0: conf && conf.segment ? conf.segment : (j && j.segment) || null };
       }).filter(Boolean).sort((a, b) => b.score - a.score);
       if (['clip', 'presser'].includes(wants)) {
         if (!(s.clips || []).length) failures.push(s.noClipReason || 'no-candidates');
@@ -504,8 +513,9 @@
         // Sampled motion + judged action decide the window; without samples the
         // judge's own segment (or the library's) is used.
         const seg = sm.length ? bestSegment(sm, beatSec, clipSec) : (pick.segment0 && Number.isFinite(pick.segment0.start) ? pick.segment0 : bestSegment([], beatSec, clipSec));
-        const why = pick.gate === 'judge' ? `judge confirmed ${subject.name || 'the subject'} (${pick.relevance}/10)` : pick.gate === 'library' ? `confirmed before for ${subject.name || 'the subject'} (${pick.relevance}/10)` : `post names ${subject.name}`;
-        return { kind: wants === 'presser' ? 'presser' : 'clip', clip: pick.clip, segment: segmentOut(seg, beatSec), relevance: pick.relevance, moment: pick.moment, gate: pick.gate, ...(pick.clip.rung ? { rung: pick.clip.rung } : {}), why };
+        const team = pick.gate === 'team';
+        const why = team ? `${teamName} game footage (no confirmed clip of ${subject.name || 'the subject'}; ${pick.relevance}/10 for the team)` : pick.gate === 'judge' ? `judge confirmed ${subject.name || 'the subject'} (${pick.relevance}/10)` : pick.gate === 'library' ? `confirmed before for ${subject.name || 'the subject'} (${pick.relevance}/10)` : `post names ${subject.name}`;
+        return { kind: wants === 'presser' ? 'presser' : 'clip', clip: pick.clip, segment: segmentOut(seg, beatSec), relevance: pick.relevance, moment: pick.moment, gate: pick.gate, ...(team ? { label: teamName.toUpperCase().slice(0, 22), team: teamName } : {}), ...(pick.clip.rung ? { rung: pick.clip.rung } : {}), why };
       };
       const photoPick = (list, team) => {
         const p = list.find(x => !photoUses.has(x.sourceUrl || x.url)) || list[0] || null;
@@ -529,8 +539,8 @@
       let pick = null;
       if (wants === 'clip' || wants === 'presser') pick = tryClip() || tryPhoto();
       else if (s.kind === 'cards') pick = tryCards();
-      else if (wants === 'photo') pick = tryPhoto();
-      if (!pick && wants === 'photo' && s.kind !== 'cards' && !photos.length) failures.push('no-photo');
+      else if (wants === 'photo' || wants === 'cutout') pick = tryPhoto();
+      if (!pick && (wants === 'photo' || wants === 'cutout') && s.kind !== 'cards' && !photos.length) failures.push('no-photo');
       // Motion rule: a beat that would not move takes the subject's (then the
       // team's) verified photo with Ken Burns before it falls back to a block.
       if (!pick && !hasAnimatedModule(s.beat || {})) pick = tryPhoto() || tryTeamPhoto();
