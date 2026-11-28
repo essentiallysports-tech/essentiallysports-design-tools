@@ -84,9 +84,10 @@
   // more than about half a second. Ambient, like Ken Burns. The zones drift
   // at different depths (PARALLAX): the media window in front, the data module
   // at 1x, the paper ground behind (it moves against them), so the frame has
-  // depth and no beat ever reads as a still.
+  // depth and no beat ever reads as a still. The paper ground holds still
+  // (ground 0): a drifting texture costs ~10% more MP4 bytes for little gain.
   const CAMERA = Object.freeze({ ax: 5, px: 6700, ay: 7, py: 5300, phase: 1.3 });
-  const PARALLAX = Object.freeze({ media: 1.5, module: 1, ground: -0.6 });
+  const PARALLAX = Object.freeze({ media: 1.5, module: 1, ground: 0 });
   const cameraAt = t => ({ x: CAMERA.ax * Math.sin((2 * Math.PI * t) / CAMERA.px), y: CAMERA.ay * Math.sin((2 * Math.PI * t) / CAMERA.py + CAMERA.phase) });
   // The ambient clock: real time with every chapter wipe taken out. Ambient
   // motion (camera, Ken Burns, clip playback, idle module motion) holds while
@@ -507,7 +508,7 @@
       const key = `mod.sb.${row.team}`;
       const c0 = countable(row.value);
       const lead = Number.isFinite(vals[i]) && vals[i] === best && n > 1;
-      out.push(sp(`${key}.row`, 'card', { x: r.x, y, w: r.w, h: rowH, ...(lead ? { lead: BLUE } : {}) }, { z: 12, order: i }));
+      out.push(sp(`${key}.row`, 'card', { x: r.x, y, w: r.w, h: rowH, lead: lead ? BLUE : WHITE }, { z: 12, order: i }));
       out.push(sp(`${key}.chip`, 'teamchip', { x: r.x + 28, y: y + 16, w: rowH - 32, h: rowH - 32, text: row.team.slice(0, 3), logo: row.logo }, { z: 14, order: i }));
       out.push(sp(`${key}.name`, 'text', { x: r.x + rowH + 28, y: y + rowH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: INK, text: row.team, maxW: r.w - rowH - 300 }, { z: 14, order: i }));
       out.push(sp(`${key}.val`, 'text', { x: r.x + r.w - 32, y: y + rowH / 2 + (CAP * TS.h2) / 2, size: TS.h2, color: lead ? BLUE : INK, align: 'right', text: row.value, ...(c0 ? { value: c0.value, fmt: c0 } : {}) }, { z: 14, order: i, from: c0 ? { value: 0 } : null }));
@@ -532,7 +533,7 @@
       const c0 = countable(`${row.value}${m.unit}`) || { value: row.value, pre: '', post: m.unit, dec: 0 };
       out.push(sp(`${key}.label`, 'text', { x: a.x, y: y + CAP * TS.label, size: TS.label, color: INK, text: row.label, maxW: a.w }, { order: i }));
       // The track: the full scale, so a bar reads as a share of it.
-      out.push(sp(`${key}.track`, 'rect', { x: a.x, y: y + CAP * TS.label + 14, w: a.w - valW + 40, h: barH, fill: PAPER, track: 1 }, { z: 18, order: i, enter: 'fade' }));
+      out.push(sp(`${key}.track`, 'rect', { x: a.x, y: y + CAP * TS.label + 14, w: a.w - valW, h: barH, fill: PAPER, track: 1 }, { z: 18, order: i, enter: 'fade' }));
       out.push(sp(`${key}.bar`, 'rect', { x: a.x, y: y + CAP * TS.label + 14, w: bw, h: barH, fill: toneHex(row.tone), sheen: 1 }, { order: i, from: { w: 0 }, enter: 'fade' }));
       out.push(sp(`${key}.val`, 'text', { x: a.x + bw + 20, y: y + CAP * TS.label + 14 + barH / 2 + (CAP * TS.caption) / 2, size: TS.caption, color: toneHex(row.tone), text: fmtCount(c0, row.value), value: row.value, fmt: c0 }, { order: i, from: { value: 0, x: a.x + 20 }, enter: 'fade' }));
     });
@@ -854,7 +855,9 @@
     const [xa, xb, ya, yb] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
     const P = p => [plot.x + ((p[0] - xa) / Math.max(1e-9, xb - xa)) * plot.w, plot.y + plot.h - 16 - ((p[1] - ya) / Math.max(1e-9, yb - ya)) * (plot.h - 40)];
     const list = m.points.map(P);
-    out.push(sp('mod.lc.line', 'poly', { pts: list, stroke: BLUE, lw: 10, dot: 1 }, { z: 14, order: 1, from: { p: 0 }, enter: 'fade' }));
+    // Light guides (structural) and a tinted area under the line as it draws.
+    [0.25, 0.5, 0.75].forEach((f, i) => out.push(sp(`mod.lc.g${i}`, 'line', { x1: plot.x, y1: plot.y + plot.h * f, x2: plot.x + plot.w, y2: plot.y + plot.h * f, stroke: INK, lw: 2, alpha: 0.18, dash: 1 }, { z: 12, order: 1, enter: 'fade' })));
+    out.push(sp('mod.lc.line', 'poly', { pts: list, stroke: BLUE, lw: 10, dot: 1, area: plot.y + plot.h }, { z: 14, order: 1, from: { p: 0 }, enter: 'fade' }));
     const last = list[list.length - 1];
     out.push(sp('mod.lc.end', 'dot', { x: last[0], y: last[1], r: 20, fill: BLUE, stroke: WHITE, lw: 6 }, { z: 16, order: 14, enter: 'pop', pulse: true }));
     if (m.axes.x) out.push(sp('mod.lc.lx', 'text', { x: plot.x + plot.w, y: plot.y + plot.h + 16 + CAP * TS.body, size: TS.body, font: 's', color: INK, align: 'right', text: m.axes.x }, { order: 1 }));
@@ -1156,7 +1159,8 @@
         let dr = zoneOf(layout, 'module', fit.extra);
         let capY = LAYOUTS[layout].cap + (layout === 'media' ? fit.extra : 0);
         // Module alone: as tall as it needs (480-800), the caption under it.
-        if (layout === 'module' && b.module) { const full = dr.h; const need = moduleNeed(b.module); const h = need >= 600 ? full : Math.max(360, Math.min(full, need)); dr = { ...dr, y: dr.y + Math.round((full - h) / 2 / 8) * 8, h }; }
+        // It sits under the headline (not floating mid-frame); the caption follows it.
+        if (layout === 'module' && b.module) { const full = dr.h; const need = moduleNeed(b.module); const h = need >= 600 ? full : Math.max(360, Math.min(full, need)); dr = { ...dr, y: dr.y + Math.min(48, full - h), h }; capY = Math.min(capY, dr.y + h + 104); }
         // In the data layout a small module (flow, tally) gets a card its size, centred in the zone.
         if (layout === 'data' && b.module && ['flow', 'tally'].includes(b.module.type)) { const h = Math.min(dr.h, Math.max(360, moduleNeed(b.module))); dr = { ...dr, y: dr.y + Math.round((dr.h - h) / 2 / 8) * 8, h }; }
         const specs = [...chapterHeadSpecs(ch, measure, fit)];
@@ -1314,7 +1318,7 @@
       const size = [TS.h2, TS.caption].find(z => close.options.every(o => ctx.measure(o.text, dFont(z)) <= 840 - 96)) || TS.caption;
       close.options.forEach((o, i) => out.push(sp(`close.opt.${i}`, 'button', { x: 120, y: 900 + i * 220, w: 840, h: 164, fill: toneHex(o.tone, i ? 'blue' : 'red'), text: o.text, size }, { z: 30, order: i, from: { alpha: 0, sc: 0.9 } })));
       // "OR" where the two options meet (a vote, not a list).
-      out.push(sp('close.or', 'orchip', { x: 540, y: 900 + 164 + 28, r: 44, text: 'OR' }, { z: 31, order: 2, enter: 'pop' }));
+      out.push(sp('close.or', 'orchip', { x: 540, y: 900 + 164 + 28, r: 44, text: 'OR' }, { z: 31, order: 2, from: { alpha: 0, sc: 0.6 } }));
       if (close.comment) out.push(sp('close.comment', 'pill', { x: 540, y: 1370, size: TS.caption, fill: INK, ink: WHITE, text: close.comment, anchor: 'center', bubble: 1, maxW: 900 }, { z: 30, order: 3, from: { alpha: 0 } }));
     } else if (close.kind === 'checklist') {
       out.push(sp('close.prompt', 'para', { x: ZONE.left, y: 440, w: 840, h: 200, text: close.prompt, color: INK, steps: [TS.h1, TS.h2], maxLines: 2 }, { z: 30 }));
@@ -1721,9 +1725,7 @@
             ctx.strokeStyle = `rgba(255,255,255,${(0.06 * clamp01(s.chalk)).toFixed(3)})`;
             ctx.lineWidth = 2;
             for (let k = 0; k < 14; k += 1) { const yy = s.y + ((k + 0.5) * s.h) / 14; ctx.beginPath(); ctx.moveTo(s.x + 24, yy + Math.sin(k) * 3); ctx.lineTo(s.x + s.w - 24, yy - Math.cos(k) * 3); ctx.stroke(); }
-            // A chalk-dust smear and a wooden ledge.
-            ctx.fillStyle = `rgba(255,255,255,${(0.05 * clamp01(s.chalk)).toFixed(3)})`;
-            ctx.fillRect(s.x + s.w * 0.12, s.y + s.h * 0.18, s.w * 0.5, s.h * 0.1);
+            // The board's ledge.
             ctx.fillStyle = `rgba(18,18,18,${(0.5 * clamp01(s.chalk)).toFixed(3)})`;
             ctx.fillRect(s.x, s.y + s.h - 14, s.w, 14);
           } else if (skin === 'scrapbook' && !s.media && (el.kind === 'quotecard' || el.kind === 'panel')) {
@@ -1929,6 +1931,14 @@
             left -= segs[i];
           }
           ctx.stroke();
+          if (s.area != null) {
+            // The area under the drawn part of the line (ES blue, light).
+            ctx.save();
+            ctx.lineTo(end[0], s.area); ctx.lineTo(list[0][0], s.area); ctx.closePath();
+            ctx.fillStyle = 'rgba(10,125,250,0.10)';
+            ctx.fill();
+            ctx.restore();
+          }
           if (s.head && p > 0.85) arrowHead(ctx, prev[0], prev[1], end[0], end[1], s.lw, s.stroke, (p - 0.85) / 0.15);
           if (s.dot) list.forEach((q, i) => { if (i / (list.length - 1) <= p + 1e-6) { ctx.beginPath(); ctx.arc(q[0], q[1], s.lw * 0.9, 0, Math.PI * 2); ctx.fillStyle = WHITE; ctx.fill(); ctx.lineWidth = s.lw * 0.5; ctx.stroke(); } });
         });
@@ -2038,9 +2048,9 @@
   }
   // The paper: ES paper with a soft light falloff toward the edges (depth,
   // never a colour), then a printed texture that sits behind everything and
-  // drifts against the zones (parallax): a fine dot grid and paper grain on
-  // Clean, graph paper and grain on Scrapbook. Textures are procedural (one
-  // small tile, made once per skin): no network, no AI, $0.
+  // can drift against the zones (PARALLAX.ground): a fine dot grid on Clean,
+  // graph paper on Scrapbook. Procedural (one small tile, made once per
+  // skin): no network, no AI, $0. No grain: noise costs ~18% more MP4 bytes.
   function drawGround(ctx, tl, w, h) {
     ctx.fillStyle = PAPER;
     ctx.fillRect(0, 0, w, h);
@@ -2065,13 +2075,6 @@
     const c = makeCanvas(size, size);
     const g = c && c.getContext ? c.getContext('2d') : null;
     if (!g) { TILE[skin] = null; return null; }
-    const rand = rng(`grain-${skin}`);
-    // Grain: tiny light and dark specks (paper fibre).
-    for (let i = 0; i < size * size * 0.05; i += 1) {
-      const dark = rand() < 0.5;
-      g.fillStyle = dark ? `rgba(18,18,18,${(0.025 + rand() * 0.035).toFixed(3)})` : `rgba(255,255,255,${(0.10 + rand() * 0.18).toFixed(3)})`;
-      g.fillRect(Math.floor(rand() * size), Math.floor(rand() * size), 1 + Math.floor(rand() * 2), 1);
-    }
     if (skin === 'scrapbook') {
       // Graph paper: 40 px minor lines, a 200 px major line.
       g.fillStyle = 'rgba(10,125,250,0.11)';
@@ -2316,7 +2319,7 @@
   }
 
   return {
-    MOTION4, CAMERA, cameraAt, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, ease, springAt, curveAt, bezier,
+    MOTION4, CAMERA, PARALLAX, cameraAt, ambClock, headFit, zoneOf, CURVES, SPRING, DURATIONS, DUR, STAGGER, WIPE, ease, springAt, curveAt, bezier,
     MODULE_TYPES, MEDIA_KINDS, CLOSE_KINDS, LAYOUTS, ZONE, PALETTE, TONE,
     cleanModule, moduleProblems, moduleStrings, moduleNeed, normalize, toV4, isV4, STRUCTURAL,
     buildTimeline, stateAt, visibleAt, layerAt, wipeAt, frameAt, clipTimes, clipTime, capAt,
