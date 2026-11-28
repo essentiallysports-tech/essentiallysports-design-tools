@@ -1761,7 +1761,7 @@
           if (s.lead && HEX.test(s.lead)) { ctx.fillStyle = s.lead; ctx.fillRect(s.x, s.y, 12, s.h); }
           ctx.restore();
           if (skin === 'scrapbook' && (el.kind === 'quotecard' || el.kind === 'panel')) { tape(ctx, s.x + 70, s.y + 2, 150, -6); tape(ctx, s.x + s.w - 70, s.y + 2, 150, 7); }
-          if (skin === 'scrapbook' && s.media) { if (s.polaroid) tape(ctx, s.x + s.w / 2, s.y + 2, 180, (hash(el.id) - 0.5) * 10); else paperClip(ctx, s.x + s.w * 0.6, s.y - 18); }
+          if (skin === 'scrapbook' && s.media) { if (s.polaroid) tape(ctx, s.x + s.w / 2, s.y + 2, 180, (hash(el.id) - 0.5) * 10); else paperClip(ctx, s.x + s.w * 0.62, s.y + 34); }
         });
         return;
       }
