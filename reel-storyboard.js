@@ -69,8 +69,10 @@
   }
   // ── Reels v4 (UI) ── chapters, motion and the honest "Ready to post".
   // A chapter marker in plain words: '1 · THE RUN', '#3' (a countdown chip), '2 of 5'.
+  // A v4 plan opens with the hook chapter (no marker); the numbered chapters follow it,
+  // so an unmarked first chapter reads "Hook", not a "1" beside "1 · THE RUN".
   function markerText(marker, i) {
-    if (!marker) return String(i + 1);
+    if (!marker) return i === 0 ? 'Hook' : String(i);
     if (typeof marker === 'string') return marker;
     if (marker.kind === 'countdown') return `#${marker.n}`;
     if (marker.kind === 'progress') return `${marker.i} of ${marker.of}`;
@@ -619,7 +621,7 @@
         if (ch && ch.beats[0] && ch.beats[0].id === id) parts.push(field(id, 'chap.headline', 'Chapter headline', ch.headline || '', { max: 60, ph: 'DALLAS BLEW A *21-POINT LEAD*' }), '<p class="rm-hint">Holds for the whole chapter. Wrap one word in *asterisks* to colour it.</p>');
         if (beat.media && beat.media.kind !== 'none') parts.push(field(id, 'v4.media.label', 'Media label', (beat.media && beat.media.label) || '', { max: 24, ph: 'EAGLES BALL' }));
         parts.push(`<div class="rm-bf-pair">${field(id, 'v4.stamp.text', 'Stamp', (beat.stamp && beat.stamp.text) || '', { max: 24, ph: 'BAD CALL' })}${field(id, 'v4.tag.text', 'Tag', (beat.tag && beat.tag.text) || '', { max: 28, ph: '0:02 LEFT' })}</div>`);
-        if (beat.module && beat.module.type) parts.push(`<div class="rm-modfields">${genericBody(id, beat.module).replace(/data-field="es\./g, 'data-field="v4.module.').replace(/(id|for)="rm-es-/g, '$1="rm-v4m-')}</div><p class="rm-hint">Numbers must come from a source.</p>`);
+        if (beat.module && beat.module.type) parts.push(`<h4 class="rm-insp__h rm-modfields__h">Module · ${esc((ui.moduleLabel && ui.moduleLabel[beat.module.type]) || nice(beat.module.type))}</h4><div class="rm-modfields">${genericBody(id, beat.module).replace(/data-field="es\./g, 'data-field="v4.module.').replace(/(id|for)="rm-es-/g, '$1="rm-v4m-')}</div><p class="rm-hint">Numbers must come from a source.</p>`);
         parts.push(voHtml(beat));
         return parts.join('');
       }
@@ -627,7 +629,7 @@
       function askHtml(beat, i) {
         if (!ui.reviseBeat || !state.config.ai || state.config.offline) return '';
         return `<form class="rm-askbeat" data-sb-ask><label class="rm-bf__label" for="rm-askbeat-${esc(beat.id)}">Ask AI about scene ${i + 1}</label>
-          <div class="rm-askbeat__row"><input class="es-input" id="rm-askbeat-${esc(beat.id)}" type="text" maxlength="200" placeholder="Show the clip from the 4th down"><button class="es-btn" type="submit">${ICON.sparkles || ''}<span>Ask</span></button></div>
+          <div class="rm-askbeat__row"><input class="es-input" id="rm-askbeat-${esc(beat.id)}" type="text" maxlength="200" placeholder="Show the 4th-down clip"><button class="es-btn" type="submit">${ICON.sparkles || ''}<span>Ask</span></button></div>
           <p class="rm-hint">Changes the media, module or on-screen words. Your script stays as written.</p></form>`;
       }
       function renderEditor() {

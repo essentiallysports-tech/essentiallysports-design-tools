@@ -207,27 +207,35 @@
   }
 
   // ─── Small helpers ───────────────────────────────────────────────────────
+  // Side by side (wide screens) the toasts sit over the top of the reel frame, in its empty
+  // safe band (the ES frame keeps words below y 300), anchored to the page so they scroll with
+  // the frame and never land on the timeline, the transport or the panel's Back / Next / Export.
+  // Stacked (phones): under the top bar (CSS).
+  function placeToasts() {
+    const box = els.toasts;
+    if (!box) return;
+    const wide = window.matchMedia?.('(min-width: 901px)').matches;
+    const dev = els.device || $('rm-device');
+    const dr = wide && dev ? dev.getBoundingClientRect() : null;
+    const on = Boolean(dr && dr.width && dr.height);
+    box.classList.toggle('is-stage', on);
+    box.style.left = on ? `${Math.round(dr.left + window.scrollX + dr.width / 2)}px` : '';
+    box.style.top = on ? `${Math.round(dr.top + window.scrollY + 12)}px` : '';
+    box.style.bottom = on ? 'auto' : '';
+    box.style.width = on ? `${Math.round(Math.min(440, dr.width - 24))}px` : '';
+    box.style.maxWidth = '';
+  }
+  window.addEventListener('resize', () => { if (els.toasts && els.toasts.childElementCount) placeToasts(); });
   function toast(text, { tone = '', action = null } = {}) {
     const el = document.createElement('div');
     el.className = `es-toast rm-toast${tone === 'error' ? ' is-error' : ''}`;
     el.setAttribute('role', tone === 'error' ? 'alert' : 'status');
     el.innerHTML = `<span>${esc(text)}</span>${action ? `<button class="es-toast-action" type="button">${esc(action.label)}</button>` : ''}`;
     if (action) el.querySelector('button').addEventListener('click', () => { action.run(); el.remove(); });
-    // Side by side (wide screens): toasts sit centred under the preview, never
-    // over the panel's Back / Next / Export. Stacked (phones): under the top bar.
-    const wide = window.matchMedia?.('(min-width: 901px)').matches;
-    const stageEl = $('rm-stage');
-    const sr = wide && stageEl ? stageEl.getBoundingClientRect() : null;
-    els.toasts.classList.toggle('is-stage', Boolean(sr && sr.width));
-    els.toasts.style.left = sr && sr.width ? `${Math.round(sr.left + sr.width / 2)}px` : '';
-    els.toasts.style.maxWidth = sr && sr.width ? `${Math.round(sr.width - 32)}px` : '';
-    // Review v4: in the preview column just under the transport bar (over its quiet meta
-    // line), clear of the frame, the playback controls, the timeline's buttons and the panel.
-    const trr = sr && sr.width && els.transport ? els.transport.getBoundingClientRect() : null;
-    els.toasts.style.top = trr && trr.height ? `${Math.round(Math.max(16, Math.min(window.innerHeight - 72, trr.bottom + 6)))}px` : '';
-    els.toasts.style.bottom = trr && trr.height ? 'auto' : '';
-    if (trr && trr.height) els.toasts.style.maxWidth = `${Math.round(Math.min(440, sr.width - 32))}px`;
     els.toasts.append(el);
+    placeToasts();
+    // The making screen hands over to Review in the same tick: place again once the frame is laid out.
+    requestAnimationFrame(() => requestAnimationFrame(placeToasts));
     setTimeout(() => { el.classList.add('is-leaving'); setTimeout(() => el.remove(), 260); }, action ? 5000 : 3200);
   }
   const fmtTime = ms => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -2174,7 +2182,7 @@
     const tl = state.timeline;
     if (!tl) return;
     const sec = tl.durationMs / 1000;
-    els.beatsMeta.textContent = `${tl.beats.length} scenes · ${sec.toFixed(0)} s`;
+    els.beatsMeta.textContent = `${(state.plan && state.plan.beats ? state.plan.beats.length : tl.beats.length)} scenes · ${sec.toFixed(0)} s`;
     els.stageMeta.textContent = `${F.FORMATS[tl.format].label} · ${sec.toFixed(1)} s · ${(tl.size || [1080, 1920]).join('×')}${tl.timing && tl.timing.estimate ? ' · times estimated' : ''}`;
     els.time.textContent = `${fmtTime(state.t)} / ${fmtTime(tl.durationMs)}`;
     // Review v4: a tick on the scrubber at every chapter (v4) or scene (v3) start.
